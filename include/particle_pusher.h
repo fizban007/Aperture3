@@ -1,7 +1,7 @@
 #ifndef _PARTICLE_PUSHER_H_
 #define _PARTICLE_PUSHER_H_
 
-#include "data/callbacks.h"
+// #include "data/callbacks.h"
 #include "sim_data.h"
 
 namespace Aperture {
@@ -18,9 +18,9 @@ class ParticlePusher {
   virtual void push(SimData& data, double dt) = 0;
   // virtual void push(Particles& particles, const vfield_t& E, const vfield_t& B, double dt) = 0;
 
-  void register_ptc_comm_callback(const ptc_comm_callback& callback) {
-    m_comm = callback;
-  }
+  // void register_ptc_comm_callback(const ptc_comm_callback& callback) {
+  //   m_comm = callback;
+  // }
 
   self_type& set_algorithm(ForceAlgorithm algorithm) {
     m_algorithm = algorithm;
@@ -42,8 +42,10 @@ class ParticlePusher {
     return *this;
   }
 
+  // virtual void print() = 0;
+
  protected:
-  ptc_comm_callback m_comm;
+  // ptc_comm_callback m_comm;
   bool m_gravity, m_radiation, m_compute_curvature;
   ForceAlgorithm m_algorithm;
 

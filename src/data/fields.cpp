@@ -334,7 +334,11 @@ VectorField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, int 
   if (m_grid -> dim() < 3) {
     lower[2] = upper[2] = c[2];
   }
-  Vec3<T> result {};
+  if (m_grid -> dim() < 2) {
+    lower[1] = upper[1] = c[1];
+  }
+
+  Vec3<T> result {0.0, 0.0, 0.0};
   for (int k = lower[2]; k <= upper[2]; k++) {
     for (int j = lower[1]; j <= upper[1]; j++) {
       for (int i = lower[0]; i <= upper[0]; i++) {
@@ -342,11 +346,11 @@ VectorField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, int 
           result[0] += m_array[0](i, j, k) * interp.interp_cell(rel_pos[0], c[0], i, m_stagger[0][0])
                        * interp.interp_cell(rel_pos[1], c[1], j, m_stagger[0][1]);
           // * (normalize ? m_grid -> norm(0, i, j, k) : 1.0);
-          result[1] += m_array[1](i, j, k) * interp.interp_cell(rel_pos[0], c[0], i, m_stagger[1][0])
-                       * interp.interp_cell(rel_pos[1], c[1], j, m_stagger[1][1]);
+          // result[1] += m_array[1](i, j, k) * interp.interp_cell(rel_pos[0], c[0], i, m_stagger[1][0])
+          //              * interp.interp_cell(rel_pos[1], c[1], j, m_stagger[1][1]);
           // * (normalize ? m_grid -> norm(1, i, j, k) : 1.0);
-          result[2] += m_array[2](i, j, k) * interp.interp_cell(rel_pos[0], c[0], i, m_stagger[2][0])
-                       * interp.interp_cell(rel_pos[1], c[1], j, m_stagger[2][1]);
+          // result[2] += m_array[2](i, j, k) * interp.interp_cell(rel_pos[0], c[0], i, m_stagger[2][0])
+          //              * interp.interp_cell(rel_pos[1], c[1], j, m_stagger[2][1]);
           // * (normalize ? m_grid -> norm(2, i, j, k) : 1.0);
         } else {
           result[0] += m_array[0](i, j, k) * interp.interp_weight(rel_pos, c, Vec3<int>(i, j, k), m_stagger[0]);

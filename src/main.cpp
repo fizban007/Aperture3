@@ -11,10 +11,11 @@ int main(int argc, char *argv[])
   Environment env(&argc, &argv);
 
   // These are debug output
-  // std::cout << env.args().conf_filename() << std::endl;
-  // std::cout << env.args().data_interval() << std::endl;
-  // std::cout << env.args().steps() << std::endl;
-  // std::cout << env.args().dimx() << std::endl;
+  std::cout << env.conf().delta_t << std::endl;
+  std::cout << env.args().conf_filename() << std::endl;
+  std::cout << env.args().data_interval() << std::endl;
+  std::cout << env.args().steps() << std::endl;
+  std::cout << env.args().dimx() << std::endl;
 
   // Allocate simulation data
   SimData data(env);
@@ -38,7 +39,7 @@ int main(int argc, char *argv[])
   PICSim sim(env);
 
   // Setup the initial condition of the simulation
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 1; i++) {
     data.particles[0].append(0.0, 1.0, 100);
     data.particles[1].append(0.0, -1.0, 100);
   }
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
 
   // Main simulation loop
   for (uint32_t step = 0; step < env.args().steps(); step++) {
-   Logger::print_info("At time step {}", step);
+    Logger::print_info("At time step {}", step);
     double time = step * env.conf().delta_t;
 
     sim.step(data, step);

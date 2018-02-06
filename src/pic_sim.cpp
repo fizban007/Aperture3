@@ -1,9 +1,9 @@
 #include "pic_sim.h"
-#include "algorithms/field_solver_finite_diff.h"
 #include "algorithms/field_solver_integral.h"
 #include "algorithms/ptc_pusher_geodesic.h"
 #include "algorithms/current_deposit_Esirkepov.h"
 #include <functional>
+#include <memory>
 
 namespace Aperture {
 
@@ -12,18 +12,12 @@ namespace Aperture {
 
 PICSim::PICSim(Environment& env) : m_env(env) {
   // Initialize modules
-  // m_comm = std::make_unique<DomainCommunicator>(m_env);
   // TODO: select current deposition method according to config
   m_depositer = std::make_unique<CurrentDepositer_Esirkepov>(m_env);
 
   // TODO: select field solver according to config
-  // if (m_env.conf().algorithm_field_update == "finite_diff") {
-  //   m_field_solver = std::make_unique<FieldSolver_FiniteDiff>(m_env.local_grid());
-  // } else
-  // if (m_env.conf().algorithm_field_update == "integral") {
   m_field_solver = std::make_unique<FieldSolver_Integral>(m_env.local_grid(),
                                                           m_env.local_grid_dual());
-  // }
 
   // TODO: select particle mover type according to config
   // int interp_order = m_env.conf().interpolation_order;
@@ -65,8 +59,9 @@ PICSim::PICSim(Environment& env) : m_env(env) {
 PICSim::~PICSim() {}
 
 void PICSim::loop(Aperture::SimData& data, uint32_t steps, uint32_t data_freq) {
-  for (uint32_t step = 0; step < steps; step++) {
+  for (uint32_t n = 0; n < steps; n++) {
     // Do stuff
+    step(data, n);
   }
 }
 

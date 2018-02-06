@@ -2,9 +2,9 @@
 #define _FIELD_SOLVER_H_
 
 #include <memory>
-#include "algorithms/finite_diff.h"
+// #include "algorithms/finite_diff.h"
 // #include "boundary_conditions.h"
-#include "data/callbacks.h"
+// #include "data/callbacks.h"
 #include "data/fields.h"
 #include "sim_data.h"
 
@@ -29,19 +29,19 @@ class FieldSolver {
 
   // void set_boundary_condition(const BoundaryConditions& bc) { m_bc = &bc; }
 
-  void register_comm_callback(const vfield_comm_callback& callback) {
-    m_comm_callback_vfield = callback;
-  }
-  void register_comm_callback(const sfield_comm_callback& callback) {
-    m_comm_callback_sfield = callback;
-  }
+  // void register_comm_callback(const vfield_comm_callback& callback) {
+  //   m_comm_callback_vfield = callback;
+  // }
+  // void register_comm_callback(const sfield_comm_callback& callback) {
+  //   m_comm_callback_sfield = callback;
+  // }
   // void register_bc_callback(const fieldBC_callback& callback) {
   //   m_bc_callback = callback;
   // }
 
- protected:
-  vfield_comm_callback m_comm_callback_vfield;
-  sfield_comm_callback m_comm_callback_sfield;
+ // protected:
+  // vfield_comm_callback m_comm_callback_vfield;
+  // sfield_comm_callback m_comm_callback_sfield;
 
   // External boundary condition, memory managed elsewhere
   // const BoundaryConditions* m_bc = nullptr;
@@ -50,5 +50,5 @@ class FieldSolver {
 
 #endif  // _FIELD_SOLVER_H_
 
-#include "algorithms/field_solver_finite_diff.h"
+// #include "algorithms/field_solver_finite_diff.h"
 #include "algorithms/field_solver_integral.h"

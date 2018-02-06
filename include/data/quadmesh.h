@@ -315,7 +315,7 @@ struct Quadmesh {
   ///  Find the cell index from the global position, and get the
   ///  relative position as well.
   ////////////////////////////////////////////////////////////////////////////////
-  int find_cell(const Vec3<Scalar>& pos, Vec3<float>& rel_pos) const {
+  int find_cell(const Vec3<Scalar>& pos, Vec3<Pos_t>& rel_pos) const {
     int c1 = static_cast<int>(floor((pos.x - lower[0]) / delta[0])) + guard[0];
     if (c1 < 0 || c1 > dims[0]) {
       std::cerr << "c1 out of range: " << c1 << std::endl;

@@ -30,7 +30,9 @@ struct interp_cloud_in_cell {
   enum { radius = 1, support = 2 };
 
   double operator()(double dx) const {
-    return max(1.0 - std::abs(dx), 0.0);
+    double abs_dx = std::abs(dx);
+    // return (abs_dx < 0.5 ? max(1.0 - abs_dx, 0.0) : abs_dx);
+    return max(1.0 - abs_dx, 0.0);
   }
 };
 
@@ -78,7 +80,7 @@ class Interpolator {
   double interp_cell(FloatT pos, int p_cell, int target_cell,
                                int stagger = 0) const {
     FloatT x =
-        (double)target_cell + (stagger == 0 ? 0.5 : 1.0) - pos - (double)p_cell;
+        ((double)target_cell + (stagger == 0 ? 0.5 : 1.0)) - (pos + (double)p_cell);
     switch (m_order) {
       case 0:
         return m_interp_0(x);

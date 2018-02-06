@@ -16,6 +16,9 @@ SimData::SimData(const Environment& env) :
     photons(env) {
   // initialize(env);
   num_species = 3;
+  E.initialize();
+  B.initialize();
+  J.initialize();
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
     particles.emplace_back(env.conf().max_ptc_number);
