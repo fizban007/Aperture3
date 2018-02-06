@@ -44,10 +44,22 @@ int main(int argc, char *argv[])
     data.particles[1].append(0.0, -1.0, 100);
   }
 
+  // Setup the background current
+  auto &grid = data.E.grid();
+  auto &mesh = grid.mesh();
+  VectorField<Scalar> Jb(grid);
+  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+    // x is the staggered position where current is evaluated
+    Scalar x = mesh.pos(0, i, true);
+    Jb(0, i) = 0.1;
+  }
+  sim.field_solver().set_background_j(Jb);
 
-  std::cout << data.particles[0].number() << std::endl;
-  std::cout << data.particles[1].number() << std::endl;
-  std::cout << data.particles[2].number() << std::endl;
+  // Some more debug output
+  Logger::print_info("There are {} electrons in the initial setup", data.particles[0].number());
+  Logger::print_info("There are {} positrons in the initial setup", data.particles[1].number());
+  Logger::print_info("There are {} ions in the initial setup", data.particles[2].number());
+  Logger::print_info("There are {} photons in the initial setup", data.photons.number());
 
   // Main simulation loop
   for (uint32_t step = 0; step < env.args().steps(); step++) {

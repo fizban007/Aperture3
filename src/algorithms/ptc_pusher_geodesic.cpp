@@ -46,7 +46,7 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
 
   ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
   double v = ptc.p1[idx] / ptc.gamma[idx];
-  Logger::print_info("Before move, v is {}, gamma is {}", v, ptc.gamma[idx]);
+  // Logger::print_info("Before move, v is {}, gamma is {}", v, ptc.gamma[idx]);
   ptc.dx1[idx] = v * dt / grid.mesh().delta[0];
   ptc.x1[idx] += ptc.dx1[idx];
 
@@ -55,7 +55,7 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
   int delta_cell = (int)std::floor(ptc.x1[idx]);
   // std::cout << delta_cell << std::endl;
   c[0] += delta_cell;
-  Logger::print_info("After move, c is {}, x1 is {}", c, ptc.x1[idx]);
+  // Logger::print_info("After move, c is {}, x1 is {}", c, ptc.x1[idx]);
   if (c[0] < mesh.guard[0] || c[0] >= mesh.dims[0] - mesh.guard[0]) {
     particles.erase(idx);
     return false;
@@ -85,7 +85,7 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
       auto c = mesh.get_cell_3d(cell);
       // std::cout << c << std::endl;
       Vec3<Scalar> vE = E.interpolate(c, rel_x, m_order);
-      Logger::print_info("in lorentz, c = {}, E = {}, rel_x = {}", c, vE, rel_x);
+      // Logger::print_info("in lorentz, c = {}, E = {}, rel_x = {}", c, vE, rel_x);
 
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();
 

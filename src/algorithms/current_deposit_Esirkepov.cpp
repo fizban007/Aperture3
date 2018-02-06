@@ -73,7 +73,7 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
           J.data(0)[idx] += charge * (s1 - s0);
         }
         Rho.data()[idx] += charge * s1;
-        Logger::print_info("weights are {}, {}; {}", s0, s1, s1-s0);
+        // Logger::print_info("weights are {}, {}; {}", s0, s1, s1-s0);
       }
     }
   }

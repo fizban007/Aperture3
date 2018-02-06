@@ -21,6 +21,9 @@ class FieldSolver {
   virtual void update_fields(vfield_t& E, vfield_t& B, const vfield_t& J,
                              double dt, double time = 0.0) = 0;
   virtual void update_fields(SimData& data, double dt, double time = 0.0) = 0;
+
+  virtual void set_background_j(const vfield_t& j) = 0;
+
   // virtual void compute_E_update(vfield_t& E, const vfield_t& B, const vfield_t& J,
   // double dt) = 0;
   // virtual void compute_B_update(vfield_t& B, const vfield_t& E, double dt) = 0;
@@ -51,4 +54,4 @@ class FieldSolver {
 #endif  // _FIELD_SOLVER_H_
 
 // #include "algorithms/field_solver_finite_diff.h"
-#include "algorithms/field_solver_integral.h"
+// #include "algorithms/field_solver_integral.h"
