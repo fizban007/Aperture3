@@ -1,0 +1,9 @@
+*.png
+*.mp4
+*.ipynb
+*.el
+build
+bin
+Data
+ninja
+compile_commands.json

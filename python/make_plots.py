@@ -17,4 +17,4 @@ for n in range(200):
     plt.cla()
     plt.plot(x_e, p_e, '.')
     plt.plot(x_p, p_p, ".")
-    plt.savefig("%06d.png" % (n * 10))
+    plt.savefig("%06d.png" % n)
