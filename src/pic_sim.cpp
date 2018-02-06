@@ -14,6 +14,7 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // Initialize modules
   // TODO: select current deposition method according to config
   m_depositer = std::make_unique<CurrentDepositer_Esirkepov>(m_env);
+  m_depositer->set_periodic(env.conf().boundary_periodic[0]);
 
   // TODO: select field solver according to config
   m_field_solver = std::make_unique<FieldSolver_Integral>(m_env.local_grid(),
@@ -24,6 +25,7 @@ PICSim::PICSim(Environment& env) : m_env(env) {
 
   // Implement particle pusher
   m_pusher = std::make_unique<ParticlePusher_Geodesic>();
+  m_pusher->set_periodic(env.conf().boundary_periodic[0]);
 
   // TODO: figure out a way to set algorithm
   // if (m_env.conf().algorithm_ptc_push == "Vay")

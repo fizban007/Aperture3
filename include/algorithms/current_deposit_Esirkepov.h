@@ -21,7 +21,7 @@ class CurrentDepositer_Esirkepov : public CurrentDepositer {
   void scan_current(vfield& J);
 
   const Environment& m_env;
-  int m_deposit_order = 1;
+  int m_deposit_order = 3;
   int m_deriv_order;
 };  // ----- end of class current_depositer_Esirkepov : public current_depositer
 

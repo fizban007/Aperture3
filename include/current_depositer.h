@@ -15,6 +15,8 @@ class CurrentDepositer {
   virtual ~CurrentDepositer() {}
 
   virtual void deposit(SimData& data, double dt) = 0;
+
+  void set_periodic(bool p) { m_periodic = p; }
   // void register_current_callback(const vfield_comm_callback& callback) {
   //   m_comm_J = callback;
   // }
@@ -22,7 +24,8 @@ class CurrentDepositer {
   //   m_comm_rho = callback;
   // }
 
- // protected:
+ protected:
+  bool m_periodic = false;
  //  vfield_comm_callback m_comm_J;
  //  sfield_comm_callback m_comm_rho;
 };  // ----- end of class current_depositer -----

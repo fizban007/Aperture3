@@ -25,18 +25,16 @@ ParticlePusher_Geodesic::push(SimData& data, double dt) {
 
       // Logger::print_info("Looping particle {}", idx);
       double x = grid.mesh().pos(0, c[0], ptc.x1[idx]);
-      Logger::print_info("Pushing particle at cell {} and position {}",
-                         ptc.cell[idx], x);
+      // Logger::print_info("Pushing particle at cell {} and position {}",
+      //                    ptc.cell[idx], x);
 
       lorentz_push(particles, idx, x, data.E, data.B, dt);
       move_ptc(particles, idx, x, grid, dt);
-      // if (nonempty)
-      //   lorentz_push(particles, idx, x, data.E, data.B, dt * 0.5);
     }
   }
 }
 
-bool
+void
 ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
                                   double x, const Grid& grid,
                                   double dt) {
@@ -56,16 +54,27 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
   // std::cout << delta_cell << std::endl;
   c[0] += delta_cell;
   // Logger::print_info("After move, c is {}, x1 is {}", c, ptc.x1[idx]);
+
+  // This controls the boundary condition
   if (c[0] < mesh.guard[0] || c[0] >= mesh.dims[0] - mesh.guard[0]) {
-    particles.erase(idx);
-    return false;
+    // Move particles to the other end of the box
+    if (m_periodic) {
+      if (c[0] < mesh.guard[0])
+        c[0] += mesh.reduced_dim(0);
+      else
+        c[0] -= mesh.reduced_dim(0);
+      ptc.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
+      ptc.x1[idx] -= (Pos_t)delta_cell;
+    } else {
+      // Erase particles in the guard cell
+      particles.erase(idx);
+    }
   } else {
     ptc.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
     // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
     ptc.x1[idx] -= (Pos_t)delta_cell;
     // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
   }
-  return true;
 }
 
 void

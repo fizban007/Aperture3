@@ -20,6 +20,25 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
     // normalize_density(data.Rho[i], data.Rho[i]);
   }
 
+  // Handle periodic boundary by copying over the deposited quantities
+  if (m_periodic) {
+    auto& mesh = data.J.grid().mesh();
+    for (int i = 0; i < mesh.guard[0]; i++) {
+      // current
+      data.J(0, i + mesh.reduced_dim(0)) += data.J(0, i);
+      data.J(0, i) = 0.0;
+      data.J(0, 2 * mesh.guard[0] - 1 - i) += data.J(0, mesh.dims[0] - 1 - i);
+      data.J(0, mesh.dims[0] - 1 - i) = 0.0;
+      // rho
+      for (unsigned int j = 0; j < part.size(); j++) {
+        data.Rho[j](i + mesh.reduced_dim(0)) += data.Rho[j](i);
+        data.Rho[j](i) = 0.0;
+        data.Rho[j](2 * mesh.guard[0] - 1 - i) += data.Rho[j](mesh.dims[0] - 1 - i);
+        data.Rho[j](mesh.dims[0] - 1 - i) = 0.0;
+      }
+    }
+  }
+
   // communication on the just deposited Rho
   // if (m_comm_rho != nullptr) {
   //   for (Index_t i = 0; i < part.size(); i++) {
@@ -43,7 +62,7 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
   auto& grid = J.grid();
   auto charge = particles.charge();
   if (grid.dim() == 1) {
-    Logger::print_info("Computing rho");
+    // Logger::print_info("Computing rho");
     // loop over all the particles
     for (Index_t n = 0; n < particles.number(); n++) {
       if (particles.is_empty(n)) continue;
@@ -54,7 +73,7 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
       auto x_p = part.x1[n] - part.dx1[n];
       c_p += std::floor(x_p);
       x_p -= (double)c_p - c;
-      Logger::print_info("{}, {}, {}, {}", c, c_p, x, x_p);
+      // Logger::print_info("{}, {}, {}, {}", c, c_p, x, x_p);
       // auto v3 = part.dx3[n];
 
       double s0, s1;
@@ -70,7 +89,7 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
           // double w1_p = interp.interp_cell(x_p[1], c_p[1], j);
           s0 = w0_p;
           // double s00 = w0_p * w1_p;
-          J.data(0)[idx] += charge * (s1 - s0);
+          J.data(0)[idx] += charge * (s1 - s0) * grid.mesh().delta[0] / dt;
         }
         Rho.data()[idx] += charge * s1;
         // Logger::print_info("weights are {}, {}; {}", s0, s1, s1-s0);

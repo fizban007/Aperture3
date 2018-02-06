@@ -42,11 +42,16 @@ class ParticlePusher {
     return *this;
   }
 
+  self_type& set_periodic(bool p) {
+    m_periodic = p;
+    return *this;
+  }
+
   // virtual void print() = 0;
 
  protected:
   // ptc_comm_callback m_comm;
-  bool m_gravity, m_radiation, m_compute_curvature;
+  bool m_gravity, m_radiation, m_compute_curvature, m_periodic;
   ForceAlgorithm m_algorithm;
 
   // Lorentz_force_Boris m_boris;

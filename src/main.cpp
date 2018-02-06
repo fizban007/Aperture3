@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // x is the staggered position where current is evaluated
     Scalar x = mesh.pos(0, i, true);
-    Jb(0, i) = 0.1;
+    Jb(0, i) = 0.0;
   }
   sim.field_solver().set_background_j(Jb);
 
