@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include "sim_environment.h"
 #include "sim_data.h"
 #include "pic_sim.h"
@@ -30,23 +31,25 @@ int main(int argc, char *argv[])
   // std::cout << data.E.grid_size() << std::endl;
   // std::cout << data.B.extent() << std::endl;
 
-  // Initialize data output
-  env.exporter().AddArray("E1", data.E, 0);
-  env.exporter().AddArray("J1", data.J, 0);
-  env.exporter().AddArray("Rho_e", data.Rho[0].data());
-  env.exporter().AddArray("Rho_p", data.Rho[1].data());
-
   PICSim sim(env);
+  auto &grid = data.E.grid();
+  auto &mesh = grid.mesh();
+  int ppc = 10;
 
   // Setup the initial condition of the simulation
-  for (int i = 0; i < 1; i++) {
-    data.particles[0].append(0.0, 1.0, 100);
-    data.particles[1].append(0.0, -1.0, 100);
+  std::default_random_engine generator;
+  std::uniform_real_distribution<Pos_t> dist(0.0, 1.0);
+
+  for (int i = mesh.guard[0]; i <= mesh.dims[0]-mesh.guard[0]; i++) {
+    for (int n = 0; n < ppc; n++) {
+      data.particles[0].append(dist(generator), 1.0, i,
+                               (dist(generator) < 0.1 ? (int)ParticleFlag::tracked : 0));
+      data.particles[1].append(dist(generator), 0.0, i,
+                               (dist(generator) < 0.1 ? (int)ParticleFlag::tracked : 0));
+    }
   }
 
   // Setup the background current
-  auto &grid = data.E.grid();
-  auto &mesh = grid.mesh();
   VectorField<Scalar> Jb(grid);
   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // x is the staggered position where current is evaluated
@@ -54,6 +57,15 @@ int main(int argc, char *argv[])
     Jb(0, i) = 0.0;
   }
   sim.field_solver().set_background_j(Jb);
+
+  // Initialize data output
+  env.exporter().AddArray("E1", data.E, 0);
+  env.exporter().AddArray("J1", data.J, 0);
+  env.exporter().AddArray("Rho_e", data.Rho[0].data());
+  env.exporter().AddArray("Rho_p", data.Rho[1].data());
+  env.exporter().AddParticleArray("Electrons", data.particles[0]);
+  env.exporter().AddParticleArray("Positrons", data.particles[1]);
+  env.exporter().setGrid(grid);
 
   // Some more debug output
   Logger::print_info("There are {} electrons in the initial setup", data.particles[0].number());

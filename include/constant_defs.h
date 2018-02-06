@@ -20,5 +20,7 @@
 
 #define TAG_RANK_MASK 0xFFFF0000
 #define TAG_ID_MASK 0x0000FFFF
+#define MAX_TRACKED 100000
+
 
 #endif   // _CONSTANTS_H_

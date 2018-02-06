@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 #include "data/fields.h"
+#include "data/particles.h"
+#include "data/photons.h"
 
 namespace Aperture {
 
@@ -15,6 +17,14 @@ struct dataset {
   std::vector<int> dims;
   int ndims;
   T* data;
+};
+
+template <typename Ptc>
+struct ptcdata {
+  std::string name;
+  const Ptc* ptc;
+  std::vector<float> data_x;
+  std::vector<float> data_p;
 };
 
 class DataExporter
@@ -34,8 +44,14 @@ class DataExporter
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 
+  void AddParticleArray(const std::string& name, const Particles& ptc);
+  void AddParticleArray(const std::string& name, const Photons& ptc);
+  // void AddParticleArray(const Photons& ptc);
+
   void CopyConfig(const std::string& file);
   void CopyMain();
+
+  void setGrid(const Grid& g) { grid = g; }
 
  private:
   std::string outputDirectory;  //!< Sets the directory of all the data files
@@ -45,6 +61,11 @@ class DataExporter
 
   std::vector<dataset<float>> dbFloat;
   std::vector<dataset<double>> dbDouble;
+
+  std::vector<ptcdata<Particles>> dbPtcData;
+  std::vector<ptcdata<Photons>> dbPhotonData;
+
+  Grid grid;
 }; // ----- end of class DataExporter -----
 
 

@@ -57,9 +57,9 @@ class Particles : public ParticleBase<single_particle_t>
   void set_type(ParticleType type) { m_type = type; }
   void set_charge(Scalar charge) { m_charge = charge; }
   void set_mass(Scalar mass) { m_mass = mass; }
-  // void track(Index_t pos) { m_data.flag[pos] |= (int)ParticleFlag::tracked; }
-  // bool check_flag(Index_t pos, ParticleFlag flag) { return (m_data.flag[pos] & (int)flag) == (int)flag; }
-  // void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (int)flag; }
+  void track(Index_t pos) { m_data.flag[pos] |= (int)ParticleFlag::tracked; }
+  bool check_flag(Index_t pos, ParticleFlag flag) const { return (m_data.flag[pos] & (int)flag) == (int)flag; }
+  void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (int)flag; }
 
   // The upper 16 bits represent the rank the particle is born
   // int tag_rank(Index_t idx) { return (m_data.tag_id[idx] >> 16); }

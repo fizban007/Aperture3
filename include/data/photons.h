@@ -23,8 +23,8 @@ class Photons : public ParticleBase<single_photon_t>
 
   void convert_pairs(Particles& electrons, Particles& positrons);
 
-  // bool check_flag(Index_t pos, PhotonFlag flag) { return (m_data.flag[pos] & (int)flag) == (int)flag; }
-  // void set_flag(Index_t pos, PhotonFlag flag) { m_data.flag[pos] |= (int)flag; }
+  bool check_flag(Index_t pos, PhotonFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
+  void set_flag(Index_t pos, PhotonFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
 
  private:
   void make_pair(Index_t pos, Particles& electrons, Particles& positrons);

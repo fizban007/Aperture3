@@ -1,5 +1,6 @@
 #include "utils/hdf_exporter.h"
 #include "fmt/ostream.h"
+#include "utils/logger.h"
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <time.h>
@@ -81,6 +82,29 @@ DataExporter::AddArray(const std::string &name, VectorField<T> &field, int compo
 }
 
 void
+DataExporter::AddParticleArray(const std::string& name, const Particles& ptc) {
+  ptcdata<Particles> temp;
+  temp.name = name;
+  temp.ptc = &ptc;
+  temp.data_x = std::vector<float>(MAX_TRACKED);
+  temp.data_p = std::vector<float>(MAX_TRACKED);
+
+  dbPtcData.push_back(std::move(temp));
+}
+
+void
+DataExporter::AddParticleArray(const std::string& name, const Photons& ptc) {
+  ptcdata<Photons> temp;
+  temp.name = name;
+  temp.ptc = &ptc;
+  temp.data_x = std::vector<float>(MAX_TRACKED);
+  temp.data_p = std::vector<float>(MAX_TRACKED);
+
+  dbPhotonData.push_back(std::move(temp));
+}
+
+
+void
 DataExporter::WriteOutput(int timestep, float time) {
   try {
     std::string filename = outputDirectory + filePrefix + fmt::format("{0:06d}.h5", timestep);
@@ -110,6 +134,55 @@ DataExporter::WriteOutput(int timestep, float time) {
       delete dataset;
     }
 
+    for (auto& ds : dbPtcData) {
+      std::string name_x = ds.name + "_x";
+      std::string name_p = ds.name + "_p";
+      unsigned int idx = 0;
+      for (Index_t n = 0; n < ds.ptc->number(); n++) {
+        if (ds.ptc->check_flag(n, ParticleFlag::tracked) && idx < MAX_TRACKED) {
+          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          ds.data_x[idx] = x;
+          ds.data_p[idx] = ds.ptc->data().p1[n];
+          idx += 1;
+        }
+      }
+      hsize_t sizes[1] = { idx };
+      H5::DataSpace space(1, sizes);
+      H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(name_x, H5::PredType::NATIVE_FLOAT, space));
+      dataset_x->write((void*)ds.data_x.data(), H5::PredType::NATIVE_FLOAT);
+      H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(name_p, H5::PredType::NATIVE_FLOAT, space));
+      dataset_p->write((void*)ds.data_p.data(), H5::PredType::NATIVE_FLOAT);
+
+      delete dataset_x;
+      delete dataset_p;
+
+      Logger::print_info("Written {} tracked particles", idx);
+    }
+
+    for (auto& ds : dbPhotonData) {
+      std::string name_x = ds.name + "_x";
+      std::string name_p = ds.name + "_p";
+      unsigned int idx = 0;
+      for (Index_t n = 0; n < ds.ptc->number(); n++) {
+        if (ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
+          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          ds.data_x[idx] = x;
+          ds.data_p[idx] = ds.ptc->data().p1[n];
+          idx += 1;
+        }
+      }
+      hsize_t sizes[1] = { idx };
+      H5::DataSpace space(1, sizes);
+      H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(name_x, H5::PredType::NATIVE_FLOAT, space));
+      dataset_x->write((void*)ds.data_x.data(), H5::PredType::NATIVE_FLOAT);
+      H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(name_p, H5::PredType::NATIVE_FLOAT, space));
+      dataset_p->write((void*)ds.data_p.data(), H5::PredType::NATIVE_FLOAT);
+
+      delete dataset_x;
+      delete dataset_p;
+
+      Logger::print_info("Written {} tracked photons", idx);
+    }
     delete file;
   }
   // catch failure caused by the H5File operations
@@ -133,6 +206,8 @@ DataExporter::WriteOutput(int timestep, float time) {
 
 }
 
+
+// Explicit instantiation of templates
 template
 void
 DataExporter::AddArray<float>(const std::string &name, MultiArray<float> &array);
