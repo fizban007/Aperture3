@@ -139,7 +139,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       std::string name_p = ds.name + "_p";
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
-        if (ds.ptc->check_flag(n, ParticleFlag::tracked) && idx < MAX_TRACKED) {
+        if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, ParticleFlag::tracked) && idx < MAX_TRACKED) {
           Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
@@ -164,7 +164,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       std::string name_p = ds.name + "_p";
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
-        if (ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
+        if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
           Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];

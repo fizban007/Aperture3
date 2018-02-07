@@ -97,7 +97,7 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
       // Logger::print_info("in lorentz, c = {}, E = {}, rel_x = {}", c, vE, rel_x);
 
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();
-
+      ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
     }
   }
 }

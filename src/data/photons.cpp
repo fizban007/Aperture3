@@ -1,6 +1,7 @@
 #include "data/photons.h"
 #include "sim_environment.h"
 #include "utils/Logger.h"
+#include "utils/util_functions.h"
 
 namespace Aperture {
 
@@ -45,18 +46,36 @@ Photons::append(Pos_t x, Scalar p, int cell, int flag) {
 }
 
 void
-Photons::convert_pairs(Particles& electrons, Particles& positrons) {}
+Photons::convert_pairs(Particles& electrons, Particles& positrons) {
+  if (!create_pairs || !trace_photons)
+    return;
+
+
+}
 
 void
 Photons::make_pair(Index_t pos, Particles& electrons, Particles& positrons) {}
 
 void
-Photons::emit_photons(const Particles &electrons, const Particles &positrons) {
+Photons::emit_photons(Particles &electrons, Particles &positrons) {
   if (!create_pairs)
     return;
-
+  double E_ph = 3.0;
   Logger::print_info("Processing Pair Creation...");
-
+  if (!trace_photons) {
+    // instant pair creation
+    for (Index_t n = 0; n < electrons.number(); n++) {
+      if (electrons.data().gamma[n] > gamma_thr) {
+        double gamma_f = electrons.data().gamma[n] - E_ph;
+        double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
+        // electrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
+        //                  electrons.data().cell[n],
+        //                  (electrons.check_flag(n, ParticleFlag::tracked) ? ));
+      }
+    }
+  } else {
+    // create photons and then have them convert to pairs
+  }
 }
 
 }

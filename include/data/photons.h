@@ -22,7 +22,7 @@ class Photons : public ParticleBase<single_photon_t>
   void append(Pos_t x, Scalar p, int cell, int flag = 0);
 
   void convert_pairs(Particles& electrons, Particles& positrons);
-  void emit_photons(const Particles& electrons, const Particles& positrons);
+  void emit_photons(Particles& electrons, Particles& positrons);
 
   bool check_flag(Index_t pos, PhotonFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
   void set_flag(Index_t pos, PhotonFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }

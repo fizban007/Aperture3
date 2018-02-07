@@ -11,6 +11,7 @@ namespace Aperture {
 //     PICSim(Environment::get_instance()) {}
 
 PICSim::PICSim(Environment& env) : m_env(env) {
+  Logger::print_info("Periodic is {}", env.conf().boundary_periodic[0]);
   // Initialize modules
   // TODO: select current deposition method according to config
   m_depositer = std::make_unique<CurrentDepositer_Esirkepov>(m_env);
@@ -75,6 +76,12 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   m_depositer->deposit(data, dt);
   m_field_solver->update_fields(data, dt);
   data.photons.emit_photons(data.particles[0], data.particles[1]);
+
+  if ((step % 20) == 0) {
+    for (auto& part : data.particles) {
+      // part.
+    }
+  }
 }
 
 }
