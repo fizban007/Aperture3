@@ -46,3 +46,10 @@ on 2018-02-01 at 11:02am, then to plot its result, run:
     
 However, it is pretty rigid on how many frames to draw and at what interval. So
 change those in the python script directly when you need to customize those.
+
+To make a movie on `tigressdata` after you made the plots, do this in the python
+directory:
+
+    ffmpeg -y -f image2 -r 12 -i %06d.png -c:v libx264 -crf 18 -pix_fmt yuv420p movie.mp4
+    
+You can also changed the filename of the movie to whatever you like.
