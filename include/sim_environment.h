@@ -53,6 +53,7 @@ class Environment {
   // data access methods
   const CommandArgs& args() const { return m_args; }
   const SimParams& conf() const { return m_conf_file.data(); }
+  const ConfigFile& conf_file() const { return m_conf_file; }
 
   const Grid& local_grid() const { return m_local_grid; }
   const Grid& local_grid_dual() const { return m_local_grid_dual; }

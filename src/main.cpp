@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
   env.exporter().AddParticleArray("Electrons", data.particles[0]);
   env.exporter().AddParticleArray("Positrons", data.particles[1]);
   env.exporter().setGrid(grid);
+  env.exporter().writeConfig(env.conf_file());
 
   // Some more debug output
   Logger::print_info("There are {} electrons in the initial setup", data.particles[0].number());

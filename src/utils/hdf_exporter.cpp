@@ -1,9 +1,14 @@
 #include "utils/hdf_exporter.h"
 #include "fmt/ostream.h"
 #include "utils/logger.h"
+#include "config_file.h"
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <time.h>
+#include <fstream>
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 namespace Aperture {
 
@@ -204,6 +209,32 @@ DataExporter::WriteOutput(int timestep, float time) {
     // return -1;
   }
 
+}
+
+void
+DataExporter::writeConfig(const ConfigFile &config) {
+  std::string filename = outputDirectory + "config.json";
+  auto& c = config.data();
+  json conf = {
+    {"delta_t", c.delta_t},
+    {"q_e", c.q_e},
+    {"ptc_per_cell", c.ptc_per_cell},
+    {"ion_mass", c.ion_mass},
+    {"boundary_periodic", c.boundary_periodic[0]},
+    {"create_pairs", c.create_pairs},
+    {"trace_photons", c.trace_photons},
+    {"gamma_thr", c.gamma_thr},
+    {"photon_path", c.photon_path},
+    {"grid", {
+        {"N", grid.mesh().dims[0]},
+        {"guard", grid.mesh().guard[0]},
+        {"lower", grid.mesh().lower[0]},
+        {"size", grid.mesh().sizes[0]}
+      }}
+  };
+
+  std::ofstream o(filename);
+  o << std::setw(4) << conf << std::endl;
 }
 
 

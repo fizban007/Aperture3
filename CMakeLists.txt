@@ -27,7 +27,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(HDF5_USE_STATIC_LIBRARIES)
 
-find_package(MPI REQUIRED)
+# find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C CXX)
 # find_package(Silo REQUIRED)
 # set(Boost_USE_STATIC_LIBS ON)
@@ -56,12 +56,12 @@ set(GMOCK_INCLUDE_DIR deps/googletest/googlemock/include)
 set(GTEST_INCLUDE_DIR deps/googletest/googletest/include)
 set(FMT_INCLUDE_DIR deps/fmt)
 set(CUDALE_INCLUDE_DIR deps/CudaLE/include)
-# set(FUSION_INCLUDE_DIR deps/fusion/include)
+set(JSON_INCLUDE_DIR deps/json/include)
 set(CXX_OPTS_INCLUDE_DIR deps/cxxopts/include)
 # set(CATCH_INCLUDE_DIR deps/single_include)
 # set(INTEGRATE_INCLUDE_DIR deps/integrate/src)
 
-include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${FUSION_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} include )
+include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} include )
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
 add_subdirectory(deps/fmt)
