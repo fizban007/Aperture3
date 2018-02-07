@@ -33,3 +33,16 @@ run it to run the code. The executable accepts the following arguments:
     
 I recommend going through the `sim.conf` file to see what options are available,
 and read `main.cpp` to see how to change initial conditions.
+
+# How to plot
+
+A simple python script is included in the `python` directory to make plots of
+phase-space diagrams of particles. It accepts one parameter which is the data
+directory. By default the simulation will output data to `Data` directory and
+everything will be under a timestamped subdirectory. Say a simulation was done
+on 2018-02-01 at 11:02am, then to plot its result, run:
+
+    ./make_plots.py ../Data/Data20180201-1102
+    
+However, it is pretty rigid on how many frames to draw and at what interval. So
+change those in the python script directly when you need to customize those.

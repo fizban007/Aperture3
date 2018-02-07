@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import h5py
+import matplotlib
+matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 import sys
 import os
