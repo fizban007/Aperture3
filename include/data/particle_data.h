@@ -87,11 +87,20 @@ struct single_photon_t {
 };
 }
 
-BOOST_FUSION_ADAPT_STRUCT(Aperture::single_particle_t, x1, dx1,
-                           p1, gamma, cell, flag);
+BOOST_FUSION_ADAPT_STRUCT(Aperture::single_particle_t,
+                          (Aperture::Pos_t, x1)
+                          (Aperture::Pos_t, dx1)
+                          (Aperture::Scalar, p1)
+                          (Aperture::Scalar, gamma)
+                          (uint32_t, cell)
+                          (uint32_t, flag));
 
-BOOST_FUSION_ADAPT_STRUCT(Aperture::single_photon_t, x1, p1, cell, path_left,
-                          flag);
+BOOST_FUSION_ADAPT_STRUCT(Aperture::single_photon_t,
+                          (Aperture::Pos_t, x1)
+                          (Aperture::Scalar, p1)
+                          (Aperture::Scalar, path_left)
+                          (uint32_t, cell)
+                          (uint32_t, flag));
 
 namespace Aperture {
 
@@ -149,9 +158,24 @@ struct particle_array_type<single_photon_t> {
 };
 }
 
-BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data, x1, dx1,
-                           p1, gamma, cell, flag);
+BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data,
+                          (Aperture::Pos_t*, x1)
+                          (Aperture::Pos_t*, dx1)
+                          (Aperture::Scalar*, p1)
+                          (Aperture::Scalar*, gamma)
+                          (uint32_t*, cell)
+                          (uint32_t*, flag));
 
-BOOST_FUSION_ADAPT_STRUCT(Aperture::photon_data, x1, p1, path_left, cell, flag);
+BOOST_FUSION_ADAPT_STRUCT(Aperture::photon_data,
+                          (Aperture::Pos_t*, x1)
+                          (Aperture::Scalar*, p1)
+                          (Aperture::Scalar*, path_left)
+                          (uint32_t*, cell)
+                          (uint32_t*, flag));
+
+// BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data, x1, dx1,
+//                            p1, gamma, cell, flag);
+
+// BOOST_FUSION_ADAPT_STRUCT(Aperture::photon_data, x1, p1, path_left, cell, flag);
 
 #endif  // _PARTICLE_DATA_H_
