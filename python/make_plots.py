@@ -2,10 +2,18 @@
 
 import h5py
 import matplotlib.pyplot as plt
+import sys
+import os
 
-for n in range(200):
+data_dir = sys.argv[1]
+if not os.path.isdir(data_dir):
+    print("Given path is not a directory")
+    exit(0)
+
+for n in range(250):
     # Change data directory!
-    f = h5py.File("../Data/Data20180206-1214/output%06d.h5" % (n * 10))
+    file_path = os.path.join(data_dir, "output%06d.h5" % (n * 20));
+    f = h5py.File(file_path)
 #     E1 = f["E1"]
 #     J1 = f["J1"]
 #     rho_e = f["Rho_e"]
