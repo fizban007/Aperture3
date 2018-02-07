@@ -117,6 +117,10 @@ ConfigFile::parse_file(const std::string& filename) {
         m_data.create_pairs = to_bool(input);
       } else if (word.compare("trace_photons") == 0) {
         m_data.trace_photons = to_bool(input);
+      } else if (word.compare("gamma_thr") == 0) {
+        m_data.gamma_thr = std::atof(input.c_str());
+      } else if (word.compare("photon_path") == 0) {
+        m_data.photon_path = std::atof(input.c_str());
       } else if (word.compare("data_dir") == 0) {
         m_data.data_dir = input;
       } else if (word.compare("data_file_prefix") == 0) {

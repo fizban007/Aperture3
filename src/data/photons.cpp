@@ -1,15 +1,23 @@
 #include "data/photons.h"
 #include "sim_environment.h"
+#include "utils/Logger.h"
 
 namespace Aperture {
 
 Photons::Photons() {}
 
 Photons::Photons(std::size_t max_num)
-    : ParticleBase<single_photon_t>(max_num) {}
+    : ParticleBase<single_photon_t>(max_num) {
+  // No environment provided, all pair creation parameters going to be default
+}
 
 Photons::Photons(const Environment& env)
-    : ParticleBase<single_photon_t>((std::size_t)env.conf().max_photon_number) {}
+    : ParticleBase<single_photon_t>((std::size_t)env.conf().max_photon_number) {
+  create_pairs = env.conf().create_pairs;
+  trace_photons = env.conf().trace_photons;
+  gamma_thr = env.conf().gamma_thr;
+  l_ph = env.conf().photon_path;
+}
 
 Photons::Photons(const Photons& other)
     : ParticleBase<single_photon_t>(other) {}
@@ -41,5 +49,14 @@ Photons::convert_pairs(Particles& electrons, Particles& positrons) {}
 
 void
 Photons::make_pair(Index_t pos, Particles& electrons, Particles& positrons) {}
+
+void
+Photons::emit_photons(const Particles &electrons, const Particles &positrons) {
+  if (!create_pairs)
+    return;
+
+  Logger::print_info("Processing Pair Creation...");
+
+}
 
 }

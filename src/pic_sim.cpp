@@ -74,6 +74,7 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   m_pusher->push(data, dt);
   m_depositer->deposit(data, dt);
   m_field_solver->update_fields(data, dt);
+  data.photons.emit_photons(data.particles[0], data.particles[1]);
 }
 
 }
