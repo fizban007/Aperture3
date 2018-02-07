@@ -55,26 +55,10 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
   c[0] += delta_cell;
   // Logger::print_info("After move, c is {}, x1 is {}", c, ptc.x1[idx]);
 
-  // This controls the boundary condition
-  if (c[0] < mesh.guard[0] || c[0] >= mesh.dims[0] - mesh.guard[0]) {
-    // Move particles to the other end of the box
-    if (m_periodic) {
-      if (c[0] < mesh.guard[0])
-        c[0] += mesh.reduced_dim(0);
-      else
-        c[0] -= mesh.reduced_dim(0);
-      ptc.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
-      ptc.x1[idx] -= (Pos_t)delta_cell;
-    } else {
-      // Erase particles in the guard cell
-      particles.erase(idx);
-    }
-  } else {
-    ptc.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
-    // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
-    ptc.x1[idx] -= (Pos_t)delta_cell;
-    // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
-  }
+  ptc.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
+  // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
+  ptc.x1[idx] -= (Pos_t)delta_cell;
+  // std::cout << ptc.x1[idx] << ", " << ptc.cell[idx] << std::endl;
 }
 
 void
@@ -98,6 +82,32 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
 
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();
       ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
+    }
+  }
+}
+
+void
+ParticlePusher_Geodesic::handle_boundary(SimData &data) {
+  auto& mesh = data.E.grid().mesh();
+  for (auto& ptc : data.particles) {
+    if (ptc.number() > 0) {
+      for (Index_t n = 0; n < ptc.number(); n++) {
+        // This controls the boundary condition
+        auto c = mesh.get_cell_3d(ptc.data().cell[n]);
+        if (c[0] < mesh.guard[0] || c[0] >= mesh.dims[0] - mesh.guard[0]) {
+          // Move particles to the other end of the box
+          if (m_periodic) {
+            if (c[0] < mesh.guard[0])
+              c[0] += mesh.reduced_dim(0);
+            else
+              c[0] -= mesh.reduced_dim(0);
+            ptc.data().cell[n] = mesh.get_idx(c[0], c[1], c[2]);
+          } else {
+            // Erase particles in the guard cell
+            ptc.erase(n);
+          }
+        }
+      }
     }
   }
 }
