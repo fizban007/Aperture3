@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <random>
 #include "data/particles.h"
 
 namespace Aperture {
@@ -34,6 +35,10 @@ class Photons : public ParticleBase<single_photon_t>
   bool trace_photons = false;
   float gamma_thr = 10.0;
   float l_ph = 1.0;
+
+  std::default_random_engine m_generator;
+  std::uniform_real_distribution<float> m_dist;
+
 };
 
 }

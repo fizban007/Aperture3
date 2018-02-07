@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <random>
 #include "commandline_args.h"
 #include "config_file.h"
 #include "data/domain_info.h"
@@ -46,6 +47,8 @@ class Environment {
   void add_output(const std::string& name);
 
   void apply_initial_condition(SimData& data);
+
+  float gen_rand() { return m_dist(m_generator); }
 
   // data access methods
   const CommandArgs& args() const { return m_args; }
@@ -94,6 +97,9 @@ class Environment {
   std::unique_ptr<DataExporter> m_exporter;
   // std::unique_ptr<Logger> m_logger;
   // std::unique_ptr<InitialCondition> m_ic;
+  std::default_random_engine m_generator;
+  std::uniform_real_distribution<float> m_dist;
+
 };  // ----- end of class sim_environment -----
 }  // namespace Aperture
 

@@ -8,12 +8,14 @@ namespace Aperture {
 Photons::Photons() {}
 
 Photons::Photons(std::size_t max_num)
-    : ParticleBase<single_photon_t>(max_num) {
+    : ParticleBase<single_photon_t>(max_num),
+    m_dist(0.0, 1.0) {
   // No environment provided, all pair creation parameters going to be default
 }
 
 Photons::Photons(const Environment& env)
-    : ParticleBase<single_photon_t>((std::size_t)env.conf().max_photon_number) {
+    : ParticleBase<single_photon_t>((std::size_t)env.conf().max_photon_number),
+    m_dist(0.0, 1.0) {
   create_pairs = env.conf().create_pairs;
   trace_photons = env.conf().trace_photons;
   gamma_thr = env.conf().gamma_thr;
@@ -68,9 +70,34 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       if (electrons.data().gamma[n] > gamma_thr) {
         double gamma_f = electrons.data().gamma[n] - E_ph;
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
-        // electrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
-        //                  electrons.data().cell[n],
-        //                  (electrons.check_flag(n, ParticleFlag::tracked) ? ));
+        // track 10% of the secondary particles
+        electrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
+                         electrons.data().cell[n],
+                         ((electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1) ?
+                          (uint32_t)PhotonFlag::tracked : 0));
+        positrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
+                         electrons.data().cell[n],
+                         (electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
+                          (uint32_t)PhotonFlag::tracked : 0));
+        double p_i = std::abs(electrons.data().p1[n]);
+        electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
+      }
+    }
+    for (Index_t n = 0; n < positrons.number(); n++) {
+      if (positrons.data().gamma[n] > gamma_thr) {
+        double gamma_f = positrons.data().gamma[n] - E_ph;
+        double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
+        // track 10% of the secondary particles
+        electrons.append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * p_sec,
+                         positrons.data().cell[n],
+                         ((positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1) ?
+                          (uint32_t)PhotonFlag::tracked : 0));
+        positrons.append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * p_sec,
+                         positrons.data().cell[n],
+                         (positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
+                          (uint32_t)PhotonFlag::tracked : 0));
+        double p_i = std::abs(positrons.data().p1[n]);
+        positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
       }
     }
   } else {

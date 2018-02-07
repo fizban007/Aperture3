@@ -7,7 +7,8 @@
 namespace Aperture {
 
 // Environment&
-Environment::Environment(int* argc, char*** argv) {
+Environment::Environment(int* argc, char*** argv)
+    : m_generator(), m_dist(0.0, 1.0) {
   // m_comm = std::make_unique<MPIComm>(argc, argv);
   // m_comm = std::make_unique<MPIComm>(nullptr, nullptr);
   // std::cout << m_comm->world().rank() << std::endl;
