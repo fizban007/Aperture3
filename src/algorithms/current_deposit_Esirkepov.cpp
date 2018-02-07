@@ -24,11 +24,6 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   if (m_periodic) {
     auto& mesh = data.J.grid().mesh();
     for (int i = 0; i < mesh.guard[0]; i++) {
-      // current
-      data.J(0, i + mesh.reduced_dim(0)) += data.J(0, i);
-      data.J(0, i) = 0.0;
-      data.J(0, 2 * mesh.guard[0] - 1 - i) += data.J(0, mesh.dims[0] - 1 - i);
-      data.J(0, mesh.dims[0] - 1 - i) = 0.0;
       // rho
       for (unsigned int j = 0; j < part.size(); j++) {
         data.Rho[j](i + mesh.reduced_dim(0)) += data.Rho[j](i);
@@ -52,6 +47,16 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   // if (m_comm_J != nullptr) {
   //   m_comm_J(data.J);
   // }
+
+  if (m_periodic) {
+    auto& mesh = data.J.grid().mesh();
+    for (int i = 0; i < mesh.guard[0]; i++) {
+      data.J(0, i + mesh.reduced_dim(0)) += data.J(0, i);
+      data.J(0, i) = 0.0;
+      data.J(0, 2 * mesh.guard[0] - 1 - i) += data.J(0, mesh.dims[0] - 1 - i);
+      data.J(0, mesh.dims[0] - 1 - i) = 0.0;
+    }
+  }
 }
 
 void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
@@ -89,7 +94,7 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
           // double w1_p = interp.interp_cell(x_p[1], c_p[1], j);
           s0 = w0_p;
           // double s00 = w0_p * w1_p;
-          J.data(0)[idx] += charge * (s1 - s0) * grid.mesh().delta[0] / dt;
+          J.data(0)[idx] += -charge * (s1 - s0) * grid.mesh().delta[0] / dt;
         }
         Rho.data()[idx] += charge * s1;
         // Logger::print_info("weights are {}, {}; {}", s0, s1, s1-s0);
