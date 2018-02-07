@@ -93,7 +93,7 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
       // Vec3<Scalar> vE = m_interp.interp_cell(ptc.x[idx].vec3(), grid.);
       auto c = mesh.get_cell_3d(cell);
       // std::cout << c << std::endl;
-      Vec3<Scalar> vE = E.interpolate(c, rel_x, m_order);
+      Vec3<Scalar> vE = E.interpolate(c, rel_x, m_interp);
       // Logger::print_info("in lorentz, c = {}, E = {}, rel_x = {}", c, vE, rel_x);
 
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();

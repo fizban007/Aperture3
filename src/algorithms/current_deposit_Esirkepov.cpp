@@ -63,7 +63,7 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
 void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
                                                  const Particles& particles,
                                                  double dt) {
-  Interpolator interp(m_deposit_order);
+  Interpolator interp(m_interp);
   auto& part = particles.data();
   auto& grid = J.grid();
   auto charge = particles.charge();

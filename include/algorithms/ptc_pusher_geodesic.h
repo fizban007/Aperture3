@@ -23,12 +23,13 @@ class ParticlePusher_Geodesic : public ParticlePusher {
   void move_ptc(Particles& particles, Index_t idx, double x, const Grid& grid,
                 double dt);
 
-  void set_interp_order(int order);
+  void handle_boundary(SimData& data);
+  // void set_interp_order(int order);
 
   // virtual void print() { std::cout << "This is particle pusher" << std::endl; }
 
  private:
-  int m_order = 3;
+  // int m_order = 3;
   // Interpolator m_interp;
   bool m_radiation;
 

@@ -16,6 +16,7 @@ class ParticlePusher {
   virtual ~ParticlePusher() {}
 
   virtual void push(SimData& data, double dt) = 0;
+  virtual void handle_boundary(SimData& data) = 0;
   // virtual void push(Particles& particles, const vfield_t& E, const vfield_t& B, double dt) = 0;
 
   // void register_ptc_comm_callback(const ptc_comm_callback& callback) {
@@ -47,12 +48,18 @@ class ParticlePusher {
     return *this;
   }
 
+  self_type& set_interp_order(int n) {
+    m_interp = n;
+    return *this;
+  }
+
   // virtual void print() = 0;
 
  protected:
   // ptc_comm_callback m_comm;
   bool m_gravity, m_radiation, m_compute_curvature, m_periodic;
   ForceAlgorithm m_algorithm;
+  int m_interp = 1;
 
   // Lorentz_force_Boris m_boris;
   // Lorentz_force_Vay m_vay;

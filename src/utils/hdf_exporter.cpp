@@ -230,7 +230,8 @@ DataExporter::writeConfig(const ConfigFile &config) {
         {"guard", grid.mesh().guard[0]},
         {"lower", grid.mesh().lower[0]},
         {"size", grid.mesh().sizes[0]}
-      }}
+      }},
+    {"interp_order", c.interpolation_order}
   };
 
   std::ofstream o(filename);
