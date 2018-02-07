@@ -40,21 +40,22 @@ int main(int argc, char *argv[])
   std::default_random_engine generator;
   std::uniform_real_distribution<Pos_t> dist(0.0, 1.0);
 
-  for (int i = mesh.guard[0]; i <= mesh.dims[0]-mesh.guard[0]; i++) {
+  for (int i = mesh.guard[0]; i < mesh.dims[0]-mesh.guard[0]; i++) {
     for (int n = 0; n < ppc; n++) {
-      data.particles[0].append(dist(generator), 1.0, i,
+      // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
+      data.particles[0].append(dist(generator), 0.0, i,
                                (dist(generator) < 0.1 ? (int)ParticleFlag::tracked : 0));
-      data.particles[1].append(dist(generator), 0.0, i,
+      data.particles[1].append(dist(generator), 0.1 + 0.00025 * dist(generator), i,
                                (dist(generator) < 0.1 ? (int)ParticleFlag::tracked : 0));
     }
   }
 
   // Setup the background current
   VectorField<Scalar> Jb(grid);
-  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+  for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // x is the staggered position where current is evaluated
     Scalar x = mesh.pos(0, i, true);
-    Jb(0, i) = 0.0;
+    Jb(0, i) = 0.1;
   }
   sim.field_solver().set_background_j(Jb);
 

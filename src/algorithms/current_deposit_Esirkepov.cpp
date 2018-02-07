@@ -56,6 +56,7 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
       data.J(0, 2 * mesh.guard[0] - 1 - i) += data.J(0, mesh.dims[0] - 1 - i);
       data.J(0, mesh.dims[0] - 1 - i) = 0.0;
     }
+    data.J(0, mesh.guard[0] - 1) = data.J(0, mesh.reduced_dim(0) + mesh.guard[0] - 1);
   }
 }
 
