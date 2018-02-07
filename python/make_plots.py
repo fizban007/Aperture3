@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import h5py
 import matplotlib.pyplot as plt
@@ -11,6 +11,7 @@ if not os.path.isdir(data_dir):
     exit(0)
 
 for n in range(250):
+    print(n)
     # Change data directory!
     file_path = os.path.join(data_dir, "output%06d.h5" % (n * 20));
     f = h5py.File(file_path)
