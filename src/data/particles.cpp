@@ -72,4 +72,10 @@ Particles::append(Pos_t x, Scalar p, int cell, int flag) {
   put(m_number, x, p, cell, flag);
 }
 
+void
+Particles::sort(const Grid& grid) {
+  if (m_number > 0)
+    partition_and_sort(m_partition, grid, 8);
+}
+
 }

@@ -79,9 +79,10 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   m_field_solver->update_fields(data, dt);
   data.photons.emit_photons(data.particles[0], data.particles[1]);
 
+  // Sort the particles every 20 timesteps to move empty slots to the back
   if ((step % 20) == 0) {
     for (auto& part : data.particles) {
-      // part.
+      part.sort(data.E.grid());
     }
   }
 }

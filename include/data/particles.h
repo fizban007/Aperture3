@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include "data/particle_base.h"
+#include "data/grid.h"
 #include "constant_defs.h"
 // #include "sim_environment.h"
 
@@ -48,6 +49,7 @@ class Particles : public ParticleBase<single_particle_t>
   // // into the bulk part, and those that needs to be communicated out
   // void partition(std::vector<Index_t>& partitions, const Grid& grid);
   // void clear_guard_cells(const Grid& grid);
+  void sort(const Grid& grid);
 
   // particle_data& data() { return m_data; }
   // const particle_data& data() const { return m_data; }
@@ -73,6 +75,7 @@ class Particles : public ParticleBase<single_particle_t>
   ParticleType m_type;
   Scalar m_charge = 1.0;
   Scalar m_mass = 1.0;
+  std::vector<Index_t> m_partition;
 
   // std::vector<Index_t> m_index;
 }; // ----- end of class Particles : public ParticleBase -----
