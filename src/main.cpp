@@ -79,10 +79,10 @@ int main(int argc, char *argv[])
     Logger::print_info("At time step {}", step);
     double time = step * env.conf().delta_t;
 
-    sim.step(data, step);
-
     if (step % env.args().data_interval() == 0)
       env.exporter().WriteOutput(step, time);
+
+    sim.step(data, step);
   }
   return 0;
 }
