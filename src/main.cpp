@@ -34,15 +34,33 @@ int main(int argc, char *argv[])
   PICSim sim(env);
   auto &grid = data.E.grid();
   auto &mesh = grid.mesh();
-  int ppc = 10;
+  int ppc = 30;
 
   // Setup the initial condition of the simulation
-  for (int i = mesh.guard[0]; i < mesh.dims[0]-mesh.guard[0]; i++) {
-    data.particles[0].append(env.gen_rand(), 0.0, i,
+  for (int i = mesh.guard[0]; i < mesh.dims[0] / 4; i++) {
+    data.particles[1].append(env.gen_rand(), 0.1, i,
                              (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
     for (int n = 0; n < ppc; n++) {
       // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
-      data.particles[1].append(env.gen_rand(), 0.1 + 0.00025 * env.gen_rand(), i,
+      data.particles[0].append(env.gen_rand(), -0.9, i,
+                               (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+    }
+  }
+
+
+  for (int i = mesh.dims[0] / 4; i < mesh.dims[0] * 3/ 4; i++) {
+    data.particles[0].append(env.gen_rand(), 0.0, i,
+                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+    data.particles[1].append(env.gen_rand(), 0.0, i,
+                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+  }
+
+  for (int i = mesh.dims[0] * 3 / 4; i < mesh.dims[0]-mesh.guard[0]; i++) {
+    data.particles[0].append(env.gen_rand(), -0.1, i,
+                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+    for (int n = 0; n < ppc; n++) {
+      // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
+      data.particles[1].append(env.gen_rand(), 0.9, i,
                                (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
     }
   }
@@ -52,7 +70,8 @@ int main(int argc, char *argv[])
   for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // x is the staggered position where current is evaluated
     Scalar x = mesh.pos(0, i, true);
-    Jb(0, i) = 1.0;
+    // Jb(0, i) = 1.0 + 9.0 * sin(CONST_PI * x / mesh.sizes[0]);
+    Jb(0, i) = 5.0;
   }
   sim.field_solver().set_background_j(Jb);
 
@@ -63,6 +82,8 @@ int main(int argc, char *argv[])
   env.exporter().AddArray("Rho_p", data.Rho[1].data());
   env.exporter().AddParticleArray("Electrons", data.particles[0]);
   env.exporter().AddParticleArray("Positrons", data.particles[1]);
+  if (env.conf().trace_photons)
+    env.exporter().AddParticleArray("Photons", data.photons);
   env.exporter().setGrid(grid);
   env.exporter().writeConfig(env.conf_file());
 
