@@ -76,16 +76,27 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   // TODO: add particle logic
   m_pusher->push(data, dt);
   m_depositer->deposit(data, dt);
-  m_pusher->handle_boundary(data);
   m_field_solver->update_fields(data, dt);
   data.photons.emit_photons(data.particles[0], data.particles[1]);
+  data.photons.move(data.E.grid(), dt);
+  data.photons.convert_pairs(data.particles[0], data.particles[1]);
+
+  auto& mesh = data.E.grid().mesh();
+  // Logger::print_info("J at boundary 1: {} | {} | {} | {}", data.J(0, 1),
+  //                    data.J(0, 2), data.J(0, 3), data.J(0, 4));
+  // Logger::print_info("J at boundary 2: {} | {} | {} | {}", data.J(0, 0),
+  //                    data.J(0, 1), data.J(0, 2), data.J(0, 3));
 
   // Sort the particles every 20 timesteps to move empty slots to the back
   if ((step % 20) == 0) {
     for (auto& part : data.particles) {
       part.sort(data.E.grid());
     }
+    data.photons.sort(data.E.grid());
   }
+  m_pusher->handle_boundary(data);
+  Logger::print_info("There are {} electrons in the pool", data.particles[0].number());
+  Logger::print_info("There are {} positrons in the pool", data.particles[1].number());
 }
 
 }

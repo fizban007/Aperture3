@@ -31,7 +31,7 @@ Photons::Photons(Photons&& other)
 Photons::~Photons() {}
 
 void
-Photons::put(std::size_t pos, Pos_t x, Scalar p, int cell, int flag) {
+Photons::put(std::size_t pos, Pos_t x, Scalar p, Scalar path_left, int cell, int flag) {
   if (pos >= m_numMax)
     throw std::runtime_error("Trying to insert photon beyond the end of the array. Resize it first!");
 
@@ -39,12 +39,13 @@ Photons::put(std::size_t pos, Pos_t x, Scalar p, int cell, int flag) {
   m_data.p1[pos] = p;
   m_data.cell[pos] = cell;
   m_data.flag[pos] = flag;
+  m_data.path_left[pos] = path_left;
   if (pos >= m_number) m_number = pos + 1;
 }
 
 void
-Photons::append(Pos_t x, Scalar p, int cell, int flag) {
-  put(m_number, x, p, cell, flag);
+Photons::append(Pos_t x, Scalar p, Scalar path_left, int cell, int flag) {
+  put(m_number, x, p, path_left, cell, flag);
 }
 
 void
@@ -52,11 +53,35 @@ Photons::convert_pairs(Particles& electrons, Particles& positrons) {
   if (!create_pairs || !trace_photons)
     return;
 
+  if (m_number <= 0)
+    return;
 
+  for (Index_t idx = 0; idx < m_number; idx++) {
+    if (is_empty(idx))
+      continue;
+
+    if (m_data.path_left[idx] < 0.0) {
+      double E_ph = std::abs(m_data.p1[idx]);
+      double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
+      
+      electrons.append(m_data.x1[idx], sgn(m_data.p1[idx]) * p_sec, m_data.cell[idx],
+                       (check_flag(idx, PhotonFlag::tracked) ? (uint32_t)ParticleFlag::tracked : 0));
+      positrons.append(m_data.x1[idx], sgn(m_data.p1[idx]) * p_sec, m_data.cell[idx],
+                       (check_flag(idx, PhotonFlag::tracked) ? (uint32_t)ParticleFlag::tracked : 0));
+      erase(idx);
+    }
+  }
 }
 
 void
-Photons::make_pair(Index_t pos, Particles& electrons, Particles& positrons) {}
+Photons::make_pair(Index_t pos, Particles& electrons, Particles& positrons) {
+}
+
+void
+Photons::sort(const Grid& grid) {
+  if (m_number > 0)
+    partition_and_sort(m_partition, grid, 8);
+}
 
 void
 Photons::emit_photons(Particles &electrons, Particles &positrons) {
@@ -64,30 +89,41 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
     return;
   double E_ph = 3.0;
   Logger::print_info("Processing Pair Creation...");
-  if (!trace_photons) {
-    // instant pair creation
-    for (Index_t n = 0; n < electrons.number(); n++) {
-      if (electrons.data().gamma[n] > gamma_thr) {
-        double gamma_f = electrons.data().gamma[n] - E_ph;
+  // instant pair creation
+  for (Index_t n = 0; n < electrons.number(); n++) {
+    if (electrons.is_empty(n))
+      continue;
+    if (electrons.data().gamma[n] > gamma_thr) {
+      double gamma_f = electrons.data().gamma[n] - E_ph;
+      // track 10% of the secondary particles and photons
+      if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
-        // track 10% of the secondary particles
         electrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
                          electrons.data().cell[n],
                          ((electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1) ?
-                          (uint32_t)PhotonFlag::tracked : 0));
+                          (uint32_t)ParticleFlag::tracked : 0));
         positrons.append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * p_sec,
                          electrons.data().cell[n],
                          (electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
-                          (uint32_t)PhotonFlag::tracked : 0));
-        double p_i = std::abs(electrons.data().p1[n]);
-        electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
+                          (uint32_t)ParticleFlag::tracked : 0));
+      } else {
+        append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * E_ph, l_ph,
+               electrons.data().cell[n],
+               (electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
+                (uint32_t)PhotonFlag::tracked : 0));
       }
+      double p_i = std::abs(electrons.data().p1[n]);
+      electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
     }
-    for (Index_t n = 0; n < positrons.number(); n++) {
-      if (positrons.data().gamma[n] > gamma_thr) {
-        double gamma_f = positrons.data().gamma[n] - E_ph;
-        double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
-        // track 10% of the secondary particles
+  }
+  for (Index_t n = 0; n < positrons.number(); n++) {
+    if (positrons.is_empty(n))
+      continue;
+    if (positrons.data().gamma[n] > gamma_thr) {
+      double gamma_f = positrons.data().gamma[n] - E_ph;
+      double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
+      // track 10% of the secondary particles
+      if (!trace_photons) {
         electrons.append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * p_sec,
                          positrons.data().cell[n],
                          ((positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1) ?
@@ -96,12 +132,41 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
                          positrons.data().cell[n],
                          (positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
                           (uint32_t)PhotonFlag::tracked : 0));
-        double p_i = std::abs(positrons.data().p1[n]);
-        positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
+      } else {
+        append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * E_ph, l_ph,
+               positrons.data().cell[n],
+               (positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < 0.1 ?
+                (uint32_t)PhotonFlag::tracked : 0));
       }
+      double p_i = std::abs(positrons.data().p1[n]);
+      positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
     }
-  } else {
-    // create photons and then have them convert to pairs
+  }
+  Logger::print_info("There are now {} photons in the pool", m_number);
+}
+
+void
+Photons::move(const Grid& grid, double dt) {
+  auto& mesh = grid.mesh();
+
+  for (Index_t idx = 0; idx < m_number; idx++) {
+    if (is_empty(idx))
+      continue;
+    int cell = m_data.cell[idx];
+
+    m_data.x1[idx] += sgn(m_data.p1[idx]) * dt / mesh.delta[0];
+    m_data.path_left[idx] -= dt;
+    // Compute the change in particle cell
+    auto c = mesh.get_cell_3d(cell);
+    int delta_cell = (int)std::floor(m_data.x1[idx]);
+    // std::cout << delta_cell << std::endl;
+    c[0] += delta_cell;
+    // Logger::print_info("After move, c is {}, x1 is {}", c, m_data.x1[idx]);
+
+    m_data.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
+    // std::cout << m_data.x1[idx] << ", " << m_data.cell[idx] << std::endl;
+    m_data.x1[idx] -= (Pos_t)delta_cell;
+    // std::cout << m_data.x1[idx] << ", " << m_data.cell[idx] << std::endl;
   }
 }
 
