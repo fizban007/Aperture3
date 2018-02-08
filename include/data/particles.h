@@ -60,8 +60,8 @@ class Particles : public ParticleBase<single_particle_t>
   void set_charge(Scalar charge) { m_charge = charge; }
   void set_mass(Scalar mass) { m_mass = mass; }
   void track(Index_t pos) { m_data.flag[pos] |= (int)ParticleFlag::tracked; }
-  bool check_flag(Index_t pos, ParticleFlag flag) const { return (m_data.flag[pos] & (int)flag) == (int)flag; }
-  void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (int)flag; }
+  bool check_flag(Index_t pos, ParticleFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
+  void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
 
   // The upper 16 bits represent the rank the particle is born
   // int tag_rank(Index_t idx) { return (m_data.tag_id[idx] >> 16); }
