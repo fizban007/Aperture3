@@ -26,6 +26,8 @@ class ParticlePusher_Geodesic : public ParticlePusher {
   void handle_boundary(SimData& data);
   // void set_interp_order(int order);
 
+  void extra_force(Particles& particles, Index_t idx, double x, const Grid& grid,
+                   double dt);
   // virtual void print() { std::cout << "This is particle pusher" << std::endl; }
 
  private:

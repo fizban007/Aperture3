@@ -29,6 +29,7 @@ ParticlePusher_Geodesic::push(SimData& data, double dt) {
       //                    ptc.cell[idx], x);
 
       lorentz_push(particles, idx, x, data.E, data.B, dt);
+      extra_force(particles, idx, x, grid, dt);
       move_ptc(particles, idx, x, grid, dt);
     }
   }
@@ -104,12 +105,25 @@ ParticlePusher_Geodesic::handle_boundary(SimData &data) {
             ptc.data().cell[n] = mesh.get_idx(c[0], c[1], c[2]);
           } else {
             // Erase particles in the guard cell
+            if (c[0] <= 1 || c[0] >= mesh.dims[0] - 2)
             ptc.erase(n);
           }
         }
       }
     }
   }
+}
+
+void
+ParticlePusher_Geodesic::extra_force(Particles &particles, Index_t idx, double x, const Grid &grid, double dt) {
+  auto& ptc = particles.data();
+
+  auto& mesh = grid.mesh();
+
+  double g0 = 0.0;
+  double f = (2.0 * x / mesh.sizes[0] - 1.0);
+  double g = g0 * f * f * f;
+  ptc.p1[idx] += g * particles.mass() * dt;
 }
 
 }  // namespace Aperture

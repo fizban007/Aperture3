@@ -48,8 +48,8 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   //   m_comm_J(data.J);
   // }
 
+  auto& mesh = data.J.grid().mesh();
   if (m_periodic) {
-    auto& mesh = data.J.grid().mesh();
     for (int i = 0; i < mesh.guard[0]; i++) {
       data.J(0, i + mesh.reduced_dim(0)) += data.J(0, i);
       data.J(0, i) = 0.0;
@@ -57,6 +57,15 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
       data.J(0, mesh.dims[0] - 1 - i) = 0.0;
     }
     data.J(0, mesh.guard[0] - 1) = data.J(0, mesh.reduced_dim(0) + mesh.guard[0] - 1);
+  } else {
+    // for (int i = 0; i < mesh.guard[0] - 1; i++) {
+    //   data.J(0, mesh.guard[0] - 1) += data.J(0, i);
+    //   data.J(0, i) = 0.0;
+    // }
+    // for (int i = 0; i < mesh.guard[0]; i++) {
+    //   data.J(0, mesh.dims[0] - mesh.guard[0] - 1) += data.J(0, mesh.dims[0] - 1 - i);
+    //   data.J(0, mesh.dims[0] - 1 - i) = 0.0;
+    // }
   }
 }
 
