@@ -97,16 +97,17 @@ void CurrentDepositer_Esirkepov::split_delta_rho(vfield& J, sfield& Rho,
         double w0 = interp.interp_cell(x, c, i);
         s1 = w0;
         // This is kinda redundant
-        int idx = grid.mesh().get_idx(i);
+        // int idx = grid.mesh().get_idx(i);
+        // assert(idx < grid.mesh().dims[0] && idx >= 0);
 
         if (!check_bit(part.flag[n], ParticleFlag::ignore_current)) {
           double w0_p = interp.interp_cell(x_p, c_p, i);
           // double w1_p = interp.interp_cell(x_p[1], c_p[1], j);
           s0 = w0_p;
           // double s00 = w0_p * w1_p;
-          J.data(0)[idx] += -charge * (s1 - s0) * grid.mesh().delta[0] / dt;
+          J(0, i) += -charge * (s1 - s0) * grid.mesh().delta[0] / dt;
         }
-        Rho.data()[idx] += charge * s1;
+        Rho(i) += charge * s1;
         // Logger::print_info("weights are {}, {}; {}", s0, s1, s1-s0);
       }
     }
