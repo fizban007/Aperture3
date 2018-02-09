@@ -105,13 +105,35 @@ ParticlePusher_Geodesic::handle_boundary(SimData &data) {
             ptc.data().cell[n] = mesh.get_idx(c[0], c[1], c[2]);
           } else {
             // Erase particles in the guard cell
-            if (c[0] <= 1 || c[0] >= mesh.dims[0] - 2)
+            if (c[0] <= 2 || c[0] >= mesh.dims[0] - 3)
             ptc.erase(n);
           }
         }
       }
     }
   }
+  auto& ptc = data.photons;
+  if (ptc.number() > 0) {
+    for (Index_t n = 0; n < ptc.number(); n++) {
+      // This controls the boundary condition
+      auto c = mesh.get_cell_3d(ptc.data().cell[n]);
+      if (c[0] < mesh.guard[0] || c[0] >= mesh.dims[0] - mesh.guard[0]) {
+        // Move particles to the other end of the box
+        if (m_periodic) {
+          if (c[0] < mesh.guard[0])
+            c[0] += mesh.reduced_dim(0);
+          else
+            c[0] -= mesh.reduced_dim(0);
+          ptc.data().cell[n] = mesh.get_idx(c[0], c[1], c[2]);
+        } else {
+          // Erase particles in the guard cell
+          if (c[0] <= 2 || c[0] >= mesh.dims[0] - 3)
+            ptc.erase(n);
+        }
+      }
+    }
+  }
+
 }
 
 void
