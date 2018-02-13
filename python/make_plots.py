@@ -18,7 +18,7 @@ for n in range(1000):
     print(n)
     # Change data directory!
     file_path = os.path.join(data_dir, "output%06d.h5" % (n * 100));
-    f = h5py.File(file_path)
+    f = h5py.File(file_path, 'r', swmr=True)
     conf = json.load(open(os.path.join(data_dir, "config.json")));
 #     E1 = f["E1"]
 #     J1 = f["J1"]
