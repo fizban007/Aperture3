@@ -97,6 +97,20 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   m_pusher->handle_boundary(data);
   Logger::print_info("There are {} electrons in the pool", data.particles[0].number());
   Logger::print_info("There are {} positrons in the pool", data.particles[1].number());
+
+  uint32_t total_tracked_e = 0;
+  uint32_t total_tracked_ph = 0;
+  for (Index_t idx = 0; idx < data.particles[0].number(); idx++) {
+    if (!data.particles[0].is_empty(idx) && data.particles[0].check_flag(idx, ParticleFlag::tracked))
+      total_tracked_e += 1;
+  }
+  for (Index_t idx = 0; idx < data.photons.number(); idx++) {
+    if (!data.photons.is_empty(idx) && data.photons.check_flag(idx, PhotonFlag::tracked))
+      total_tracked_ph += 1;
+  }
+  Logger::print_info("{} electrons are tracked", total_tracked_e);
+  Logger::print_info("{} photons are tracked", total_tracked_ph);
+
 }
 
 }
