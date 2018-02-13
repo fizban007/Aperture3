@@ -121,6 +121,8 @@ ConfigFile::parse_file(const std::string& filename) {
         m_data.gamma_thr = std::atof(input.c_str());
       } else if (word.compare("photon_path") == 0) {
         m_data.photon_path = std::atof(input.c_str());
+      } else if (word.compare("track_percent") == 0) {
+        m_data.track_percent = std::atof(input.c_str());
       } else if (word.compare("data_dir") == 0) {
         m_data.data_dir = input;
       } else if (word.compare("data_file_prefix") == 0) {

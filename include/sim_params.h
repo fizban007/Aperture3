@@ -47,6 +47,7 @@ struct SimParams {
   bool          annih_on          = false;
   int           annih_thr         = 1000;
   float         annih_fraction    = 0.01;
+  float         track_percent     = 0.2;
 
   std::array<std::string, 3> grid_config;
   std::array<std::string, 3> data_grid_config;
