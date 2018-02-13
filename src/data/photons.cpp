@@ -88,7 +88,7 @@ void
 Photons::emit_photons(Particles &electrons, Particles &positrons) {
   if (!create_pairs)
     return;
-  double E_ph = 3.0;
+  double E_ph = 10.0;
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {

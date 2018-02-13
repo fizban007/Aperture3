@@ -127,8 +127,7 @@ ParticlePusher_Geodesic::handle_boundary(SimData &data) {
           ptc.data().cell[n] = mesh.get_idx(c[0], c[1], c[2]);
         } else {
           // Erase particles in the guard cell
-          if (c[0] <= 2 || c[0] >= mesh.dims[0] - 3)
-            ptc.erase(n);
+          ptc.erase(n);
         }
       }
     }
@@ -142,7 +141,7 @@ ParticlePusher_Geodesic::extra_force(Particles &particles, Index_t idx, double x
 
   auto& mesh = grid.mesh();
 
-  double g0 = 0.0;
+  double g0 = 0.2;
   double f = (2.0 * x / mesh.sizes[0] - 1.0);
   double g = g0 * f * f * f;
   ptc.p1[idx] += g * particles.mass() * dt;

@@ -3,6 +3,7 @@
 #include "sim_environment.h"
 #include "sim_data.h"
 #include "pic_sim.h"
+#include "utils/util_functions.h"
 
 using namespace Aperture;
 
@@ -34,34 +35,52 @@ int main(int argc, char *argv[])
   PICSim sim(env);
   auto &grid = data.E.grid();
   auto &mesh = grid.mesh();
-  int ppc = 30;
+  int ppc = 5;
 
   // Setup the initial condition of the simulation
-  for (int i = mesh.guard[0]; i < mesh.dims[0] / 4; i++) {
-    data.particles[1].append(env.gen_rand(), 0.1, i,
-                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
-    for (int n = 0; n < ppc; n++) {
-      // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
-      data.particles[0].append(env.gen_rand(), -0.9, i,
-                               (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+  // for (int i = mesh.guard[0]; i < mesh.dims[0] / 4; i++) {
+  //   data.particles[1].append(env.gen_rand(), 0.0, i,
+  //                            (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  //   for (int n = 0; n < ppc; n++) {
+  //     // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
+  //     data.particles[0].append(env.gen_rand(), -1.0, i,
+  //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  //   }
+  // }
+
+
+  // for (int i = mesh.dims[0] / 4; i < mesh.dims[0] * 3/ 4; i++) {
+  //   data.particles[0].append(env.gen_rand(), 0.0, i,
+  //                            (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  //   data.particles[1].append(env.gen_rand(), 0.0, i,
+  //                            (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  // }
+
+  // for (int i = mesh.dims[0] * 3 / 4; i < mesh.dims[0]-mesh.guard[0]; i++) {
+  //   data.particles[0].append(env.gen_rand(), 0.0, i,
+  //                            (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  //   for (int n = 0; n < ppc; n++) {
+  //     // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
+  //     data.particles[1].append(env.gen_rand(), 1.0, i,
+  //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+  //   }
+  // }
+  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+    double rho = (double)ppc * (2.0 * i / (double)mesh.reduced_dim(0) - 1.0) + 1.0;
+    for (int n = 0; n < ppc * 5; n++) {
+      data.particles[0].append(env.gen_rand(), 1.0 * sgn(rho - 2.0), i,
+                               (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+      data.particles[1].append(env.gen_rand(), 1.0 * sgn(rho - 2.0), i,
+                               (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
     }
-  }
 
-
-  for (int i = mesh.dims[0] / 4; i < mesh.dims[0] * 3/ 4; i++) {
-    data.particles[0].append(env.gen_rand(), 0.0, i,
-                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
-    data.particles[1].append(env.gen_rand(), 0.0, i,
-                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
-  }
-
-  for (int i = mesh.dims[0] * 3 / 4; i < mesh.dims[0]-mesh.guard[0]; i++) {
-    data.particles[0].append(env.gen_rand(), -0.1, i,
-                             (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
-    for (int n = 0; n < ppc; n++) {
-      // data.particles[0].append(dist(generator), 0.99 + 0.02 * dist(generator), i,
-      data.particles[1].append(env.gen_rand(), 0.9, i,
-                               (env.gen_rand() < 0.1 ? (int)ParticleFlag::tracked : 0));
+    for (int n = 0; n < std::abs(rho); n++) {
+      if (rho < 0)
+        data.particles[0].append(env.gen_rand(), 0.0, i,
+                                 (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+      else
+        data.particles[1].append(env.gen_rand(), 0.0, i,
+                                 (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
     }
   }
 
@@ -71,7 +90,7 @@ int main(int argc, char *argv[])
     // x is the staggered position where current is evaluated
     Scalar x = mesh.pos(0, i, true);
     // Jb(0, i) = 1.0 + 9.0 * sin(CONST_PI * x / mesh.sizes[0]);
-    Jb(0, i) = 5.0;
+    Jb(0, i) = 10.0;
   }
   sim.field_solver().set_background_j(Jb);
 
