@@ -65,7 +65,7 @@ Photons::convert_pairs(Particles& electrons, Particles& positrons) {
     if (m_data.path_left[idx] < 0.0) {
       double E_ph = std::abs(m_data.p1[idx]);
       double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
-      
+
       electrons.append(m_data.x1[idx], sgn(m_data.p1[idx]) * p_sec, m_data.cell[idx],
                        (check_flag(idx, PhotonFlag::tracked) ? (uint32_t)ParticleFlag::tracked : 0));
       positrons.append(m_data.x1[idx], sgn(m_data.p1[idx]) * p_sec, m_data.cell[idx],
@@ -73,10 +73,6 @@ Photons::convert_pairs(Particles& electrons, Particles& positrons) {
       erase(idx);
     }
   }
-}
-
-void
-Photons::make_pair(Index_t pos, Particles& electrons, Particles& positrons) {
 }
 
 void
