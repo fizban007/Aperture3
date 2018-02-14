@@ -43,6 +43,7 @@ struct SimParams {
   bool        trace_photons       = false;
   float       gamma_thr           = 20.0;
   float       photon_path         = 1.0;
+  float       ic_path             = 1.0;
 
   bool          annih_on          = false;
   int           annih_thr         = 1000;

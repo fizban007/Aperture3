@@ -20,6 +20,7 @@ Photons::Photons(const Environment& env)
   trace_photons = env.conf().trace_photons;
   gamma_thr = env.conf().gamma_thr;
   l_ph = env.conf().photon_path;
+  p_ic = env.conf().delta_t / env.conf().ic_path;
   track_pct = env.conf().track_percent;
 }
 
@@ -95,6 +96,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
     if (electrons.is_empty(n))
       continue;
     if (electrons.data().gamma[n] > gamma_thr) {
+      if (m_dist(m_generator) < p_ic)
+        continue;
       double gamma_f = electrons.data().gamma[n] - E_ph;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {

@@ -232,7 +232,8 @@ DataExporter::writeConfig(const ConfigFile &config) {
         {"size", grid.mesh().sizes[0]}
       }},
     {"interp_order", c.interpolation_order},
-    {"track_pct", c.track_percent}
+    {"track_pct", c.track_percent},
+    {"ic_path", c.ic_path}
   };
 
   std::ofstream o(filename);
