@@ -85,14 +85,14 @@ void
 Photons::emit_photons(Particles &electrons, Particles &positrons) {
   if (!create_pairs)
     return;
-  double E_ph = 10.0;
+  double E_ph = 40.0;
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
     if (electrons.is_empty(n))
       continue;
     if (electrons.data().gamma[n] > gamma_thr) {
-      if (m_dist(m_generator) < p_ic)
+      if (m_dist(m_generator) > p_ic)
         continue;
       double gamma_f = electrons.data().gamma[n] - E_ph;
       // track a fraction of the secondary particles and photons
@@ -118,10 +118,12 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
     if (positrons.is_empty(n))
       continue;
     if (positrons.data().gamma[n] > gamma_thr) {
+      if (m_dist(m_generator) > p_ic)
+        continue;
       double gamma_f = positrons.data().gamma[n] - E_ph;
-      double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
       // track 10% of the secondary particles
       if (!trace_photons) {
+        double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
         electrons.append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * p_sec,
                          positrons.data().cell[n],
                          ((m_dist(m_generator) < track_pct) ? (uint32_t)ParticleFlag::tracked : 0));
