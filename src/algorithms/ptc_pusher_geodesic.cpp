@@ -141,10 +141,19 @@ ParticlePusher_Geodesic::extra_force(Particles &particles, Index_t idx, double x
 
   auto& mesh = grid.mesh();
 
-  double g0 = 0.01;
-  double f = (2.0 * x / mesh.sizes[0] - 1.0);
-  double g = g0 * f * f * f;
+  // Add fake light surfaces
+  // if (x < 0.1 * mesh.sizes[0] && ptc.p1[idx] > 0) {
+  //   // repel like crazy
+  //   ptc.p1[idx] = 0.0;
+  // } else if (x > 0.9 * mesh.sizes[0] && ptc.p1[idx] < 0) {
+  //   ptc.p1[idx] = 0.0;
+  // }
+
+  double g0 = 0.0;
+  double f = (2.0 * x / mesh.sizes[0] - 1.3);
+  double g = g0 * f;
   ptc.p1[idx] += g * particles.mass() * dt;
+
 }
 
 }  // namespace Aperture

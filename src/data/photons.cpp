@@ -85,15 +85,19 @@ void
 Photons::emit_photons(Particles &electrons, Particles &positrons) {
   if (!create_pairs)
     return;
-  double E_ph = 40.0;
+  // This is assuming not in KN regime
+  double E_ph = 20.0;
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
     if (electrons.is_empty(n))
       continue;
-    if (electrons.data().gamma[n] > gamma_thr) {
-      if (m_dist(m_generator) > p_ic)
+    float gamma_ratio = electrons.data().gamma[n] / gamma_thr;
+    if (gamma_ratio > 1.0) {
+      if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
+      // Assuming in KN regime, the photon takes 9/10 of the original energy
+      // E_ph = 0.95 * electrons.data().gamma[n];
       double gamma_f = electrons.data().gamma[n] - E_ph;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
@@ -117,9 +121,12 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
   for (Index_t n = 0; n < positrons.number(); n++) {
     if (positrons.is_empty(n))
       continue;
-    if (positrons.data().gamma[n] > gamma_thr) {
-      if (m_dist(m_generator) > p_ic)
+    float gamma_ratio = positrons.data().gamma[n] / gamma_thr;
+    if (gamma_ratio > 1.0) {
+      if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
+      // Assuming in KN regime, the photon takes 9/10 of the original energy
+      // E_ph = 0.95 * positrons.data().gamma[n];
       double gamma_f = positrons.data().gamma[n] - E_ph;
       // track 10% of the secondary particles
       if (!trace_photons) {

@@ -30,6 +30,7 @@ void
 FieldSolver_Integral::update_fields(Aperture::SimData &data, double dt,
                                     double time) {
   update_fields(data.E, data.B, data.J, dt, time);
+  data.B.addBy(data.E);
 }
 
 void

@@ -12,6 +12,7 @@
 namespace Aperture {
 
 class ConfigFile;
+class CommandArgs;
 
 template <typename T>
 struct dataset {
@@ -54,7 +55,7 @@ class DataExporter
   void CopyMain();
 
   void setGrid(const Grid& g) { grid = g; }
-  void writeConfig(const ConfigFile& config);
+  void writeConfig(const ConfigFile& config, const CommandArgs& args);
 
  private:
   std::string outputDirectory;  //!< Sets the directory of all the data files

@@ -65,12 +65,23 @@ int main(int argc, char *argv[])
   //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
   //   }
   // }
+  double jb = 10.0;
+  double initial_M = 4.0;
   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-    double rho = (double)ppc * (2.0 * i / (double)mesh.reduced_dim(0) - 1.0) + 1.0;
-    for (int n = 0; n < ppc * 5; n++) {
-      data.particles[0].append(env.gen_rand(), 10.0 * sgn(rho - 2.0), i,
+    // double rho = (double)ppc * 0.2 * (2.0 * i / (double)mesh.reduced_dim(0) - 0.7);
+    double rho = jb * (0.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
+    // double rho = jb * 0.5 * (1.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
+    // double rho = (double)ppc * 0.2 * cos(2.0 * acos(-1.0) * i / (double)mesh.reduced_dim(0));
+    // double rho = 0.0;
+    // if (i < 0.5 * (mesh.guard[0] + mesh.reduced_dim(0)))
+    //   rho = (double)ppc * 0.2 * (1.0 - 1.8 * i / (double)mesh.reduced_dim(0));
+    // else
+    //   rho = (double)ppc * 0.2 * (1.8 * i / (double)mesh.reduced_dim(0) - 0.8);
+    // for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e-std::abs(rho)); n++) {
+    for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e); n++) {
+      data.particles[0].append(env.gen_rand(), 5.0 * sgn(2.0 * i / mesh.reduced_dim(0) - 1.3), i,
                                (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
-      data.particles[1].append(env.gen_rand(), 10.0 * sgn(rho - 2.0), i,
+      data.particles[1].append(env.gen_rand(), 5.0 * sgn(2.0 * i / mesh.reduced_dim(0) - 1.3), i,
                                (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
     }
 
@@ -88,23 +99,28 @@ int main(int argc, char *argv[])
   VectorField<Scalar> Jb(grid);
   for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // x is the staggered position where current is evaluated
-    Scalar x = mesh.pos(0, i, true);
+    // Scalar x = mesh.pos(0, i, true);
     // Jb(0, i) = 1.0 + 9.0 * sin(CONST_PI * x / mesh.sizes[0]);
-    Jb(0, i) = 5.0;
+    Jb(0, i) = jb;
   }
   sim.field_solver().set_background_j(Jb);
 
   // Initialize data output
   env.exporter().AddArray("E1", data.E, 0);
+  env.exporter().AddArray("E1avg", data.B, 0);
   env.exporter().AddArray("J1", data.J, 0);
   env.exporter().AddArray("Rho_e", data.Rho[0].data());
   env.exporter().AddArray("Rho_p", data.Rho[1].data());
+  env.exporter().AddArray("Rho_e_avg", data.Rho_avg[0].data());
+  env.exporter().AddArray("Rho_p_avg", data.Rho_avg[1].data());
+  env.exporter().AddArray("J_e_avg", data.J_avg[0].data());
+  env.exporter().AddArray("J_p_avg", data.J_avg[1].data());
   env.exporter().AddParticleArray("Electrons", data.particles[0]);
   env.exporter().AddParticleArray("Positrons", data.particles[1]);
   if (env.conf().trace_photons)
     env.exporter().AddParticleArray("Photons", data.photons);
   env.exporter().setGrid(grid);
-  env.exporter().writeConfig(env.conf_file());
+  env.exporter().writeConfig(env.conf_file(), env.args());
 
   // Some more debug output
   Logger::print_info("There are {} electrons in the initial setup", data.particles[0].number());
@@ -117,10 +133,26 @@ int main(int argc, char *argv[])
     Logger::print_info("At time step {}", step);
     double time = step * env.conf().delta_t;
 
-    if (step % env.args().data_interval() == 0)
+    if (step % env.args().data_interval() == 0) {
+      double factor = 1.0 / env.args().data_interval();
+      data.B.multiplyBy(factor);
+      data.Rho_avg[0].multiplyBy(factor);
+      data.Rho_avg[1].multiplyBy(factor);
+      data.J_avg[0].multiplyBy(factor);
+      data.J_avg[1].multiplyBy(factor);
       env.exporter().WriteOutput(step, time);
+      data.B.initialize();
+      data.Rho_avg[0].initialize();
+      data.Rho_avg[1].initialize();
+      data.J_avg[0].initialize();
+      data.J_avg[1].initialize();
+    }
 
     sim.step(data, step);
+    data.Rho_avg[0].addBy(data.Rho[0]);
+    data.Rho_avg[1].addBy(data.Rho[1]);
+    data.J_avg[0].addBy(data.J_s[0]);
+    data.J_avg[1].addBy(data.J_s[1]);
   }
   return 0;
 }

@@ -8,10 +8,9 @@ namespace Aperture {
 //   initialize(env);
 // }
 
-SimData::SimData(const Environment& env) :
-    env(env), E(env.local_grid()),
+SimData::SimData(const Environment& e) :
+    env(e), E(env.local_grid()),
     B(env.local_grid()),
-    Bflux(env.local_grid()),
     J(env.local_grid()),
     photons(env) {
   // initialize(env);
@@ -21,6 +20,9 @@ SimData::SimData(const Environment& env) :
   J.initialize();
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
+    Rho_avg.emplace_back(env.local_grid());
+    J_s.emplace_back(env.local_grid());
+    J_avg.emplace_back(env.local_grid());
     particles.emplace_back(env.conf().max_ptc_number);
 
     double q = env.conf().q_e;

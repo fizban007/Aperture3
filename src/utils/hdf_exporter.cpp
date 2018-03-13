@@ -2,6 +2,7 @@
 #include "fmt/ostream.h"
 #include "utils/logger.h"
 #include "config_file.h"
+#include "commandline_args.h"
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <time.h>
@@ -212,7 +213,7 @@ DataExporter::WriteOutput(int timestep, float time) {
 }
 
 void
-DataExporter::writeConfig(const ConfigFile &config) {
+DataExporter::writeConfig(const ConfigFile &config, const CommandArgs &args) {
   std::string filename = outputDirectory + "config.json";
   auto& c = config.data();
   json conf = {
@@ -233,7 +234,9 @@ DataExporter::writeConfig(const ConfigFile &config) {
       }},
     {"interp_order", c.interpolation_order},
     {"track_pct", c.track_percent},
-    {"ic_path", c.ic_path}
+    {"ic_path", c.ic_path},
+    {"N_steps", args.steps()},
+    {"data_interval", args.data_interval()}
   };
 
   std::ofstream o(filename);

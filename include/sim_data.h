@@ -20,9 +20,11 @@ struct SimData {
   const Environment& env;
   VectorField<Scalar> E;
   VectorField<Scalar> B;
-  ScalarField<Scalar> Bflux;
   VectorField<Scalar> J;
   std::vector<ScalarField<Scalar> > Rho;
+  std::vector<ScalarField<Scalar> > Rho_avg;
+  std::vector<ScalarField<Scalar> > J_s;
+  std::vector<ScalarField<Scalar> > J_avg;
 
   std::vector<Particles> particles;  // Each species occupies an array
   Photons photons;
