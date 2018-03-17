@@ -41,6 +41,7 @@ class Photons : public ParticleBase<single_photon_t>
 
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;
+  std::normal_distribution<float> m_normal;
 
 };
 

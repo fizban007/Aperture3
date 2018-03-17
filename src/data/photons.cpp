@@ -87,6 +87,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
     return;
   // This is assuming not in KN regime
   double E_ph = 20.0;
+  double l_photon = l_ph + 0.3 * l_ph * m_normal(m_generator);
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
@@ -97,7 +98,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
       // Assuming in KN regime, the photon takes 9/10 of the original energy
-      // E_ph = 0.95 * electrons.data().gamma[n];
+      // E_ph = 0.6 * m_dist(m_generator) * electrons.data().gamma[n] + 2.0;
+      E_ph = 0.6 * electrons.data().gamma[n] + 2.0;
       double gamma_f = electrons.data().gamma[n] - E_ph;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
@@ -109,7 +111,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
                          electrons.data().cell[n],
                          (m_dist(m_generator) < track_pct ? (uint32_t)ParticleFlag::tracked : 0));
       } else {
-        append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * E_ph, l_ph,
+        append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * E_ph, l_photon,
                electrons.data().cell[n],
                // ((electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < track_pct) ?
                 (m_dist(m_generator) < track_pct ? (uint32_t)PhotonFlag::tracked : 0));
@@ -126,7 +128,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
       // Assuming in KN regime, the photon takes 9/10 of the original energy
-      // E_ph = 0.95 * positrons.data().gamma[n];
+      // E_ph = 0.6 * m_dist(m_generator) * positrons.data().gamma[n] + 2.0;
+      E_ph = 0.6 * positrons.data().gamma[n] + 2.0;
       double gamma_f = positrons.data().gamma[n] - E_ph;
       // track 10% of the secondary particles
       if (!trace_photons) {
@@ -138,7 +141,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
                          positrons.data().cell[n],
                          (m_dist(m_generator) < track_pct ? (uint32_t)ParticleFlag::tracked : 0));
       } else {
-        append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * E_ph, l_ph,
+        append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * E_ph, l_photon,
                positrons.data().cell[n],
                // ((positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < track_pct) ?
                (m_dist(m_generator) < track_pct ? (uint32_t)PhotonFlag::tracked : 0));
