@@ -3,15 +3,15 @@
 #include <memory>
 // #include "data/detail/grid_impl.hpp"
 #include "sim_data.h"
+#include "domain_communicator.h"
 
 namespace Aperture {
 
 // Environment&
 Environment::Environment(int* argc, char*** argv)
     : m_generator(), m_dist(0.0, 1.0) {
-  // m_comm = std::make_unique<MPIComm>(argc, argv);
+  m_comm = std::make_unique<MPIComm>(argc, argv);
   // m_comm = std::make_unique<MPIComm>(nullptr, nullptr);
-  // std::cout << m_comm->world().rank() << std::endl;
 
   // Read in command line configuration
   // Handle the case of wrong command line arguments, exit gracefully
@@ -30,9 +30,9 @@ Environment::Environment(int* argc, char*** argv)
   }
 
   // Initialize logger for future use
-  // m_logger = std::make_unique<Logger>(m_comm->world().rank(), m_conf_file.data().log_lvl,
-  //                                     m_conf_file.data().log_file);
-  // Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl, m_conf_file.data().log_file);
+  Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl, m_conf_file.data().log_file);
+  Logger::print_debug("Current rank is {}", m_comm->world().rank());
+
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -49,28 +49,16 @@ Environment::Environment(int* argc, char*** argv)
 
   // Now we need to decide what to initiate depending on what is the user
   // configuration. Need to discuss this and think it through.
-  // std::cout << m_local_grid.mesh() << std::endl;
+  Logger::print_debug("Local mesh is {}", m_local_grid.mesh());
 
   // call setup_metric according to the selected metric on the local grid of
   // each node, setting up the metric coefficients and other cache arrays for the
   // local grid
   // select_metric(m_metric_type, m_local_grid.setup_metric, m_local_grid);
 
-  // TODO: separate the field updater part of the grid initialization and the
-  // ptc mover part of the grid initialization
-  // if (m_conf_file.data().algorithm_field_update == "integral") {
-  // m_local_grid_dual = m_local_grid.make_dual();
-  // select_metric(m_metric_type, m_local_grid_dual.setup_metric, m_local_grid_dual);
-  // }
-
   // initialize the data exporter
   m_exporter = std::make_unique<DataExporter>(
       m_conf_file.data().data_dir, m_conf_file.data().data_file_prefix);
-
-  // always add the mesh first
-  // select_metric(m_local_grid.type(), m_exporter->AddMesh, "quadmesh", m_local_grid.dim(),
-  //               m_local_grid, *m_exporter);
-  // m_exporter->AddMesh("quadmesh", m_local_grid.dim(), m_local_grid, const Metric &g)
 
 }
 
@@ -103,9 +91,9 @@ Environment::setup_domain(int dimx, int dimy, int dimz) {
     periodic[i] = m_conf_file.data().boundary_periodic[i];
   }
   int dims[3]{dimx, dimy, dimz};
-  // auto cartesian_ranks = m_comm->get_cartesian_members(dimx * dimy * dimz);
-  // m_comm->cartesian().create_cart(m_super_grid.dim(), dims, periodic,
-                                  // cartesian_ranks);
+  auto cartesian_ranks = m_comm->get_cartesian_members(dimx * dimy * dimz);
+  m_comm->cartesian().create_cart(m_super_grid.dim(), dims, periodic,
+                                  cartesian_ranks);
   // if (!m_comm->cartesian().is_null())
   //   m_domain_info.state = ProcessState::primary;
 
@@ -114,8 +102,8 @@ Environment::setup_domain(int dimx, int dimy, int dimz) {
   // Initialize domain_info
   m_domain_info.dim = m_super_grid.dim();
   // m_domain_info.rank_map.resize(dimz);
-  // m_domain_info.rank = m_comm->world().rank();
-  // m_domain_info.cart_pos.x = m_comm->cartesian().coord(0);
+  m_domain_info.rank = m_comm->world().rank();
+  m_domain_info.cart_pos.x = m_comm->cartesian().coord(0);
   // if (m_domain_info.dim >= 2)
     // m_domain_info.cart_pos.y = m_comm->cartesian().coord(1);
   // if (m_domain_info.dim >= 3)
@@ -145,11 +133,11 @@ Environment::setup_domain(int dimx, int dimy, int dimz) {
   Logger::print_debug_all("Rank {} has boundary info {} {} {} {}", m_domain_info.rank, m_domain_info.is_boundary[0], m_domain_info.is_boundary[1], m_domain_info.is_boundary[2], m_domain_info.is_boundary[3]);
 
   // Cache whether this node is boundary on all 6 directions
-  // for (int i = 0; i < NUM_BOUNDARIES; ++i) m_domain_info.is_boundary[i] = false;
-  // if (m_domain_info.cart_neighbor_left[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[0] = true;
-  // if (m_domain_info.cart_neighbor_right[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[1] = true;
-  // if (m_domain_info.cart_neighbor_left[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[2] = true;
-  // if (m_domain_info.cart_neighbor_right[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[3] = true;
+  for (int i = 0; i < NUM_BOUNDARIES; ++i) m_domain_info.is_boundary[i] = false;
+  if (m_domain_info.cart_neighbor_left[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[0] = true;
+  if (m_domain_info.cart_neighbor_right[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[1] = true;
+  if (m_domain_info.cart_neighbor_left[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[2] = true;
+  if (m_domain_info.cart_neighbor_right[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[3] = true;
 
   // resize domain map
   // for (auto& v : m_domain_info.rank_map) {

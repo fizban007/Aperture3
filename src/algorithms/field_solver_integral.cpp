@@ -24,6 +24,10 @@ FieldSolver_Integral::update_fields(vfield_t &E, vfield_t &B, const vfield_t &J,
     }
     // for (int i = 0; i < mesh.gu)
   }
+
+  if (m_comm_callback_vfield != nullptr) {
+    m_comm_callback_vfield(E);
+  }
 }
 
 void

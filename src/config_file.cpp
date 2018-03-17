@@ -6,8 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include "config_file.h"
-#include "utils/Logger.h"
-#include "fmt/format.h"
+#include "utils/logger.h"
 
 using namespace Aperture;
 
@@ -48,9 +47,9 @@ ConfigFile::ConfigFile(const std::string& filename) {
   try {
     parse_file(filename);
   } catch (const exceptions::empty_entry& e) {
-    fmt::print(stderr, "Error: {}, skipping.\n", e.what());
+    Logger::print_err("Error: {}, skipping.\n", e.what());
   } catch (const exceptions::file_not_found& e) {
-    fmt::print(stderr, "Error: {}\n", e.what());
+    Logger::print_err("Error: {}\n", e.what());
   }
 }
 
@@ -142,7 +141,7 @@ ConfigFile::parse_file(const std::string& filename) {
       // } else if (word.compare("initial_condition") == 0) {
       //   m_data.initial_condition = input;
       } else {
-        fmt::print(stderr, "Unrecognized entry: {}\n", word);
+        Logger::print_err("Unrecognized entry: {}\n", word);
       }
     }
 

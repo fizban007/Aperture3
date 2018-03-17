@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <memory>
 #include "current_depositer.h"
-// #include "domain_communicator.h"
 #include "field_solver.h"
 #include "particle_pusher.h"
 #include "sim_data.h"
@@ -32,7 +31,7 @@ class PICSim {
   std::unique_ptr<ParticlePusher> m_pusher;
   std::unique_ptr<CurrentDepositer> m_depositer;
   std::unique_ptr<FieldSolver> m_field_solver;
-  // std::unique_ptr<DomainCommunicator> m_comm;
+  std::unique_ptr<DomainCommunicator> m_comm;
 };  // ----- end of class PICSim -----
 }
 

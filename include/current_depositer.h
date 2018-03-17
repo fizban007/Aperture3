@@ -3,6 +3,7 @@
 
 #include "sim_data.h"
 #include "sim_environment.h"
+#include "data/callbacks.h"
 
 namespace Aperture {
 
@@ -18,18 +19,18 @@ class CurrentDepositer {
 
   void set_periodic(bool p) { m_periodic = p; }
   void set_interp_order(int n) { m_interp = n; }
-  // void register_current_callback(const vfield_comm_callback& callback) {
-  //   m_comm_J = callback;
-  // }
-  // void register_rho_callback(const sfield_comm_callback& callback) {
-  //   m_comm_rho = callback;
-  // }
+  void register_current_callback(const vfield_comm_callback& callback) {
+    m_comm_J = callback;
+  }
+  void register_rho_callback(const sfield_comm_callback& callback) {
+    m_comm_rho = callback;
+  }
 
  protected:
   bool m_periodic = false;
   int m_interp = 1;
- //  vfield_comm_callback m_comm_J;
- //  sfield_comm_callback m_comm_rho;
+  vfield_comm_callback m_comm_J;
+  sfield_comm_callback m_comm_rho;
 };  // ----- end of class current_depositer -----
 
 }  // namespace Aperture

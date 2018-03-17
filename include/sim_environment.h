@@ -11,7 +11,7 @@
 #include "utils/hdf_exporter.h"
 // #include "metrics.h"
 // #include "utils/data_exporter.h"
-// #include "utils/mpi_comm.h"
+#include "utils/mpi_comm.h"
 #include "utils/logger.h"
 // #include "boundary_conditions.h"
 // #include "initial_conditions.h"
@@ -19,6 +19,7 @@
 namespace Aperture {
 
 struct SimData;
+class DomainCommunicator;
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Class of the simulation environment. This class holds the basic information
@@ -62,25 +63,13 @@ class Environment {
   // MetricType metric_type() const { return m_metric_type; }
 
   DataExporter& exporter() { return *m_exporter; }
-  // const MPICommWorld& world() const { return m_comm->world(); }
-  // const MPICommCartesian& cartesian() const { return m_comm->cartesian(); }
-  // const MPICommEnsemble& ensemble() const { return m_comm->ensemble(); }
-  // const DomainInfo& domain_info() const { return m_domain_info; }
-  // // const Logger& logger() const { return *m_logger; }
+  const MPICommWorld& world() const { return m_comm->world(); }
+  const MPICommCartesian& cartesian() const { return m_comm->cartesian(); }
+  const DomainInfo& domain_info() const { return m_domain_info; }
   // // const BoundaryConditions& boundary_conditions() const { return m_bc; }
   // // const InitialCondition& initial_condition() const { return *m_ic; }
 
-  // bool is_primary() const {
-  //   return m_domain_info.state == ProcessState::primary;
-  // }
-  // bool is_replica() const {
-  //   return m_domain_info.state == ProcessState::replica;
-  // }
-  // bool is_idle() const { return m_domain_info.state == ProcessState::idle; }
-  // bool is_trivial_ensemble() const { return m_comm->ensemble().size() == 1; }
-
  private:
-  // SimEnvironment(int* argc, char*** argv);
   // Environment() {}
 
   CommandArgs m_args;
@@ -94,9 +83,8 @@ class Environment {
   DomainInfo m_domain_info;
   // BoundaryConditions m_bc;
 
-  // std::unique_ptr<MPIComm> m_comm;
+  std::unique_ptr<MPIComm> m_comm;
   std::unique_ptr<DataExporter> m_exporter;
-  // std::unique_ptr<Logger> m_logger;
   // std::unique_ptr<InitialCondition> m_ic;
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;

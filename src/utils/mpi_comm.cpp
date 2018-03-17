@@ -51,8 +51,8 @@ INSTANTIATE_SEND(single_particle_t);
 INSTANTIATE_SEND(single_photon_t);
 INSTANTIATE_SEND(Vec3<float>);
 INSTANTIATE_SEND(Vec3<double>);
-INSTANTIATE_SEND(Vec4<float>);
-INSTANTIATE_SEND(Vec4<double>);
+// INSTANTIATE_SEND(Vec4<float>);
+// INSTANTIATE_SEND(Vec4<double>);
 
 INSTANTIATE_RECV(char);
 INSTANTIATE_RECV(short);
@@ -69,8 +69,8 @@ INSTANTIATE_RECV(single_particle_t);
 INSTANTIATE_RECV(single_photon_t);
 INSTANTIATE_RECV(Vec3<float>);
 INSTANTIATE_RECV(Vec3<double>);
-INSTANTIATE_RECV(Vec4<float>);
-INSTANTIATE_RECV(Vec4<double>);
+// INSTANTIATE_RECV(Vec4<float>);
+// INSTANTIATE_RECV(Vec4<double>);
 
 INSTANTIATE_SEND_RECV(char);
 INSTANTIATE_SEND_RECV(short);

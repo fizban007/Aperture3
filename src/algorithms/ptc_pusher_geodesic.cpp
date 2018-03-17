@@ -3,7 +3,7 @@
 #include <array>
 #include <cmath>
 #include <fmt/ostream.h>
-#include "utils/Logger.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 

@@ -12,10 +12,6 @@ extern MPI_Datatype MPI_VEC3_FLOAT;
 extern MPI_Datatype MPI_VEC3_DOUBLE;
 extern MPI_Datatype MPI_VEC3_INT;
 extern MPI_Datatype MPI_VEC3_CHAR;
-extern MPI_Datatype MPI_VEC4_FLOAT;
-extern MPI_Datatype MPI_VEC4_DOUBLE;
-extern MPI_Datatype MPI_VEC4_INT;
-extern MPI_Datatype MPI_VEC4_CHAR;
 extern MPI_Datatype MPI_PARTICLES;
 extern MPI_Datatype MPI_PHOTONS;
 

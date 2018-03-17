@@ -7,13 +7,13 @@ else()
 endif()
 
 set(Aperture_src
-  "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp"
+  "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
   "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
 #   # "algorithms/finite_diff.cpp" "algorithms/field_solver_finite_diff.cpp" "algorithms/field_solver_integral.cpp"
 #   "algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "algorithms/solve.cpp"
 #   # "algorithms/ptc_pusher_mapping.cpp"
-  "algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "utils/logger.cpp" "utils/timer.cpp" "utils/memory.cpp" "utils/hdf_exporter.cpp"
+  "algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "utils/logger.cpp" "utils/timer.cpp" "utils/memory.cpp" "utils/hdf_exporter.cpp" "utils/mpi_comm.cpp" "utils/mpi_helper.cpp"
 # "utils/data_exporter.cpp" "utils/silo_file.cpp" "utils/mpi_helper.cpp" "utils/mpi_comm.cpp" "utils/memory.cpp"
 #   # "initial_conditions/initial_condition_dipole.cpp" "initial_conditions/initial_condition_reload.cpp" "initial_conditions/initial_condition_empty.cpp"
 #   "initial_conditions/initial_condition_wald.cpp" "initial_conditions/initial_condition_split_monopole.cpp"

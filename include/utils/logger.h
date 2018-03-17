@@ -3,7 +3,7 @@
 
 #include <string>
 #include <cstdio>
-#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include "data/enum_types.h"
 
 namespace Aperture {

@@ -13,10 +13,6 @@ MPI_Datatype MPI_VEC3_FLOAT;
 MPI_Datatype MPI_VEC3_DOUBLE;
 MPI_Datatype MPI_VEC3_INT;
 MPI_Datatype MPI_VEC3_CHAR;
-MPI_Datatype MPI_VEC4_FLOAT;
-MPI_Datatype MPI_VEC4_DOUBLE;
-MPI_Datatype MPI_VEC4_INT;
-MPI_Datatype MPI_VEC4_CHAR;
 MPI_Datatype MPI_PARTICLES;
 MPI_Datatype MPI_PHOTONS;
 
@@ -113,26 +109,6 @@ MPI_Datatype get_mpi_datatype(const Vec3<char>& x) {
 }
 
 template <>
-MPI_Datatype get_mpi_datatype(const Vec4<float>& x) {
-  return MPI_VEC4_FLOAT;
-}
-
-template <>
-MPI_Datatype get_mpi_datatype(const Vec4<double>& x) {
-  return MPI_VEC4_DOUBLE;
-}
-
-template <>
-MPI_Datatype get_mpi_datatype(const Vec4<int>& x) {
-  return MPI_VEC4_INT;
-}
-
-template <>
-MPI_Datatype get_mpi_datatype(const Vec4<char>& x) {
-  return MPI_VEC4_CHAR;
-}
-
-template <>
 MPI_Datatype get_mpi_datatype(const single_particle_t& x) {
   return MPI_PARTICLES;
 }
@@ -151,23 +127,6 @@ void register_vec3_type(const Type& t, MPI_Datatype* type) {
   MPI_Aint offsets[n_entries] = {offsetof(Vec3<Type>, x),
                                  offsetof(Vec3<Type>, y),
                                  offsetof(Vec3<Type>, z)};
-  // std::cout << offsets[0] << " " << offsets[1] << " " << offsets[2] <<
-  // std::endl;
-
-  MPI_Type_create_struct(n_entries, blocklengths, offsets, types, type);
-  MPI_Type_commit(type);
-  // _data_types.push_back(target_type);
-}
-
-template <typename Type>
-void register_vec4_type(const Type& t, MPI_Datatype* type) {
-  const int n_entries = 4;
-  int blocklengths[n_entries] = {1, 1, 1, 1};
-  MPI_Datatype mt = get_mpi_datatype(t);
-  MPI_Datatype types[n_entries] = {mt, mt, mt, mt};
-  MPI_Aint offsets[n_entries] = {
-      offsetof(Vec4<Type>, x), offsetof(Vec4<Type>, y), offsetof(Vec4<Type>, z),
-      offsetof(Vec4<Type>, w)};
   // std::cout << offsets[0] << " " << offsets[1] << " " << offsets[2] <<
   // std::endl;
 
@@ -205,10 +164,6 @@ void register_types() {
   register_vec3_type(double(), &MPI_VEC3_DOUBLE);
   register_vec3_type(int(), &MPI_VEC3_INT);
   register_vec3_type(char(), &MPI_VEC3_CHAR);
-  register_vec4_type(float(), &MPI_VEC4_FLOAT);
-  register_vec4_type(double(), &MPI_VEC4_DOUBLE);
-  register_vec4_type(int(), &MPI_VEC4_INT);
-  register_vec4_type(char(), &MPI_VEC4_CHAR);
   register_particle_type(single_particle_t(), &MPI_PARTICLES);
   register_particle_type(single_photon_t(), &MPI_PHOTONS);
 }
@@ -218,10 +173,6 @@ void free_types() {
   MPI_Type_free(&MPI_VEC3_DOUBLE);
   MPI_Type_free(&MPI_VEC3_INT);
   MPI_Type_free(&MPI_VEC3_CHAR);
-  MPI_Type_free(&MPI_VEC4_FLOAT);
-  MPI_Type_free(&MPI_VEC4_DOUBLE);
-  MPI_Type_free(&MPI_VEC4_INT);
-  MPI_Type_free(&MPI_VEC4_CHAR);
   MPI_Type_free(&MPI_PARTICLES);
   MPI_Type_free(&MPI_PHOTONS);
 }

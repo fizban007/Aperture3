@@ -2,6 +2,7 @@
 #include "algorithms/field_solver_integral.h"
 #include "algorithms/ptc_pusher_geodesic.h"
 #include "algorithms/current_deposit_Esirkepov.h"
+#include "domain_communicator.h"
 #include <functional>
 #include <memory>
 
@@ -13,6 +14,8 @@ namespace Aperture {
 PICSim::PICSim(Environment& env) : m_env(env) {
   Logger::print_info("Periodic is {}", env.conf().boundary_periodic[0]);
   // Initialize modules
+  m_comm = std::make_unique<DomainCommunicator>(env);
+
   // TODO: select current deposition method according to config
   m_depositer = std::make_unique<CurrentDepositer_Esirkepov>(m_env);
   m_depositer->set_periodic(env.conf().boundary_periodic[0]);
@@ -39,17 +42,17 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // m_pusher -> set_radiation(bool radiation)
 
   // Register communication callbacks
-  // m_depositer->register_current_callback(
-  //     [this](VectorField<Scalar>& j) { m_comm->put_guard_cells(j); });
+  m_depositer->register_current_callback(
+      [this](VectorField<Scalar>& j) { m_comm->put_guard_cells(j); });
 
-  // m_depositer->register_rho_callback(
-  //     [this](ScalarField<Scalar>& rho) { m_comm->put_guard_cells(rho); });
+  m_depositer->register_rho_callback(
+      [this](ScalarField<Scalar>& rho) { m_comm->put_guard_cells(rho); });
 
-  // m_field_solver->register_comm_callback(
-  //     [this](VectorField<Scalar>& f) -> void { m_comm->get_guard_cells(f); });
+  m_field_solver->register_comm_callback(
+      [this](VectorField<Scalar>& f) -> void { m_comm->get_guard_cells(f); });
 
-  // m_field_solver->register_comm_callback(
-  //     [this](ScalarField<Scalar>& f) -> void { m_comm->get_guard_cells(f); });
+  m_field_solver->register_comm_callback(
+      [this](ScalarField<Scalar>& f) -> void { m_comm->get_guard_cells(f); });
 
   // auto &comm = *m_comm;
   // std::function<void(VectorField<Scalar>&)> vcall = [&comm](VectorField<Scalar>& f) -> void { comm.get_guard_cells(f); };
@@ -81,7 +84,7 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   data.photons.move(data.E.grid(), dt);
   data.photons.convert_pairs(data.particles[0], data.particles[1]);
 
-  auto& mesh = data.E.grid().mesh();
+  // auto& mesh = data.E.grid().mesh();
   // Logger::print_info("J at boundary 1: {} | {} | {} | {}", data.J(0, 1),
   //                    data.J(0, 2), data.J(0, 3), data.J(0, 4));
   // Logger::print_info("J at boundary 2: {} | {} | {} | {}", data.J(0, 0),

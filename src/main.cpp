@@ -1,5 +1,6 @@
 #include <iostream>
 #include <random>
+#include "utils/logger.h"
 #include "sim_environment.h"
 #include "sim_data.h"
 #include "pic_sim.h"
@@ -13,11 +14,11 @@ int main(int argc, char *argv[])
   Environment env(&argc, &argv);
 
   // These are debug output
-  std::cout << env.conf().delta_t << std::endl;
-  std::cout << env.args().conf_filename() << std::endl;
-  std::cout << env.args().data_interval() << std::endl;
-  std::cout << env.args().steps() << std::endl;
-  std::cout << env.args().dimx() << std::endl;
+  Logger::print_debug("{}", env.conf().delta_t);
+  Logger::print_debug("{}", env.args().conf_filename());
+  Logger::print_debug("{}", env.args().data_interval());
+  Logger::print_debug("{}", env.args().steps());
+  Logger::print_debug("{}", env.args().dimx());
 
   // Allocate simulation data
   SimData data(env);

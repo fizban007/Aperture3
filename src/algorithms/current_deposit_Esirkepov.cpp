@@ -39,11 +39,11 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
 
   // detail::map_multi_array(data.J.data(0), data.J_s[0], data.J.grid().extent(), detail::Op_PlusAssign<Scalar>());
   // communication on the just deposited Rho
-  // if (m_comm_rho != nullptr) {
-  //   for (Index_t i = 0; i < part.size(); i++) {
-  //     m_comm_rho(data.Rho[i]);
-  //   }
-  // }
+  if (m_comm_rho != nullptr) {
+    for (Index_t i = 0; i < part.size(); i++) {
+      m_comm_rho(data.Rho[i]);
+    }
+  }
   // Now we have delta Q in every cell, add them up along all directions
 
   scan_current(data.J_s[0]);
@@ -56,9 +56,9 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   //   normalize_velocity(data.Rho[j], data.V[j]);
   // }
   // Call communication on just scanned J
-  // if (m_comm_J != nullptr) {
-  //   m_comm_J(data.J);
-  // }
+  if (m_comm_J != nullptr) {
+    m_comm_J(data.J);
+  }
 
   auto& mesh = data.J.grid().mesh();
   if (m_periodic) {
@@ -69,15 +69,6 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
       data.J(0, mesh.dims[0] - 1 - i) = 0.0;
     }
     data.J(0, mesh.guard[0] - 1) = data.J(0, mesh.reduced_dim(0) + mesh.guard[0] - 1);
-  } else {
-    // for (int i = 0; i < mesh.guard[0] - 1; i++) {
-    //   data.J(0, mesh.guard[0] - 1) += data.J(0, i);
-    //   data.J(0, i) = 0.0;
-    // }
-    // for (int i = 0; i < mesh.guard[0]; i++) {
-    //   data.J(0, mesh.dims[0] - mesh.guard[0] - 1) += data.J(0, mesh.dims[0] - 1 - i);
-    //   data.J(0, mesh.dims[0] - 1 - i) = 0.0;
-    // }
   }
 }
 

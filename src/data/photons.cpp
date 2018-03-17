@@ -1,6 +1,6 @@
 #include "data/photons.h"
 #include "sim_environment.h"
-#include "utils/Logger.h"
+#include "utils/logger.h"
 #include "utils/util_functions.h"
 
 namespace Aperture {
@@ -87,7 +87,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
     return;
   // This is assuming not in KN regime
   double E_ph = 20.0;
-  double l_photon = l_ph + 0.3 * l_ph * m_normal(m_generator);
+  double l_photon = l_ph + 0.5 * l_ph * m_normal(m_generator);
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
