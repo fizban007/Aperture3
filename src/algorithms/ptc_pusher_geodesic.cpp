@@ -149,7 +149,7 @@ ParticlePusher_Geodesic::extra_force(Particles &particles, Index_t idx, double x
   //   ptc.p1[idx] = 0.0;
   // }
 
-  double g0 = 0.0;
+  double g0 = 0.03;
   double f = (2.0 * x / mesh.sizes[0] - 1.3);
   double g = g0 * f;
   ptc.p1[idx] += g * particles.mass() * dt;

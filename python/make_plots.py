@@ -44,7 +44,7 @@ xs = np.linspace(conf['grid']['lower'], conf['grid']['lower'] + conf['grid']['si
                  N - 2 * guard + 1)
 efield, = ax2.plot(xs, np.zeros(len(xs)), color='g', linewidth=0.6)
 ax2.set_ylabel("$E$")
-ax2.set_ylim([-20, 50])
+# ax2.set_ylim([-30, 50])
 
 mult, = axes[0,1].plot([], [])
 axes[0,1].plot(xs, np.ones(len(xs)))
@@ -67,7 +67,7 @@ axes[1,1].plot(xs,10.0*np.ones(len(xs)),'--')
 # axes[1,1].plot(xs,6.0 * np.cos(2.0 * np.pi * xs / conf["grid"]['size']))
 # axes[1,1].plot(xs,24.0 * (abs(0.5 - xs / conf["grid"]['size']) - 0.25))
 # axes[1,1].plot(xs,5.0 * (1.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
-axes[1,1].plot(xs,10.0 * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
+# axes[1,1].plot(xs,10.0 * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
 axes[1,1].set_ylim([-10, 15])
 axes[1,1].axvline(x=291.7, linestyle='--')
 
@@ -89,7 +89,7 @@ for n in range(initial_step, conf['N_steps']):
         p_e = f["Electrons_p"]
         x_p = f["Positrons_x"]
         p_p = f["Positrons_p"]
-        E1 = np.array(f["E1avg"])[guard-1:-guard]
+        E1 = np.array(f["E1"])[guard-1:-guard]
         j_e = np.array(f["J_e_avg"])[guard-1:-guard]
         j_p = np.array(f["J_p_avg"])[guard-1:-guard]
         rho_e = np.array(f["Rho_e_avg"])[guard-1:-guard]
@@ -113,6 +113,8 @@ for n in range(initial_step, conf['N_steps']):
         rho.set_data(xs, rho_e + rho_p)
         axes[0,1].relim()
         axes[0,1].autoscale_view(True,True,True)
+        ax2.relim()
+        ax2.autoscale_view(True,True,True)
         # axes[0,1].set_ylim(bottom=0)
 
         # fig.canvas.restore_region(axbg)
