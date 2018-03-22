@@ -35,6 +35,7 @@ class Photons : public ParticleBase<single_photon_t>
   bool trace_photons = false;
   float gamma_thr = 10.0;
   float l_ph = 1.0;
+  float p_ph = 1.0;
   float p_ic = 1.0;
   float track_pct = 0.2;
   std::vector<Index_t> m_partition;

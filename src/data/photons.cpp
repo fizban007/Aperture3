@@ -20,6 +20,7 @@ Photons::Photons(const Environment& env)
   trace_photons = env.conf().trace_photons;
   gamma_thr = env.conf().gamma_thr;
   l_ph = env.conf().photon_path;
+  p_ph = env.conf().delta_t / l_ph;
   p_ic = env.conf().delta_t / env.conf().ic_path;
   track_pct = env.conf().track_percent;
 }
@@ -62,7 +63,8 @@ Photons::convert_pairs(Particles& electrons, Particles& positrons) {
     if (is_empty(idx))
       continue;
 
-    if (m_data.path_left[idx] < 0.0) {
+    // if (m_data.path_left[idx] < 0.0) {
+    if (m_dist(m_generator) < p_ph) {
       double E_ph = std::abs(m_data.p1[idx]);
       double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
 
