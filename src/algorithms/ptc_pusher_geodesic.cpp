@@ -7,6 +7,27 @@
 
 namespace Aperture {
 
+double gamma(double beta_phi, double p) {
+  double b2 = beta_phi * beta_phi;
+  if (beta_phi < 0) p = -p;
+
+  // if (b2 > 1.0 && p*p/(1.0 + b2) + (1.0 - b2) < 0) {
+  //   Logger::print_info("b2 is {}, p is {}, sqrt is {}, {}", b2, p, p*p/(1.0 + b2), (1.0 - b2));
+  // }
+  double result = -p * b2 / std::sqrt(1.0 + b2) + std::sqrt(p*p/(1.0 + b2) + (1.0 - b2));
+  result *= 1.0 / (1.0 - b2);
+
+  return result;
+}
+
+double beta_phi(double x) {
+  double b = (x - 0.1)/0.4 - 1.0;
+  if (x > 0.1 && x < 0.9) {
+    return b * b * b;
+  } else {
+    return b;
+  }
+}
 
 ParticlePusher_Geodesic::ParticlePusher_Geodesic() {}
 
@@ -44,6 +65,11 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
   int cell = ptc.cell[idx];
 
   ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
+  // double g = gamma(beta_phi(x/mesh.sizes[0]), ptc.p1[idx]);
+  // if (g < 1.0) g = 1.0;
+  // if (std::abs(beta_phi(x/mesh.sizes[0])) > 1.0)
+  //   // Logger::print_info("p is {}, beta is {}, g is {}, x is {}", ptc.p1[idx], beta_phi(x/mesh.sizes[0]), g, x);
+  // ptc.gamma[idx] = g;
   double v = ptc.p1[idx] / ptc.gamma[idx];
   // Logger::print_info("Before move, v is {}, gamma is {}", v, ptc.gamma[idx]);
   ptc.dx1[idx] = v * dt / grid.mesh().delta[0];
@@ -82,7 +108,18 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
       // Logger::print_info("in lorentz, c = {}, E = {}, rel_x = {}", c, vE, rel_x);
 
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();
-      ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
+
+      // double b = beta_phi(x/mesh.sizes[0]);
+      // double lim = std::sqrt((b*b - 1.0)*(b*b + 1.0));
+      // if (b > 1.0 && ptc.p1[idx] < lim) {
+      //   ptc.p1[idx] = lim + 1e-5;
+      //   // Logger::print_info("lim is {}", lim);
+      // }
+
+      // if (b < -1.0 && ptc.p1[idx] > -lim)
+      //   ptc.p1[idx] = -lim - 1e-5;
+      // // ptc.gamma[idx] = sqrt(1.0 + ptc.p1[idx] * ptc.p1[idx]);
+
     }
   }
 }
@@ -149,7 +186,7 @@ ParticlePusher_Geodesic::extra_force(Particles &particles, Index_t idx, double x
   //   ptc.p1[idx] = 0.0;
   // }
 
-  double g0 = 0.03;
+  double g0 = 0.06;
   double f = (2.0 * x / mesh.sizes[0] - 1.3);
   double g = g0 * f;
   ptc.p1[idx] += g * particles.mass() * dt;
