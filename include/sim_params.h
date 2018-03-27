@@ -50,6 +50,11 @@ struct SimParams {
   float         annih_fraction    = 0.01;
   float         track_percent     = 0.2;
 
+  // These parameters are for radiative transfer
+  float       spectral_alpha      = 2.0;  // Slope of the soft photon spectrum
+  float       e_s                 = 0.2;  // separation between two regimes of pair creation
+  float       e_min               = 1.0e-3;  // minimum energy of the background photons
+
   std::array<std::string, 3> grid_config;
   std::array<std::string, 3> data_grid_config;
 

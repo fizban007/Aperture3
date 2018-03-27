@@ -38,11 +38,23 @@ class Photons : public ParticleBase<single_photon_t>
   float p_ph = 1.0;
   float p_ic = 1.0;
   float track_pct = 0.2;
+
+  float alpha = 2.0;
+  float e_s = 0.2;
+  float e_min = 1.0e-3;
+  double A1;
+  double A2;
   std::vector<Index_t> m_partition;
 
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;
   std::normal_distribution<float> m_normal;
+
+  void compute_A1(double er);
+  void compute_A2(double er, double et);
+  double f_inv1(double u, double gamma);
+  double f_inv2(double u, double gamma);
+  double draw_photon_energy(double gamma, double p);
 
 };
 

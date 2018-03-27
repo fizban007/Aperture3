@@ -138,6 +138,12 @@ ConfigFile::parse_file(const std::string& filename) {
         m_data.algorithm_field_update = input;
       } else if (word.compare("algorithm_current_deposit") == 0) {
         m_data.algorithm_current_deposit = input;
+      } else if (word.compare("spectral_alpha") == 0) {
+        m_data.spectral_alpha = std::atof(input.c_str());
+      } else if (word.compare("e_s") == 0) {
+        m_data.e_s = std::atof(input.c_str());
+      } else if (word.compare("e_min") == 0) {
+        m_data.e_min = std::atof(input.c_str());
       // } else if (word.compare("initial_condition") == 0) {
       //   m_data.initial_condition = input;
       } else {
