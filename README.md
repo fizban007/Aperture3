@@ -9,7 +9,7 @@ compile this on `tigressdata`, use the following module load:
 
     module load rh/devtoolset/6
     module load boost/1.54.0
-    module load openmpi
+    module load openmpi/gcc/1.8.8
     module load hdf5/gcc/1.8.12
     
 Then from the directory where you cloned the project, do:
@@ -29,6 +29,10 @@ run it to run the code. The executable accepts the following arguments:
     -s, --steps arg     Number of steps to run the simulation. (default: 2000)
     -d, --interval arg  The interval to output data to the hard disk. (default:
                         20)
+
+Typically I would run with something like this:
+
+    mpirun -np 1 ./aperture -s 200000 -d 200
     
 I recommend going through the `sim.conf` file to see what options are available,
 and read `main.cpp` to see how to change initial conditions.
