@@ -112,10 +112,12 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       // E_ph = 0.6 * electrons.data().gamma[n] + 2.0;
       E_ph = draw_photon_energy(electrons.data().gamma[n], electrons.data().p1[n]);
       double gamma_f = electrons.data().gamma[n] - E_ph;
+      if (gamma_f < 0.0)
+        Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", electrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (E_ph * e_min < 0.1) continue;
+      if (E_ph * e_min < 0.01) continue;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -147,10 +149,12 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       // E_ph = 0.6 * positrons.data().gamma[n] + 2.0;
       E_ph = draw_photon_energy(positrons.data().gamma[n], positrons.data().p1[n]);
       double gamma_f = positrons.data().gamma[n] - E_ph;
+      if (gamma_f < 0.0)
+        Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", positrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (E_ph * e_min < 0.1) continue;
+      if (E_ph * e_min < 0.01) continue;
       // track 10% of the secondary particles
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -183,14 +187,14 @@ Photons::move(const Grid& grid, double dt) {
     double pos = mesh.pos(0, cell, m_data.x1[idx]);
 
     // Censor photons that are not converting inside the box
-    if (p < 0 && m_data.path_left[idx] > pos) {
-      erase(idx);
-      continue;
-    }
-    if (p > 0 && m_data.path_left[idx] > mesh.sizes[0] - pos) {
-      erase(idx);
-      continue;
-    }
+    // if (p < 0 && m_data.path_left[idx] > pos) {
+    //   erase(idx);
+    //   continue;
+    // }
+    // if (p > 0 && m_data.path_left[idx] > mesh.sizes[0] - pos) {
+    //   erase(idx);
+    //   continue;
+    // }
 
 
     m_data.x1[idx] += sgn(p) * dt / mesh.delta[0];
@@ -268,7 +272,8 @@ Photons::draw_photon_energy(double gamma, double p) {
     u1p = 1.0 - (1.0 - std::pow(u, 1.0 / (2.0 + alpha))) / e1p;
   }
   // given e1p and u1p, compute the photon energy in the lab frame
-  return (gamma * e1p + std::abs(p) * u1p);
+  // Logger::print_info("e1p is {}, u1p is {}", e1p, u1p);
+  return (gamma + std::abs(p) * (-u1p)) * e1p;
 }
 
 }

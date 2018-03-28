@@ -117,7 +117,7 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
       double beta = beta_phi(x/mesh.sizes[0]);
       double g = gamma(beta, p);
       double f = (g - (beta < 0.0 ? -1.0 : 1.0) * p) / (1.0 + beta * beta);
-      ptc.p1[idx] += (beta / g) * f * f * dt;
+      ptc.p1[idx] += 0.01 * (beta / g) * f * f * dt;
       ptc.p1[idx] += particles.charge() * vE[0] * dt / particles.mass();
 
       // double b = beta_phi(x/mesh.sizes[0]);
