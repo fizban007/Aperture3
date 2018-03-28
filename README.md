@@ -15,6 +15,7 @@ compile this on `tigressdata`, use the following module load:
 Then from the directory where you cloned the project, do:
 
     cd 1Dpic
+    git checkout tigressdata
     mkdir build
     cd build
     cmake -DBoost_NO_BOOST_CMAKE=true -DBoost_NO_SYSTEM_PATHS=true -DBOOST_ROOT:PATHNAME=/usr/local/boost/1.54.0 ..
