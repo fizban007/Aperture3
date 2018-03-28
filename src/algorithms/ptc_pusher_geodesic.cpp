@@ -4,6 +4,7 @@
 #include <cmath>
 #include <fmt/ostream.h>
 #include "utils/logger.h"
+#include "algorithms/functions.h"
 
 namespace Aperture {
 
@@ -18,15 +19,6 @@ double gamma(double beta_phi, double p) {
   // result *= 1.0 / (1.0 - b2);
 
   return std::sqrt(1.0 + p*p + b2);
-}
-
-double beta_phi(double x) {
-  double b = (x - 0.1)/0.4 - 1.0;
-  if (x > 0.1 && x < 0.9) {
-    return b;
-  } else {
-    return b;
-  }
 }
 
 ParticlePusher_Geodesic::ParticlePusher_Geodesic() {}

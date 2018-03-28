@@ -6,6 +6,7 @@
 #include <string>
 #include <random>
 #include "data/particles.h"
+#include "data/quadmesh.h"
 
 namespace Aperture {
 
@@ -23,7 +24,7 @@ class Photons : public ParticleBase<single_photon_t>
   void append(Pos_t x, Scalar p, Scalar path_left, int cell, int flag = 0);
 
   void convert_pairs(Particles& electrons, Particles& positrons);
-  void emit_photons(Particles& electrons, Particles& positrons);
+  void emit_photons(Particles& electrons, Particles& positrons, const Quadmesh& mesh);
   void move(const Grid& grid, double dt);
   void sort(const Grid& grid);
 
@@ -34,7 +35,7 @@ class Photons : public ParticleBase<single_photon_t>
   void compute_A2(double er, double et);
   double f_inv1(double u, double gamma);
   double f_inv2(double u, double gamma);
-  double draw_photon_energy(double gamma, double p);
+  double draw_photon_energy(double gamma, double p, double x);
 
  private:
   bool create_pairs = false;

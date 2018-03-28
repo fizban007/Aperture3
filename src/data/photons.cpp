@@ -2,6 +2,7 @@
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
+#include "algorithms/functions.h"
 
 namespace Aperture {
 
@@ -89,7 +90,7 @@ Photons::sort(const Grid& grid) {
 }
 
 void
-Photons::emit_photons(Particles &electrons, Particles &positrons) {
+Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh& mesh) {
   if (!create_pairs)
     return;
   // This is assuming not in KN regime
@@ -110,14 +111,15 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       // Assuming in KN regime, the photon takes 9/10 of the original energy
       // E_ph = 0.6 * m_dist(m_generator) * electrons.data().gamma[n] + 2.0;
       // E_ph = 0.6 * electrons.data().gamma[n] + 2.0;
-      E_ph = draw_photon_energy(electrons.data().gamma[n], electrons.data().p1[n]);
-      double gamma_f = electrons.data().gamma[n] - E_ph;
+      double x = mesh.pos(0, electrons.data().cell[n], electrons.data().x1[n]) / mesh.sizes[0];
+      E_ph = draw_photon_energy(electrons.data().gamma[n], electrons.data().p1[n], x);
+      double gamma_f = electrons.data().gamma[n] - std::abs(E_ph);
       if (gamma_f < 0.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", electrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (E_ph * e_min < 0.01) continue;
+      if (std::abs(E_ph) * e_min < 0.01) continue;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -128,7 +130,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
                          electrons.data().cell[n],
                          (m_dist(m_generator) < track_pct ? (uint32_t)ParticleFlag::tracked : 0));
       } else {
-        append(electrons.data().x1[n], sgn(electrons.data().p1[n]) * E_ph, l_photon,
+        append(electrons.data().x1[n], E_ph, l_photon,
                electrons.data().cell[n],
                // ((electrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < track_pct) ?
                 (m_dist(m_generator) < track_pct ? (uint32_t)PhotonFlag::tracked : 0));
@@ -147,14 +149,15 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
       // Assuming in KN regime, the photon takes 9/10 of the original energy
       // E_ph = 0.6 * m_dist(m_generator) * positrons.data().gamma[n] + 2.0;
       // E_ph = 0.6 * positrons.data().gamma[n] + 2.0;
-      E_ph = draw_photon_energy(positrons.data().gamma[n], positrons.data().p1[n]);
-      double gamma_f = positrons.data().gamma[n] - E_ph;
+      double x = mesh.pos(0, positrons.data().cell[n], positrons.data().x1[n]) / mesh.sizes[0];
+      E_ph = draw_photon_energy(positrons.data().gamma[n], positrons.data().p1[n], x);
+      double gamma_f = positrons.data().gamma[n] - std::abs(E_ph);
       if (gamma_f < 0.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", positrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (E_ph * e_min < 0.01) continue;
+      if (std::abs(E_ph) * e_min < 0.01) continue;
       // track 10% of the secondary particles
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -165,7 +168,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons) {
                          positrons.data().cell[n],
                          (m_dist(m_generator) < track_pct ? (uint32_t)ParticleFlag::tracked : 0));
       } else {
-        append(positrons.data().x1[n], sgn(positrons.data().p1[n]) * E_ph, l_photon,
+        append(positrons.data().x1[n], E_ph, l_photon,
                positrons.data().cell[n],
                // ((positrons.check_flag(n, ParticleFlag::tracked) && m_dist(m_generator) < track_pct) ?
                (m_dist(m_generator) < track_pct ? (uint32_t)PhotonFlag::tracked : 0));
@@ -253,7 +256,7 @@ Photons::f_inv2(double u, double gamma) {
 }
 
 double
-Photons::draw_photon_energy(double gamma, double p) {
+Photons::draw_photon_energy(double gamma, double p, double x) {
   float u = m_dist(m_generator);
   // draw the rest frame photon energy
   double e1p;
@@ -273,7 +276,12 @@ Photons::draw_photon_energy(double gamma, double p) {
   }
   // given e1p and u1p, compute the photon energy in the lab frame
   // Logger::print_info("e1p is {}, u1p is {}", e1p, u1p);
-  return (gamma + std::abs(p) * (-u1p)) * e1p;
+  double beta = beta_phi(x);
+  double v = ((beta < 0.0 ? -1.0 : 1.0) * p / gamma + beta * beta) / (1.0 + beta * beta);
+  if (beta < 0.0) {
+    v *= -1.0;
+  }
+  return sgn(v) * (gamma + std::abs(p) * (-u1p)) * e1p;
 }
 
 }
