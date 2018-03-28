@@ -96,6 +96,8 @@ ConfigFile::parse_file(const std::string& filename) {
         m_data.data_grid_config[1] = line;
       } else if (word.compare("data_dim3") == 0 || word.compare("data_dim_3") == 0) {
         m_data.data_grid_config[2] = line;
+      } else if (word.compare("datadir") == 0) {
+        m_data.data_dir = input;
       } else if (word.compare("gravity") == 0) {
         m_data.gravity = std::atof(input.c_str());
       } else if (word.compare("ion_mass") == 0) {
