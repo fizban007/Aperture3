@@ -66,7 +66,7 @@ include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH
 
 add_subdirectory(deps/fmt)
 add_subdirectory(src)
-# add_subdirectory(tests)
+add_subdirectory(tests)
 # add_subdirectory(tools)
 
 if (build_tests)

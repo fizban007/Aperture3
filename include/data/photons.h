@@ -30,6 +30,12 @@ class Photons : public ParticleBase<single_photon_t>
   bool check_flag(Index_t pos, PhotonFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
   void set_flag(Index_t pos, PhotonFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
 
+  void compute_A1(double er);
+  void compute_A2(double er, double et);
+  double f_inv1(double u, double gamma);
+  double f_inv2(double u, double gamma);
+  double draw_photon_energy(double gamma, double p);
+
  private:
   bool create_pairs = false;
   bool trace_photons = false;
@@ -50,11 +56,6 @@ class Photons : public ParticleBase<single_photon_t>
   std::uniform_real_distribution<float> m_dist;
   std::normal_distribution<float> m_normal;
 
-  void compute_A1(double er);
-  void compute_A2(double er, double et);
-  double f_inv1(double u, double gamma);
-  double f_inv2(double u, double gamma);
-  double draw_photon_energy(double gamma, double p);
 
 };
 
