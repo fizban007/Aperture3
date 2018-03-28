@@ -236,7 +236,10 @@ DataExporter::writeConfig(const ConfigFile &config, const CommandArgs &args) {
     {"track_pct", c.track_percent},
     {"ic_path", c.ic_path},
     {"N_steps", args.steps()},
-    {"data_interval", args.data_interval()}
+    {"data_interval", args.data_interval()},
+    {"spectral_alpha", c.spectral_alpha},
+    {"e_s", c.e_s},
+    {"e_min", c.e_min}
   };
 
   std::ofstream o(filename);
