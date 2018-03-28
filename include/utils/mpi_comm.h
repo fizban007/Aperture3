@@ -114,7 +114,7 @@ class MPICommBase {
 
   template <typename T>
   void gatherv(const T* send_buf, int sendcount, T* recv_buf,
-               const int* recvcounts, const int* displs, int root) const;
+               int* recvcounts, int* displs, int root) const;
 
   // this version is mostly used by non-root processes becuase in this case
   // recv_buf and recvcount are not significant
@@ -123,7 +123,7 @@ class MPICommBase {
 
   // this version is called by root in an in-place manner
   template <typename T>
-  void gatherv_inplace(T* recv_buf, const int* recvcounts, const int* displs,
+  void gatherv_inplace(T* recv_buf, int* recvcounts, int* displs,
                        int root) const;
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +139,7 @@ class MPICommBase {
 
   // returns the count of elements received.
   template <typename T>
-  int get_count(const T* value, const MPI_Status* status) const;
+  int get_count(const T* value, MPI_Status* status) const;
 
   ////////////////////////////////////////////////////////////////////////////////
   ///  Accessors
@@ -187,7 +187,7 @@ class MPICommCartesian : public MPICommBase {
 
   void create_dims(int num_nodes, int ndims, int* dims);
   void create_cart(int ndims, int dims[], bool periodic[],
-                   const std::vector<int>& ranks);
+                   std::vector<int>& ranks);
 
   void printCoord() const;
 

@@ -29,9 +29,9 @@ using namespace Aperture;
   template void MPICommBase::all_gather<type>(const type* send_buf, int sendcount, type* recv_buf, int recvcount) const; \
   template void MPICommBase::gather<type>(const type *send_buf, int sendcount, int root) const; \
   template void MPICommBase::gather_inplace<type>(type *recv_buf, int recvcount, int root) const; \
-  template void MPICommBase::gatherv<type>(const type *send_buf, int sendcount, type *recv_buf, const int *recvcounts, const int *displs, int root) const; \
+  template void MPICommBase::gatherv<type>(const type *send_buf, int sendcount, type *recv_buf, int *recvcounts, int *displs, int root) const; \
   template void MPICommBase::gatherv<type>(const type *send_buf, int sendcount, int root) const; \
-  template void MPICommBase::gatherv_inplace<type>(type *recv_buf, const int *recvcounts, const int *displs, int root) const
+  template void MPICommBase::gatherv_inplace<type>(type *recv_buf, int *recvcounts, int *displs, int root) const
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Instantiating send and recv methods
@@ -46,7 +46,7 @@ INSTANTIATE_SEND(unsigned int);
 INSTANTIATE_SEND(unsigned long);
 INSTANTIATE_SEND(float);
 INSTANTIATE_SEND(double);
-INSTANTIATE_SEND(long double);
+//INSTANTIATE_SEND(long double);
 INSTANTIATE_SEND(single_particle_t);
 INSTANTIATE_SEND(single_photon_t);
 INSTANTIATE_SEND(Vec3<float>);
@@ -64,7 +64,7 @@ INSTANTIATE_RECV(unsigned int);
 INSTANTIATE_RECV(unsigned long);
 INSTANTIATE_RECV(float);
 INSTANTIATE_RECV(double);
-INSTANTIATE_RECV(long double);
+//INSTANTIATE_RECV(long double);
 INSTANTIATE_RECV(single_particle_t);
 INSTANTIATE_RECV(single_photon_t);
 INSTANTIATE_RECV(Vec3<float>);
@@ -82,7 +82,7 @@ INSTANTIATE_SEND_RECV(unsigned int);
 INSTANTIATE_SEND_RECV(unsigned long);
 INSTANTIATE_SEND_RECV(float);
 INSTANTIATE_SEND_RECV(double);
-INSTANTIATE_SEND_RECV(long double);
+//INSTANTIATE_SEND_RECV(long double);
 
 INSTANTIATE_SCAN(char);
 INSTANTIATE_SCAN(short);
@@ -94,7 +94,7 @@ INSTANTIATE_SCAN(unsigned int);
 INSTANTIATE_SCAN(unsigned long);
 INSTANTIATE_SCAN(float);
 INSTANTIATE_SCAN(double);
-INSTANTIATE_SCAN(long double);
+//INSTANTIATE_SCAN(long double);
 
 INSTANTIATE_GATHER(char);
 INSTANTIATE_GATHER(short);
@@ -106,7 +106,7 @@ INSTANTIATE_GATHER(unsigned int);
 INSTANTIATE_GATHER(unsigned long);
 INSTANTIATE_GATHER(float);
 INSTANTIATE_GATHER(double);
-INSTANTIATE_GATHER(long double);
+//INSTANTIATE_GATHER(long double);
 
 // INSTANTIATE_GET_RECV_COUNT(single_particle_t);
 // INSTANTIATE_GET_RECV_COUNT(single_photon_t);

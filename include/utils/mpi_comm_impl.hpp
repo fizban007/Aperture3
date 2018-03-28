@@ -226,7 +226,7 @@ MPICommBase::gather_inplace(T* recv_buf, int recvcount, int root) const {
 template <typename T>
 void
 MPICommBase::gatherv(const T* send_buf, int sendcount, T* recv_buf,
-                     const int* recvcounts, const int* displs, int root) const {
+                     int* recvcounts, int* displs, int root) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
 
   int error_code =
@@ -252,8 +252,8 @@ MPICommBase::gatherv(const T* send_buf, int sendcount, int root) const {
 // this version is called by root in an in-place manner
 template <typename T>
 void
-MPICommBase::gatherv_inplace(T* recv_buf, const int* recvcounts,
-                             const int* displs, int root) const {
+MPICommBase::gatherv_inplace(T* recv_buf, int* recvcounts,
+                             int* displs, int root) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*recv_buf);
 
   int error_code = MPI_Gatherv(MPI_IN_PLACE, 0, MPI_INT, (void*)recv_buf,
@@ -283,7 +283,7 @@ MPICommBase::probe(int source, int tag) const {
 
 template <typename T>
 int
-MPICommBase::get_count(const T* value, const MPI_Status* status) const {
+MPICommBase::get_count(const T* value, MPI_Status* status) const {
   int count = 0;
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*value);
   MPI_Get_count(status, type, &count);
@@ -330,7 +330,7 @@ MPICommCartesian::create_dims(int num_nodes, int ndims, int* dims) {
 
 void
 MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
-                              const std::vector<int>& ranks) {
+                              std::vector<int>& ranks) {
   // this means the calling proc is not selected to createCart
   if (ranks.size() == 0) {
     return;
