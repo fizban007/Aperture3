@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   //   }
   // }
   double jb = 10.0;
-  double initial_M = 4.0;
+  double initial_M = 2.0;
   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // double rho = -jb * 0.5 * (2.0 * i / (double)mesh.reduced_dim(0) - 1.3) / env.conf().q_e;
     // double rho = jb * (0.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
@@ -81,22 +81,22 @@ int main(int argc, char *argv[])
     //   rho = (double)ppc * 0.2 * (1.0 - 1.8 * i / (double)mesh.reduced_dim(0));
     // else
     //   rho = (double)ppc * 0.2 * (1.8 * i / (double)mesh.reduced_dim(0) - 0.8);
-    // for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e-std::abs(rho)); n++) {
-    for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e); n++) {
+    for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e-std::abs(rho)); n++) {
+    // for (int n = 0; n < 0.5*((jb * initial_M)/env.conf().q_e); n++) {
       data.particles[0].append(env.gen_rand(), 0.0 * sgn(2.0 * i / mesh.reduced_dim(0) - 1.3), i,
                                (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
       data.particles[1].append(env.gen_rand(), 0.0 * sgn(2.0 * i / mesh.reduced_dim(0) - 1.3), i,
                                (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
     }
 
-    // for (int n = 0; n < std::abs(rho); n++) {
-    //   if (rho < 0)
-    //     data.particles[0].append(env.gen_rand(), 0.0, i,
-    //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
-    //   else
-    //     data.particles[1].append(env.gen_rand(), 0.0, i,
-    //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
-    // }
+    for (int n = 0; n < std::abs(rho); n++) {
+      if (rho < 0)
+        data.particles[0].append(env.gen_rand(), 0.0, i,
+                                 (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+      else
+        data.particles[1].append(env.gen_rand(), 0.0, i,
+                                 (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
+    }
   }
 
   // Setup the background current
@@ -110,10 +110,10 @@ int main(int argc, char *argv[])
   sim.field_solver().set_background_j(Jb);
 
   // Setup initial electric field
-  for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0]; i++) {
-    double x = mesh.pos(0, i, 1);
-    data.E(0, i) = -jb * 1 * (19182.2 + 0.85 * x - 2600.0 * log(x + 1600.0));
-  }
+  // for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0]; i++) {
+  //   double x = mesh.pos(0, i, 1);
+  //   data.E(0, i) = -jb * 1 * (19182.2 + 0.85 * x - 2600.0 * log(x + 1600.0));
+  // }
 
   // Initialize data output
   env.exporter().AddArray("E1", data.E, 0);

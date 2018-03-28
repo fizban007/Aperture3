@@ -35,8 +35,8 @@ axes[0, 0].set_ylabel('$p/mc$')
 axes[0, 0].set_xlabel('$x/\lambda_p$')
 axes[0, 0].set_xlim([conf['grid']['lower'], conf['grid']['lower'] + conf['grid']['size']])
 thr = conf['gamma_thr'] * 1.8
-axes[0, 0].set_ylim([-thr, thr])
-axes[0, 0].axvline(x=291.7, linestyle='--')
+axes[0, 0].set_ylim([-thr*10, thr*10])
+# axes[0, 0].axvline(x=291.7/2, linestyle='--')
 
 guard = conf['grid']['guard']
 N = conf['grid']['N']
@@ -44,32 +44,32 @@ xs = np.linspace(conf['grid']['lower'], conf['grid']['lower'] + conf['grid']['si
                  N - 2 * guard + 1)
 efield, = ax2.plot(xs, np.zeros(len(xs)), color='g', linewidth=0.6)
 ax2.set_ylabel("$E$")
-# ax2.set_ylim([-30, 50])
+ax2.set_ylim([-20, 40])
 
 mult, = axes[0,1].plot([], [])
 axes[0,1].plot(xs, np.ones(len(xs)))
 axes[0,1].plot(xs, 2.0*np.ones(len(xs)))
-axes[0,1].axvline(x=291.7, linestyle='--')
+# axes[0,1].axvline(x=291.7/2, linestyle='--')
 # axes[0,1].set_ylim(bottom=0)
 
 ve, = axes[1,0].plot([], [])
 vp, = axes[1,0].plot([], [])
 
 axes[1,0].plot(xs,np.zeros(len(xs)))
-axes[1,0].set_ylim([0, 30])
-axes[1,0].axvline(x=291.7, linestyle='--')
+axes[1,0].set_ylim([-1.2, 1.2])
+# axes[1,0].axvline(x=291.7/2, linestyle='--')
 
 j, = axes[1,1].plot([],[])
 rho, = axes[1,1].plot([],[])
 axes[1,1].plot(xs,np.zeros(len(xs)))
-axes[1,1].plot(xs,10.0*np.ones(len(xs)),'--')
+axes[1,1].plot(xs,1.0*np.ones(len(xs)),'--')
 # axes[1,1].plot(xs,(2.0*xs/1000.0 - 0.7)*5.0,'--')
 # axes[1,1].plot(xs,6.0 * np.cos(2.0 * np.pi * xs / conf["grid"]['size']))
 # axes[1,1].plot(xs,24.0 * (abs(0.5 - xs / conf["grid"]['size']) - 0.25))
 # axes[1,1].plot(xs,5.0 * (1.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
-# axes[1,1].plot(xs,10.0 * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
-axes[1,1].set_ylim([-10, 15])
-axes[1,1].axvline(x=291.7, linestyle='--')
+axes[1,1].plot(xs,1.0 * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
+axes[1,1].set_ylim([-1.0, 1.5])
+# axes[1,1].axvline(x=291.7/2, linestyle='--')
 
 # axbg = fig.canvas.copy_from_bbox(ax1.bbox)
 # images = []
@@ -107,10 +107,10 @@ for n in range(initial_step, conf['N_steps']):
         efield.set_data(xs, E1)
 
         mult.set_data(xs, (rho_p - rho_e)/10)
-        ve.set_data(xs, -rho_e)
-        vp.set_data(xs, rho_p)
-        j.set_data(xs, j_e + j_p)
-        rho.set_data(xs, rho_e + rho_p)
+        ve.set_data(xs, j_e/rho_e)
+        vp.set_data(xs, j_p/rho_p)
+        j.set_data(xs, (j_e + j_p)/10)
+        rho.set_data(xs, (rho_e + rho_p)/10)
         axes[0,1].relim()
         axes[0,1].autoscale_view(True,True,True)
         ax2.relim()
