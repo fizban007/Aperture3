@@ -250,7 +250,7 @@ Photons::f_inv2(double u, double gamma) {
   compute_A2(er, et);
   if (u < A2 * et * et * 0.5 / er)
     return std::sqrt(2.0 * u * er / A2);
-  else if (u < 1.0 - A2 * et )
+  else if (u < 1.0 - A2 * et / (1.0 + alpha))
     return et * std::exp(u / (A2 * et) - et * 0.5 / er);
   else
     return er * std::pow((1.0 - u)*(1.0 + alpha) / (A2 * et), -1.0 / (alpha + 1.0));
