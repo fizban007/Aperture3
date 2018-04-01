@@ -274,44 +274,52 @@ Photons::draw_photon_ep(double e1p, double gamma) {
   double u = m_dist(m_generator);
   double gemin2 = 2.0 * gamma * e_min;
   double ep;
-  if (e1p < gemin2) {
-    double a1;
-    if (e1p < 0.5) {
-      double e_lim = e1p / (1.0 - 2.0 * e1p);
-      if (e_lim > gemin2) {
-        a1 = (alpha + 2.0) / ((1.0 - std::pow((1.0 - 2.0 * e1p) * gemin2 / e1p, alpha)) * 2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
-      } else {
-        a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
-        ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
-        return ep;
-      }
-    } else {
-      a1 = (alpha + 2.0) / (2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
-    }
-    double lim = a1 * (gemin2*gemin2 - e1p*e1p) * gamma / (gemin2*gemin2 * (alpha + 2.0));
-    if (u < lim)
-      ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
-    else
-      ep = gemin2 * std::pow(1.0 - (u - lim) * alpha * (alpha + 2.0) / (2.0 * gamma * a1), -1.0/alpha);
-  } else {
-    double a2 = (alpha * (alpha + 2.0) * 0.5 / gamma) * std::pow(e1p / gemin2, alpha);
-    if (e1p < 0.5)
-      a2 /= (1.0 - std::pow(1.0 - 2.0 * e1p, alpha));
-    // ep = std::pow(std::pow(e1p, -alpha) - u * alpha * (alpha + 2.0) / (a2 * 2.0 * gamma * std::pow(gemin2, alpha)), -1.0 / alpha);
-    ep = gemin2 * std::pow(std::pow(gemin2/e1p, alpha) - u * alpha * (alpha + 2.0) / (2.0 * gamma * a2), -1.0/alpha);
-  }
-  // if (e1p < 0.5 && e1p / (1.0 - 2.0 * e1p) <= gemin2) {
-  //   double e_lim = e1p / (1.0 - 2.0 * e1p);
-  //   double a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
-  //   ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
-  // } else if (e1p > gemin2) {
+  // if (e1p < gemin2) {
+  //   double a1;
+  //   if (e1p < 0.5) {
+  //     double e_lim = e1p / (1.0 - 2.0 * e1p);
+  //     if (e_lim > gemin2) {
+  //       a1 = (alpha + 2.0) / ((1.0 - std::pow((1.0 - 2.0 * e1p) * gemin2 / e1p, alpha)) * 2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
+  //     } else {
+  //       a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
+  //       ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+  //       return ep;
+  //     }
+  //   } else {
+  //     a1 = (alpha + 2.0) / (2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
+  //   }
+  //   double lim = a1 * (gemin2*gemin2 - e1p*e1p) * gamma / (gemin2*gemin2 * (alpha + 2.0));
+  //   if (u < lim)
+  //     ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+  //   else
+  //     ep = gemin2 * std::pow(1.0 - (u - lim) * alpha * (alpha + 2.0) / (2.0 * gamma * a1), -1.0/alpha);
+  // } else {
   //   double a2 = (alpha * (alpha + 2.0) * 0.5 / gamma) * std::pow(e1p / gemin2, alpha);
   //   if (e1p < 0.5)
   //     a2 /= (1.0 - std::pow(1.0 - 2.0 * e1p, alpha));
+  //   // ep = std::pow(std::pow(e1p, -alpha) - u * alpha * (alpha + 2.0) / (a2 * 2.0 * gamma * std::pow(gemin2, alpha)), -1.0 / alpha);
   //   ep = gemin2 * std::pow(std::pow(gemin2/e1p, alpha) - u * alpha * (alpha + 2.0) / (2.0 * gamma * a2), -1.0/alpha);
-  // } else {
-  //   ep = 0.0;
   // }
+  if (e1p < 0.5 && e1p / (1.0 - 2.0 * e1p) <= gemin2) {
+    double e_lim = e1p / (1.0 - 2.0 * e1p);
+    double a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
+    ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+  } else if (e1p > gemin2) {
+    double a2 = (alpha * (alpha + 2.0) * 0.5 / gamma) * std::pow(e1p / gemin2, alpha);
+    if (e1p < 0.5)
+      a2 /= (1.0 - std::pow(1.0 - 2.0 * e1p, alpha));
+    ep = gemin2 * std::pow(std::pow(gemin2/e1p, alpha) - u * alpha * (alpha + 2.0) / (2.0 * gamma * a2), -1.0/alpha);
+  } else {
+    double G = 0.0;
+    if (e1p < 0.5)
+      G = std::pow((1.0 - 2.0 * e1p) * gemin2 / e1p, alpha);
+    double U_0 = (gemin2*gemin2 - e1p*e1p)*gamma/(gemin2*gemin2);
+    double a3 = (alpha + 2.0) / (U_0 + (1.0 - G)*2.0*gamma/alpha);
+    if (u < U_0)
+      ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a3 * gamma) + e1p*e1p);
+    else
+      ep = gemin2 * std::pow(1.0 - (u - U_0) * alpha * (alpha + 2.0) / (2.0 * a3 * gamma), -1.0/alpha);
+  }
   return ep;
 }
 
