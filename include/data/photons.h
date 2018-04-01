@@ -35,6 +35,9 @@ class Photons : public ParticleBase<single_photon_t>
   void compute_A2(double er, double et);
   double f_inv1(double u, double gamma);
   double f_inv2(double u, double gamma);
+  double draw_photon_e1p(double gamma);
+  double draw_photon_ep(double e1p, double gamma);
+  double draw_photon_u1p(double e1p, double gamma);
   double draw_photon_energy(double gamma, double p, double x);
 
  private:

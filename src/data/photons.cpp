@@ -228,6 +228,7 @@ Photons::compute_A2(double er, double et) {
   // double et = er / (2.0 * er + 1.0);
 
   A2 = 1.0 / (et * (et * 0.5 / er + std::log(er / et) + 1.0 / (1.0 + alpha)));
+  // A2 = 1.0 / (et * (et * 0.5 / er + std::log(er / et) + 1.0));
 }
 
 double
@@ -249,14 +250,14 @@ Photons::f_inv2(double u, double gamma) {
   compute_A2(er, et);
   if (u < A2 * et * et * 0.5 / er)
     return std::sqrt(2.0 * u * er / A2);
-  else if (u < A2 * et)
-    return et * std::exp(u - A2 * et * et * 0.5 / er);
+  else if (u < 1.0 - A2 * et )
+    return et * std::exp(u / (A2 * et) - et * 0.5 / er);
   else
-    return er * std::pow((1.0 - u) / (A2 * et), -1.0 / (alpha + 1.0));
+    return er * std::pow((1.0 - u)*(1.0 + alpha) / (A2 * et), -1.0 / (alpha + 1.0));
 }
 
 double
-Photons::draw_photon_energy(double gamma, double p, double x) {
+Photons::draw_photon_e1p(double gamma) {
   float u = m_dist(m_generator);
   // draw the rest frame photon energy
   double e1p;
@@ -265,15 +266,76 @@ Photons::draw_photon_energy(double gamma, double p, double x) {
   } else {
     e1p = f_inv2(u, gamma);
   }
-  // given energy, draw the rest frame photon angle
-  u = m_dist(m_generator);
-  double u1p;
-  if (e1p < 0.5) {
-    double q = std::pow(1.0 - 2.0 * e1p, 2.0 + alpha);
-    u1p = (std::pow(u * (1.0 - q) + q, 1.0 / (2.0 + alpha)) + e1p - 1.0) / e1p;
+  return e1p;
+}
+
+double
+Photons::draw_photon_ep(double e1p, double gamma) {
+  double u = m_dist(m_generator);
+  double gemin2 = 2.0 * gamma * e_min;
+  double ep;
+  if (e1p < gemin2) {
+    double a1;
+    if (e1p < 0.5) {
+      double e_lim = e1p / (1.0 - 2.0 * e1p);
+      if (e_lim > gemin2) {
+        a1 = (alpha + 2.0) / ((1.0 - std::pow((1.0 - 2.0 * e1p) * gemin2 / e1p, alpha)) * 2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
+      } else {
+        a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
+        ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+        return ep;
+      }
+    } else {
+      a1 = (alpha + 2.0) / (2.0 * gamma / alpha + (gemin2*gemin2 - e1p*e1p)/(2.0*e_min*gemin2));
+    }
+    double lim = a1 * (gemin2*gemin2 - e1p*e1p) * gamma / (gemin2*gemin2 * (alpha + 2.0));
+    if (u < lim)
+      ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+    else
+      ep = gemin2 * std::pow(1.0 - (u - lim) * alpha * (alpha + 2.0) / (2.0 * gamma * a1), -1.0/alpha);
   } else {
-    u1p = 1.0 - (1.0 - std::pow(u, 1.0 / (2.0 + alpha))) / e1p;
+    double a2 = (alpha * (alpha + 2.0) * 0.5 / gamma) * std::pow(e1p / gemin2, alpha);
+    if (e1p < 0.5)
+      a2 /= (1.0 - std::pow(1.0 - 2.0 * e1p, alpha));
+    // ep = std::pow(std::pow(e1p, -alpha) - u * alpha * (alpha + 2.0) / (a2 * 2.0 * gamma * std::pow(gemin2, alpha)), -1.0 / alpha);
+    ep = gemin2 * std::pow(std::pow(gemin2/e1p, alpha) - u * alpha * (alpha + 2.0) / (2.0 * gamma * a2), -1.0/alpha);
   }
+  // if (e1p < 0.5 && e1p / (1.0 - 2.0 * e1p) <= gemin2) {
+  //   double e_lim = e1p / (1.0 - 2.0 * e1p);
+  //   double a1 = (gemin2 * gemin2 * (alpha + 2.0)) / (gamma * (e_lim*e_lim - e1p*e1p));
+  //   ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a1 * gamma) + e1p*e1p);
+  // } else if (e1p > gemin2) {
+  //   double a2 = (alpha * (alpha + 2.0) * 0.5 / gamma) * std::pow(e1p / gemin2, alpha);
+  //   if (e1p < 0.5)
+  //     a2 /= (1.0 - std::pow(1.0 - 2.0 * e1p, alpha));
+  //   ep = gemin2 * std::pow(std::pow(gemin2/e1p, alpha) - u * alpha * (alpha + 2.0) / (2.0 * gamma * a2), -1.0/alpha);
+  // } else {
+  //   ep = 0.0;
+  // }
+  return ep;
+}
+
+double
+Photons::draw_photon_u1p(double e1p, double gamma) {
+  // given energy, draw the rest frame photon angle
+  double u1p;
+  double ep = draw_photon_ep(e1p, gamma);
+
+  // float E_target = gamma * (e_min * std::pow(1.0 - u, -1.0 / alpha)) / 2.0;
+  u1p = 1.0 - 1.0 / e1p + 1.0 / ep;
+  // if (e1p < 0.5) {
+  //   double q = std::pow(1.0 - 2.0 * e1p, 3.0 + alpha);
+  //   u1p = (std::pow(u * (1.0 - q) + q, 1.0 / (3.0 + alpha)) + e1p - 1.0) / e1p;
+  // } else {
+  //   u1p = 1.0 - (1.0 - std::pow(u, 1.0 / (3.0 + alpha))) / e1p;
+  // }
+  return u1p;
+}
+
+double
+Photons::draw_photon_energy(double gamma, double p, double x) {
+  double e1p = draw_photon_e1p(gamma);
+  double u1p = draw_photon_u1p(e1p, gamma);
   // given e1p and u1p, compute the photon energy in the lab frame
   // Logger::print_info("e1p is {}, u1p is {}", e1p, u1p);
   double beta = beta_phi(x);
