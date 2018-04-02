@@ -313,12 +313,12 @@ Photons::draw_photon_ep(double e1p, double gamma) {
     double G = 0.0;
     if (e1p < 0.5)
       G = std::pow((1.0 - 2.0 * e1p) * gemin2 / e1p, alpha);
-    double U_0 = (gemin2*gemin2 - e1p*e1p)*gamma/(gemin2*gemin2);
-    double a3 = (alpha + 2.0) / (U_0 + (1.0 - G)*2.0*gamma/alpha);
-    if (u < U_0)
+    double U_0 = (gemin2*gemin2 - e1p*e1p)*gamma/(gemin2*gemin2*(alpha + 2.0));
+    double a3 = 1.0 / (U_0 + (1.0 - G)*2.0*gamma/(alpha * (alpha + 2.0)));
+    if (u < U_0 * a3)
       ep = std::sqrt(u * (alpha + 2.0) * gemin2 * gemin2 / (a3 * gamma) + e1p*e1p);
     else
-      ep = gemin2 * std::pow(1.0 - (u - U_0) * alpha * (alpha + 2.0) / (2.0 * a3 * gamma), -1.0/alpha);
+      ep = gemin2 * std::pow(1.0 - (u - a3 * U_0) * alpha * (alpha + 2.0) / (2.0 * a3 * gamma), -1.0/alpha);
   }
   return ep;
 }
