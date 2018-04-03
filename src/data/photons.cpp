@@ -119,7 +119,9 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (std::abs(E_ph) * e_min < 0.01) continue;
+      if (std::abs(E_ph) * e_min < 0.01)
+        // continue;
+        l_photon = 99999.9;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -142,7 +144,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       continue;
     float gamma_ratio = positrons.data().gamma[n] / gamma_thr;
     if (gamma_ratio > 1.0) {
-      float prob = (positrons.data().gamma[n] * e_min < 0.1 ? p_ic : p_ic * 0.1 / (e_min * positrons.data().gamma[n]));
+      float e_p = positrons.data().gamma[n] * e_min;
+      float prob = (e_p < 0.1 ? p_ic : p_ic * 0.1 / e_p);
       if (m_dist(m_generator) > prob)
       // if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
@@ -157,7 +160,10 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      if (std::abs(E_ph) * e_min < 0.01) continue;
+      if (std::abs(E_ph) * e_min < 0.01)
+        l_photon = 99999.9;
+        // continue;
+      // if (std::abs(E_ph) < 100.0) continue;
       // track 10% of the secondary particles
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
