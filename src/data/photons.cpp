@@ -97,7 +97,6 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
   double E_ph = 20.0;
   // double l_photon = l_ph + 0.5 * l_ph * m_normal(m_generator);
   // double l_photon = 9999.9;
-  double l_photon = -l_ph * std::log(1.0 - m_dist(m_generator));
   Logger::print_info("Processing Pair Creation...");
   // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
@@ -119,6 +118,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
+      double l_photon = -l_ph * std::log(1.0 - m_dist(m_generator));
       if (std::abs(E_ph) * e_min < 0.01)
         l_photon = 99999.9;
       if (std::abs(E_ph) < 100.0) continue;
@@ -160,6 +160,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
+      double l_photon = -l_ph * std::log(1.0 - m_dist(m_generator));
       if (std::abs(E_ph) * e_min < 0.01)
         l_photon = 99999.9;
       if (std::abs(E_ph) < 100.0) continue;
