@@ -39,6 +39,7 @@ class Photons : public ParticleBase<single_photon_t>
   double draw_photon_ep(double e1p, double gamma);
   double draw_photon_u1p(double e1p, double gamma);
   double draw_photon_energy(double gamma, double p, double x);
+  double draw_photon_freepath(double Eph);
 
  private:
   bool create_pairs = false;

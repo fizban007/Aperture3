@@ -118,10 +118,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      double l_photon = -l_ph * std::log(1.0 - m_dist(m_generator));
-      if (std::abs(E_ph) * e_min < 0.01)
-        l_photon = 99999.9;
-      if (std::abs(E_ph) < 10.0) continue;
+      double l_photon = draw_photon_freepath(E_ph);
+      if (l_photon > mesh.sizes[0]) continue;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
         double p_sec = sqrt(0.25 * E_ph * E_ph - 1.0);
@@ -160,10 +158,8 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      double l_photon = -l_ph * std::log(1.0 - m_dist(m_generator));
-      if (std::abs(E_ph) * e_min < 0.01)
-        l_photon = 99999.9;
-      if (std::abs(E_ph) < 10.0) continue;
+      double l_photon = draw_photon_freepath(E_ph);
+      if (l_photon > mesh.sizes[0]) continue;
       // if (std::abs(E_ph) < 100.0) continue;
       // track 10% of the secondary particles
       if (!trace_photons) {
@@ -359,6 +355,17 @@ Photons::draw_photon_energy(double gamma, double p, double x) {
     v *= -1.0;
   }
   return sgn(v) * (gamma + std::abs(p) * (-u1p)) * e1p;
+}
+
+double
+Photons::draw_photon_freepath(double Eph) {
+  double rate;
+  if (Eph * e_min < 2.0) {
+    rate = std::pow(Eph * e_min / 2.0, alpha);
+  } else {
+    rate = std::pow(Eph * e_min / 2.0, -1.0);
+  }
+  return -l_ph * std::log(1.0 - m_dist(m_generator)) / rate;
 }
 
 }
