@@ -193,14 +193,14 @@ Photons::move(const Grid& grid, double dt) {
     double pos = mesh.pos(0, cell, m_data.x1[idx]);
 
     // Censor photons that are not converting inside the box
-    // if (p < 0 && m_data.path_left[idx] > pos) {
-    //   erase(idx);
-    //   continue;
-    // }
-    // if (p > 0 && m_data.path_left[idx] > mesh.sizes[0] - pos) {
-    //   erase(idx);
-    //   continue;
-    // }
+    if (p < 0 && m_data.path_left[idx] > pos) {
+      erase(idx);
+      continue;
+    }
+    if (p > 0 && m_data.path_left[idx] > mesh.sizes[0] - pos) {
+      erase(idx);
+      continue;
+    }
 
 
     m_data.x1[idx] += sgn(p) * dt / mesh.delta[0];
