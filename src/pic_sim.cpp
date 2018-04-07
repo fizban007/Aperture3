@@ -91,10 +91,12 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   //                    data.J(0, 1), data.J(0, 2), data.J(0, 3));
 
   // Sort the particles every 20 timesteps to move empty slots to the back
-  if ((step % 20) == 0) {
+  if ((step % 100) == 0) {
     for (auto& part : data.particles) {
       part.sort(data.E.grid());
     }
+  }
+  if ((step % 200) == 0) {
     data.photons.sort(data.E.grid());
   }
   m_pusher->handle_boundary(data);
