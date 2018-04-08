@@ -35,22 +35,23 @@ int main(int argc, char *argv[])
     std::ofstream f("spectrum1e3.txt");
     for (int i = 0; i < N; i++) {
       // float E_ph = ph.draw_photon_e1p(gamma);
-      // float e1p = ph.draw_photon_e1p(gamma);
-      float e1p = 25.0*gamma*emin;
+      float e1p = ph.draw_photon_e1p(gamma);
+      // float e1p = 25.0*gamma*emin;
       float u1p = ph.draw_photon_u1p(e1p, gamma);
-      float ep = ph.draw_photon_ep(e1p, gamma);
+      // float ep = ph.draw_photon_ep(e1p, gamma);
       float E_ph = ph.draw_photon_energy(gamma, p, x) / gamma;
       // std::cout << ph.draw_photon_energy(gamma, p, x) << std::endl;
 
       // float u = dist(g);
       // float E_target = emin * std::pow(1.0 - u, -1.0 / alpha);
       // float E_prime = E_target * gamma / 2.0;
-      f << E_ph << std::endl;
       // double f_inv2 = ph.f_inv2((double)i / (double)N, gamma);
       // f << f_inv2 << std::endl;
       // float u1 = ph.draw_photon_u1p(200.0);
+      f << E_ph << std::endl;
       f2 << u1p << std::endl;
-      f3 << ep << std::endl;
+      f3 << e1p << std::endl;
+      // f3 << ep << std::endl;
     }
   // }
   f.close();
