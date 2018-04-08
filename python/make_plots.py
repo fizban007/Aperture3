@@ -35,7 +35,7 @@ axes[0, 0].set_ylabel('$p/mc$')
 axes[0, 0].set_xlabel('$x/\lambda_p$')
 axes[0, 0].set_xlim([conf['grid']['lower'], conf['grid']['lower'] + conf['grid']['size']])
 thr = conf['gamma_thr'] * 1.8
-axes[0, 0].set_ylim([-thr*10, thr*10])
+# axes[0, 0].set_ylim([-1e5, 1e5])
 # axes[0, 0].axvline(x=291.7/2, linestyle='--')
 
 guard = conf['grid']['guard']
@@ -44,7 +44,7 @@ xs = np.linspace(conf['grid']['lower'], conf['grid']['lower'] + conf['grid']['si
                  N - 2 * guard + 1)
 efield, = ax2.plot(xs, np.zeros(len(xs)), color='g', linewidth=0.6)
 ax2.set_ylabel("$E$")
-ax2.set_ylim([-20, 40])
+# ax2.set_ylim([-400, 400])
 
 mult, = axes[0,1].plot([], [])
 axes[0,1].plot(xs, np.ones(len(xs)))
@@ -55,9 +55,13 @@ axes[0,1].plot(xs, 2.0*np.ones(len(xs)))
 ve, = axes[1,0].plot([], [])
 vp, = axes[1,0].plot([], [])
 
-axes[1,0].plot(xs,np.zeros(len(xs)))
-axes[1,0].set_ylim([-1.2, 1.2])
+# axes[1,0].plot(xs,np.zeros(len(xs)))
+# axes[1,0].set_ylim([-1.2, 1.2])
 # axes[1,0].axvline(x=291.7/2, linestyle='--')
+a,b,hist_e = axes[1,0].hist(np.array([0]), bins=100, histtype=u'step')
+a,b,hist_p = axes[1,0].hist(np.array([0]), bins=100, histtype=u'step')
+a,b,hist_ph = axes[1,0].hist(np.array([0]), bins=100, histtype=u'step')
+axes[1,0].set_yscale('log')
 
 j, = axes[1,1].plot([],[])
 rho, = axes[1,1].plot([],[])
@@ -85,10 +89,10 @@ for n in range(initial_step, conf['N_steps']):
     #     J1 = f["J1"]
     #     rho_e = f["Rho_e"]
     #     rho_p = f["Rho_p"]
-        x_e = f["Electrons_x"]
-        p_e = f["Electrons_p"]
-        x_p = f["Positrons_x"]
-        p_p = f["Positrons_p"]
+        x_e = np.array(f["Electrons_x"])
+        p_e = np.array(f["Electrons_p"])
+        x_p = np.array(f["Positrons_x"])
+        p_p = np.array(f["Positrons_p"])
         E1 = np.array(f["E1"])[guard-1:-guard]
         j_e = np.array(f["J_e_avg"])[guard-1:-guard]
         j_p = np.array(f["J_p_avg"])[guard-1:-guard]
@@ -99,20 +103,27 @@ for n in range(initial_step, conf['N_steps']):
         po.set_data(x_p, p_p)
         # ax1.plot(x_p, p_p, ".", markersize=1.0)
         if conf['trace_photons']:
-            x_ph = f["Photons_x"]
-            p_ph = f["Photons_p"]
+            x_ph = np.array(f["Photons_x"])
+            p_ph = np.array(f["Photons_p"])
             # ax1.plot(x_ph, p_ph, '.', markersize=1.0, color='k')
             ph.set_data(x_ph, p_ph)
 
         efield.set_data(xs, E1)
 
         mult.set_data(xs, (rho_p - rho_e)/10)
-        ve.set_data(xs, j_e/rho_e)
-        vp.set_data(xs, j_p/rho_p)
+        # ve.set_data(xs, j_e/rho_e)
+        # vp.set_data(xs, j_p/rho_p)
+        axes[1,0].cla()
+        a, b, c = axes[1,0].hist(np.log10(np.sqrt(p_e*p_e + 1)+1), bins=100, histtype=u'step')
+        a, b, c = axes[1,0].hist(np.log10(np.sqrt(p_p*p_p + 1)+1), bins=100, histtype=u'step')
+        a, b, c = axes[1,0].hist(np.log10(abs(p_ph)+1), bins=100, histtype=u'step')
+        axes[1,0].set_yscale('log')
         j.set_data(xs, (j_e + j_p)/10)
         rho.set_data(xs, (rho_e + rho_p)/10)
         axes[0,1].relim()
         axes[0,1].autoscale_view(True,True,True)
+        axes[0,0].relim()
+        axes[0,0].autoscale_view(True,True,True)
         ax2.relim()
         ax2.autoscale_view(True,True,True)
         # axes[0,1].set_ylim(bottom=0)
