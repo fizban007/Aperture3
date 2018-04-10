@@ -3,9 +3,14 @@
 
 #include <string>
 #include <array>
+#include "visit_struct/visit_struct.hpp"
 #include "data/enum_types.h"
 
 namespace Aperture {
+
+typedef std::array<std::string, 6> bdy_cond_t;
+typedef std::array<bool, 3> bdy_per_t;
+typedef std::array<std::string, 3> grid_conf_t;
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  This is the standard simulation parameters class. This class will be
@@ -65,8 +70,87 @@ struct SimParams {
   std::string initial_condition = "empty";
 };
 
-
-
 }
+
+// VISITABLE_STRUCT(Aperture::SimParams,
+//                           (std::string, metric)
+//                           (double, delta_t)
+//                           (double, q_e)
+//                           (int, ptc_per_cell)
+//                           (unsigned long, max_ptc_number)
+//                           (unsigned long, max_photon_number)
+//                           (double, ion_mass)
+//                           (bool, gravity_on)
+//                           (double, gravity)
+//                           (Aperture::bdy_cond_t, boundary_conditions)
+//                           (Aperture::bdy_per_t, boundary_periodic)
+//                           (int, interpolation_order)
+//                           (int, current_smoothing)
+//                           (std::string, data_dir)
+//                           (std::string, data_file_prefix)
+//                           (bool, data_compress)
+//                           (std::string, log_method)
+//                           (std::string, log_file)
+//                           (Aperture::LogLevel, log_lvl)
+//                           (bool, create_pairs)
+//                           (bool, trace_photons)
+//                           (float, gamma_thr)
+//                           (float, photon_path)
+//                           (float, ic_path)
+//                           (bool, annih_on)
+//                           (int, annih_thr)
+//                           (float, annih_fraction)
+//                           (float, track_percent)
+//                           (float, spectral_alpha)
+//                           (float, e_s)
+//                           (float, e_min)
+//                           (Aperture::grid_conf_t, grid_config)
+//                           (Aperture::grid_conf_t, data_grid_config)
+//                           (std::string, algorithm_ptc_move)
+//                           (std::string, algorithm_ptc_push)
+//                           (std::string, algorithm_field_update)
+//                           (std::string, algorithm_current_deposit)
+//                           (std::string, initial_condition));
+
+// VISITABLE_STRUCT(Aperture::SimParams,
+//                  metric,
+//                  delta_t,
+//                  q_e,
+//                  ptc_per_cell,
+//                  max_ptc_number,
+//                  max_photon_number,
+//                  ion_mass,
+//                  gravity_on,
+//                  gravity,
+//                  // boundary_conditions,
+//                  boundary_periodic,
+//                  interpolation_order,
+//                  current_smoothing,
+//                  data_dir,
+//                  data_file_prefix,
+//                  data_compress,
+//                  log_method,
+//                  log_file,
+//                  log_lvl,
+//                  create_pairs,
+//                  trace_photons,
+//                  gamma_thr,
+//                  photon_path,
+//                  ic_path,
+//                  annih_on,
+//                  annih_thr,
+//                  annih_fraction,
+//                  track_percent,
+//                  spectral_alpha,
+//                  e_s,
+//                  e_min,
+//                  // grid_config,
+//                  // data_grid_config,
+//                  algorithm_ptc_move,
+//                  algorithm_ptc_push,
+//                  algorithm_field_update,
+//                  algorithm_current_deposit,
+//                  initial_condition);
+
 
 #endif  // _SIM_PARAMS_H_
