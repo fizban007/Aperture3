@@ -29,6 +29,8 @@ Photons::Photons(const Environment& env)
   e_s = env.conf().e_s;
   e_min = env.conf().e_min;
   Logger::print_info("Photon conversion probability is {}", p_ph);
+  Logger::print_info("emin is {}", e_min);
+  Logger::print_info("IC probability is {}", p_ic);
 }
 
 Photons::Photons(const Photons& other)

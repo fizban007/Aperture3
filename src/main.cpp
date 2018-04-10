@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
   //                              (env.gen_rand() < env.conf().track_percent ? (int)ParticleFlag::tracked : 0));
   //   }
   // }
-  double jb = 10.0;
+  double jb = 1.0;
   double initial_M = 2.0;
   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
     // double rho = -jb * 0.5 * (2.0 * i / (double)mesh.reduced_dim(0) - 1.3) / env.conf().q_e;

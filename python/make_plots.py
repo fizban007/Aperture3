@@ -27,9 +27,9 @@ ax2 = axes[0, 0].twinx()
 
 # fig.canvas.draw()
 
-el, = axes[0, 0].plot([], [], '.', markersize=1.0, color='blue')
-po, = axes[0, 0].plot([], [], '.', markersize=1.0, color='orange')
-ph, = axes[0, 0].plot([], [], '.', markersize=1.0, color='k')
+el, = axes[0, 0].plot([], [], '.', markersize=1.0, color='blue', alpha=0.3)
+po, = axes[0, 0].plot([], [], '.', markersize=1.0, color='orange', alpha=0.3)
+ph, = axes[0, 0].plot([], [], '.', markersize=1.0, color='k', alpha=0.3)
 
 axes[0, 0].set_ylabel('$p/mc$')
 axes[0, 0].set_xlabel('$x/\lambda_p$')
