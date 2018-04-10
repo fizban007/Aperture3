@@ -58,10 +58,11 @@ set(FMT_INCLUDE_DIR deps/fmt)
 set(CUDALE_INCLUDE_DIR deps/CudaLE/include)
 set(JSON_INCLUDE_DIR deps/json/include)
 set(CXX_OPTS_INCLUDE_DIR deps/cxxopts/include)
+set(CPPTOML_INCLUDE_DIR deps/cpptoml/include)
 # set(CATCH_INCLUDE_DIR deps/single_include)
 # set(INTEGRATE_INCLUDE_DIR deps/integrate/src)
 
-include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} include )
+include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} include)
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
 add_subdirectory(deps/fmt)
