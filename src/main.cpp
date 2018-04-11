@@ -8,6 +8,14 @@
 
 using namespace Aperture;
 
+// Define background charge density profile here
+double
+rho_gj(double jb, double x) {
+  // return jb * (0.85 - 130.0 / (80.0 + 250.0 * x));
+  // return jb * std::atan(5.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI;
+  return jb * (0.44 + 0.6 * std::atan(5.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI);
+}
+
 int main(int argc, char *argv[])
 {
   // Initialize the simulation environment
@@ -74,7 +82,7 @@ int main(int argc, char *argv[])
     // double rho = -jb * 0.5 * (2.0 * i / (double)mesh.reduced_dim(0) - 1.3) / env.conf().q_e;
     // double rho = jb * (0.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
     // double rho = jb * 0.5 * (1.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
-    double rho = jb * (0.85 - 130.0 / (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) / env.conf().q_e;
+    double rho = rho_gj(jb, i / (double)mesh.reduced_dim(0)) / env.conf().q_e;
     // double rho = (double)ppc * 0.2 * cos(2.0 * acos(-1.0) * i / (double)mesh.reduced_dim(0));
     // double rho = 0.0;
     // if (i < 0.5 * (mesh.guard[0] + mesh.reduced_dim(0)))
