@@ -20,6 +20,7 @@ else:
     initial_step = 0
 
 conf = json.load(open(os.path.join(data_dir, "config.json")))
+jb = 1.0
 
 fig, axes = plt.subplots(2, 2)
 fig.set_size_inches(18.5, 10.5)
@@ -110,7 +111,7 @@ for n in range(initial_step, conf['N_steps']):
 
         efield.set_data(xs, E1)
 
-        mult.set_data(xs, (rho_p - rho_e)/10)
+        mult.set_data(xs, (rho_p - rho_e)/jb)
         # ve.set_data(xs, j_e/rho_e)
         # vp.set_data(xs, j_p/rho_p)
         axes[1,0].cla()
@@ -118,8 +119,8 @@ for n in range(initial_step, conf['N_steps']):
         a, b, c = axes[1,0].hist(np.log10(np.sqrt(p_p*p_p + 1)+1), bins=100, histtype=u'step')
         a, b, c = axes[1,0].hist(np.log10(abs(p_ph)+1), bins=100, histtype=u'step')
         axes[1,0].set_yscale('log')
-        j.set_data(xs, (j_e + j_p)/10)
-        rho.set_data(xs, (rho_e + rho_p)/10)
+        j.set_data(xs, (j_e + j_p)/jb)
+        rho.set_data(xs, (rho_e + rho_p)/jb)
         axes[0,1].relim()
         axes[0,1].autoscale_view(True,True,True)
         axes[0,0].relim()

@@ -1,3 +1,6 @@
+APERTURE &nbsp;&nbsp;![](https://github.com/fizban007/1Dpic/blob/master/logo.png "Aperture Logo")
+=============
+
 # How to compile
 
 First clone the directory:
