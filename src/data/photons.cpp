@@ -95,12 +95,8 @@ void
 Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh& mesh) {
   if (!create_pairs)
     return;
-  // This is assuming not in KN regime
-  double E_ph = 20.0;
-  // double l_photon = l_ph + 0.5 * l_ph * m_normal(m_generator);
-  // double l_photon = 9999.9;
+  double E_ph;
   Logger::print_info("Processing Pair Creation...");
-  // instant pair creation
   for (Index_t n = 0; n < electrons.number(); n++) {
     if (electrons.is_empty(n))
       continue;
@@ -109,19 +105,15 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       float prob = (electrons.data().gamma[n] * e_min < 0.1 ? p_ic : p_ic * 0.1 / (e_min * electrons.data().gamma[n]));
       if (m_dist(m_generator) > prob)
         continue;
-      // Assuming in KN regime, the photon takes 9/10 of the original energy
-      // E_ph = 0.6 * m_dist(m_generator) * electrons.data().gamma[n] + 2.0;
-      // E_ph = 0.6 * electrons.data().gamma[n] + 2.0;
       double x = mesh.pos(0, electrons.data().cell[n], electrons.data().x1[n]) / mesh.sizes[0];
       E_ph = draw_photon_energy(electrons.data().gamma[n], electrons.data().p1[n], x);
       double gamma_f = electrons.data().gamma[n] - std::abs(E_ph);
-      if (gamma_f < 0.0)
+      if (gamma_f < 1.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", electrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      double l_photon = draw_photon_freepath(E_ph);
-      // if (l_photon > mesh.sizes[0]) continue;
+      double l_photon = draw_photon_freepath(std::abs(E_ph));
       if (l_photon > mesh.sizes[0] || std::abs(E_ph) < 10.0) continue;
       // track a fraction of the secondary particles and photons
       if (!trace_photons) {
@@ -148,20 +140,17 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       float e_p = positrons.data().gamma[n] * e_min;
       float prob = (e_p < 0.1 ? p_ic : p_ic * 0.1 / e_p);
       if (m_dist(m_generator) > prob)
-      // if (m_dist(m_generator) > p_ic * gamma_ratio)
         continue;
       // Assuming in KN regime, the photon takes 9/10 of the original energy
-      // E_ph = 0.6 * m_dist(m_generator) * positrons.data().gamma[n] + 2.0;
-      // E_ph = 0.6 * positrons.data().gamma[n] + 2.0;
       double x = mesh.pos(0, positrons.data().cell[n], positrons.data().x1[n]) / mesh.sizes[0];
       E_ph = draw_photon_energy(positrons.data().gamma[n], positrons.data().p1[n], x);
       double gamma_f = positrons.data().gamma[n] - std::abs(E_ph);
-      if (gamma_f < 0.0)
+      if (gamma_f < 1.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", positrons.data().gamma[n], E_ph);
       if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
-      double l_photon = draw_photon_freepath(E_ph);
+      double l_photon = draw_photon_freepath(std::abs(E_ph));
       if (l_photon > mesh.sizes[0] || std::abs(E_ph) < 10.0) continue;
       // if (std::abs(E_ph) < 100.0) continue;
       // track 10% of the secondary particles
@@ -366,7 +355,8 @@ Photons::draw_photon_freepath(double Eph) {
   if (Eph * e_min < 2.0) {
     rate = std::pow(Eph * e_min / 2.0, alpha);
   } else {
-    rate = std::pow(Eph * e_min / 2.0, -1.0);
+    // rate = std::pow(Eph * e_min / 2.0, -1.0);
+    rate = 2.0 / (Eph * e_min);
   }
   return -l_ph * std::log(1.0 - m_dist(m_generator)) / rate;
 }
