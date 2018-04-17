@@ -41,7 +41,7 @@ class CommandArgs
 
  private:
   // default values provided in the constructor
-  int m_dimx, m_dimy, m_dimz;
+  int m_dimx = 1, m_dimy = 1, m_dimz = 1;
   uint32_t m_steps, m_data_interval;
   std::string m_conf_filename;
   std::unique_ptr<cxxopts::Options> m_options;

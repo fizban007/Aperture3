@@ -130,14 +130,14 @@ Environment::setup_domain(int dimx, int dimy, int dimz) {
   }
 
   // Debug info for boundary
-  Logger::print_debug_all("Rank {} has boundary info {} {} {} {}", m_domain_info.rank, m_domain_info.is_boundary[0], m_domain_info.is_boundary[1], m_domain_info.is_boundary[2], m_domain_info.is_boundary[3]);
+  // Logger::print_debug_all("Rank {} has boundary info {} {} {} {}", m_domain_info.rank, m_domain_info.is_boundary[0], m_domain_info.is_boundary[1], m_domain_info.is_boundary[2], m_domain_info.is_boundary[3]);
 
   // Cache whether this node is boundary on all 6 directions
-  for (int i = 0; i < NUM_BOUNDARIES; ++i) m_domain_info.is_boundary[i] = false;
-  if (m_domain_info.cart_neighbor_left[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[0] = true;
-  if (m_domain_info.cart_neighbor_right[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[1] = true;
-  if (m_domain_info.cart_neighbor_left[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[2] = true;
-  if (m_domain_info.cart_neighbor_right[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[3] = true;
+  // for (int i = 0; i < NUM_BOUNDARIES; ++i) m_domain_info.is_boundary[i] = false;
+  // if (m_domain_info.cart_neighbor_left[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[0] = true;
+  // if (m_domain_info.cart_neighbor_right[0] == NEIGHBOR_NULL) m_domain_info.is_boundary[1] = true;
+  // if (m_domain_info.cart_neighbor_left[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[2] = true;
+  // if (m_domain_info.cart_neighbor_right[1] == NEIGHBOR_NULL) m_domain_info.is_boundary[3] = true;
 
   // resize domain map
   // for (auto& v : m_domain_info.rank_map) {
