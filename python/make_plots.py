@@ -52,6 +52,8 @@ axes[0,1].plot(xs, np.ones(len(xs)))
 axes[0,1].plot(xs, 2.0*np.ones(len(xs)))
 # axes[0,1].axvline(x=291.7/2, linestyle='--')
 # axes[0,1].set_ylim(bottom=0)
+txt = axes[0,1].text(0.7,1.1,"$t = {}$".format(0.0),
+                     size=20,transform = axes[0,1].transAxes)
 
 ve, = axes[1,0].plot([], [])
 vp, = axes[1,0].plot([], [])
@@ -72,14 +74,18 @@ axes[1,1].plot(xs,1.0*np.ones(len(xs)),'--')
 # axes[1,1].plot(xs,6.0 * np.cos(2.0 * np.pi * xs / conf["grid"]['size']))
 # axes[1,1].plot(xs,24.0 * (abs(0.5 - xs / conf["grid"]['size']) - 0.25))
 # axes[1,1].plot(xs,5.0 * (1.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
-axes[1,1].plot(xs,1.0 * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
+axes[1,1].plot(xs,jb * (0.85 - 130.0 / (80.0 + 250.0 * xs / conf['grid']['size'])))
+# axes[1,1].plot(xs,jb * 0.9 * (2.0 * xs / conf['grid']['size'] - 1.0))
+# axes[1,1].plot(xs, jb * np.arctan(5.0*(2.0*xs/conf['grid']['size']-1.2))*2.0/np.pi)
+# axes[1,1].plot(xs, jb * 1.75 * np.arctan(1.0*(2.0*xs/conf['grid']['size']-1.2))*2.0/np.pi)
+# axes[1,1].plot(xs,jb*(0.44 + 0.6*np.arctan(5.0*(2.0*xs/conf['grid']['size']-1.2))*2.0/np.pi))
 axes[1,1].set_ylim([-1.0, 1.5])
 # axes[1,1].axvline(x=291.7/2, linestyle='--')
 
 # axbg = fig.canvas.copy_from_bbox(ax1.bbox)
 # images = []
 
-for n in range(initial_step, conf['N_steps']):
+for n in range(initial_step, conf['N_steps'] // conf['data_interval']):
 # for n in range(1000):
     print(n)
     # Change data directory!
@@ -127,6 +133,8 @@ for n in range(initial_step, conf['N_steps']):
         axes[0,0].autoscale_view(True,True,True)
         ax2.relim()
         ax2.autoscale_view(True,True,True)
+        txt.set_text("$t = {}$".format(n*conf["delta_t"]*conf['data_interval']))
+
         # axes[0,1].set_ylim(bottom=0)
 
         # fig.canvas.restore_region(axbg)

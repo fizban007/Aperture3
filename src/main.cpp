@@ -11,9 +11,10 @@ using namespace Aperture;
 // Define background charge density profile here
 double
 rho_gj(double jb, double x) {
-  // return jb * (0.85 - 130.0 / (80.0 + 250.0 * x));
-  // return jb * std::atan(5.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI;
-  return jb * (0.44 + 0.6 * std::atan(5.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI);
+  return jb * (0.85 - 130.0 / (80.0 + 250.0 * x));
+  // return jb * 1.75* std::atan(1.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI;
+  // return jb * (0.44 + 0.6 * std::atan(5.0 * (2.0 * x - 1.2)) * 2.0 / CONST_PI);
+  // return jb * 0.9 * (2.0 * x - 1.0);
 }
 
 int main(int argc, char *argv[])
