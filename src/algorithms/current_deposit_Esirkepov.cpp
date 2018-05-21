@@ -60,6 +60,7 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
     m_comm_J(data.J);
   }
 
+  // periodic boundary issues
   auto& mesh = data.J.grid().mesh();
   if (m_periodic) {
     for (int i = 0; i < mesh.guard[0]; i++) {
