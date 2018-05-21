@@ -22,6 +22,11 @@ class ParticlePusher_Geodesic : public ParticlePusher {
                     double dt);
   void move_ptc(Particles& particles, Index_t idx, double x, const Grid& grid,
                 double dt);
+#ifdef __AVX2__
+  void lorentz_push_avx2(particle_data& data, Index_t idx, const VectorField<Scalar>& E, double dt);
+
+  void move_ptc_avx2(particle_data& data, Index_t idx, const Quadmesh& mesh, double dt);
+#endif // __AVX2__
 
   void handle_boundary(SimData& data);
   // void set_interp_order(int order);
