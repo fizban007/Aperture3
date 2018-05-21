@@ -30,6 +30,15 @@ struct ptcdata {
   std::vector<float> data_p;
 };
 
+template <>
+struct ptcdata<Photons> {
+  std::string name;
+  const Photons* ptc;
+  std::vector<float> data_x;
+  std::vector<float> data_p;
+  std::vector<float> data_l;
+};
+
 class DataExporter
 {
  public:

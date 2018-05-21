@@ -55,6 +55,7 @@ struct single_photon_t {
   Pos_t x1 = 0.0;
   Scalar p1 = 0.0;
   Scalar path_left = 0.0;
+  Scalar path = 0.0;
   // Defulat MAX_CELL means empty particle slot
   uint32_t cell = MAX_CELL;
   uint32_t flag = 0;
@@ -99,6 +100,7 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::single_photon_t,
                           (Aperture::Pos_t, x1)
                           (Aperture::Scalar, p1)
                           (Aperture::Scalar, path_left)
+                          (Aperture::Scalar, path)
                           (uint32_t, cell)
                           (uint32_t, flag));
 
@@ -132,12 +134,13 @@ struct photon_data {
   // NOTE: This size is also NOT equal to the size of the
   // single_photon_t struct, due to padding
   enum {
-    size = sizeof(Pos_t) * 1 + sizeof(Scalar) * 2 + sizeof(uint32_t) * 2
+    size = sizeof(Pos_t) * 1 + sizeof(Scalar) * 3 + sizeof(uint32_t) * 2
   };
 
   Pos_t* x1;
   Scalar* p1;
   Scalar* path_left;
+  Scalar* path;
   uint32_t* cell;
   uint32_t* flag;
 
@@ -170,6 +173,7 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::photon_data,
                           (Aperture::Pos_t*, x1)
                           (Aperture::Scalar*, p1)
                           (Aperture::Scalar*, path_left)
+                          (Aperture::Scalar*, path)
                           (uint32_t*, cell)
                           (uint32_t*, flag));
 

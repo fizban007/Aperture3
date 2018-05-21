@@ -24,13 +24,13 @@ DataExporter::DataExporter(const std::string& dir, const std::string& prefix)
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
 
   // Format the output directory as Data%Y%m%d-%H%M
-  char myTime[100] = {};
-  char subDir[100] = {};
+  char myTime[150] = {};
+  char subDir[200] = {};
   time_t rawtime;
   struct tm* timeinfo;
   time(&rawtime);
   timeinfo = localtime(&rawtime);
-  strftime(myTime, 100, "%Y%m%d-%H%M", timeinfo);
+  strftime(myTime, 140, "%Y%m%d-%H%M", timeinfo);
   snprintf(subDir, sizeof(subDir), "Data%s/", myTime);
 
   outputDirectory += subDir;
@@ -105,6 +105,7 @@ DataExporter::AddParticleArray(const std::string& name, const Photons& ptc) {
   temp.ptc = &ptc;
   temp.data_x = std::vector<float>(MAX_TRACKED);
   temp.data_p = std::vector<float>(MAX_TRACKED);
+  temp.data_l = std::vector<float>(MAX_TRACKED);
 
   dbPhotonData.push_back(std::move(temp));
 }
@@ -168,12 +169,14 @@ DataExporter::WriteOutput(int timestep, float time) {
     for (auto& ds : dbPhotonData) {
       std::string name_x = ds.name + "_x";
       std::string name_p = ds.name + "_p";
+      std::string name_l = ds.name + "_l";
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
           Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
+          ds.data_l[idx] = ds.ptc->data().path[n];
           idx += 1;
         }
       }
@@ -183,9 +186,12 @@ DataExporter::WriteOutput(int timestep, float time) {
       dataset_x->write((void*)ds.data_x.data(), H5::PredType::NATIVE_FLOAT);
       H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(name_p, H5::PredType::NATIVE_FLOAT, space));
       dataset_p->write((void*)ds.data_p.data(), H5::PredType::NATIVE_FLOAT);
+      H5::DataSet *dataset_l = new H5::DataSet(file->createDataSet(name_l, H5::PredType::NATIVE_FLOAT, space));
+      dataset_l->write((void*)ds.data_l.data(), H5::PredType::NATIVE_FLOAT);
 
       delete dataset_x;
       delete dataset_p;
+      delete dataset_l;
 
       Logger::print_info("Written {} tracked photons", idx);
     }

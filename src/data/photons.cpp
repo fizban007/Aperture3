@@ -51,6 +51,7 @@ Photons::put(std::size_t pos, Pos_t x, Scalar p, Scalar path_left, int cell, int
   m_data.cell[pos] = cell;
   m_data.flag[pos] = flag;
   m_data.path_left[pos] = path_left;
+  m_data.path[pos] = path_left;
   if (pos >= m_number) m_number = pos + 1;
 }
 
@@ -176,6 +177,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
 void
 Photons::move(const Grid& grid, double dt) {
   auto& mesh = grid.mesh();
+  if (mesh.dim() != 1) return;
 
   for (Index_t idx = 0; idx < m_number; idx++) {
     if (is_empty(idx))
@@ -198,13 +200,13 @@ Photons::move(const Grid& grid, double dt) {
     m_data.x1[idx] += sgn(p) * dt / mesh.delta[0];
     m_data.path_left[idx] -= dt;
     // Compute the change in particle cell
-    auto c = mesh.get_cell_3d(cell);
+    // auto c = mesh.get_cell_3d(cell);
     int delta_cell = (int)std::floor(m_data.x1[idx]);
     // std::cout << delta_cell << std::endl;
-    c[0] += delta_cell;
+    cell += delta_cell;
     // Logger::print_info("After move, c is {}, x1 is {}", c, m_data.x1[idx]);
 
-    m_data.cell[idx] = mesh.get_idx(c[0], c[1], c[2]);
+    m_data.cell[idx] = cell;
     // std::cout << m_data.x1[idx] << ", " << m_data.cell[idx] << std::endl;
     m_data.x1[idx] -= (Pos_t)delta_cell;
     // std::cout << m_data.x1[idx] << ", " << m_data.cell[idx] << std::endl;
@@ -358,6 +360,9 @@ Photons::draw_photon_freepath(double Eph) {
     // rate = std::pow(Eph * e_min / 2.0, -1.0);
     rate = 2.0 / (Eph * e_min);
   }
+  // FIXME: Redundant 1 - u? u is already a uniform random number between 0 and
+  // 1, so is 1 - u.
+  // return -l_ph * std::log(m_dist(m_generator)) / rate;
   return -l_ph * std::log(1.0 - m_dist(m_generator)) / rate;
 }
 
