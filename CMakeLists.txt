@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
-include(ExternalProject)
+# include(ExternalProject)
 project (Aperture)
 message ("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
-option(build_tests "Build the test suite." OFF)
+option(build_tests "Build the test suite." ON)
 
 # Set CXX flags
 # set(CMAKE_CXX_COMPILER "/opt/intel/bin/icpc")
@@ -60,10 +60,12 @@ set(JSON_INCLUDE_DIR deps/json/include)
 set(CXX_OPTS_INCLUDE_DIR deps/cxxopts/include)
 set(CPPTOML_INCLUDE_DIR deps/cpptoml/include)
 set(VISIT_STRUCT_INCLUDE_DIR deps/visit_struct/include)
-# set(CATCH_INCLUDE_DIR deps/single_include)
+set(HIGHFIVE_INCLUDE_DIR deps/highfive/include)
+set(CATCH_INCLUDE_DIR deps/catch/single_include)
+set(FADBAD_INCLUDE_DIR deps/FADBAD++)
 # set(INTEGRATE_INCLUDE_DIR deps/integrate/src)
 
-include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${VISIT_STRUCT_INCLUDE_DIR} include)
+include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} include)
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
 add_subdirectory(deps/fmt)
@@ -72,13 +74,9 @@ add_subdirectory(tests)
 # add_subdirectory(tools)
 
 if (build_tests)
-  include(CTest)
   # Enable testing
   enable_testing(true)
 
-  function(install)
-  endfunction()
-  add_subdirectory(deps/googletest)
   add_subdirectory(tests)
 endif()
 
