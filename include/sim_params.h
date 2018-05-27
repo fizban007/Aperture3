@@ -3,7 +3,7 @@
 
 #include <string>
 #include <array>
-#include "visit_struct/visit_struct.hpp"
+// #include "visit_struct/visit_struct.hpp"
 #include "data/enum_types.h"
 
 namespace Aperture {
