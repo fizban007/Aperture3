@@ -51,7 +51,7 @@ class ParticleBase
   /// Virtual destructor because we need to derive from this class.
   virtual ~ParticleBase();
 
-  void alloc_mem(std::size_t max_num, std::size_t alignment = 64);
+  void alloc_mem(std::size_t max_num);
   void free_mem();
 
   void resize(std::size_t max_num);

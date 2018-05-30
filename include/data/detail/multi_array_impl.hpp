@@ -3,6 +3,7 @@
 
 #include "data/multi_array.h"
 #include "utils/memory.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -22,7 +23,10 @@ MultiArray<T>::MultiArray(int width, int height, int depth)
   find_dim();
 
   // _data = new T[_size];
-  _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  auto error = cudaMallocManaged(&_data, _size * sizeof(T));
+  if (error != cudaSuccess)
+    Logger::print_err("Cuda Malloc error!");
 }
 
 template <typename T>
@@ -33,7 +37,10 @@ template <typename T>
 MultiArray<T>::MultiArray(const self_type& other)
     : _extent(other._extent), _size(other._size), _dim(other._dim) {
   // _data = new T[_size];
-  _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  auto error = cudaMallocManaged(&_data, _size * sizeof(T));
+  if (error != cudaSuccess)
+    Logger::print_err("Cuda Malloc error!");
   copyFrom(other);
 }
 
@@ -52,7 +59,7 @@ template <typename T>
 MultiArray<T>::~MultiArray() {
   if (_data != nullptr) {
     // delete[] _data;
-    aligned_free(reinterpret_cast<void*>(_data));
+    cudaFree(_data);
     _data = nullptr;
   }
 }
@@ -79,7 +86,7 @@ MultiArray<T>::operator=(self_type&& other) -> self_type& {
   // another place will lead to memory leak.
   if (_data != nullptr) {
     // delete[] _data;
-    aligned_free(reinterpret_cast<void*>(_data));
+    cudaFree(_data);
   }
   _data = other._data;
   other._data = nullptr;
@@ -96,10 +103,12 @@ MultiArray<T>::resize(int width, int height, int depth) {
   find_dim();
   if (_data != nullptr) {
     // delete[] _data;
-    aligned_free(reinterpret_cast<void*>(_data));
+    cudaFree(_data);
   }
   // _data = new T[_size];
-  _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  auto error = cudaMallocManaged(&_data, _size * sizeof(T));
+  if (error != cudaSuccess)
+    Logger::print_err("Cuda Malloc error!");
   assign( static_cast<T>(0) );
 }
 

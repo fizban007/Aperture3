@@ -6,15 +6,16 @@ message("Cuda library found, enabling the GPU part of the code.")
   # message("Cuda library not found, skipping the GPU part of the code.")
 # endif()
 
-set(Aperture_src
-  "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
+set(AperCuda_src
+  "data/multi_array.cu"
+  # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
-  "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
+  # "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
 #   # "algorithms/finite_diff.cpp" "algorithms/field_solver_finite_diff.cpp" "algorithms/field_solver_integral.cpp"
 #   "algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "algorithms/solve.cpp"
 #   # "algorithms/ptc_pusher_mapping.cpp"
-"algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "algorithms/functions.cpp"
-"utils/logger.cpp" "utils/timer.cpp" "utils/memory.cpp" "utils/hdf_exporter.cpp" "utils/mpi_comm.cpp" "utils/mpi_helper.cpp"
+# "algorithms/field_solver_integral.cpp" "algorithms/current_deposit_Esirkepov.cpp" "algorithms/ptc_pusher_geodesic.cpp" "algorithms/functions.cpp"
+# "utils/hdf_exporter.cpp" "utils/mpi_comm.cpp" "utils/mpi_helper.cpp"
 # "utils/data_exporter.cpp" "utils/silo_file.cpp" "utils/mpi_helper.cpp" "utils/mpi_comm.cpp" "utils/memory.cpp"
 #   # "initial_conditions/initial_condition_dipole.cpp" "initial_conditions/initial_condition_reload.cpp" "initial_conditions/initial_condition_empty.cpp"
 #   "initial_conditions/initial_condition_wald.cpp" "initial_conditions/initial_condition_split_monopole.cpp"
@@ -22,7 +23,13 @@ set(Aperture_src
 #   "tri_mesh/mesh.cpp" "tri_mesh/triangulation.cpp" "tri_mesh/cell.cpp" "tri_mesh/fetd.cpp")
 )
 message(${HDF5_LIBRARIES})
-add_library(Aperture STATIC ${Aperture_src})
+# add_library(Aperture STATIC ${Aperture_src})
+add_cuda_target(AperCuda)
+
+set(Aperture_src
+"utils/logger.cpp" "utils/timer.cpp"
+  )
+add_library(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
 
 
@@ -42,8 +49,8 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 
 # add_subdirectory(cuda)
 
-add_executable(aperture "main.cpp")
-target_link_libraries(aperture Aperture)
+# add_executable(aperture "main.cpp")
+# target_link_libraries(aperture Aperlib)
 
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)

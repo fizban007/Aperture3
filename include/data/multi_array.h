@@ -26,11 +26,11 @@ class MultiArray {
 
   /// Iterator for the multi_array class, defines both the const and
   /// nonconst iterators at the same time.
-  template <bool isConst>
-  class const_nonconst_iterator;
+  // template <bool isConst>
+  // class const_nonconst_iterator;
 
-  typedef const_nonconst_iterator<false> iterator;
-  typedef const_nonconst_iterator<true> const_iterator;
+  // typedef const_nonconst_iterator<false> iterator;
+  // typedef const_nonconst_iterator<true> const_iterator;
 
   ////////////////////////////////////////////////////////////////////////////////
   //  Constructors
@@ -122,23 +122,23 @@ class MultiArray {
   //  Iterators
   ////////////////////////////////////////////////////////////////////////////////
 
-  iterator begin() { return iterator(*this, 0); }
-  iterator end() { return iterator(*this, _size); }
-  iterator index(int x, int y = 0, int z = 0) {
-    return iterator(*this, x, y, z);
-  }
-  iterator index(const Index& index) {
-    return iterator(*this, index.x, index.y, index.z);
-  }
+  // iterator begin() { return iterator(*this, 0); }
+  // iterator end() { return iterator(*this, _size); }
+  // iterator index(int x, int y = 0, int z = 0) {
+  //   return iterator(*this, x, y, z);
+  // }
+  // iterator index(const Index& index) {
+  //   return iterator(*this, index.x, index.y, index.z);
+  // }
 
-  const_iterator begin() const { return const_iterator(*this, 0); }
-  const_iterator end() const { return const_iterator(*this, _size); }
-  const_iterator index(int x, int y = 0, int z = 0) const {
-    return const_iterator(*this, x, y, z);
-  }
-  const_iterator index(const Index& index) const {
-    return const_iterator(*this, index.x, index.y, index.z);
-  }
+  // const_iterator begin() const { return const_iterator(*this, 0); }
+  // const_iterator end() const { return const_iterator(*this, _size); }
+  // const_iterator index(int x, int y = 0, int z = 0) const {
+  //   return const_iterator(*this, x, y, z);
+  // }
+  // const_iterator index(const Index& index) const {
+  //   return const_iterator(*this, index.x, index.y, index.z);
+  // }
 
   /// Get the dimensions of this array
   ///

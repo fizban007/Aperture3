@@ -71,9 +71,8 @@ ParticleBase<ParticleClass>::~ParticleBase() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::alloc_mem(std::size_t max_num,
-                                       std::size_t alignment) {
-  alloc_struct_of_arrays(m_data, max_num, alignment);
+ParticleBase<ParticleClass>::alloc_mem(std::size_t max_num) {
+  alloc_struct_of_arrays(m_data, max_num);
 }
 
 template <typename ParticleClass>

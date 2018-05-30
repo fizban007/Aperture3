@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 # include(ExternalProject)
-project (Aperture)
+project (Aperture LANGUAGES C CXX CUDA)
 message ("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
 option(build_tests "Build the test suite." ON)
@@ -63,14 +63,14 @@ set(FADBAD_INCLUDE_DIR deps/FADBAD++)
 include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} include)
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
-enable_language(CUDA)
+# enable_language(C++ CUDA)
 # message(${CUDA_TOOLKIT_ROOT_DIR})
 
 set(GCC5 /usr/bin/g++-5)
-set(CMAKE_CUDA_FLAGS "-lcublas -lcurand")
+set(CMAKE_CUDA_FLAGS "-lcublas -lcurand --compiler-options -fPIC")
 macro(add_cuda_target cuda_target)
   add_library(${cuda_target} ${${cuda_target}_src})
-  target_compile_options(${cuda_target} PUBLIC "-arch=compute_61;-code=sm_61;-lineinfo")
+  target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
   set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
   set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
     # RELEASE -DNDEBUG -O2 -Xptxas="-v"

@@ -8,6 +8,7 @@
 #include "constant_defs.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
+#include "cuda/cuda_control.h"
 // #include "data/vec4.h"
 #include <cinttypes>
 #include <type_traits>
@@ -24,28 +25,28 @@ struct single_particle_t {
   uint32_t flag = 0;
 
   // A series of set methods so that one can chain them
-  single_particle_t& set_x(Pos_t x) {
+  HD_INLINE single_particle_t& set_x(Pos_t x) {
     x1 = x;
     return *this;
   }
 
-  single_particle_t& set_dx(Pos_t dx) {
+  HD_INLINE single_particle_t& set_dx(Pos_t dx) {
     dx1 = dx;
     return *this;
   }
 
-  single_particle_t& set_p(Scalar p) {
+  HD_INLINE single_particle_t& set_p(Scalar p) {
     p1 = p;
     gamma = sqrt(1.0 + p1 * p1);
     return *this;
   }
 
-  single_particle_t& set_cell(uint32_t c) {
+  HD_INLINE single_particle_t& set_cell(uint32_t c) {
     cell = c;
     return *this;
   }
 
-  single_particle_t& set_flag(uint32_t f) {
+  HD_INLINE single_particle_t& set_flag(uint32_t f) {
     flag = f;
     return *this;
   }
@@ -61,27 +62,27 @@ struct single_photon_t {
   uint32_t flag = 0;
 
   // A series of set methods so that one can chain them
-  single_photon_t& set_x(Pos_t x) {
+  HD_INLINE single_photon_t& set_x(Pos_t x) {
     x1 = x;
     return *this;
   }
 
-  single_photon_t& set_p(Scalar p) {
+  HD_INLINE single_photon_t& set_p(Scalar p) {
     p1 = p;
     return *this;
   }
 
-  single_photon_t& set_cell(uint32_t c) {
+  HD_INLINE single_photon_t& set_cell(uint32_t c) {
     cell = c;
     return *this;
   }
 
-  single_photon_t& set_path_left(double p) {
+  HD_INLINE single_photon_t& set_path_left(double p) {
     path_left = p;
     return *this;
   }
 
-  single_photon_t& set_flag(uint32_t f) {
+  HD_INLINE single_photon_t& set_flag(uint32_t f) {
     flag = f;
     return *this;
   }
@@ -124,7 +125,7 @@ struct particle_data {
   uint32_t* cell;
   uint32_t* flag;
 
-  single_particle_t operator[](int idx) const;
+  HOST_DEVICE single_particle_t operator[](int idx) const;
 };
 
 struct photon_data {
@@ -144,7 +145,7 @@ struct photon_data {
   uint32_t* cell;
   uint32_t* flag;
 
-  single_photon_t operator[](int idx) const;
+  HOST_DEVICE single_photon_t operator[](int idx) const;
 };
 
 template <typename SingleType>

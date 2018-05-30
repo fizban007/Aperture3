@@ -6,39 +6,46 @@
 #include "boost/fusion/include/for_each.hpp"
 #include "boost/fusion/include/size.hpp"
 #include "boost/fusion/include/zip_view.hpp"
-
+#include "cuda/cuda_control.h"
 
 namespace Aperture {
 
-// Helper for allocating memory with a given alignment requirement
+// Helper for allocating Cuda memory
 
-/// Malloc an aligned memory region of size size, with specified alignment. It
-/// is required that alignment is smaller than 0x8000. Note: This function does
-/// not initialize the new allocated memory. Need to call initialize by hand
-/// afterwards
-void* aligned_malloc(std::size_t size, std::size_t alignment);
-void aligned_free(void* p);
+struct alloc_cuda {
+  size_t N_;
+  alloc_cuda(size_t N) : N_(N) {}
+
+  template <typename T>
+  void operator()(T& x) const {
+    typedef typename std::remove_reference<decltype(*x)>::type x_type;
+    // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
+    void* p;
+    cudaMallocManaged(&p, N_*sizeof(x_type));
+    x = reinterpret_cast<typename std::remove_reference<decltype(x)>::type>(p);
+  }
+};
+
+struct free_cuda {
+  template <typename x_type>
+  void operator()(x_type& x) const {
+    if (x != nullptr) {
+      cudaFree(x);
+      x = nullptr;
+    }
+  }
+};
 
 template <typename StructOfArrays>
 void
-alloc_struct_of_arrays(StructOfArrays& data, std::size_t max_num, std::size_t alignment) {
-  boost::fusion::for_each(data, [max_num, alignment](auto& x) {
-      typedef typename std::remove_reference<decltype(*x)>::type x_type;
-      void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
-      x = reinterpret_cast<typename std::remove_reference<decltype(x)>::type>(p);
-    });
+alloc_struct_of_arrays(StructOfArrays& data, std::size_t max_num) {
+  boost::fusion::for_each(data, alloc_cuda(max_num));
 }
 
 template <typename StructOfArrays>
 void
 free_struct_of_arrays(StructOfArrays& data) {
-  boost::fusion::for_each(data, [](auto& x) {
-      // x = nullptr;
-      if (x != nullptr) {
-        aligned_free(reinterpret_cast<void*>(x));
-        x = nullptr;
-      }
-    });
+  boost::fusion::for_each(data, free_cuda());
 }
 
 }

@@ -1,4 +1,3 @@
-#define CATCH_CONFIG_MAIN
 #include "data/particle_data.h"
 #include <cuda.h>
 #include "catch.hpp"

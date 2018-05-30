@@ -1,13 +1,89 @@
 #ifndef  _MULTI_ARRAY_UTILS_HPP_
 #define  _MULTI_ARRAY_UTILS_HPP_
 
-// #include "cuda/cuda_control.h"
+#include "cuda/cuda_control.h"
 #include "data/vec3.h"
-#include "data/detail/multi_array_iter_impl.hpp"
+// #include "data/detail/multi_array_iter_impl.hpp"
 
 namespace Aperture {
 
 namespace detail {
+
+#ifdef __NVCC__
+
+template <typename T, typename UnaryOp>
+__global__ void knl_map_array_unary_op(const T* input, T* output, const Extent ext, UnaryOp op) {
+  for (int k = blockIdx.z * blockDim.z + threadIdx.z;
+       k < ext.z;
+       k += blockDim.z * gridDim.z) {
+    for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+        j < ext.y;
+        j += blockDim.y * gridDim.y) {
+      for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+          i < ext.x;
+          i += blockDim.x * gridDim.x) {
+        size_t idx = i + j * ext.x + k * ext.x * ext.y;
+        output[idx] = op(input[idx]);
+      }
+    }
+  }
+}
+
+template <typename T, typename UnaryOp>
+__global__ void knl_map_array_unary_op(T* array, const Extent ext, UnaryOp op) {
+  for (int k = blockIdx.z * blockDim.z + threadIdx.z;
+       k < ext.z;
+       k += blockDim.z * gridDim.z) {
+    for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+         j < ext.y;
+         j += blockDim.y * gridDim.y) {
+      for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+           i < ext.x;
+           i += blockDim.x * gridDim.x) {
+        size_t idx = i + j * ext.x + k * ext.x * ext.y;
+        op(array[idx]);
+      }
+    }
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void knl_map_array_binary_op(const T* input, T* output, const Extent ext, BinaryOp op) {
+  for (int k = blockIdx.z * blockDim.z + threadIdx.z;
+       k < ext.z;
+       k += blockDim.z * gridDim.z) {
+    for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+         j < ext.y;
+         j += blockDim.y * gridDim.y) {
+      for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+           i < ext.x;
+           i += blockDim.x * gridDim.x) {
+        size_t idx = i + j * ext.x + k * ext.x * ext.y;
+        op(output[idx], input[idx]);
+      }
+    }
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void knl_map_array_binary_op(const T* a, const T* b, T* output, const Extent ext, BinaryOp op) {
+  for (int k = blockIdx.z * blockDim.z + threadIdx.z;
+       k < ext.z;
+       k += blockDim.z * gridDim.z) {
+    for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+         j < ext.y;
+         j += blockDim.y * gridDim.y) {
+      for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+           i < ext.x;
+           i += blockDim.x * gridDim.x) {
+        size_t idx = i + j * ext.x + k * ext.x * ext.y;
+        output[idx] = op(a[idx], b[idx]);
+      }
+    }
+  }
+}
+
+#endif // ENABLE_CUDA
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Mapping an operation over a multiarray.
@@ -45,66 +121,84 @@ void map_multi_array(const OutputIterator& output, const InputIterator& input,
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 struct Op_Assign {
-  void operator()(T& dest, const T& value) const { dest = value; }
+  HD_INLINE void operator()(T& dest, const T& value) const { dest = value; }
 };
 
 template <typename T>
 struct Op_PlusAssign {
-  void operator()(T& dest, const T& value) const { dest += value; }
+  HD_INLINE void operator()(T& dest, const T& value) const { dest += value; }
 };
 
 template <typename T>
 struct Op_MinusAssign {
-  void operator()(T& dest, const T& value) const { dest -= value; }
+  HD_INLINE void operator()(T& dest, const T& value) const { dest -= value; }
 };
 
 template <typename T>
 struct Op_MultAssign {
-  void operator()(T& dest, const T& value) const { dest *= value; }
+  HD_INLINE void operator()(T& dest, const T& value) const { dest *= value; }
 };
 
 template <typename T>
 struct Op_AssignConst {
   T _value;
-  Op_AssignConst(const T& value) : _value(value) {}
+  HOST_DEVICE Op_AssignConst(const T& value) : _value(value) {}
 
-  void operator()(T& dest) const { dest = _value; }
+  HD_INLINE void operator()(T& dest) const { dest = _value; }
 };
 
 template <typename T>
 struct Op_MultConst {
   T _value;
-  Op_MultConst(const T& value) : _value(value) {}
+  HOST_DEVICE Op_MultConst(const T& value) : _value(value) {}
 
-  void operator()(T& dest) const { dest *= _value; }
+  HD_INLINE void operator()(T& dest) const { dest *= _value; }
 };
 
 template <typename T>
 struct Op_PlusConst {
   T _value;
-  Op_PlusConst(const T& value) : _value(value) {}
+  HOST_DEVICE Op_PlusConst(const T& value) : _value(value) {}
 
-  void operator()(T& dest) const { dest += _value; }
+  HD_INLINE void operator()(T& dest) const { dest += _value; }
 };
 
 template <typename T>
 struct Op_MinusConst {
   T _value;
-  Op_MinusConst(const T& value) : _value(value) {}
+  HOST_DEVICE Op_MinusConst(const T& value) : _value(value) {}
 
-  void operator()(T& dest) const { dest -= _value; }
+  HD_INLINE void operator()(T& dest) const { dest -= _value; }
+};
+
+template <typename T>
+struct Op_Multiply {
+  HD_INLINE T operator()(const T& a, const T& b) const { return a * b; }
+};
+
+template <typename T>
+struct Op_Plus {
+  HD_INLINE T operator()(const T& a, const T& b) const { return a + b; }
+};
+
+template <typename T>
+struct Op_MultConstRet {
+  T _value;
+  HOST_DEVICE Op_MultConstRet(const T& value) : _value(value) {}
+
+  HD_INLINE T operator()(const T& a) const { return a * _value; }
 };
 
 }
 
-template <typename It>
-void check_bounds(const It& iterator, const Extent& extent) {
-  // Check bounds
-  if (iterator + extent - Extent(1, 1, 1) > iterator.array().end()) {
-    std::cerr << iterator.pos() << std::endl;
-    throw std::invalid_argument("Index out of bounds in array operation!");
-  }
-}
+// template <typename It>
+// void check_bounds(const Index& idx, const Extent& extent) {
+//   // Check bounds
+//   if (idx + extent - Extent(1, 1, 1) > iterator.array().end()) {
+//     std::cerr << iterator.pos() << std::endl;
+//     throw std::invalid_argument("Index out of bounds in array operation!");
+//   }
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Copy a chunk of data from input to output, with size specified
@@ -187,7 +281,7 @@ void add_from_linear(const OutputIt& output, const InputIt& input, const Extent&
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename T>
 void fill(const InputIt& input, const Extent& extent, T value) {
-  check_bounds(input, extent);
+  // check_bounds(input, extent);
 
   detail::map_multi_array(input, extent, detail::Op_AssignConst<typename InputIt::data_type>(value));
 }
@@ -199,8 +293,8 @@ void fill(const InputIt& input, const Extent& extent, T value) {
 template <typename InputIt, typename OutputIt>
 void multiply(const OutputIt& output, const InputIt& input,
               const Extent& extent) {
-  check_bounds(input, extent);
-  check_bounds(output, extent);
+  // check_bounds(input, extent);
+  // check_bounds(output, extent);
 
   detail::map_multi_array(output, input, extent, detail::Op_MultAssign<typename InputIt::data_type>());
 }
@@ -210,7 +304,7 @@ void multiply(const OutputIt& output, const InputIt& input,
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename T>
 void multiply(const InputIt& input, const Extent& extent, T value) {
-  check_bounds(input, extent);
+  // check_bounds(input, extent);
 
   detail::map_multi_array(input, extent, detail::Op_MultConst<typename InputIt::data_type>(value));
 }
@@ -221,8 +315,8 @@ void multiply(const InputIt& input, const Extent& extent, T value) {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename OutputIt>
 void add(const OutputIt& output, const InputIt& input, const Extent& extent) {
-  check_bounds(input, extent);
-  check_bounds(output, extent);
+  // check_bounds(input, extent);
+  // check_bounds(output, extent);
 
   detail::map_multi_array(output, input, extent, detail::Op_PlusAssign<typename InputIt::data_type>());
 }
@@ -232,7 +326,7 @@ void add(const OutputIt& output, const InputIt& input, const Extent& extent) {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename T>
 void add(const InputIt& input, const Extent& extent, T value) {
-  check_bounds(input, extent);
+  // check_bounds(input, extent);
 
   detail::map_multi_array(input, extent, detail::Op_PlusConst<typename InputIt::data_type>(value));
 }
@@ -243,8 +337,8 @@ void add(const InputIt& input, const Extent& extent, T value) {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename OutputIt>
 void subtract(const OutputIt& output, const InputIt& input, const Extent& extent) {
-  check_bounds(input, extent);
-  check_bounds(output, extent);
+  // check_bounds(input, extent);
+  // check_bounds(output, extent);
 
   detail::map_multi_array(output, input, extent, detail::Op_MinusAssign<typename InputIt::data_type>());
 }
@@ -254,7 +348,7 @@ void subtract(const OutputIt& output, const InputIt& input, const Extent& extent
 ////////////////////////////////////////////////////////////////////////////////
 template <typename InputIt, typename T>
 void subtract(const InputIt& input, const Extent& extent, T value) {
-  check_bounds(input, extent);
+  // check_bounds(input, extent);
 
   detail::map_multi_array(input, extent, detail::Op_MinusConst<typename InputIt::data_type>(value));
 }
