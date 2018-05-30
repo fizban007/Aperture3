@@ -37,11 +37,6 @@ find_package(Boost COMPONENTS system filesystem REQUIRED)
 # if (EIGEN3_FOUND)
 #   message(${EIGEN3_INCLUDE_DIR})
 # endif()
-# find_package(CUDA)
-
-if (CUDA_FOUND)
-  message(${CUDA_TOOLKIT_ROOT_DIR})
-endif()
 # find_package(OpenMP)
 # if(OPENMP_FOUND)
 #   message("OPENMP FOUND")
@@ -68,9 +63,37 @@ set(FADBAD_INCLUDE_DIR deps/FADBAD++)
 include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} include)
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
+enable_language(CUDA)
+# message(${CUDA_TOOLKIT_ROOT_DIR})
+
+set(GCC5 /usr/bin/g++-5)
+set(CMAKE_CUDA_FLAGS "-lcublas -lcurand")
+macro(add_cuda_target cuda_target)
+  add_library(${cuda_target} ${${cuda_target}_src})
+  target_compile_options(${cuda_target} PUBLIC "-arch=compute_61;-code=sm_61;-lineinfo")
+  set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
+  set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+    # RELEASE -DNDEBUG -O2 -Xptxas="-v"
+    # RELEASE -DNDEBUG -O3
+    # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
+endmacro()
+macro(add_cuda_executable cuda_target)
+  add_executable(${cuda_target} ${${cuda_target}_src})
+  target_compile_options(${cuda_target} PUBLIC "-arch=compute_61;-code=sm_61;-lineinfo")
+  set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
+  set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+    # RELEASE -DNDEBUG -O2 -Xptxas="-v"
+    # RELEASE -DNDEBUG -O3
+    # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
+endmacro()
+# set(CUDA_HOST_COMPILER ${GCC5})
+# set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+# set(CUDA_SEPARABLE_COMPILATION ON)
+# endif()
+
 add_subdirectory(deps/fmt)
 add_subdirectory(src)
-add_subdirectory(tests)
+# add_subdirectory(tests)
 # add_subdirectory(tools)
 
 if (build_tests)
@@ -83,3 +106,6 @@ endif()
 # This is to get all header files recognized by QtCreator
 file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp")
 add_custom_target(myIncludes SOURCES ${headers})
+
+# find_package(Cuda REQUIRED)
+# if (CUDA_FOUND)

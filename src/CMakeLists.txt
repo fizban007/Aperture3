@@ -1,10 +1,10 @@
-if (CUDA_FOUND)
-  add_definitions(-DCUDA_ENABLED)
-  include_directories(${CUDA_INCLUDE_DIRS})
-  message("Cuda library found, enabling the GPU part of the code.")
-else()
-  message("Cuda library not found, skipping the GPU part of the code.")
-endif()
+# if (CUDA_FOUND)
+add_definitions(-DCUDA_ENABLED)
+include_directories(${CUDA_INCLUDE_DIRS})
+message("Cuda library found, enabling the GPU part of the code.")
+# else()
+  # message("Cuda library not found, skipping the GPU part of the code.")
+# endif()
 
 set(Aperture_src
   "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"

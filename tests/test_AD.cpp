@@ -122,10 +122,12 @@ TEST_CASE("Model Lagrangian in Schwarzschild", "[AD]") {
   const int N = 5000000;
   std::vector<double> vec(N);
   std::vector<double> v_r(N);
+  std::vector<double> v_dLdr(N);
   for (size_t i = 0; i < N; ++i) {
     float tmp = distribution(eng);
     vec[i] = tmp;
     v_r[i] = dist_v(eng);
+    v_dLdr[i] = 0.0;
   }
 
   stamp();
@@ -136,18 +138,22 @@ TEST_CASE("Model Lagrangian in Schwarzschild", "[AD]") {
   show_duration_since_stamp("For double", "ms");
   F<double, 1> x, y, res;
   stamp();
+  double dLdr, lag;
   for (int i = 0; i < N; i++) {
     x = vec[i]; x.diff(0);
     // y = v_r[i]; y.diff(1);
     res = L(x, v_r[i]);
-    double dLdr = res.d(0);
-    // double l = res.x();
+    v_dLdr[i] = res.d(0);
+    lag = res.x();
+    // if (i == N - 1)
+    //   std::cout << dLdr << std::endl;
     // if (l != l)
     //   std::cout << "NaN at " << vec[i] << std::endl;
     // else
     //   CHECK(L.dLdr(vec[i], v_r[i])*0.5/res.x() == Approx(dLdr));
   }
   show_duration_since_stamp("For AD", "ms");
+  // std::cout << v_dLdr[N/2] << ", " << lag << std::endl;
 
   stamp();
   for (int i = 0; i < N; i++) {

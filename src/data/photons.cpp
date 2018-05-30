@@ -111,7 +111,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       double gamma_f = electrons.data().gamma[n] - std::abs(E_ph);
       if (gamma_f < 1.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", electrons.data().gamma[n], E_ph);
-      if (gamma_f < 2.0) gamma_f = std::min(2.0, electrons.data().gamma[n]);
+      if (gamma_f < 2.0) gamma_f = std::min(2.0f, electrons.data().gamma[n]);
       double p_i = std::abs(electrons.data().p1[n]);
       electrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
       double l_photon = draw_photon_freepath(std::abs(E_ph));
@@ -148,7 +148,7 @@ Photons::emit_photons(Particles &electrons, Particles &positrons, const Quadmesh
       double gamma_f = positrons.data().gamma[n] - std::abs(E_ph);
       if (gamma_f < 1.0)
         Logger::print_err("Photon energy exceeds particle energy! gamma is {}, Eph is {}", positrons.data().gamma[n], E_ph);
-      if (gamma_f < 2.0) gamma_f = std::min(2.0, positrons.data().gamma[n]);
+      if (gamma_f < 2.0) gamma_f = std::min(2.0f, positrons.data().gamma[n]);
       double p_i = std::abs(positrons.data().p1[n]);
       positrons.data().p1[n] *= sqrt(gamma_f * gamma_f - 1.0) / p_i;
       double l_photon = draw_photon_freepath(std::abs(E_ph));
