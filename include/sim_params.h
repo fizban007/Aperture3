@@ -32,7 +32,7 @@ struct SimParams {
   double        gravity           = 0.0;
 
   std::array<std::string, 6> boundary_conditions;
-  std::array<bool, 3>        boundary_periodic = {false, false, false};
+  bool                       boundary_periodic[3] = { false };
 
   // simulation parameters
   int         interpolation_order = 1;

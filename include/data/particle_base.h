@@ -26,11 +26,11 @@ class ParticleBase
   /// @brief The current number of particles in the array.
   /// @accessors #number(), #setNum()
   std::size_t m_number;
-  bool m_sorted;                         ///< Whether the array is sorted or not
 
   void* m_data_ptr;
   array_type m_data;
-  std::vector<Index_t> m_index, m_index_bak;
+  // std::vector<Index_t> m_index, m_index_bak;
+  // bool m_sorted;
 
  public:
   /// Default constructor, initializing everything to 0 and `sorted` to `true`
@@ -67,19 +67,19 @@ class ParticleBase
   void swap(Index_t pos, ParticleClass& part);
 
   // After rearrange, the index array will all be -1
-  void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
-  void rearrange_arrays(std::vector<Index_t>& index, std::size_t num = 0);
-  void rearrange_copy(std::vector<Index_t>& index, std::size_t num = 0);
-  template <typename T>
-  void rearrange_single_array(T* array, std::vector<Index_t>& index, std::size_t num = 0);
+  // void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
+  // void rearrange_arrays(std::vector<Index_t>& index, std::size_t num = 0);
+  // void rearrange_copy(std::vector<Index_t>& index, std::size_t num = 0);
+  // template <typename T>
+  // void rearrange_single_array(T* array, std::vector<Index_t>& index, std::size_t num = 0);
   // Partition according to a grid configuration, sort the particles into the
   // bulk part, and those that needs to be communicated out. After partition,
   // the given array partition becomes the starting position of each partition
   // in the particle array
-  void partition(std::vector<Index_t>& partitions, const Grid& grid);
+  // void partition(std::vector<Index_t>& partitions, const Grid& grid);
   // Partition for communication, as well as sorting the particles into tiles,
   // with a given tile size. Tiles have the same size in every direction available
-  void partition_and_sort(std::vector<Index_t>& partitions, const Grid& grid, int tile_size);
+  // void partition_and_sort(std::vector<Index_t>& partitions, const Grid& grid, int tile_size);
   void clear_guard_cells(const Grid& grid);
 
   // Accessor methods
@@ -103,10 +103,10 @@ class ParticleBase
   void set_num(size_t num) { m_number = num; }
 
   /// Set the array to be sorted.
-  void sorted() { m_sorted = true; }
+  // void sorted() { m_sorted = true; }
 
   /// Set `sorted` to be false.
-  void scrambled() { m_sorted = false; }
+  // void scrambled() { m_sorted = false; }
 
 }; // ----- end of class ParticleBase -----
 

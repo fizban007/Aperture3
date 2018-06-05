@@ -125,7 +125,7 @@ struct particle_data {
   uint32_t* cell;
   uint32_t* flag;
 
-  HOST_DEVICE single_particle_t operator[](int idx) const;
+  HOST_DEVICE single_particle_t operator[](size_t idx) const;
 };
 
 struct photon_data {
@@ -145,7 +145,7 @@ struct photon_data {
   uint32_t* cell;
   uint32_t* flag;
 
-  HOST_DEVICE single_photon_t operator[](int idx) const;
+  HOST_DEVICE single_photon_t operator[](size_t idx) const;
 };
 
 template <typename SingleType>

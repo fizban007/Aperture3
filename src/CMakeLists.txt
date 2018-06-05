@@ -7,7 +7,7 @@ message("Cuda library found, enabling the GPU part of the code.")
 # endif()
 
 set(AperCuda_src
-  "data/multi_array.cu"
+  "data/multi_array.cu" "data/particles.cu"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
   # "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"

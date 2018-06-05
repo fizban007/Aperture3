@@ -79,7 +79,7 @@ macro(add_cuda_target cuda_target)
 endmacro()
 macro(add_cuda_executable cuda_target)
   add_executable(${cuda_target} ${${cuda_target}_src})
-  target_compile_options(${cuda_target} PUBLIC "-arch=compute_61;-code=sm_61;-lineinfo")
+  target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
   set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
   set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
     # RELEASE -DNDEBUG -O2 -Xptxas="-v"

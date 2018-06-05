@@ -11,7 +11,7 @@
 
 namespace Aperture {
 
-class Environment;
+class SimParams;
 
 class Particles : public ParticleBase<single_particle_t>
 {
@@ -19,7 +19,7 @@ class Particles : public ParticleBase<single_particle_t>
   typedef ParticleBase<single_particle_t> BaseClass;
   Particles();
   Particles(std::size_t max_num, ParticleType type = ParticleType::electron);
-  Particles(const Environment& env, ParticleType type = ParticleType::electron);
+  Particles(const SimParams& env, ParticleType type = ParticleType::electron);
   Particles(const Particles& other);
   Particles(Particles&& other);
   virtual ~Particles();
@@ -49,7 +49,7 @@ class Particles : public ParticleBase<single_particle_t>
   // // into the bulk part, and those that needs to be communicated out
   // void partition(std::vector<Index_t>& partitions, const Grid& grid);
   // void clear_guard_cells(const Grid& grid);
-  void sort(const Grid& grid);
+  // void sort(const Grid& grid);
 
   // particle_data& data() { return m_data; }
   // const particle_data& data() const { return m_data; }

@@ -23,19 +23,7 @@ SimData::SimData(const Environment& e) :
     Rho_avg.emplace_back(env.local_grid());
     J_s.emplace_back(env.local_grid());
     J_avg.emplace_back(env.local_grid());
-    particles.emplace_back(env.conf().max_ptc_number);
-
-    double q = env.conf().q_e;
-    if (static_cast<ParticleType>(i) == ParticleType::electron) {
-      particles[i].set_charge(-q);
-      particles[i].set_mass(q);
-    } else if (static_cast<ParticleType>(i) == ParticleType::positron) {
-      particles[i].set_charge(q);
-      particles[i].set_mass(q);
-    } else if (static_cast<ParticleType>(i) == ParticleType::ion) {
-      particles[i].set_charge(q);
-      particles[i].set_mass(q * env.conf().ion_mass);
-    }
+    particles.emplace_back(env.conf().data(), static_cast<ParticleType>(i));
   }
   for (int i = 0; i < num_species; i++) {
     particles[i].initialize();
