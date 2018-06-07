@@ -5,19 +5,41 @@
 #include "boost/fusion/include/for_each.hpp"
 #include "boost/fusion/include/size.hpp"
 #include "boost/fusion/include/zip_view.hpp"
+#include "boost/mpl/range_c.hpp"
+#include "boost/mpl/integral_c.hpp"
 #include "data/detail/particle_data_impl.hpp"
 #include "data/particle_base.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
+#include <thrust/device_ptr.h>
+#include <thrust/sort.h>
+#include <thrust/copy.h>
+#include <thrust/gather.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <algorithm>
 #include <numeric>
+#include <string>
 #include <stdexcept>
 #include <type_traits>
 // #include "types/particles.h"
 
 namespace Aperture {
 
-using boost::fusion::at_c;
+namespace Kernels {
+
+// FIXME: This is only for 1D
+__global__
+void compute_tile(uint32_t* tile, const uint32_t* cell, size_t N, int tile_size) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < N;
+       i += blockDim.x * gridDim.x) {
+    tile[i] = cell[i] / tile_size;
+  }
+}
+
+}
+
+// using boost::fusion::at_c;
 
 struct set_nullptr {
   template <typename T>
@@ -47,6 +69,20 @@ struct fill_pos_amount {
   }
 };
 
+struct sync_dev {
+  int devId_;
+  size_t size_;
+
+  sync_dev(int devId, size_t size) :
+      devId_(devId), size_(size) {}
+
+  template <typename T>
+  void operator()(T& x) const {
+    typedef typename std::remove_reference<decltype(*x)>::type x_type;
+    cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
+  }
+};
+
 struct copy_to_dest {
   size_t num_, src_pos_, dest_pos_;
   copy_to_dest(size_t num, size_t src_pos, size_t dest_pos) :
@@ -60,9 +96,37 @@ struct copy_to_dest {
   }
 };
 
+template <typename ArrayType>
+struct rearrange_array {
+  ArrayType& array_;
+  // thrust::device_ptr<Index_t>& index_;
+  Index_t* index_;
+  size_t N_;
+  void* tmp_ptr_;
+  std::string skip_;
+
+  rearrange_array(ArrayType& array, Index_t* index,
+                  size_t N, void* tmp_ptr, const std::string& skip) :
+      array_(array), index_(index), N_(N), tmp_ptr_(tmp_ptr), skip_(skip) {}
+
+  template <typename T>
+  void operator()(T i) const {
+    auto ptr_index = thrust::device_pointer_cast(index_);
+    auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
+    if (name == "cell" || name == "dx1") return;
+
+    // printf("%d, %s\n", T::value, name);
+    auto x = boost::fusion::at_c<T::value>(array_);
+    auto x_ptr = thrust::device_pointer_cast(x);
+    auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<decltype(x)>(tmp_ptr_));
+    thrust::gather(ptr_index, ptr_index + N_, x_ptr, tmp_ptr);
+    thrust::copy_n(tmp_ptr, N_, x_ptr);
+  }
+};
+
 template <typename ParticleClass>
 ParticleBase<ParticleClass>::ParticleBase()
-    : m_numMax(0), m_number(0), m_data_ptr(nullptr) {
+    : m_numMax(0), m_number(0), m_tmp_data_ptr(nullptr), m_index(nullptr) {
   boost::fusion::for_each(m_data, set_nullptr());
 }
 
@@ -71,6 +135,9 @@ ParticleBase<ParticleClass>::ParticleBase(std::size_t max_num)
     : m_numMax(max_num), m_number(0) {
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num);
+  auto alloc = alloc_cuda_managed(max_num);
+  alloc(m_index);
+  cudaMallocManaged(&m_tmp_data_ptr, max_num*sizeof(double));
   // m_index.resize(max_num, 0);
   // m_index_bak.resize(max_num, 0);
   initialize();
@@ -85,6 +152,10 @@ ParticleBase<ParticleClass>::ParticleBase(
   // m_sorted = other.m_sorted;
 
   alloc_mem(n);
+  auto alloc = alloc_cuda_managed(n);
+  alloc(m_index);
+  cudaMallocManaged(&m_tmp_data_ptr, n*sizeof(double));
+  // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(n);
   // m_index_bak.resize(n);
   copy_from(other, n);
@@ -98,6 +169,10 @@ ParticleBase<ParticleClass>::ParticleBase(ParticleBase<ParticleClass>&& other) {
 
   // m_data_ptr = other.m_data_ptr;
   m_data = other.m_data;
+  auto alloc = alloc_cuda_managed(m_numMax);
+  alloc(m_index);
+  cudaMallocManaged(&m_tmp_data_ptr, m_numMax*sizeof(double));
+  // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(other.m_numMax);
   // m_index_bak.resize(other.m_numMax);
 
@@ -108,6 +183,8 @@ ParticleBase<ParticleClass>::ParticleBase(ParticleBase<ParticleClass>&& other) {
 template <typename ParticleClass>
 ParticleBase<ParticleClass>::~ParticleBase() {
   free_mem();
+  free_cuda()(m_index);
+  free_cuda()(m_tmp_data_ptr);
 }
 
 template <typename ParticleClass>
@@ -136,6 +213,14 @@ ParticleBase<ParticleClass>::resize(std::size_t max_num) {
   if (m_number > max_num) m_number = max_num;
   free_mem();
   alloc_mem(max_num);
+
+  free_cuda()(m_index);
+  free_cuda()(m_tmp_data_ptr);
+  auto alloc = alloc_cuda_managed(max_num);
+  alloc(m_index);
+  cudaMallocManaged(&m_tmp_data_ptr, max_num*sizeof(double));
+  // alloc((double*)m_tmp_data_ptr);
+
   // m_index.resize(max_num, 0);
   // m_index_bak.resize(max_num, 0);
   initialize();
@@ -206,6 +291,84 @@ ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
   if (dest_pos + num > m_number) m_number = dest_pos + num;
 }
 
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::compute_tile_num(int tile_size) {
+  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number, tile_size);
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::sort_by_tile(int tile_size) {
+  // First compute the tile number according to current cell id
+  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number, tile_size);
+
+  // Generate particle index array
+  auto ptr_tile = thrust::device_pointer_cast(m_data.tile);
+  auto ptr_idx = thrust::device_pointer_cast(m_index);
+  thrust::counting_iterator<Index_t> iter(0);
+  thrust::copy_n(iter, this->m_number, ptr_idx);
+
+  // Sort the index array by key
+  thrust::sort_by_key(ptr_tile, ptr_tile + this->m_number, ptr_idx);
+
+  // TODO: Move the rest of particle array using the new index
+  rearrange_arrays("tile");
+
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::sort_by_cell() {
+  // Generate particle index array
+  auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
+  auto ptr_idx = thrust::device_pointer_cast(m_index);
+  thrust::counting_iterator<Index_t> iter(0);
+  thrust::copy_n(iter, this->m_number, ptr_idx);
+
+  // Sort the index array by key
+  thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
+
+  // TODO: Move the rest of particle array using the new index
+  rearrange_arrays("cell");
+
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
+  // auto ptr_idx = thrust::device_pointer_cast(m_index);
+  boost::fusion::for_each(boost::mpl::range_c<
+                          unsigned, 0, boost::fusion::result_of::size<array_type>::value>(),
+                          rearrange_array<array_type>(m_data, m_index, m_numMax, m_tmp_data_ptr, skip));
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::move_tile() {
+  // Assuming compute_tile_num is already called
+
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::sync_to_device(int deviceId) {
+  boost::fusion::for_each(m_data, sync_dev(deviceId, m_number));
+  cudaDeviceSynchronize();
+}
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::sync_to_host() {
+  boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
+  cudaDeviceSynchronize();
+}
 // template <typename ParticleClass>
 // void
 // ParticleBase<ParticleClass>::rearrange(std::vector<Index_t>& index,
