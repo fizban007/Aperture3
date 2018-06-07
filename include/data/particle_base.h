@@ -27,8 +27,9 @@ class ParticleBase
   /// @accessors #number(), #setNum()
   std::size_t m_number;
 
-  void* m_data_ptr;
+  void* m_tmp_data_ptr;
   array_type m_data;
+  Index_t* m_index;
   // std::vector<Index_t> m_index, m_index_bak;
   // bool m_sorted;
 
@@ -58,14 +59,19 @@ class ParticleBase
   void initialize();
   void erase(std::size_t pos, std::size_t amount = 1);
   void copy_from(const ParticleBase<ParticleClass>& other, std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos = 0);
-  void copy_from(const std::vector<ParticleClass>& buffer, std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos = 0);
-  void copy_to_buffer(std::vector<ParticleClass>& buffer, std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos = 0);
+  // void copy_from(const std::vector<ParticleClass>& buffer, std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos = 0);
+  // void copy_to_buffer(std::vector<ParticleClass>& buffer, std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos = 0);
 
   // void put(std::size_t pos, const Vec3<Pos_t>& x, const Vec3<Mom_t>& p, int cell, int flag = 0);
   void put(Index_t pos, const ParticleClass& part);
   void append(const ParticleClass& part);
   void swap(Index_t pos, ParticleClass& part);
 
+  void compute_tile_num(int tile_size);
+  void sort_by_tile(int tile_size);
+  void sort_by_cell();
+  void rearrange_arrays(const std::string& skip);
+  void move_tile();
   // After rearrange, the index array will all be -1
   // void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
   // void rearrange_arrays(std::vector<Index_t>& index, std::size_t num = 0);
@@ -82,9 +88,14 @@ class ParticleBase
   // void partition_and_sort(std::vector<Index_t>& partitions, const Grid& grid, int tile_size);
   void clear_guard_cells(const Grid& grid);
 
+  void sync_to_device(int deviceId = 0);
+  void sync_to_host();
+
   // Accessor methods
   array_type& data() { return m_data; }
   const array_type& data() const { return m_data; }
+  void* tmp_data() { return m_tmp_data_ptr; };
+  const void* tmp_data() const { return m_tmp_data_ptr; };
 
   bool is_empty(Index_t pos) const {
     // Note we need to assume any particle array type has a member called "cell"
