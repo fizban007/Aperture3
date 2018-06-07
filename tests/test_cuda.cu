@@ -35,9 +35,9 @@ TEST_CASE("Launching cuda kernel", "[Cuda]") {
   cudaFree(c);
 }
 
-struct alloc_cuda {
+struct alloc_cuda_managed {
   size_t N_;
-  alloc_cuda(size_t N) : N_(N) {}
+  alloc_cuda_managed(size_t N) : N_(N) {}
 
   template <typename T>
   void operator()(T& x) const {
@@ -64,7 +64,7 @@ TEST_CASE("Boost fusion stuff", "[Cuda]") {
 
   particle_data data;
 
-  boost::fusion::for_each(data, alloc_cuda(N));
+  boost::fusion::for_each(data, alloc_cuda_managed(N));
 
   for (size_t i = 0; i < N; i++) {
     data.dx1[i] = 1.0;

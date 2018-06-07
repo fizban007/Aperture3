@@ -12,9 +12,9 @@ namespace Aperture {
 
 // Helper for allocating Cuda memory
 
-struct alloc_cuda {
+struct alloc_cuda_managed {
   size_t N_;
-  alloc_cuda(size_t N) : N_(N) {}
+  alloc_cuda_managed(size_t N) : N_(N) {}
 
   template <typename T>
   void operator()(T& x) const {
@@ -39,7 +39,7 @@ struct free_cuda {
 template <typename StructOfArrays>
 void
 alloc_struct_of_arrays(StructOfArrays& data, std::size_t max_num) {
-  boost::fusion::for_each(data, alloc_cuda(max_num));
+  boost::fusion::for_each(data, alloc_cuda_managed(max_num));
 }
 
 template <typename StructOfArrays>
