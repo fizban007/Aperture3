@@ -118,6 +118,12 @@ class MultiArray {
   /// Resize the array according to an \ref Extent object.
   void resize(Extent extent);
 
+  /// Sync the content between host and device
+  void sync_to_device(int devId = 0);
+
+  /// Sync the content between host and device
+  void sync_to_host();
+
   ////////////////////////////////////////////////////////////////////////////////
   //  Iterators
   ////////////////////////////////////////////////////////////////////////////////

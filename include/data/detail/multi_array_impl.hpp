@@ -129,6 +129,18 @@ MultiArray<T>::find_dim() {
     _dim = 3;
 }
 
+template <typename T>
+void
+MultiArray<T>::sync_to_device(int devId) {
+  cudaMemPrefetchAsync(_data, _size * sizeof(T), devId);
+}
+
+template <typename T>
+void
+MultiArray<T>::sync_to_host() {
+  cudaMemPrefetchAsync(_data, _size * sizeof(T), cudaCpuDeviceId);
+}
+
 }
 
 #endif   // _MULTI_ARRAY_IMPL_H_
