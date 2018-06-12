@@ -37,13 +37,17 @@ struct Data {
   }
 
   void prefetch(int deviceId) {
-    cudaMemPrefetchAsync(a.data(), memSize, deviceId);
-    cudaMemPrefetchAsync(b.data(), memSize, deviceId);
-    cudaMemPrefetchAsync(c.data(), memSize, deviceId);
+    // cudaMemPrefetchAsync(a.data(), memSize, deviceId);
+    // cudaMemPrefetchAsync(b.data(), memSize, deviceId);
+    // cudaMemPrefetchAsync(c.data(), memSize, deviceId);
+    a.sync_to_device(deviceId);
+    b.sync_to_device(deviceId);
+    c.sync_to_device(deviceId);
   }
 
   void prefetch() {
-    cudaMemPrefetchAsync(c.data(), memSize, cudaCpuDeviceId);
+    // cudaMemPrefetchAsync(c.data(), memSize, cudaCpuDeviceId);
+    c.sync_to_host();
   }
 };
 
