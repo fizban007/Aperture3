@@ -45,9 +45,9 @@ struct Quadmesh {
   ///  Constructor which only initialize dimensions.
   ////////////////////////////////////////////////////////////////////////////////
   HOST_DEVICE Quadmesh(int N1, int N2 = 1, int N3 = 1) {
-    dims[0] = max(1, N1);
-    dims[1] = max(1, N2);
-    dims[2] = max(1, N3);
+    dims[0] = (N1 > 1 ? N1 : 1);
+    dims[1] = (N2 > 1 ? N2 : 1);
+    dims[2] = (N3 > 1 ? N3 : 1);
 
     // Initialize other quantities to zero
     for (int i = 0; i < 3; i++) {
@@ -229,7 +229,7 @@ struct Quadmesh {
   ////////////////////////////////////////////////////////////////////////////////
   ///  Index of the point if the grid is stratified into 1 direction.
   ////////////////////////////////////////////////////////////////////////////////
-  HD_INLINE HD_INLINE int get_idx(int c1, int c2 = 0, int c3 = 0) const {
+  HD_INLINE int get_idx(int c1, int c2 = 0, int c3 = 0) const {
     return c1 + c2 * dims[0] + c3 * dims[0] * dims[1];
   }
 
@@ -243,7 +243,7 @@ struct Quadmesh {
   ////////////////////////////////////////////////////////////////////////////////
   ///  Index increment in the particular direction
   ////////////////////////////////////////////////////////////////////////////////
-  HD_INLINE HD_INLINE int idx_increment(int direction) const {
+  HD_INLINE int idx_increment(int direction) const {
     if (direction >= dimension) return 0;
     switch (direction) {
       case 0:

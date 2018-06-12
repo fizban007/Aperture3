@@ -10,6 +10,8 @@
 
 namespace Aperture {
 
+class Environment;
+
 class Photons : public ParticleBase<single_photon_t>
 {
  public:

@@ -1,7 +1,7 @@
 #include "utils/hdf_exporter.h"
 #include "fmt/ostream.h"
 #include "utils/logger.h"
-#include "config_file.h"
+// #include "config_file.h"
 #include "commandline_args.h"
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
@@ -15,8 +15,8 @@ namespace Aperture {
 
 DataExporter::DataExporter() {}
 
-DataExporter::DataExporter(const std::string& dir, const std::string& prefix)
-    : outputDirectory(dir), filePrefix(prefix) {
+DataExporter::DataExporter(const Quadmesh& m, const std::string& dir, const std::string& prefix)
+    : outputDirectory(dir), filePrefix(prefix), mesh(m) {
   boost::filesystem::path rootPath (dir.c_str());
   boost::system::error_code returnedError;
 
@@ -34,12 +34,26 @@ DataExporter::DataExporter(const std::string& dir, const std::string& prefix)
   snprintf(subDir, sizeof(subDir), "Data%s/", myTime);
 
   outputDirectory += subDir;
-  boost::filesystem::path subPath(outputDirectory);
-
-  boost::filesystem::create_directories(subPath, returnedError);
 }
 
 DataExporter::~DataExporter() {}
+
+void
+DataExporter::createDirectories() {
+  boost::filesystem::path subPath(outputDirectory);
+  boost::filesystem::path logPath(outputDirectory + "log/");
+
+  boost::system::error_code returnedError;
+  boost::filesystem::create_directories(subPath, returnedError);
+  boost::filesystem::create_directories(logPath, returnedError);
+}
+
+bool
+DataExporter::checkDirectories() {
+  boost::filesystem::path subPath(outputDirectory);
+
+  return boost::filesystem::exists(outputDirectory);
+}
 
 void
 DataExporter::AddArray(const std::string &name, float *data, int *dims, int ndims) {
@@ -81,11 +95,11 @@ DataExporter::AddArray(const std::string &name, MultiArray<T> &array) {
   delete[] dims;
 }
 
-template <typename T>
-void
-DataExporter::AddArray(const std::string &name, VectorField<T> &field, int component) {
-  AddArray(name, field.data(component));
-}
+// template <typename T>
+// void
+// DataExporter::AddArray(const std::string &name, VectorField<T> &field, int component) {
+//   AddArray(name, field.data(component));
+// }
 
 void
 DataExporter::AddParticleArray(const std::string& name, const Particles& ptc) {
@@ -110,9 +124,9 @@ DataExporter::AddParticleArray(const std::string& name, const Photons& ptc) {
   dbPhotonData.push_back(std::move(temp));
 }
 
-
 void
 DataExporter::WriteOutput(int timestep, float time) {
+  if (!checkDirectories()) createDirectories();
   try {
     std::string filename = outputDirectory + filePrefix + fmt::format("{0:06d}.h5", timestep);
     H5::H5File *file = new H5::H5File(filename, H5F_ACC_TRUNC);
@@ -147,7 +161,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, ParticleFlag::tracked) && idx < MAX_TRACKED) {
-          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          Scalar x = mesh.pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
           idx += 1;
@@ -173,7 +187,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
-          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          Scalar x = mesh.pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
           ds.data_l[idx] = ds.ptc->data().path[n];
@@ -219,30 +233,31 @@ DataExporter::WriteOutput(int timestep, float time) {
 }
 
 void
-DataExporter::writeConfig(const ConfigFile &config, const CommandArgs &args) {
+DataExporter::writeConfig(const SimParams& params) {
+  if (!checkDirectories()) createDirectories();
   std::string filename = outputDirectory + "config.json";
-  auto& c = config.data();
+  auto& c = params;
   json conf = {
     {"delta_t", c.delta_t},
     {"q_e", c.q_e},
     {"ptc_per_cell", c.ptc_per_cell},
     {"ion_mass", c.ion_mass},
-    {"boundary_periodic", c.boundary_periodic[0]},
+    {"periodic_boundary", c.periodic_boundary},
     {"create_pairs", c.create_pairs},
     {"trace_photons", c.trace_photons},
     {"gamma_thr", c.gamma_thr},
     {"photon_path", c.photon_path},
-    {"grid", {
-        {"N", grid.mesh().dims[0]},
-        {"guard", grid.mesh().guard[0]},
-        {"lower", grid.mesh().lower[0]},
-        {"size", grid.mesh().sizes[0]}
-      }},
+    // {"grid", {
+    {"N", c.N},
+    {"guard", c.guard},
+    {"lower", c.lower},
+    {"size", c.size},
+    //   }},
     {"interp_order", c.interpolation_order},
     {"track_pct", c.track_percent},
     {"ic_path", c.ic_path},
-    {"N_steps", args.steps()},
-    {"data_interval", args.data_interval()},
+    {"N_steps", c.max_steps},
+    {"data_interval", c.data_interval},
     {"spectral_alpha", c.spectral_alpha},
     {"e_s", c.e_s},
     {"e_min", c.e_min}
@@ -262,11 +277,11 @@ template
 void
 DataExporter::AddArray<double>(const std::string &name, MultiArray<double> &array);
 
-template
-void
-DataExporter::AddArray<float>(const std::string &name, VectorField<float> &field, int component);
+// template
+// void
+// DataExporter::AddArray<float>(const std::string &name, VectorField<float> &field, int component);
 
-template
-void
-DataExporter::AddArray<double>(const std::string &name, VectorField<double> &field, int component);
+// template
+// void
+// DataExporter::AddArray<double>(const std::string &name, VectorField<double> &field, int component);
 }

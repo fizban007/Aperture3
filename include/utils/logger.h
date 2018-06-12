@@ -20,6 +20,7 @@ class Logger {
   ~Logger();
 
   static void init(int rank, LogLevel level, std::string log_file);
+  static bool open_log_file();
 
   template <typename... Args>
   static void err(const char* str, Args&&... args) {
@@ -69,7 +70,8 @@ class Logger {
 
   template <typename... Args>
   static void log_info(const char* str, Args&&... args) {
-    if (m_file == nullptr) return;
+    if (m_file == nullptr)
+      if (!open_log_file()) return;
     if (m_rank == 0) {
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
@@ -78,7 +80,8 @@ class Logger {
 
   template <typename... Args>
   static void log_detail(const char* str, Args&&... args) {
-    if (m_file == nullptr) return;
+    if (m_file == nullptr)
+      if (!open_log_file()) return;
     if (m_rank == 0 && m_level > LogLevel::info) {
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
@@ -87,7 +90,8 @@ class Logger {
 
   template <typename... Args>
   static void log_debug(const char* str, Args&&... args) {
-    if (m_file == nullptr) return;
+    if (m_file == nullptr)
+      if (!open_log_file()) return;
     if (m_rank == 0 && m_level > LogLevel::detail) {
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
@@ -96,7 +100,8 @@ class Logger {
 
   template <typename... Args>
   static void log_debug_all(const char* str, Args&&... args) {
-    if (m_file == nullptr) return;
+    if (m_file == nullptr)
+      if (!open_log_file()) return;
     if (m_level > LogLevel::detail) {
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");

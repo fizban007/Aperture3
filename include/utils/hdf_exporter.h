@@ -5,9 +5,11 @@
 // #include <H5Cpp.h>
 #include <string>
 #include <vector>
-#include "data/fields.h"
+// #include "data/fields.h"
 #include "data/particles.h"
 #include "data/photons.h"
+#include "data/quadmesh.h"
+#include "sim_params.h"
 
 namespace Aperture {
 
@@ -43,7 +45,7 @@ class DataExporter
 {
  public:
   DataExporter();
-  DataExporter(const std::string& dir, const std::string& prefix);
+  DataExporter(const Quadmesh& m, const std::string& dir, const std::string& prefix);
 
   ~DataExporter();
 
@@ -51,8 +53,8 @@ class DataExporter
 
   void AddArray(const std::string& name, float* data, int* dims, int ndims);
   void AddArray(const std::string& name, double* data, int* dims, int ndims);
-  template <typename T>
-  void AddArray(const std::string& name, VectorField<T>& field, int component);
+  // template <typename T>
+  // void AddArray(const std::string& name, VectorField<T>& field, int component);
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 
@@ -60,11 +62,13 @@ class DataExporter
   void AddParticleArray(const std::string& name, const Photons& ptc);
   // void AddParticleArray(const Photons& ptc);
 
-  void CopyConfig(const std::string& file);
-  void CopyMain();
+  // void CopyConfig(const std::string& file);
+  // void CopyMain();
 
-  void setGrid(const Grid& g) { grid = g; }
-  void writeConfig(const ConfigFile& config, const CommandArgs& args);
+  // void setGrid(const Grid& g) { grid = g; }
+  void writeConfig(const SimParams& params);
+  void createDirectories();
+  bool checkDirectories();
 
  private:
   std::string outputDirectory;  //!< Sets the directory of all the data files
@@ -78,7 +82,7 @@ class DataExporter
   std::vector<ptcdata<Particles>> dbPtcData;
   std::vector<ptcdata<Photons>> dbPhotonData;
 
-  Grid grid;
+  Quadmesh mesh;
 }; // ----- end of class DataExporter -----
 
 
