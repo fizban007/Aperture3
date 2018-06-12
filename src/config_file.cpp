@@ -7,6 +7,7 @@
 #include <sstream>
 #include "config_file.h"
 #include "utils/logger.h"
+#include "cpptoml.h"
 
 using namespace Aperture;
 
@@ -40,133 +41,74 @@ ConfigFile::ConfigFile() {
   // m_grid_conf.resize(3);
 }
 
-ConfigFile::ConfigFile(const std::string& filename) {
-  // m_grid_conf.resize(3);
-
-  // Parse the configuration file
-  try {
-    parse_file(filename);
-  } catch (const exceptions::empty_entry& e) {
-    Logger::print_err("Error: {}, skipping.\n", e.what());
-  } catch (const exceptions::file_not_found& e) {
-    Logger::print_err("Error: {}\n", e.what());
-  }
-}
-
 void
-ConfigFile::parse_file(const std::string& filename) {
+ConfigFile::parse_file(const std::string& filename, SimParams& params) {
+  // std::cout << filename << std::endl;
   if (filename.empty())
     throw (exceptions::file_not_found());
 
-  m_filename = filename;
-  std::string line;
-  std::string word, input;
-  std::ifstream file(filename.c_str());
+  auto config = cpptoml::parse_file(filename);
+  SimParams defaults;
 
-  if (file) {
-    while (std::getline(file, line)) {
-      if (skip_line_or_word(line)) continue;
-
-      std::stringstream parseline(line);
-      parseline >> word >> std::ws;
-      input = parseline.str().substr(parseline.tellg());
-      if (input.empty())
-        throw (exceptions::empty_entry(word));
-
-      // transform to lower case to avoid case problems
-      std::transform(word.begin(), word.end(), word.begin(), ::tolower);
-
-      if (word.compare("metric") == 0) {
-        m_data.metric = input;
-      } else if (word.compare("delta_t") == 0) {
-        m_data.delta_t = std::atof(input.c_str());
-      } else if (word.compare("n_p") == 0) {
-        m_data.ptc_per_cell = std::atoi(input.c_str());
-      } else if (word.compare("q_e") == 0) {
-        m_data.q_e = std::atof(input.c_str());
-      } else if (word.compare("dim1") == 0 || word.compare("dim_1") == 0) {
-        m_data.grid_config[0] = line;
-      } else if (word.compare("dim2") == 0 || word.compare("dim_2") == 0) {
-        m_data.grid_config[1] = line;
-      } else if (word.compare("dim3") == 0 || word.compare("dim_3") == 0) {
-        m_data.grid_config[2] = line;
-      } else if (word.compare("data_dim1") == 0 || word.compare("data_dim_1") == 0) {
-        m_data.data_grid_config[0] = line;
-      } else if (word.compare("data_dim2") == 0 || word.compare("data_dim_2") == 0) {
-        m_data.data_grid_config[1] = line;
-      } else if (word.compare("data_dim3") == 0 || word.compare("data_dim_3") == 0) {
-        m_data.data_grid_config[2] = line;
-      } else if (word.compare("datadir") == 0) {
-        m_data.data_dir = input;
-      } else if (word.compare("gravity") == 0) {
-        m_data.gravity = std::atof(input.c_str());
-      } else if (word.compare("ion_mass") == 0) {
-        m_data.ion_mass = std::atof(input.c_str());
-      } else if (word.compare("max_part_num") == 0) {
-        m_data.max_ptc_number = std::atol(input.c_str());
-      } else if (word.compare("max_photon_num") == 0) {
-        m_data.max_photon_number = std::atol(input.c_str());
-      } else if (word.compare("periodic_boundary_1") == 0) {
-        m_data.boundary_periodic[0] = to_bool(input);
-      } else if (word.compare("periodic_boundary_2") == 0) {
-        m_data.boundary_periodic[1] = to_bool(input);
-      } else if (word.compare("periodic_boundary_3") == 0) {
-        m_data.boundary_periodic[2] = to_bool(input);
-      } else if (word.compare("interpolation_order") == 0) {
-        m_data.interpolation_order = std::atoi(input.c_str());
-      } else if (word.compare("create_pairs") == 0) {
-        m_data.create_pairs = to_bool(input);
-      } else if (word.compare("trace_photons") == 0) {
-        m_data.trace_photons = to_bool(input);
-      } else if (word.compare("gamma_thr") == 0) {
-        m_data.gamma_thr = std::atof(input.c_str());
-      } else if (word.compare("photon_path") == 0) {
-        m_data.photon_path = std::atof(input.c_str());
-      } else if (word.compare("ic_path") == 0) {
-        m_data.ic_path = std::atof(input.c_str());
-      } else if (word.compare("track_percent") == 0) {
-        m_data.track_percent = std::atof(input.c_str());
-      } else if (word.compare("data_dir") == 0) {
-        m_data.data_dir = input;
-      } else if (word.compare("data_file_prefix") == 0) {
-        m_data.data_file_prefix = input;
-      } else if (word.compare("data_compress") == 0) {
-        m_data.data_compress = to_bool(input);
-      } else if (word.compare("algorithm_ptc_move") == 0) {
-        m_data.algorithm_ptc_move = input;
-      } else if (word.compare("algorithm_ptc_push") == 0) {
-        m_data.algorithm_ptc_push = input;
-      } else if (word.compare("algorithm_field_update") == 0) {
-        m_data.algorithm_field_update = input;
-      } else if (word.compare("algorithm_current_deposit") == 0) {
-        m_data.algorithm_current_deposit = input;
-      } else if (word.compare("spectral_alpha") == 0) {
-        m_data.spectral_alpha = std::atof(input.c_str());
-      } else if (word.compare("e_s") == 0) {
-        m_data.e_s = std::atof(input.c_str());
-      } else if (word.compare("e_min") == 0) {
-        m_data.e_min = std::atof(input.c_str());
-      // } else if (word.compare("initial_condition") == 0) {
-      //   m_data.initial_condition = input;
-      } else {
-        Logger::print_err("Unrecognized entry: {}\n", word);
-      }
-    }
-
-    // m_data.grid_config = m_grid_conf;
-    // for (int i = 0; i < 3; i++) {
-    //   if (m_grid_conf[i] != "") {
-    //     m_data["grid_conf"][i] = m_grid_conf[i];
-    //   }
-    // }
-
-  } else {
-    throw (exceptions::file_not_found(filename));
+  params.delta_t = config->get_as<double>("delta_t")
+                   .value_or(defaults.delta_t);
+  params.max_ptc_number = config->get_as<unsigned long>("max_ptc_number")
+                          .value_or(defaults.max_ptc_number);
+  params.max_photon_number = config->get_as<unsigned long>("max_photon_number")
+                             .value_or(defaults.max_photon_number);
+  params.ion_mass = config->get_as<double>("ion_mass")
+                   .value_or(defaults.ion_mass);
+  params.q_e = config->get_as<double>("q_e")
+               .value_or(defaults.q_e);
+  params.create_pairs = config->get_as<bool>("create_pairs")
+                        .value_or(defaults.create_pairs);
+  params.trace_photons = config->get_as<bool>("trace_photons")
+                        .value_or(defaults.trace_photons);
+  params.track_percent = config->get_as<double>("track_percent")
+                         .value_or(defaults.track_percent);
+  params.gamma_thr = config->get_as<double>("gamma_thr")
+                         .value_or(defaults.gamma_thr);
+  params.spectral_alpha = config->get_as<double>("spectral_alpha")
+                         .value_or(defaults.spectral_alpha);
+  params.e_s = config->get_as<double>("e_s")
+                         .value_or(defaults.e_s);
+  params.e_min = config->get_as<double>("e_min")
+                 .value_or(defaults.e_min);
+  params.photon_path = config->get_as<double>("photon_path")
+                       .value_or(defaults.photon_path);
+  params.ic_path = config->get_as<double>("ic_path")
+                       .value_or(defaults.ic_path);
+  params.data_dir = config->get_as<std::string>("data_dir")
+                    .value_or(defaults.data_dir);
+  auto periodic_boundary = config->get_array_of<bool>("periodic_boundary");
+  if (periodic_boundary) {
+    int n = periodic_boundary->size();
+    params.periodic_boundary[0] = (*periodic_boundary)[0];
+    if (n > 1) params.periodic_boundary[1] = (*periodic_boundary)[1];
+    if (n > 2) params.periodic_boundary[2] = (*periodic_boundary)[2];
   }
 
+  // Parse grid information
+  auto mesh_table = config->get_table("Mesh");
+  auto guard = mesh_table->get_array_of<int64_t>("guard");
+  if (guard) { for (int i = 0; i < 3; i++) params.guard[i] = (*guard)[i]; }
+
+  auto N = mesh_table->get_array_of<int64_t>("N");
+  if (N) { for (int i = 0; i < 3; i++) params.N[i] = (*N)[i]; }
+
+  auto lower = mesh_table->get_array_of<double>("lower");
+  if (lower) { for (int i = 0; i < 3; i++) params.lower[i] = (*lower)[i]; }
+
+  auto size = mesh_table->get_array_of<double>("size");
+  if (size) { for (int i = 0; i < 3; i++) params.size[i] = (*size)[i]; }
+
+  params.tile_size = mesh_table->get_as<int64_t>("tile_size")
+                     .value_or(defaults.tile_size);
+
+  compute_derived_quantities(params);
 }
 
 void
-ConfigFile::compute_derived_quantities() {
-
+ConfigFile::compute_derived_quantities(SimParams& params) {
+  params.log_file = params.data_dir + "logs/output.log";
 }

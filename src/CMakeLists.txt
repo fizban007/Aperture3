@@ -6,8 +6,17 @@ message("Cuda library found, enabling the GPU part of the code.")
   # message("Cuda library not found, skipping the GPU part of the code.")
 # endif()
 
+set(Aperture_src
+  "utils/logger.cpp" "utils/timer.cpp"
+  "utils/hdf_exporter.cpp"
+  "commandline_args.cpp" "config_file.cpp"
+  )
+add_library(Aperture ${Aperture_src})
+target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
+
 set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu"
+  "sim_environment.cu"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
   # "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
@@ -25,13 +34,7 @@ set(AperCuda_src
 message(${HDF5_LIBRARIES})
 # add_library(Aperture STATIC ${Aperture_src})
 add_cuda_target(AperCuda)
-
-set(Aperture_src
-"utils/logger.cpp" "utils/timer.cpp"
-  )
-add_library(Aperture ${Aperture_src})
-target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
-
+target_link_libraries(AperCuda Aperture)
 
 # if (CUDA_FOUND)
 #   target_link_libraries(Pulsar ${CUDA_LIBRARIES})

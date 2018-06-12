@@ -3,7 +3,6 @@
 
 #include <stdexcept>
 #include <string>
-// #include "json.hpp"
 #include "sim_params.h"
 
 namespace Aperture {
@@ -37,21 +36,21 @@ class empty_entry : public std::exception {
 class ConfigFile {
  public:
   ConfigFile();
-  ConfigFile(const std::string& filename);
+  // ConfigFile(const std::string& filename);
   ~ConfigFile() {}
 
   // const nlohmann::json& data() const { return m_data; }
-  const SimParams& data() const { return m_data; }
+  // const SimParams& data() const { return m_data; }
   // const std::vector<std::string>& grid_conf() const { return m_grid_conf; }
 
-  void parse_file(const std::string& filename);
+  void parse_file(const std::string& filename, SimParams& params);
 
  private:
   void def_params();
-  void compute_derived_quantities();
+  void compute_derived_quantities(SimParams& params);
 
-  std::string m_filename;
-  SimParams m_data;
+  // std::string m_filename;
+  // SimParams m_data;
   // std::vector<std::string> m_grid_conf;
   // std::vector<std::string> m_data_grid_conf;
 };  // ----- end of class config_file -----

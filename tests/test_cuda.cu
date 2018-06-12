@@ -1,6 +1,8 @@
 #include "data/particle_data.h"
 #include <cuda.h>
 #include "catch.hpp"
+#include "sim_environment.h"
+#include "cuda/cudaUtility.h"
 
 using namespace Aperture;
 
@@ -8,6 +10,12 @@ __global__
 void add(const float* a, const float* b, float* c) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   c[i] = a[i] + b[i];
+}
+
+__global__
+void print_max_steps() {
+  // dev_params is declared in sim_environment.h
+  printf("%d\n", dev_params.max_steps);
 }
 
 TEST_CASE("Launching cuda kernel", "[Cuda]") {
@@ -81,4 +89,17 @@ TEST_CASE("Boost fusion stuff", "[Cuda]") {
 
   boost::fusion::for_each(data, free_cuda());
 
+}
+
+TEST_CASE("Accessing sim params in kernel", "[Cuda]") {
+  SimParams params;
+  params.max_steps = 10;
+  SimParamsBase* h_params = &params;
+
+  cudaMemcpyToSymbol(dev_params, (void*)h_params, sizeof(SimParamsBase));
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
+
+  print_max_steps<<<1, 1>>>();
+  CudaCheckError();
 }
