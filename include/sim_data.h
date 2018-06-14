@@ -26,7 +26,7 @@ struct SimData {
   std::vector<ScalarField<Scalar> > J_s;
   std::vector<ScalarField<Scalar> > J_avg;
 
-  std::vector<Particles> particles;  // Each species occupies an array
+  Particles particles;
   Photons photons;
   int num_species;
   double time = 0.0;

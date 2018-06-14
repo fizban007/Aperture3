@@ -21,21 +21,20 @@ TEST_CASE("Initializing and Adding particles", "[Particles]") {
   size_t N = 100000;
   Particles ptc(N);
 
-  CHECK(ptc.type() == ParticleType::electron);
-  CHECK(ptc.charge() == -1.0);
-  CHECK(ptc.mass() == 1.0);
   CHECK(ptc.number() == 0);
   CHECK(ptc.numMax() == N);
 
-  ptc.append(0.5, 1.0, 100);
-  ptc.append(0.2, 1.0, 200);
-  ptc.append(0.2, 0.0, 300);
-  ptc.append(0.2, -1.0, 400);
+  ptc.append(0.5, 1.0, 100, ParticleType::electron);
+  ptc.append(0.2, 1.0, 200, ParticleType::electron);
+  ptc.append(0.2, 0.0, 300, ParticleType::positron);
+  ptc.append(0.2, -1.0, 400, ParticleType::positron);
 
   CHECK(ptc.number() == 4);
   CHECK(ptc.data().x1[0] == Approx(0.5));
   CHECK(ptc.data().p1[3] == -1.0);
   CHECK(ptc.data().cell[2] == 300);
+  CHECK(ptc.check_type(2) == ParticleType::positron);
+  CHECK(ptc.check_type(0) == ParticleType::electron);
 
   set_cells<<<256, 256>>>(ptc.data().cell);
   // Wait for GPU to finish before accessing on host
@@ -139,7 +138,7 @@ TEST_CASE("Sorting Particles by tile", "[Particles]") {
   Particles ptc(N);
 
   for (size_t i = 0; i < N; i++) {
-    ptc.append(0.1, 0.0, i);
+    ptc.append(0.1, 0.0, i, ParticleType::electron);
   }
 
   int tile_size = 64;
