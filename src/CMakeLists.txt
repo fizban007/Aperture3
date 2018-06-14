@@ -15,7 +15,8 @@ add_library(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
 
 set(AperCuda_src
-  "data/multi_array.cu" "data/particles.cu"
+  "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu"
+  "algorithms/field_solver_default.cu"
   "sim_environment.cu"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
