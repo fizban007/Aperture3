@@ -2,9 +2,17 @@
 #include <cuda.h>
 #include "catch.hpp"
 #include "sim_environment.h"
+#include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 
 using namespace Aperture;
+
+struct Test {
+  float v[3] = { 0.0 };
+};
+
+__constant__ Test dev_tt;
+__constant__ SimParamsBase dev_test_params;
 
 __global__
 void add(const float* a, const float* b, float* c) {
@@ -14,8 +22,7 @@ void add(const float* a, const float* b, float* c) {
 
 __global__
 void print_max_steps() {
-  // dev_params is declared in sim_environment.h
-  printf("%d\n", dev_params.max_steps);
+  printf("%d\n", dev_test_params.max_steps);
 }
 
 TEST_CASE("Launching cuda kernel", "[Cuda]") {
@@ -96,10 +103,24 @@ TEST_CASE("Accessing sim params in kernel", "[Cuda]") {
   params.max_steps = 10;
   SimParamsBase* h_params = &params;
 
-  cudaMemcpyToSymbol(dev_params, (void*)h_params, sizeof(SimParamsBase));
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
+  cudaMemcpyToSymbol(dev_test_params, (void*)h_params, sizeof(SimParamsBase));
+  CudaCheckError();
 
   print_max_steps<<<1, 1>>>();
-  CudaCheckError();
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
+}
+
+TEST_CASE("Transferring and access constant memory", "[Cuda]") {
+  Test t1, t2;
+  t1.v[0] = 1.0;
+  t1.v[1] = 2.0;
+  t1.v[2] = 3.0;
+
+  cudaMemcpyToSymbol(dev_tt, (void*)&t1, sizeof(Test));
+  cudaMemcpyFromSymbol((void*)&t2, dev_tt, sizeof(Test));
+
+  CHECK(t2.v[0] == 1.0);
+  CHECK(t2.v[1] == 2.0);
+  CHECK(t2.v[2] == 3.0);
 }
