@@ -9,11 +9,13 @@ add_custom_target(check)
 # add_executable(test_free_path "test_free_path.cpp")
 # target_link_libraries(test_free_path ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt Aperture)
 
-set(tests_src "test.cpp" "test_AD.cpp" "test_config.cpp" "test_env.cpp" "test_stagger.cpp")
+set(tests_src
+  "test.cpp" "test_AD.cpp" "test_config.cpp" "test_env.cpp" "test_stagger.cpp"
+  "test_particles.cpp")
 add_executable(tests ${tests_src})
 target_link_libraries(tests
-  PRIVATE Aperture
-  PRIVATE AperCuda)
+  PUBLIC AperCuda
+  PUBLIC Aperture)
 
 add_custom_target(run_tests
   COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/tests"
@@ -22,11 +24,13 @@ add_custom_target(run_tests
 add_dependencies(check run_tests)
 
 # if(CUDA_FOUND)
-set(test_cuda_src "test.cu" "test_cuda.cu" "test_multiarray.cu" "test_particles.cu")
+set(test_cuda_src
+  "test.cu" "test_cuda.cu" "test_multiarray.cu" "test_particles.cu")
 add_cuda_executable(test_cuda)
+set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
 target_link_libraries(test_cuda
-  PRIVATE AperCuda
-  PRIVATE Aperture)
+  PUBLIC AperCuda
+  PUBLIC Aperture)
 add_custom_target(run_cuda_tests
   COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
   DEPENDS test_cuda
