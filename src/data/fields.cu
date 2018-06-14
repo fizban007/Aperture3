@@ -17,7 +17,7 @@ void FieldBase::check_grid_extent(const Extent& ext1, const Extent& ext2) const 
 //     : FieldBase(), m_array() {}
 
 template <typename T>
-ScalarField<T>::ScalarField(const grid_type& grid, Stagger_t stagger)
+ScalarField<T>::ScalarField(const grid_type& grid, Stagger stagger)
     : FieldBase(grid), m_array(grid.extent()), m_stagger(stagger) {
    // std::cout << grid.extent() << std::endl;
 }
@@ -80,7 +80,8 @@ void ScalarField<T>::resize (const Grid& grid) {
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::multiplyBy(data_type value) {
-  detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MultConst<T>(value));
+  // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MultConst<T>(value));
+  detail::knl_map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_MultConst<T>(value));
   return (*this);
 }
 
@@ -89,14 +90,17 @@ ScalarField<T>& ScalarField<T>::multiplyBy(
     const ScalarField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
-  detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
-                          detail::Op_MultAssign<T>());
+  // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
+  //                         detail::Op_MultAssign<T>());
+  detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
+                                  detail::Op_MultAssign<T>());
   return (*this);
 }
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::addBy(data_type value) {
-  detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_PlusConst<T>(value));
+  // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_PlusConst<T>(value));
+  detail::knl_map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_PlusConst<T>(value));
   return (*this);
 }
 
@@ -105,14 +109,17 @@ ScalarField<T>& ScalarField<T>::addBy(
     const ScalarField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
-  detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
-                          detail::Op_PlusAssign<T>());
+  // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
+  //                         detail::Op_PlusAssign<T>());
+  detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
+                                  detail::Op_PlusAssign<T>());
   return (*this);
 }
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::subtractBy(data_type value) {
-  detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MinusConst<T>(value));
+  // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MinusConst<T>(value));
+  detail::knl_map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_MinusConst<T>(value));
   return (*this);
 }
 
@@ -120,8 +127,10 @@ template <typename T>
 ScalarField<T>& ScalarField<T>::subtractBy(const ScalarField<T> &field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
-  detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
-                          detail::Op_MinusAssign<T>());
+  // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
+  //                         detail::Op_MinusAssign<T>());
+  detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
+                                  detail::Op_MinusAssign<T>());
   return (*this);
 
 }
@@ -160,7 +169,7 @@ T ScalarField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, in
 //     : FieldBase(), m_array() {
 //   for (int i = 0; i < VECTOR_DIM; ++i) {
 //     // Default initialize to face-centered
-//     m_stagger[i] = Stagger_t("000");
+//     m_stagger[i] = Stagger("000");
 //     m_stagger[i][i] = true;
 //   }
 // }
@@ -171,20 +180,20 @@ VectorField<T>::VectorField(const grid_type& grid)
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
     // Default initialize to face-centered
-    m_stagger[i] = Stagger_t("000");
-    m_stagger[i][i] = true;
+    m_stagger[i] = Stagger();
+    m_stagger[i].set_bit(i, true);
   }
 }
 
 template <typename T>
 VectorField<T>::VectorField(const self_type& field)
     : FieldBase(*field.m_grid), m_array(field.m_array)
-    , m_stagger(field.m_stagger), m_normalization(field.m_normalization) {}
+    , m_stagger(field.m_stagger) {}
 
 template <typename T>
 VectorField<T>::VectorField(self_type&& field)
     : FieldBase(*field.m_grid), m_array(std::move(field.m_array))
-    , m_stagger(field.m_stagger), m_normalization(field.m_normalization) {}
+    , m_stagger(field.m_stagger) {}
 
 template <typename T>
 VectorField<T>::~VectorField() {}
@@ -223,7 +232,7 @@ void VectorField<T>::initialize() {
 //         double x2 = m_grid -> mesh().pos(1, j, component == 1 ? 1 : 0);
 //         for (int i = 0; i < m_grid -> extent().width(); ++i) {
 //           double x1 = m_grid -> mesh().pos(0, i, component == 0 ? 1 : 0);
-//           // Stagger_t is automatically taken care of by the grid
+//           // Stagger is automatically taken care of by the grid
 //           if (type == FieldType::E)
 //             m_array[component](i, j, k) = ic.E(component, x1, x2, x3);
 //           else if (type == FieldType::B)
@@ -270,8 +279,10 @@ void VectorField<T>::resize (const Grid& grid) {
 template <typename T>
 VectorField<T>& VectorField<T>::multiplyBy(data_type value) {
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    detail::map_multi_array(m_array[i].begin(), this -> m_grid -> extent(),
-                            detail::Op_MultConst<T>(value));
+    // detail::map_multi_array(m_array[i].begin(), this -> m_grid -> extent(),
+    //                         detail::Op_MultConst<T>(value));
+    detail::knl_map_array_unary_op<<<256, 256>>>(m_array[i].data(),
+                                                 m_grid->extent(), detail::Op_MultConst<T>(value));
   }
   return (*this);
 }
@@ -281,16 +292,20 @@ VectorField<T>& VectorField<T>::multiplyBy(const ScalarField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    detail::map_multi_array(m_array[i].begin(), field.data().begin(),
-                            this -> m_grid -> extent(), detail::Op_MultAssign<T>());
+    detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(), m_array[i].data(), m_grid->extent(),
+                                  detail::Op_MultAssign<T>());
+    // detail::map_multi_array(m_array[i].begin(), field.data().begin(),
+    //                         this -> m_grid -> extent(), detail::Op_MultAssign<T>());
   }
   return (*this);
 }
 
 template <typename T>
 VectorField<T>& VectorField<T>::addBy(data_type value, int n) {
-  detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
-                          detail::Op_PlusConst<T>(value));
+  // detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
+  //                         detail::Op_PlusConst<T>(value));
+  detail::knl_map_array_unary_op<<<256, 256>>>(m_array[n].data(),
+                                               m_grid->extent(), detail::Op_PlusConst<T>(value));
   return (*this);
 }
 
@@ -299,16 +314,20 @@ VectorField<T>& VectorField<T>::addBy(const VectorField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
-                            this -> m_grid -> extent(), detail::Op_PlusAssign<T>());
+    // detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
+    //                         this -> m_grid -> extent(), detail::Op_PlusAssign<T>());
+    detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(i), m_array[i].data(), m_grid->extent(),
+                                  detail::Op_PlusAssign<T>());
   }
   return (*this);
 }
 
 template <typename T>
 VectorField<T>& VectorField<T>::subtractBy(data_type value, int n) {
-  detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
-                          detail::Op_MinusConst<T>(value));
+  // detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
+  //                         detail::Op_MinusConst<T>(value));
+  detail::knl_map_array_unary_op<<<256, 256>>>(m_array[n].data(),
+                                               m_grid->extent(), detail::Op_MinusConst<T>(value));
   return (*this);
 }
 
@@ -317,8 +336,10 @@ VectorField<T>& VectorField<T>::subtractBy(const VectorField<T> &field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
-                            this -> m_grid -> extent(), detail::Op_MinusAssign<T>());
+    detail::knl_map_array_binary_op<<<256, 256>>>(field.ptr(i), m_array[i].data(), m_grid->extent(),
+                                  detail::Op_MinusAssign<T>());
+    // detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
+    //                         this -> m_grid -> extent(), detail::Op_MinusAssign<T>());
   }
   return (*this);
 }
@@ -461,24 +482,24 @@ template <typename T>
 void
 VectorField<T>::set_field_type(Aperture::FieldType type) {
   if (type == FieldType::E) {
-    set_stagger(0, Stagger_t("001"));
-    set_stagger(1, Stagger_t("010"));
-    set_stagger(2, Stagger_t("100"));
+    set_stagger(0, Stagger(0b001));
+    set_stagger(1, Stagger(0b010));
+    set_stagger(2, Stagger(0b100));
   } else if (type == FieldType::B) {
-    set_stagger(0, Stagger_t("110"));
-    set_stagger(1, Stagger_t("101"));
-    set_stagger(2, Stagger_t("011"));
+    set_stagger(0, Stagger(0b110));
+    set_stagger(1, Stagger(0b101));
+    set_stagger(2, Stagger(0b011));
   }
 }
 
 template <typename T>
-std::array<Stagger_t, VECTOR_DIM>
+std::array<Stagger, VECTOR_DIM>
 VectorField<T>::stagger_dual() const {
-  decltype(m_stagger) stagger = m_stagger;
+  auto stagger = m_stagger;
   for (unsigned int i = 0; i < stagger.size(); i++) {
     // Only flip those directions that are inside the grid dimension
     if (i < m_grid -> dim()) {
-      stagger[i].flip();
+      stagger[i].flip(i);
     }
   }
   return stagger;
