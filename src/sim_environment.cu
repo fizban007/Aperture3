@@ -36,16 +36,8 @@ Environment::Environment(int* argc, char*** argv)
   // Copy the parameters to cuda constant memory
   cudaMemcpyToSymbol(dev_params, (void*)h_params, sizeof(SimParamsBase));
 
-  // Setup the mesh
-  for (int i = 0; i < 3; i++) {
-    m_mesh.guard[i] = m_params.guard[i];
-    m_mesh.sizes[i] = m_params.size[i];
-    m_mesh.lower[i] = m_params.lower[i];
-    m_mesh.dims[i] = m_params.N[i] + 2 * m_params.guard[i];
-    m_mesh.delta[i] = m_params.size[i] / m_params.N[i];
-    m_mesh.tileSize = m_params.tile_size;
-    m_mesh.dimension = m_mesh.dim();
-  }
+  // Setup the grid
+  m_grid.init(m_params);
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -73,7 +65,7 @@ Environment::Environment(int* argc, char*** argv)
   // m_exporter = std::make_unique<DataExporter>(
   //     m_params.data_dir, m_params.data_file_prefix);
   m_exporter = std::unique_ptr<DataExporter>(
-      new DataExporter(m_mesh, m_params.data_dir, m_params.data_file_prefix));
+      new DataExporter(m_grid, m_params.data_dir, m_params.data_file_prefix));
 
   // Initialize logger for future use
   // Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl, m_conf_file.data().log_file);

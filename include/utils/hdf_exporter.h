@@ -8,7 +8,7 @@
 // #include "data/fields.h"
 #include "data/particles.h"
 #include "data/photons.h"
-#include "data/quadmesh.h"
+#include "data/grid.h"
 #include "sim_params.h"
 
 namespace Aperture {
@@ -45,7 +45,7 @@ class DataExporter
 {
  public:
   DataExporter();
-  DataExporter(const Quadmesh& m, const std::string& dir, const std::string& prefix);
+  DataExporter(const Grid& g, const std::string& dir, const std::string& prefix);
 
   ~DataExporter();
 
@@ -82,7 +82,7 @@ class DataExporter
   std::vector<ptcdata<Particles>> dbPtcData;
   std::vector<ptcdata<Photons>> dbPhotonData;
 
-  Quadmesh mesh;
+  Grid grid;
 }; // ----- end of class DataExporter -----
 
 

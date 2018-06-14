@@ -38,3 +38,18 @@ Grid::operator=(Grid&& g) {
   return *this;
 }
 
+void
+Grid::init(const SimParams& params) {
+  // Setup the mesh
+  for (int i = 0; i < 3; i++) {
+    m_mesh.guard[i] = params.guard[i];
+    m_mesh.sizes[i] = params.size[i];
+    m_mesh.lower[i] = params.lower[i];
+    m_mesh.dims[i] = params.N[i] + 2 * params.guard[i];
+    m_mesh.delta[i] = params.size[i] / params.N[i];
+    m_mesh.tileSize = params.tile_size;
+    m_mesh.dimension = m_mesh.dim();
+  }
+
+  // TODO: In the near future, cache all the metric terms here
+}
