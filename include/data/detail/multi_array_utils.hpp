@@ -7,12 +7,12 @@
 
 namespace Aperture {
 
-namespace detail {
+namespace Kernels {
 
 #ifdef __NVCC__
 
 template <typename T, typename UnaryOp>
-__global__ void knl_map_array_unary_op(const T* input, T* output, const Extent ext, UnaryOp op) {
+__global__ void map_array_unary_op(const T* input, T* output, const Extent ext, UnaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z;
        k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -30,7 +30,7 @@ __global__ void knl_map_array_unary_op(const T* input, T* output, const Extent e
 }
 
 template <typename T, typename UnaryOp>
-__global__ void knl_map_array_unary_op(T* array, const Extent ext, UnaryOp op) {
+__global__ void map_array_unary_op(T* array, const Extent ext, UnaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z;
        k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -48,7 +48,7 @@ __global__ void knl_map_array_unary_op(T* array, const Extent ext, UnaryOp op) {
 }
 
 template <typename T, typename BinaryOp>
-__global__ void knl_map_array_binary_op(const T* input, T* output, const Extent ext, BinaryOp op) {
+__global__ void map_array_binary_op(const T* input, T* output, const Extent ext, BinaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z;
        k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -66,7 +66,7 @@ __global__ void knl_map_array_binary_op(const T* input, T* output, const Extent 
 }
 
 template <typename T, typename BinaryOp>
-__global__ void knl_map_array_binary_op(const T* a, const T* b, T* output, const Extent ext, BinaryOp op) {
+__global__ void map_array_binary_op(const T* a, const T* b, T* output, const Extent ext, BinaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z;
        k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -84,6 +84,10 @@ __global__ void knl_map_array_binary_op(const T* a, const T* b, T* output, const
 }
 
 #endif // ENABLE_CUDA
+
+}
+
+namespace detail {
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Mapping an operation over a multiarray.
