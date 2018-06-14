@@ -294,7 +294,7 @@ ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::compute_tile_num(int tile_size) {
-  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number, tile_size);
+  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 }
@@ -303,7 +303,7 @@ template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::sort_by_tile(int tile_size) {
   // First compute the tile number according to current cell id
-  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number, tile_size);
+  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number);
 
   // Generate particle index array
   auto ptr_tile = thrust::device_pointer_cast(m_data.tile);

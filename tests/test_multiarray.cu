@@ -97,7 +97,6 @@ TEST_CASE("Add 2D multi_array", "[MultiArray]") {
 }
 
 TEST_CASE("Map Array Multiply", "[MultiArray]")  {
-  using namespace Aperture::detail;
   Data data(150, 150, 100);
 
   data.a.assign(2.0);
@@ -112,7 +111,7 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   // dim3 gridSize(32, 32);
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(16, 16, 8);
-  knl_map_array_binary_op<<<gridSize, blockSize>>>(data.a.data(), data.b.data(), data.c.data(), data.a.extent(), Op_Multiply<float>());
+  Kernels::map_array_binary_op<<<gridSize, blockSize>>>(data.a.data(), data.b.data(), data.c.data(), data.a.extent(), Op_Multiply<float>());
   CudaCheckError();
 
   data.prefetch();
