@@ -13,7 +13,7 @@ using json = nlohmann::json;
 
 namespace Aperture {
 
-DataExporter::DataExporter() {}
+// DataExporter::DataExporter() {}
 
 DataExporter::DataExporter(const Grid& g, const std::string& dir, const std::string& prefix)
     : outputDirectory(dir), filePrefix(prefix), grid(g) {

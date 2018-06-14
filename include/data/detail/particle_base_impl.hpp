@@ -11,6 +11,7 @@
 #include "data/particle_base.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
+#include "cuda/constant_mem.h"
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/copy.h>
@@ -29,11 +30,11 @@ namespace Kernels {
 
 // FIXME: This is only for 1D
 __global__
-void compute_tile(uint32_t* tile, const uint32_t* cell, size_t N, int tile_size) {
+void compute_tile(uint32_t* tile, const uint32_t* cell, size_t N) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < N;
        i += blockDim.x * gridDim.x) {
-    tile[i] = cell[i] / tile_size;
+    tile[i] = cell[i] / dev_mesh.tileSize[0];
   }
 }
 

@@ -34,6 +34,8 @@ class Grid {
 
   Quadmesh& mesh() { return m_mesh; }
   const Quadmesh& mesh() const { return m_mesh; }
+  Quadmesh* mesh_ptr() { return &m_mesh; }
+  const Quadmesh* mesh_ptr() const { return &m_mesh; }
   int size() const { return m_mesh.size(); }
   Extent extent() const { return m_mesh.extent(); }
   unsigned int dim() const { return m_mesh.dim(); }

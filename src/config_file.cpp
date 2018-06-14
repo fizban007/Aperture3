@@ -89,7 +89,7 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   }
 
   // Parse grid information
-  auto mesh_table = config->get_table("Mesh");
+  auto mesh_table = config->get_table("Grid");
   auto guard = mesh_table->get_array_of<int64_t>("guard");
   if (guard) { for (int i = 0; i < 3; i++) params.guard[i] = (*guard)[i]; }
 
@@ -102,8 +102,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   auto size = mesh_table->get_array_of<double>("size");
   if (size) { for (int i = 0; i < 3; i++) params.size[i] = (*size)[i]; }
 
-  params.tile_size = mesh_table->get_as<int64_t>("tile_size")
-                     .value_or(defaults.tile_size);
+  auto tile_size = mesh_table->get_array_of<double>("tile_size");
+  if (tile_size) { for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i]; }
 
   compute_derived_quantities(params);
 }
