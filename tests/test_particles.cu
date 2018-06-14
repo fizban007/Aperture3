@@ -5,17 +5,12 @@
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <random>
+#include "cuda/cudaUtility.h"
+#include "sim_environment.h"
 #include "catch.hpp"
 #include "cub/cub.cuh"
 
 using namespace Aperture;
-
-__global__
-void set_cells(uint32_t* cells) {
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-
-  cells[idx] = idx;
-}
 
 TEST_CASE("Initializing and Adding particles", "[Particles]") {
   size_t N = 100000;
@@ -35,14 +30,6 @@ TEST_CASE("Initializing and Adding particles", "[Particles]") {
   CHECK(ptc.data().cell[2] == 300);
   CHECK(ptc.check_type(2) == ParticleType::positron);
   CHECK(ptc.check_type(0) == ParticleType::electron);
-
-  set_cells<<<256, 256>>>(ptc.data().cell);
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
-
-  for (size_t i = 0; i < 256*256; i++) {
-    CHECK(ptc.data().cell[i] == i);
-  }
 }
 
 TEST_CASE("Testing memory allocation", "[Particles]") {
@@ -126,33 +113,10 @@ TEST_CASE("Sorting particles, using cub", "[Particles]") {
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 
+
   timer::show_duration_since_stamp("sort using cub radix sort", "ms");
 
   cudaFree(d_temp_storage);
   cudaFree(cell_alt);
   cudaFree(x1_alt);
-}
-
-TEST_CASE("Sorting Particles by tile", "[Particles]") {
-  size_t N = 10000000;
-  Particles ptc(N);
-
-  for (size_t i = 0; i < N; i++) {
-    ptc.append(0.1, 0.0, i, ParticleType::electron);
-  }
-
-  int tile_size = 64;
-  ptc.compute_tile_num(tile_size);
-
-  for (size_t i = 0; i < N; i++) {
-    // CHECK(ptc.data().tile[i] == i / tile_size);
-  }
-  ptc.sync_to_device(0);
-
-  timer::stamp();
-  // ptc.sort_by_cell();
-  ptc.sort_by_tile(tile_size);
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("sorting by cell on gpu, in class", "ms");
 }
