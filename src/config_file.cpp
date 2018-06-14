@@ -110,5 +110,5 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
 
 void
 ConfigFile::compute_derived_quantities(SimParams& params) {
-  params.log_file = params.data_dir + "logs/output.log";
+  params.log_file = params.data_dir + "output.log";
 }
