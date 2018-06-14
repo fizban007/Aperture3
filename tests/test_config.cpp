@@ -5,14 +5,7 @@ using namespace Aperture;
 
 ConfigFile config;
 
-TEST_CASE("Simple parsing", "[config]") {
-  SimParams params;
-  CHECK(params.periodic_boundary[0] == false);
-  CHECK(params.periodic_boundary[1] == false);
-  CHECK(params.periodic_boundary[2] == false);
-
-  config.parse_file("test.toml", params);
-
+void check_test_params(const SimParams& params) {
   CHECK(params.delta_t == Approx(0.3));
   CHECK(params.q_e == Approx(0.1));
   CHECK(params.max_ptc_number == 100000000);
@@ -43,5 +36,18 @@ TEST_CASE("Simple parsing", "[config]") {
   CHECK(params.size[0] == Approx(100.0));
   CHECK(params.size[1] == Approx(10.0));
   CHECK(params.size[2] == Approx(2.0));
-  CHECK(params.tile_size == 64);
+  CHECK(params.tile_size[0] == 64);
+  CHECK(params.tile_size[1] == 1);
+  CHECK(params.tile_size[2] == 1);
+}
+
+TEST_CASE("Simple parsing", "[config]") {
+  SimParams params;
+  CHECK(params.periodic_boundary[0] == false);
+  CHECK(params.periodic_boundary[1] == false);
+  CHECK(params.periodic_boundary[2] == false);
+
+  config.parse_file("test.toml", params);
+
+  check_test_params(params);
 }
