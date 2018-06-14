@@ -12,54 +12,24 @@ template class ParticleBase<single_photon_t>;
 
 Particles::Particles() {}
 
-Particles::Particles(std::size_t max_num, ParticleType type)
-    : ParticleBase<single_particle_t>(max_num) {
-  m_type = type;
-
-  // TODO: Set charge and mass!!
-  double q = 1.0;
-  double ion_mass = 1.0;
-  if (type == ParticleType::electron) {
-    m_charge = -q; m_mass = q;
-  } else if (type == ParticleType::positron) {
-    m_charge = q; m_mass = q;
-  } else if (type == ParticleType::ion) {
-    m_charge = q; m_mass = q * ion_mass;
-  }
-}
+Particles::Particles(std::size_t max_num)
+    : ParticleBase<single_particle_t>(max_num) {}
 
 // Particles::Particles(const Environment& env, ParticleType type)
-Particles::Particles(const SimParams& params, ParticleType type)
+Particles::Particles(const SimParams& params)
     : ParticleBase<single_particle_t>((std::size_t)params.max_ptc_number) {
-  m_type = type;
-  auto q = params.q_e;
-  if (type == ParticleType::electron) {
-    m_charge = -q; m_mass = q;
-  } else if (type == ParticleType::positron) {
-    m_charge = q; m_mass = q;
-  } else if (type == ParticleType::ion) {
-    m_charge = q; m_mass = q * params.ion_mass;
-  }
 }
 
 Particles::Particles(const Particles& other)
-    : ParticleBase<single_particle_t>(other) {
-  m_type = other.m_type;
-  m_charge = other.m_charge;
-  m_mass = other.m_mass;
-}
+    : ParticleBase<single_particle_t>(other) {}
 
 Particles::Particles(Particles&& other)
-    : ParticleBase<single_particle_t>(std::move(other)) {
-  m_type = other.m_type;
-  m_charge = other.m_charge;
-  m_mass = other.m_mass;
-}
+    : ParticleBase<single_particle_t>(std::move(other)) {}
 
 Particles::~Particles() {}
 
 void
-Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, int flag) {
+Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight, uint32_t flag) {
   if (pos >= m_numMax)
     throw std::runtime_error("Trying to insert particle beyond the end of the array. Resize it first!");
 
@@ -70,15 +40,15 @@ Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, int flag) {
   m_data.p1[pos] = p;
   // m_data.p2[pos] = p[1];
   // m_data.p3[pos] = p[2];
-  m_data.gamma[pos] = sqrt(1.0 + p*p);
+  m_data.weight[pos] = weight;
   m_data.cell[pos] = cell;
-  m_data.flag[pos] = flag;
+  m_data.flag[pos] = flag | ((uint32_t)type << 29);
   if (pos >= m_number) m_number = pos + 1;
 }
 
 void
-Particles::append(Pos_t x, Scalar p, int cell, int flag) {
-  put(m_number, x, p, cell, flag);
+Particles::append(Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight, uint32_t flag) {
+  put(m_number, x, p, cell, type, weight, flag);
 }
 
 // void

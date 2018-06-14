@@ -18,8 +18,8 @@ class Particles : public ParticleBase<single_particle_t>
  public:
   typedef ParticleBase<single_particle_t> BaseClass;
   Particles();
-  Particles(std::size_t max_num, ParticleType type = ParticleType::electron);
-  Particles(const SimParams& env, ParticleType type = ParticleType::electron);
+  Particles(std::size_t max_num);
+  Particles(const SimParams& env);
   Particles(const Particles& other);
   Particles(Particles&& other);
   virtual ~Particles();
@@ -34,8 +34,8 @@ class Particles : public ParticleBase<single_particle_t>
 
   using BaseClass::put;
   using BaseClass::append;
-  void put(std::size_t pos, Pos_t x, Scalar p, int cell, int flag = 0);
-  void append(Pos_t x, Scalar p, int cell, int flag = 0);
+  void put(std::size_t pos, Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight = 1.0, uint32_t flag = 0);
+  void append(Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight = 1.0, uint32_t flag = 0);
   // void put(std::size_t pos, const single_particle_t& part);
   // void swap(Index_t pos, single_particle_t& part);
 
@@ -53,15 +53,20 @@ class Particles : public ParticleBase<single_particle_t>
 
   // particle_data& data() { return m_data; }
   // const particle_data& data() const { return m_data; }
-  ParticleType type() const { return m_type; }
-  Scalar charge() const { return m_charge; }
-  Scalar mass() const { return m_mass; }
-  void set_type(ParticleType type) { m_type = type; }
-  void set_charge(Scalar charge) { m_charge = charge; }
-  void set_mass(Scalar mass) { m_mass = mass; }
+  // ParticleType type() const { return m_type; }
+  // Scalar charge() const { return m_charge; }
+  // Scalar mass() const { return m_mass; }
+  // void set_type(ParticleType type) { m_type = type; }
+  // void set_charge(Scalar charge) { m_charge = charge; }
+  // void set_mass(Scalar mass) { m_mass = mass; }
   void track(Index_t pos) { m_data.flag[pos] |= (int)ParticleFlag::tracked; }
   bool check_flag(Index_t pos, ParticleFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
   void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
+  // Use the highest 3 bits to represent particle type
+  ParticleType check_type(Index_t pos) const { return (ParticleType)(m_data.flag[pos] >> 29); }
+  void set_type(Index_t pos, ParticleType type) {
+    m_data.flag[pos] = (m_data.flag[pos] & ((uint32_t)-1 >> 3)) | ((uint32_t)type << 29);
+  }
 
   // The upper 16 bits represent the rank the particle is born
   // int tag_rank(Index_t idx) { return (m_data.tag_id[idx] >> 16); }
@@ -72,9 +77,9 @@ class Particles : public ParticleBase<single_particle_t>
 
   // char* m_data_ptr;
   // particle_data m_data;
-  ParticleType m_type;
-  Scalar m_charge = 1.0;
-  Scalar m_mass = 1.0;
+  // ParticleType m_type;
+  // Scalar m_charge = 1.0;
+  // Scalar m_mass = 1.0;
   std::vector<Index_t> m_partition;
 
   // std::vector<Index_t> m_index;

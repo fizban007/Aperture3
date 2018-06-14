@@ -12,6 +12,7 @@ SimData::SimData(const Environment& e) :
     env(e), E(env.local_grid()),
     B(env.local_grid()),
     J(env.local_grid()),
+    particles(env),
     photons(env) {
   // initialize(env);
   num_species = 3;
@@ -23,11 +24,9 @@ SimData::SimData(const Environment& e) :
     Rho_avg.emplace_back(env.local_grid());
     J_s.emplace_back(env.local_grid());
     J_avg.emplace_back(env.local_grid());
-    particles.emplace_back(env.conf().data(), static_cast<ParticleType>(i));
+    // particles.emplace_back(env.params(), static_cast<ParticleType>(i));
   }
-  for (int i = 0; i < num_species; i++) {
-    particles[i].initialize();
-  }
+
 }
 
 SimData::~SimData() {}

@@ -19,11 +19,13 @@ struct single_particle_t {
   Pos_t x1 = 0.0;
   Pos_t dx1 = 0.0;
   Scalar p1 = 0.0;
-  Scalar gamma = 0.0;
+  Scalar weight = 0.0;
   // Defulat MAX_CELL means empty particle slot
   uint32_t cell = MAX_CELL;
   uint32_t tile = 0;
   uint32_t flag = 0;
+
+  HOST_DEVICE single_particle_t() {}
 
   // A series of set methods so that one can chain them
   HD_INLINE single_particle_t& set_x(Pos_t x) {
@@ -38,7 +40,7 @@ struct single_particle_t {
 
   HD_INLINE single_particle_t& set_p(Scalar p) {
     p1 = p;
-    gamma = sqrt(1.0 + p1 * p1);
+    // gamma = sqrt(1.0 + p1 * p1);
     return *this;
   }
 
@@ -62,6 +64,8 @@ struct single_photon_t {
   uint32_t cell = MAX_CELL;
   uint32_t tile = 0;
   uint32_t flag = 0;
+
+  HOST_DEVICE single_photon_t() {}
 
   // A series of set methods so that one can chain them
   HD_INLINE single_photon_t& set_x(Pos_t x) {
@@ -95,7 +99,7 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::single_particle_t,
                           (Aperture::Pos_t, x1)
                           (Aperture::Pos_t, dx1)
                           (Aperture::Scalar, p1)
-                          (Aperture::Scalar, gamma)
+                          (Aperture::Scalar, weight)
                           (uint32_t, cell)
                           (uint32_t, tile)
                           (uint32_t, flag));
@@ -124,11 +128,13 @@ struct particle_data {
   Pos_t* x1;
   Pos_t* dx1;
   Scalar* p1;
-  Scalar* gamma;
+  Scalar* weight;
 
   uint32_t* cell;
   uint32_t* tile;
   uint32_t* flag;
+
+  HOST_DEVICE particle_data() {}
 
   HOST_DEVICE single_particle_t operator[](size_t idx) const;
 };
@@ -151,6 +157,8 @@ struct photon_data {
   uint32_t* tile;
   uint32_t* flag;
 
+  HOST_DEVICE photon_data() {}
+
   HOST_DEVICE single_photon_t operator[](size_t idx) const;
 };
 
@@ -172,7 +180,7 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data,
                           (Aperture::Pos_t*, x1)
                           (Aperture::Pos_t*, dx1)
                           (Aperture::Scalar*, p1)
-                          (Aperture::Scalar*, gamma)
+                          (Aperture::Scalar*, weight)
                           (uint32_t*, cell)
                           (uint32_t*, tile)
                           (uint32_t*, flag));
