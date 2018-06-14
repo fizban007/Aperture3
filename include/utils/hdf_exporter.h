@@ -44,7 +44,7 @@ struct ptcdata<Photons> {
 class DataExporter
 {
  public:
-  DataExporter();
+  // DataExporter();
   DataExporter(const Grid& g, const std::string& dir, const std::string& prefix);
 
   ~DataExporter();
@@ -82,7 +82,7 @@ class DataExporter
   std::vector<ptcdata<Particles>> dbPtcData;
   std::vector<ptcdata<Photons>> dbPhotonData;
 
-  Grid grid;
+  const Grid& grid;
 }; // ----- end of class DataExporter -----
 
 

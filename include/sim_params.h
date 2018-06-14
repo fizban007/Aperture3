@@ -63,7 +63,7 @@ struct SimParamsBase {
   int     guard[3]                = { 0 };
   float   lower[3]                = { 0.0 };
   float   size[3]                 = { 0.0 };
-  int     tile_size               = 1;
+  int     tile_size[3]            = { 1 };
 };
 
 struct SimParams : public SimParamsBase

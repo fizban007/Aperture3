@@ -14,16 +14,11 @@
 // #include "utils/data_exporter.h"
 // #include "utils/mpi_comm.h"
 #include "utils/logger.h"
+// #include "cuda/constant_mem.h"
 // #include "boundary_conditions.h"
 // #include "initial_conditions.h"
 
 namespace Aperture {
-
-#ifdef __NVCC__
-
-extern __constant__ SimParamsBase dev_params;
-
-#endif // __NVCC__
 
 // struct SimData;
 // class DomainCommunicator;
@@ -35,6 +30,7 @@ extern __constant__ SimParamsBase dev_params;
 class Environment {
  public:
   Environment(int* argc, char*** argv);
+  Environment(const std::string& conf_file);
   ~Environment();
 
   // Remove copy and assignment operators
@@ -82,6 +78,7 @@ class Environment {
 
  private:
   // Environment() {}
+  void setup_env(const std::string& conf_file);
 
   CommandArgs m_args;
   SimParams m_params;

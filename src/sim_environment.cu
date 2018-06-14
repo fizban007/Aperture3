@@ -1,13 +1,13 @@
 #include "sim_environment.h"
 #include "fmt/format.h"
+#include "cuda/cudaUtility.h"
+#include "cuda/constant_mem.h"
 #include <memory>
 // #include "data/detail/grid_impl.hpp"
 // #include "sim_data.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
-
-__constant__ SimParamsBase dev_params;
 
 // Environment&
 Environment::Environment(int* argc, char*** argv)
@@ -23,21 +23,38 @@ Environment::Environment(int* argc, char*** argv)
     exit(0);
   }
 
+  setup_env(m_params.conf_file);
+}
+
+Environment::Environment(const std::string& conf_file)
+    : m_generator(), m_dist(0.0, 1.0) {
+  setup_env(conf_file);
+}
+
+Environment::~Environment() {}
+
+void
+Environment::setup_env(const std::string& conf_file) {
   // Read in the input file
   try {
-    m_conf_file.parse_file(m_params.conf_file, m_params);
+    m_conf_file.parse_file(conf_file, m_params);
   } catch (exceptions::file_not_found& e) {
     Logger::err("Config file not found, exiting");
     exit(0);
   }
 
-  SimParamsBase* h_params = &m_params;
+  // SimParamsBase* h_params = &m_params;
 
   // Copy the parameters to cuda constant memory
-  cudaMemcpyToSymbol(dev_params, (void*)h_params, sizeof(SimParamsBase));
+  cudaMemcpyToSymbol(dev_params, (void*)&m_params, sizeof(SimParamsBase));
+  CudaCheckError();
 
   // Setup the grid
   m_grid.init(m_params);
+  // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1] << std::endl;
+  std::cout << "size of quadmesh is " << sizeof(Quadmesh) << std::endl;
+  cudaMemcpyToSymbol(dev_mesh, (void*)m_grid.mesh_ptr(), sizeof(Quadmesh));
+  CudaCheckError();
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -72,9 +89,6 @@ Environment::Environment(int* argc, char*** argv)
   Logger::init(0, m_params.log_lvl, m_params.log_file);
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 }
-
-Environment::~Environment() {}
-
 // void
 // Environment::setup_domain(int num_nodes) {
 //   int ndims = m_super_grid.dim();

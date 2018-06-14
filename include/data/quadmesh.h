@@ -22,7 +22,7 @@ struct Quadmesh {
   Scalar lower[3];  //!< Lower limit of the grid on each direction
   Scalar sizes[3];  //!< Size of the grid in coordinate space
 
-  int tileSize;
+  int tileSize[3];
   int dimension;
 
   HOST_DEVICE Quadmesh() {  //!< Default constructor
@@ -36,8 +36,8 @@ struct Quadmesh {
       delta[i] = 1.0;
       lower[i] = 0.0;
       sizes[i] = 0.0;
+      tileSize[i] = 1;
     }
-    tileSize = 64;
     dimension = 1;
 #endif  // __CUDACC__
   }
@@ -56,8 +56,8 @@ struct Quadmesh {
       delta[i] = 1.0;
       lower[i] = 0.0;
       sizes[i] = delta[i] * dims[i];
+      tileSize[i] = 1;
     }
-    tileSize = 64;
     dimension = dim();
   }
 
@@ -71,8 +71,8 @@ struct Quadmesh {
       delta[i] = m.delta[i];
       lower[i] = m.lower[i];
       sizes[i] = m.sizes[i];
+      tileSize[i] = m.tileSize[i];
     }
-    tileSize = m.tileSize;
     dimension = m.dimension;
     return *this;
   }
@@ -87,8 +87,8 @@ struct Quadmesh {
       result = result && (guard[i] == m.guard[i]);
       result = result && (sizes[i] == m.sizes[i]);
       result = result && (lower[i] == m.lower[i]);
+      // result = result && (tileSize[i] == m.tileSize[i]);
     }
-    result = result && (tileSize == m.tileSize);
     result = result && (dimension == m.dimension);
     return result;
   }
@@ -355,10 +355,10 @@ struct Quadmesh {
                   dims[2] - 2 * guard[2]};
   }
 
-  HD_INLINE int tile_num(int tile_size) const {
+  HD_INLINE int num_tiles() const {
     int ret = reduced_dim(0) * reduced_dim(1) * reduced_dim(2);
     for (int i = 0; i < 3; i++)
-      if (dims[i] > 1) ret /= tile_size;
+      if (dims[i] > 1) ret /= tileSize[i];
     return ret;
   }
 
@@ -384,23 +384,20 @@ struct Quadmesh {
     return Vec3<int>(get_c1(idx), get_c2(idx), get_c3(idx));
   }
 
-  HD_INLINE int tile_id(int c1, int c2, int c3, int tile_size) const {
-    int tileN1 = (dims[0] > 1 ? dims[0] / tile_size : 1);
-    int tileN2 = (dims[1] > 1 ? dims[1] / tile_size : 1);
-    int ret = (c1 - guard[0]) / tile_size;
-    ret += ((c2 - guard[1]) / tile_size) * tileN1;
-    ret += ((c3 - guard[2]) / tile_size) * tileN1 * tileN2;
+  HD_INLINE int tile_id(int c1, int c2, int c3) const {
+    int tileN1 = (dims[0] > 1 ? dims[0] / tileSize[0] : 1);
+    int tileN2 = (dims[1] > 1 ? dims[1] / tileSize[1] : 1);
+    int ret = (c1 - guard[0]) / tileSize[0];
+    if (dims[1] > 1)
+      ret += ((c2 - guard[1]) / tileSize[0]) * tileN1;
+    if (dims[2] > 1)
+      ret += ((c3 - guard[2]) / tileSize[0]) * tileN1 * tileN2;
     return ret;
   }
 
-  HD_INLINE int tile_id(int cell, int tile_size) const {
+  HD_INLINE int tile_id(int cell) const {
     int c1 = get_c1(cell), c2 = get_c2(cell), c3 = get_c3(cell);
-    int tileN1 = (dims[0] > 1 ? dims[0] / tile_size : 1);
-    int tileN2 = (dims[1] > 1 ? dims[1] / tile_size : 1);
-    int ret = (c1 - guard[0]) / tile_size;
-    ret += ((c2 - guard[1]) / tile_size) * tileN1;
-    ret += ((c3 - guard[2]) / tile_size) * tileN1 * tileN2;
-    return ret;
+    return tile_id(c1, c2, c3);
   }
 
   HD_INLINE int dim() const {

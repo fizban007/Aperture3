@@ -1,7 +1,8 @@
 #include "algorithms/field_solver_default.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "cuda/cudaUtility.h"
-#include "sim_environment.h"
+#include "cuda/constant_mem.h"
+// #include "sim_environment.h"
 
 namespace Aperture {
 
@@ -46,7 +47,7 @@ void
 FieldSolver_Default::update_fields(Aperture::SimData &data, double dt,
                                     double time) {
   update_fields(data.E, data.B, data.J, dt, time);
-  detail::knl_map_array_binary_op<<<256, 256>>>
+  Kernels::map_array_binary_op<<<256, 256>>>
       (data.E.ptr(0), data.E.ptr(1), data.E.grid().extent(), detail::Op_PlusAssign<Scalar>());
   CudaCheckError();
 }
