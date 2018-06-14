@@ -6,6 +6,7 @@
 #include "data/multi_array.h"
 #include "data/grid.h"
 #include "data/enum_types.h"
+#include "data/stagger.h"
 #include "constant_defs.h"
 // #include "initial_conditions/initial_condition.h"
 
@@ -53,7 +54,7 @@ class ScalarField : public FieldBase {
 
   // Constructors and destructor
   // ScalarField();
-  ScalarField(const grid_type &grid, Stagger_t stagger = Stagger_t("000"));
+  ScalarField(const grid_type &grid, Stagger stagger = Stagger(0));
   ScalarField(const self_type &field);
   ScalarField(self_type &&field);
   virtual ~ScalarField();
@@ -100,15 +101,15 @@ class ScalarField : public FieldBase {
   const array_type &data() const { return m_array; }
   data_type *ptr() { return m_array.data(); }
   const data_type *ptr() const { return m_array.data(); }
-  Stagger_t stagger() const { return m_stagger; }
+  Stagger stagger() const { return m_stagger; }
 
-  void set_stagger(Stagger_t stagger) {
+  void set_stagger(Stagger stagger) {
     m_stagger = stagger;
   }
 
  private:
   array_type m_array;
-  Stagger_t m_stagger;
+  Stagger m_stagger;
 };  // ----- end of class scalar_field -----
 
 template <typename T>
@@ -160,7 +161,7 @@ class VectorField : public FieldBase {
   self_type &convertToFlux();
   self_type &convertFromFlux();
 
-  void normalize(FieldNormalization normalization);
+  // void normalize(FieldNormalization normalization);
 
   /// Index operator
   data_type &operator()(int n, int x, int y = 0, int z = 0) {
@@ -184,23 +185,23 @@ class VectorField : public FieldBase {
   const array_type &data(int n) const { return m_array[n]; }
   data_type *ptr(int n) { return m_array[n].data(); }
   const data_type *ptr(int n) const { return m_array[n].data(); }
-  auto stagger(int n) const { return m_stagger[n]; }
-  auto& stagger() const { return m_stagger; }
-  std::array<Stagger_t, VECTOR_DIM> stagger_dual() const;
+  Stagger stagger(int n) const { return m_stagger[n]; }
+  const std::array<Stagger, VECTOR_DIM>& stagger() const { return m_stagger; }
+  std::array<Stagger, VECTOR_DIM> stagger_dual() const;
 
-  void set_stagger(int n, Stagger_t stagger) {
+  void set_stagger(int n, Stagger stagger) {
     m_stagger[n] = stagger;
   }
-  void set_stagger(const std::array<Stagger_t, VECTOR_DIM>& stagger) {
+  void set_stagger(const std::array<Stagger, VECTOR_DIM>& stagger) {
     m_stagger = stagger;
   }
   void set_field_type(FieldType type);
 
  private:
   std::array<array_type, VECTOR_DIM> m_array;
-  std::array<Stagger_t, VECTOR_DIM> m_stagger;
+  std::array<Stagger, VECTOR_DIM> m_stagger;
   // Default normalization is coord
-  FieldNormalization m_normalization = FieldNormalization::coord;
+  // FieldNormalization m_normalization = FieldNormalization::coord;
 };  // ----- end of class vector_field -----
 
 }

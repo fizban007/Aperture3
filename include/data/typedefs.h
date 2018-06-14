@@ -12,7 +12,8 @@ typedef float Scalar;
 /// A simple way to track staggering of field components. Note that when
 /// initializing it, one can use Stagger_t("011"). The rightmost digit is for x
 /// direction, while leftmost digit for z
-typedef std::bitset<3> Stagger_t;
+// typedef std::bitset<3> Stagger_t;
+// typedef char Stagger_t;
 
 typedef float Mom_t;
 typedef float Pos_t;
