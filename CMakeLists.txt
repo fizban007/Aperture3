@@ -74,6 +74,7 @@ macro(add_cuda_target cuda_target)
   target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
   set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
   set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  set_property(TARGET ${cuda_target} PROPERTY PROPERTIES POSITION_INDEPENDENT_CODE ON)
     # RELEASE -DNDEBUG -O2 -Xptxas="-v"
     # RELEASE -DNDEBUG -O3
     # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
@@ -83,6 +84,7 @@ macro(add_cuda_executable cuda_target)
   target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
   set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 11)
   set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  set_property(TARGET ${cuda_target} PROPERTY PROPERTIES POSITION_INDEPENDENT_CODE ON)
     # RELEASE -DNDEBUG -O2 -Xptxas="-v"
     # RELEASE -DNDEBUG -O3
     # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
