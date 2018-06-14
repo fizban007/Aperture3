@@ -9,9 +9,9 @@ namespace Aperture {
 
 enum class FieldType : char { E, B };
 
-enum class FieldNormalization : char { coord, physical, volume };
+enum class FieldNormalization : unsigned char { coord, physical, volume };
 
-enum class ParticleType : char { electron = 0, positron, ion };
+enum class ParticleType : unsigned char { electron = 0, positron, ion };
 
 enum class CommTags : char { left = 0, right };
 
@@ -49,7 +49,7 @@ enum class FieldBCType {
 
 // Use util functions check_bit, set_bit, bit_or, clear_bit, and toggle_bit to
 // interact with particle and photon flags
-enum class ParticleFlag : int {
+enum class ParticleFlag : uint32_t {
   tracked = 1,
   ignore_force,
   ignore_current,
@@ -59,7 +59,7 @@ enum class ParticleFlag : int {
   existed
 };
 
-enum class PhotonFlag : int { tracked = 1, ignore_pair_create };
+enum class PhotonFlag : uint32_t { tracked = 1, ignore_pair_create };
 
 ///  Composite structure that contains the information for both
 ///  particle boundary condition and field boundary condition

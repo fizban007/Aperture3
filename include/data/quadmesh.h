@@ -7,6 +7,7 @@
 #include "cuda/cuda_control.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
+#include "data/stagger.h"
 
 namespace Aperture {
 
@@ -173,7 +174,7 @@ struct Quadmesh {
   // }
 
   // Get 3D position from a linear position of a cell
-  HD_INLINE Vec3<Scalar> pos_3d(int idx, Stagger_t stagger) const {
+  HD_INLINE Vec3<Scalar> pos_3d(int idx, Stagger stagger) const {
     Vec3<Scalar> result;
     result[0] = pos(0, idx % dims[0], stagger[0]);
     result[1] = pos(1, (idx / dims[0]) % dims[1], stagger[1]);
