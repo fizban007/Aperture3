@@ -12,6 +12,7 @@
 #include "data/quadmesh.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
+#include "sim_params.h"
 // #include "metrics.h"
 
 namespace Aperture {
@@ -24,6 +25,8 @@ class Grid {
   Grid(const Grid& g);
   Grid(Grid&& g);
   ~Grid();
+
+  void init(const SimParams& params);
 
   Grid& operator=(const Grid& g);
   Grid& operator=(Grid&& g);

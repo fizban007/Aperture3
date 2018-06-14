@@ -8,7 +8,7 @@
 #include "sim_params.h"
 #include "config_file.h"
 // #include "data/domain_info.h"
-// #include "data/grid.h"
+#include "data/grid.h"
 #include "utils/hdf_exporter.h"
 // #include "metrics.h"
 // #include "utils/data_exporter.h"
@@ -63,7 +63,9 @@ class Environment {
   // const SimParams& conf() const { return m_conf_file.data(); }
   const SimParams& params() const { return m_params; }
   // const ConfigFile& conf_file() const { return m_conf_file; }
-  const Quadmesh& mesh() const { return m_mesh; }
+  const Grid& grid() const { return m_grid; }
+  const Grid& local_grid() const { return m_grid; }
+  const Quadmesh& mesh() const { return m_grid.mesh(); }
 
   // const Grid& local_grid() const { return m_local_grid; }
   // const Grid& local_grid_dual() const { return m_local_grid_dual; }
@@ -85,7 +87,7 @@ class Environment {
   SimParams m_params;
   ConfigFile m_conf_file;
 
-  Quadmesh m_mesh;
+  Grid m_grid;
   // Grid m_local_grid, m_local_grid_dual;
   // Grid m_super_grid;
   // Grid m_data_grid, m_data_super_grid;

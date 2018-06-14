@@ -15,8 +15,8 @@ namespace Aperture {
 
 DataExporter::DataExporter() {}
 
-DataExporter::DataExporter(const Quadmesh& m, const std::string& dir, const std::string& prefix)
-    : outputDirectory(dir), filePrefix(prefix), mesh(m) {
+DataExporter::DataExporter(const Grid& g, const std::string& dir, const std::string& prefix)
+    : outputDirectory(dir), filePrefix(prefix), grid(g) {
   boost::filesystem::path rootPath (dir.c_str());
   boost::system::error_code returnedError;
 
@@ -161,7 +161,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, ParticleFlag::tracked) && idx < MAX_TRACKED) {
-          Scalar x = mesh.pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
           idx += 1;
@@ -187,7 +187,7 @@ DataExporter::WriteOutput(int timestep, float time) {
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
-          Scalar x = mesh.pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
+          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
           ds.data_l[idx] = ds.ptc->data().path[n];
