@@ -8,6 +8,7 @@
 #include "data/typedefs.h"
 #include "data/vec3.h"
 #include "data/stagger.h"
+#include "constant_defs.h"
 
 namespace Aperture {
 
@@ -152,16 +153,6 @@ struct Quadmesh {
       return pos_in_cell * delta[i];
   }
 
-#if defined(__AVX2__) && (defined(__ICC) || defined(__INTEL_COMPILER))
-  __m256d pos(int i, __m128i n, __m128 x) const {
-    if (i < dimension) {
-      __m128 offset = _mm_cvtepi32_ps(_mm_sub_epi32(n, _mm_set1_epi32(guard[i])));
-      return _mm256_fmadd_pd(_mm256_cvtps_pd(_mm_add_ps(x, offset)), _mm256_set1_pd(delta[i]), _mm256_set1_pd(lower[i]));
-    } else {
-      return _mm256_mul_pd(_mm256_set1_pd(delta[i]), _mm256_cvtps_pd(x));
-    }
-  }
-#endif
   // Scalar pos(int i, int n, StaggerType stagger,
   //            Scalar pos_in_cell = 0.5) const {
   //   if (i < dimension)
@@ -288,7 +279,7 @@ struct Quadmesh {
   ////////////////////////////////////////////////////////////////////////////////
   ///  Test if a point is inside the bulk of the grid, not in guard cells.
   ////////////////////////////////////////////////////////////////////////////////
-  HD_INLINE bool is_in_bulk(int c) const { return is_in_bulk(get_cell_3d(c)); }
+  HD_INLINE bool is_in_bulk(int c) const { return is_in_bulk(get_c1(c), get_c2(c), get_c3(c)); }
 
   ////////////////////////////////////////////////////////////////////////////////
   ///  Get the size of the grid (product of all dimensions).
@@ -362,31 +353,17 @@ struct Quadmesh {
     return ret;
   }
 
-  HD_INLINE int get_c1(int idx) const { return idx % dims[0]; }
-  HD_INLINE int get_c2(int idx) const { return (idx / dims[0]) % dims[1]; }
-  HD_INLINE int get_c3(int idx) const { return idx / (dims[0] * dims[1]); }
-
-#if defined(__AVX2__) && (defined(__ICC) || defined(__INTEL_COMPILER))
-  __m128i get_c1(__m128i n) const {
-    return _mm_rem_epi32(n, _mm_set1_epi32(dims[0]));
-  }
-
-  __m128i get_c2(__m128i n) const {
-    return _mm_rem_epi32(_mm_div_epi32(n, _mm_set1_epi32(dims[0])) , _mm_set1_epi32(dims[1]));
-  }
-
-  __m128i get_c3(__m128i n) const {
-    return _mm_div_epi32(n, _mm_set1_epi32(dims[0] * dims[1]));
-  }
-#endif
+  HD_INLINE uint32_t get_c1(uint32_t idx) const { return idx % dims[0]; }
+  HD_INLINE uint32_t get_c2(uint32_t idx) const { return (idx / dims[0]) % dims[1]; }
+  HD_INLINE uint32_t get_c3(uint32_t idx) const { return idx / (dims[0] * dims[1]); }
 
   HD_INLINE Vec3<int> get_cell_3d(int idx) const {
     return Vec3<int>(get_c1(idx), get_c2(idx), get_c3(idx));
   }
 
-  HD_INLINE int tile_id(int c1, int c2, int c3) const {
-    int tileN1 = (dims[0] > 1 ? dims[0] / tileSize[0] : 1);
-    int tileN2 = (dims[1] > 1 ? dims[1] / tileSize[1] : 1);
+  HD_INLINE uint32_t tile_id(int c1, int c2, int c3) const {
+    uint32_t tileN1 = (dims[0] > 1 ? dims[0] / tileSize[0] : 1);
+    uint32_t tileN2 = (dims[1] > 1 ? dims[1] / tileSize[1] : 1);
     int ret = (c1 - guard[0]) / tileSize[0];
     if (dims[1] > 1)
       ret += ((c2 - guard[1]) / tileSize[0]) * tileN1;
@@ -395,7 +372,9 @@ struct Quadmesh {
     return ret;
   }
 
-  HD_INLINE int tile_id(int cell) const {
+  HD_INLINE uint32_t tile_id(uint32_t cell) const {
+    if (cell == MAX_CELL)
+      return MAX_TILE;
     int c1 = get_c1(cell), c2 = get_c2(cell), c3 = get_c3(cell);
     return tile_id(c1, c2, c3);
   }
