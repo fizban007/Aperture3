@@ -17,7 +17,7 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu"
   "algorithms/field_solver_default.cu"
-  "sim_environment.cu"
+  "sim_environment.cu" "sim_data.cu"
   "cuda/constant_mem.cu"
   "algorithms/ptc_pusher_beadonwire.cu"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"

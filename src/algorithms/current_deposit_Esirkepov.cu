@@ -5,6 +5,13 @@
 
 namespace Aperture {
 
+namespace Kernels {
+
+__global__
+void compute_delta_rho(Scalar** rho, Scalar** delta_rho, )
+
+}
+
 CurrentDepositer_Esirkepov::CurrentDepositer_Esirkepov(const Environment& env)
     : m_env(env) {}
 
@@ -15,13 +22,16 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   auto& part = data.particles;
   data.J.initialize();
 
-  for (Index_t i = 0; i < part.size(); i++) {
+  for (Index_t i = 0; i < data.num_species; i++) {
     data.Rho[i].initialize();
-    data.J_s[i].initialize();
+    // data.J_s[i].initialize();
     // data.V[i].initialize();
-    compute_delta_rho(data.J_s[i], data.Rho[i], part[i], dt);
+    // compute_delta_rho(data.J_s[i], data.Rho[i], part[i], dt);
     // normalize_density(data.Rho[i], data.Rho[i]);
   }
+  Scalar** rho_ptrs = data.rho_ptrs;
+  Scalar** j_ptrs = data.J.array_ptrs();
+
 
   // TODO::Handle periodic boundary by copying over the deposited quantities
 
