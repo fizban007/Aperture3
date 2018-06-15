@@ -67,8 +67,8 @@ class ParticleBase
   void append(const ParticleClass& part);
   void swap(Index_t pos, ParticleClass& part);
 
-  void compute_tile_num(int tile_size);
-  void sort_by_tile(int tile_size);
+  void compute_tile_num();
+  void sort_by_tile();
   void sort_by_cell();
   void rearrange_arrays(const std::string& skip);
   void move_tile();
@@ -86,7 +86,7 @@ class ParticleBase
   // Partition for communication, as well as sorting the particles into tiles,
   // with a given tile size. Tiles have the same size in every direction available
   // void partition_and_sort(std::vector<Index_t>& partitions, const Grid& grid, int tile_size);
-  void clear_guard_cells(const Grid& grid);
+  void clear_guard_cells();
 
   void sync_to_device(int deviceId = 0);
   void sync_to_host();

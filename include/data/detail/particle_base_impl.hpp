@@ -12,11 +12,15 @@
 #include "utils/memory.h"
 #include "utils/timer.h"
 #include "cuda/constant_mem.h"
+#include "cuda/cudaUtility.h"
+
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/copy.h>
 #include <thrust/gather.h>
+#include <thrust/binary_search.h>
 #include <thrust/iterator/counting_iterator.h>
+
 #include <algorithm>
 #include <numeric>
 #include <string>
@@ -28,13 +32,23 @@ namespace Aperture {
 
 namespace Kernels {
 
-// FIXME: This is only for 1D
 __global__
-void compute_tile(uint32_t* tile, const uint32_t* cell, size_t N) {
+void compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-       i < N;
+       i < num;
        i += blockDim.x * gridDim.x) {
-    tile[i] = cell[i] / dev_mesh.tileSize[0];
+    // tile[i] = cell[i] / dev_mesh.tileSize[0];
+    tile[i] = dev_mesh.tile_id(cell[i]);
+  }
+}
+
+__global__
+void erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < num;
+       i += blockDim.x * gridDim.x) {
+    if (!dev_mesh.is_in_bulk(cell[i]))
+      cell[i] = MAX_CELL;
   }
 }
 
@@ -294,15 +308,16 @@ ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::compute_tile_num(int tile_size) {
-  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number);
+ParticleBase<ParticleClass>::compute_tile_num() {
+  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, m_number);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
+  CudaCheckError();
 }
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::sort_by_tile(int tile_size) {
+ParticleBase<ParticleClass>::sort_by_tile() {
   // First compute the tile number according to current cell id
   Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number);
 
@@ -315,8 +330,12 @@ ParticleBase<ParticleClass>::sort_by_tile(int tile_size) {
   // Sort the index array by key
   thrust::sort_by_key(ptr_tile, ptr_tile + this->m_number, ptr_idx);
 
-  // TODO: Move the rest of particle array using the new index
+  // Move the rest of particle array using the new index
   rearrange_arrays("tile");
+
+  // Update the new number of particles
+  const int padding = 100;
+  m_number = thrust::upper_bound(ptr_tile, ptr_tile + m_number + padding, MAX_TILE - 1) - ptr_tile;
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
@@ -334,8 +353,12 @@ ParticleBase<ParticleClass>::sort_by_cell() {
   // Sort the index array by key
   thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
 
-  // TODO: Move the rest of particle array using the new index
+  // Move the rest of particle array using the new index
   rearrange_arrays("cell");
+
+  // Update the new number of particles
+  const int padding = 100;
+  m_number = thrust::upper_bound(ptr_cell, ptr_cell + m_number + padding, MAX_CELL - 1) - ptr_cell;
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
@@ -348,13 +371,6 @@ ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
   boost::fusion::for_each(boost::mpl::range_c<
                           unsigned, 0, boost::fusion::result_of::size<array_type>::value>(),
                           rearrange_array<array_type>(m_data, m_index, m_numMax, m_tmp_data_ptr, skip));
-}
-
-template <typename ParticleClass>
-void
-ParticleBase<ParticleClass>::move_tile() {
-  // Assuming compute_tile_num is already called
-
 }
 
 template <typename ParticleClass>
@@ -669,12 +685,17 @@ ParticleBase<ParticleClass>::sync_to_host() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::clear_guard_cells(const Grid& grid) {
-  for (Index_t i = 0; i < m_number; i++) {
-    if (!grid.mesh().is_in_bulk(m_data.cell[i])) {
-      erase(i);
-    }
-  }
+ParticleBase<ParticleClass>::clear_guard_cells() {
+  Kernels::erase_ptc_in_guard_cells<<<512,512>>>(m_data.cell, m_number);
+  // Wait for GPU to finish
+  cudaDeviceSynchronize();
+  CudaCheckError();
+
+  // for (Index_t i = 0; i < m_number; i++) {
+  //   if (!grid.mesh().is_in_bulk(m_data.cell[i])) {
+  //     erase(i);
+  //   }
+  // }
 }
 }
 

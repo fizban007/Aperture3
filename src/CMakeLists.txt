@@ -19,6 +19,7 @@ set(AperCuda_src
   "algorithms/field_solver_default.cu"
   "sim_environment.cu"
   "cuda/constant_mem.cu"
+  "algorithms/ptc_pusher_beadonwire.cu"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
   # "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
