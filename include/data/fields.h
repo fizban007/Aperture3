@@ -143,6 +143,7 @@ class VectorField : public FieldBase {
   void copyFrom(const self_type &field);
 
   void resize(const grid_type &grid);
+  void init_array_ptrs();
 
   /// Arithmetic operations
   self_type &multiplyBy(data_type value);
@@ -185,6 +186,8 @@ class VectorField : public FieldBase {
   const array_type &data(int n) const { return m_array[n]; }
   data_type *ptr(int n) { return m_array[n].data(); }
   const data_type *ptr(int n) const { return m_array[n].data(); }
+  data_type **array_ptrs() { return m_ptrs; }
+  const data_type * const*array_ptrs() const { return m_ptrs; }
   Stagger stagger(int n) const { return m_stagger[n]; }
   const std::array<Stagger, VECTOR_DIM>& stagger() const { return m_stagger; }
   std::array<Stagger, VECTOR_DIM> stagger_dual() const;
@@ -200,8 +203,12 @@ class VectorField : public FieldBase {
  private:
   std::array<array_type, VECTOR_DIM> m_array;
   std::array<Stagger, VECTOR_DIM> m_stagger;
-  // Default normalization is coord
-  // FieldNormalization m_normalization = FieldNormalization::coord;
+  // Keep a cached array of pointers to the actual device pointers, convenient
+  // for the kernels
+  data_type** m_ptrs;
+
+  // Default normalization is coord FieldNormalization
+  // m_normalization = FieldNormalization::coord;
 };  // ----- end of class vector_field -----
 
 }
