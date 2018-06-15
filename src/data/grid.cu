@@ -51,5 +51,10 @@ Grid::init(const SimParams& params) {
     m_mesh.dimension = m_mesh.dim();
   }
 
+  if (m_mesh.dims[0] * m_mesh.dims[1] * m_mesh.dims[2] >= MAX_CELL - 1) {
+    std::cout << "Grid dimensions too large!" << std::endl;
+    abort();
+  }
+    
   // TODO: In the near future, cache all the metric terms here
 }
