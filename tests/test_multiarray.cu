@@ -97,6 +97,7 @@ TEST_CASE("Add 2D multi_array", "[MultiArray]") {
 }
 
 TEST_CASE("Map Array Multiply", "[MultiArray]")  {
+  using namespace Aperture::detail;
   Data data(150, 150, 100);
 
   data.a.assign(2.0);

@@ -3,7 +3,7 @@
 
 #ifdef __CUDACC__
   #define HOST_DEVICE __host__ __device__
-  #define HD_INLINE __host__ __device__ 
+  #define HD_INLINE __host__ __device__ __forceinline__
   // #define WITH_CUDA_ENABLED
 #else
   #define HOST_DEVICE
