@@ -9,7 +9,6 @@ namespace Aperture {
 template class ParticleBase<single_particle_t>;
 template class ParticleBase<single_photon_t>;
 
-
 Particles::Particles() {}
 
 Particles::Particles(std::size_t max_num)
@@ -42,7 +41,7 @@ Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, ParticleType type, 
   // m_data.p3[pos] = p[2];
   m_data.weight[pos] = weight;
   m_data.cell[pos] = cell;
-  m_data.flag[pos] = flag | ((uint32_t)type << 29);
+  m_data.flag[pos] = flag | gen_ptc_type_flag(type);
   if (pos >= m_number) m_number = pos + 1;
 }
 

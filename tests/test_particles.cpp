@@ -17,12 +17,8 @@ TEST_CASE("Sorting Particles by tile", "[Particles]") {
   }
   ptc.set_num(N);
 
-  int tile_size = 64;
-  ptc.compute_tile_num(tile_size);
+  ptc.compute_tile_num();
 
-  for (size_t i = 0; i < N; i++) {
-    // CHECK(ptc.data().tile[i] == i / tile_size);
-  }
   ptc.sync_to_device(0);
 
   timer::stamp();
