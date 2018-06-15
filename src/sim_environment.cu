@@ -52,8 +52,17 @@ Environment::setup_env(const std::string& conf_file) {
   // Setup the grid
   m_grid.init(m_params);
   // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1] << std::endl;
-  std::cout << "size of quadmesh is " << sizeof(Quadmesh) << std::endl;
+  // std::cout << "size of quadmesh is " << sizeof(Quadmesh) << std::endl;
   cudaMemcpyToSymbol(dev_mesh, (void*)m_grid.mesh_ptr(), sizeof(Quadmesh));
+  CudaCheckError();
+
+  // Setup particle charges and masses
+  float charges[8] = { m_params.q_e };
+  float masses[8] = { m_params.q_e };
+  charges[(int)ParticleType::electron] = -1.0;
+  masses[(int)ParticleType::ion] *= m_params.ion_mass;
+  cudaMemcpyToSymbol(dev_charges, (void*)charges, sizeof(charges));
+  cudaMemcpyToSymbol(dev_masses, (void*)masses, sizeof(masses));
   CudaCheckError();
 
   // Obtain the metric type and setup the grid mesh
@@ -88,6 +97,8 @@ Environment::setup_env(const std::string& conf_file) {
   // Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl, m_conf_file.data().log_file);
   Logger::init(0, m_params.log_lvl, m_params.log_file);
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
+
+  Logger::print_info("Setup environment completed.");
 }
 // void
 // Environment::setup_domain(int num_nodes) {

@@ -60,6 +60,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                    .value_or(defaults.ion_mass);
   params.q_e = config->get_as<double>("q_e")
                .value_or(defaults.q_e);
+  params.num_species = config->get_as<int>("num_species")
+               .value_or(defaults.num_species);
   params.create_pairs = config->get_as<bool>("create_pairs")
                         .value_or(defaults.create_pairs);
   params.trace_photons = config->get_as<bool>("trace_photons")

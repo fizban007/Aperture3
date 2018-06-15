@@ -23,6 +23,7 @@ struct SimParamsBase {
   unsigned long max_ptc_number    = 100;
   unsigned long max_photon_number = 100;
   double        ion_mass          = 1.0;
+  int           num_species       = 3;
 
   bool          gravity_on        = false;
   double        gravity           = 0.0;
