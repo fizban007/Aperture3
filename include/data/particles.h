@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include "utils/util_functions.h"
 #include "data/particle_base.h"
 #include "data/grid.h"
 #include "constant_defs.h"
@@ -63,9 +64,9 @@ class Particles : public ParticleBase<single_particle_t>
   bool check_flag(Index_t pos, ParticleFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
   void set_flag(Index_t pos, ParticleFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
   // Use the highest 3 bits to represent particle type
-  ParticleType check_type(Index_t pos) const { return (ParticleType)(m_data.flag[pos] >> 29); }
+  ParticleType check_type(Index_t pos) const { return (ParticleType)get_ptc_type(m_data.flag[pos]); }
   void set_type(Index_t pos, ParticleType type) {
-    m_data.flag[pos] = (m_data.flag[pos] & ((uint32_t)-1 >> 3)) | ((uint32_t)type << 29);
+    m_data.flag[pos] = set_ptc_type_flag(m_data.flag[pos], type);
   }
 
   // The upper 16 bits represent the rank the particle is born
