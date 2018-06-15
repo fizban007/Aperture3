@@ -5,7 +5,7 @@
 #include "data/fields.h"
 #include "data/grid.h"
 #include "data/particles.h"
-#include "data/photons.h"
+// #include "data/photons.h"
 #include "sim_environment.h"
 
 namespace Aperture {
@@ -27,10 +27,15 @@ struct SimData {
   std::vector<ScalarField<Scalar> > J_avg;
 
   Particles particles;
-  Photons photons;
+  // Photons photons;
   int num_species;
   double time = 0.0;
+  // Keep an array of pointers for all the device pointers, convenient for
+  // kernels
+  Scalar** rho_ptrs;
 };
+
+
 }
 
 #endif  // _SIM_DATA_H_
