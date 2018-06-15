@@ -1,6 +1,7 @@
 #include "data/fields.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "algorithms/interpolation.h"
+#include "cuda/cudaUtility.h"
 
 namespace Aperture {
 
@@ -179,45 +180,69 @@ VectorField<T>::VectorField(const grid_type& grid)
     : FieldBase(grid) {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
+    m_ptrs[i] = m_array[i].data();
     // Default initialize to face-centered
     m_stagger[i] = Stagger();
     m_stagger[i].set_bit(i, true);
   }
+  init_array_ptrs();
 }
 
 template <typename T>
 VectorField<T>::VectorField(const self_type& field)
     : FieldBase(*field.m_grid), m_array(field.m_array)
-    , m_stagger(field.m_stagger) {}
+    , m_stagger(field.m_stagger) {
+  init_array_ptrs();
+}
 
 template <typename T>
 VectorField<T>::VectorField(self_type&& field)
     : FieldBase(*field.m_grid), m_array(std::move(field.m_array))
-    , m_stagger(field.m_stagger) {}
+    , m_stagger(field.m_stagger) {
+  init_array_ptrs();
+}
 
 template <typename T>
-VectorField<T>::~VectorField() {}
+VectorField<T>::~VectorField() {
+  cudaFree(m_ptrs);
+}
 
 template <typename T>
 VectorField<T>& VectorField<T>::operator= (const self_type& other) {
-    this -> m_grid = other.m_grid;
-    this -> m_grid_size = other.m_grid_size;
-    m_array = other.m_array;
-    return (*this);
+  this -> m_grid = other.m_grid;
+  this -> m_grid_size = other.m_grid_size;
+  m_array = other.m_array;
+  for (int i = 0; i < VECTOR_DIM; ++i) {
+    m_ptrs[i] = m_array[i].data();
+  }
+
+  return (*this);
 }
 
 template <typename T>
 VectorField<T>& VectorField<T>::operator= ( self_type&& other) {
-    this -> m_grid = other.m_grid;
-    this -> m_grid_size = other.m_grid_size;
-    m_array = std::move(other.m_array);
-    return (*this);
+  this -> m_grid = other.m_grid;
+  this -> m_grid_size = other.m_grid_size;
+  m_array = std::move(other.m_array);
+  for (int i = 0; i < VECTOR_DIM; ++i) {
+    m_ptrs[i] = m_array[i].data();
+  }
+
+  return (*this);
 }
 
 template <typename T>
 void VectorField<T>::initialize() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i].assign(static_cast<T>(0));
+  }
+}
+template <typename T>
+void VectorField<T>::init_array_ptrs() {
+  CudaSafeCall(cudaMallocManaged(&m_ptrs, VECTOR_DIM*sizeof(T*)));
+
+  for (int i = 0; i < VECTOR_DIM; ++i) {
+    m_ptrs[i] = m_array[i].data();
   }
 }
 
