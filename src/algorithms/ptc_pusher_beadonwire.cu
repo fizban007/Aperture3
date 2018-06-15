@@ -1,11 +1,13 @@
 #include "algorithms/ptc_pusher_beadonwire.h"
-#include "utils/util_functions.h"
-#include "cuda/cuda_control.h"
 #include "sim_environment.h"
 #include <array>
 #include <cmath>
 #include <fmt/ostream.h>
 #include "utils/logger.h"
+#include "utils/util_functions.h"
+#include "cuda/cuda_control.h"
+#include "cuda/cudaUtility.h"
+#include "cuda/constant_mem.h"
 #include "algorithms/functions.h"
 
 namespace Aperture {
@@ -28,7 +30,7 @@ namespace Kernels {
 
 __global__
 void lorentz_push(Scalar* p, const Pos_t* x, const uint32_t* cell, const uint32_t* flag,
-                  Scalar* E, double dt, uint32_t num) {
+                  const Scalar* E, double dt, uint32_t num) {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
        i += blockDim.x * gridDim.x) {
@@ -36,14 +38,18 @@ void lorentz_push(Scalar* p, const Pos_t* x, const uint32_t* cell, const uint32_
       auto c = cell[i];
       auto rel_x = x[i];
       auto p1 = p[i];
-      auto sp = flag[i];
+      int sp = get_ptc_type(flag[i]);
       Scalar E1 = E[c] * rel_x + E[c - 1] * (1.0 - rel_x);
 
-      p1 += E1 * dt;
+      p1 += dev_charges[sp] * E1 * dt / dev_masses[sp];
       p[i] = p1;
     }
   }
+}
 
+__global__
+void move_ptc(Pos_t* x, uint32_t* cell, const Scalar* p, double dt, uint32_t num) {
+  
 }
 
 }
@@ -62,9 +68,8 @@ ParticlePusher_BeadOnWire::push(SimData& data, double dt) {
 }
 
 void
-ParticlePusher_BeadOnWire::move_ptc(Particles& particles, Index_t idx,
-                                  double x, const Grid& grid,
-                                  double dt) {
+ParticlePusher_BeadOnWire::move_ptc(Particles& particles, double x,
+                                    const Grid& grid, double dt) {
   auto& ptc = particles.data();
   auto& mesh = grid.mesh();
   if (mesh.dim() == 1) {
@@ -72,12 +77,14 @@ ParticlePusher_BeadOnWire::move_ptc(Particles& particles, Index_t idx,
 }
 
 void
-ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, Index_t idx,
-                                      double x,
+ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, double x,
                                       const VectorField<Scalar>& E,
                                       const VectorField<Scalar>& B, double dt) {
   auto& ptc = particles.data();
   if (E.grid().dim() == 1) {
+    Kernels::lorentz_push<<<512, 512>>>(ptc.p1, ptc.x1, ptc.cell, ptc.flag,
+                                        E.ptr(0), dt, particles.number());
+    CudaCheckError();
   }
 }
 
@@ -90,12 +97,12 @@ ParticlePusher_BeadOnWire::handle_boundary(SimData &data) {
       ptc.clear_guard_cells();
     }
   }
-  auto& photon = data.photons;
-  if (photon.number() > 0) {
-    if (m_params.periodic_boundary[0] == false) {
-      photon.clear_guard_cells();
-    }
-  }
+  // auto& photon = data.photons;
+  // if (photon.number() > 0) {
+  //   if (m_params.periodic_boundary[0] == false) {
+  //     photon.clear_guard_cells();
+  //   }
+  // }
 
 }
 

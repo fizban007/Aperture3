@@ -19,10 +19,10 @@ class ParticlePusher_BeadOnWire : public ParticlePusher {
 
   virtual void push(SimData& data, double dt);
 
-  void lorentz_push(Particles& particles, Index_t idx, double x,
+  void lorentz_push(Particles& particles, double x,
                     const VectorField<Scalar>& E, const VectorField<Scalar>& B,
                     double dt);
-  void move_ptc(Particles& particles, Index_t idx, double x, const Grid& grid,
+  void move_ptc(Particles& particles, double x, const Grid& grid,
                 double dt);
   void handle_boundary(SimData& data);
   // void set_interp_order(int order);
