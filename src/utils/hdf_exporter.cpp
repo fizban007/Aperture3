@@ -95,11 +95,11 @@ DataExporter::AddArray(const std::string &name, MultiArray<T> &array) {
   delete[] dims;
 }
 
-// template <typename T>
-// void
-// DataExporter::AddArray(const std::string &name, VectorField<T> &field, int component) {
-//   AddArray(name, field.data(component));
-// }
+template <typename T>
+void
+DataExporter::AddArray(const std::string &name, VectorField<T> &field, int component) {
+  AddArray(name, field.data(component));
+}
 
 void
 DataExporter::AddParticleArray(const std::string& name, const Particles& ptc) {
@@ -277,11 +277,11 @@ template
 void
 DataExporter::AddArray<double>(const std::string &name, MultiArray<double> &array);
 
-// template
-// void
-// DataExporter::AddArray<float>(const std::string &name, VectorField<float> &field, int component);
+template
+void
+DataExporter::AddArray<float>(const std::string &name, VectorField<float> &field, int component);
 
-// template
-// void
-// DataExporter::AddArray<double>(const std::string &name, VectorField<double> &field, int component);
+template
+void
+DataExporter::AddArray<double>(const std::string &name, VectorField<double> &field, int component);
 }

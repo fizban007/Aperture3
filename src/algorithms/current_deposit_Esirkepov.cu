@@ -1,14 +1,55 @@
+#include <thrust/scan.h>
 #include "algorithms/current_deposit_Esirkepov.h"
 #include "utils/util_functions.h"
 #include "data/detail/multi_array_utils.hpp"
+#include "cuda/constant_mem.h"
+#include "cuda/cudaUtility.h"
 #include "sim_environment.h"
 
 namespace Aperture {
 
 namespace Kernels {
 
+HD_INLINE Scalar cloud_in_cell(Scalar dx) {
+  return max(1.0 - std::abs(dx), 0.0);
+}
+
+HD_INLINE Scalar interp(Scalar rel_pos, int ptc_cell, int target_cell) {
+  Scalar dx = ((Scalar)target_cell + 0.5 - (rel_pos + Scalar(ptc_cell)));
+  return cloud_in_cell(dx);
+}
+
 __global__
-void compute_delta_rho(Scalar** rho, Scalar** delta_rho, )
+void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc, uint32_t num) {
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[i];
+    int c_p = c;
+    auto x = ptc.x1[i];
+    auto x_p = x - ptc.dx1[i];
+    auto flag = ptc.flag[i];
+    int sp = get_ptc_type(flag);
+    auto q = dev_charges[sp];
+    auto w = ptc.weight[i];
+
+    // c_p and x_p represent previous location of the particle
+    c_p += floor(x_p);
+    x_p -= (Scalar)c_p - c;
+
+    Scalar s0, s1;
+    for (int delta_c = c_p - 2; delta_c <= c_p + 1; delta_c++) {
+      s1 = interp(x, c, delta_c);
+
+      if (!check_bit(flag, ParticleFlag::ignore_current)) {
+        s0 = interp(x_p, c_p, delta_c);
+        atomicAdd(&delta_rho[0][delta_c], q * (s0 - s1) * dev_mesh.delta[0] / dev_params.delta_t);
+      }
+
+      atomicAdd(&rho[sp][delta_c], q * w * s1);
+    }
+  }
+}
 
 }
 
@@ -32,10 +73,11 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   Scalar** rho_ptrs = data.rho_ptrs;
   Scalar** j_ptrs = data.J.array_ptrs();
 
+  Kernels::compute_delta_rho<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), part.number());
+  CudaCheckError();
 
   // TODO::Handle periodic boundary by copying over the deposited quantities
 
-  // detail::map_multi_array(data.J.data(0), data.J_s[0], data.J.grid().extent(), detail::Op_PlusAssign<Scalar>());
   // communication on the just deposited Rho
   // if (m_comm_rho != nullptr) {
   //   for (Index_t i = 0; i < part.size(); i++) {
@@ -44,15 +86,7 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   // }
   // Now we have delta Q in every cell, add them up along all directions
 
-  scan_current(data.J_s[0]);
-  scan_current(data.J_s[1]);
-  detail::map_multi_array(data.J.data(0).begin(), data.J_s[0].data().begin(),
-                          data.J.grid().extent(), detail::Op_PlusAssign<Scalar>());
-  detail::map_multi_array(data.J.data(0).begin(), data.J_s[1].data().begin(),
-                          data.J.grid().extent(), detail::Op_PlusAssign<Scalar>());
-  // for (unsigned int j = 0; j < part.size(); j++) {
-  //   normalize_velocity(data.Rho[j], data.V[j]);
-  // }
+  scan_current(data.J);
   // Call communication on just scanned J
   // if (m_comm_J != nullptr) {
   //   m_comm_J(data.J);
@@ -75,7 +109,6 @@ void CurrentDepositer_Esirkepov::compute_delta_rho(sfield& J, sfield& Rho,
                                                  double dt) {
   auto& part = particles.data();
   auto& grid = J.grid();
-  auto charge = particles.charge();
   if (grid.dim() == 1) {
   }
 }
@@ -83,18 +116,18 @@ void CurrentDepositer_Esirkepov::compute_delta_rho(sfield& J, sfield& Rho,
 void CurrentDepositer_Esirkepov::scan_current(sfield& J) {
   auto& grid = J.grid();
   if (grid.dim() == 1) {
-    for (int i = 1; i < grid.mesh().dims[0]; i++) {
-      J.data()[i] += J.data()[i-1];
-    }
+    // In place scan
+    thrust::inclusive_scan(J.ptr(), J.ptr() + grid.mesh().dims[0], J.ptr());
+    CudaCheckError();
   }
 }
 
 void CurrentDepositer_Esirkepov::scan_current(vfield& J) {
   auto& grid = J.grid();
   if (grid.dim() == 1) {
-    for (int i = 1; i < grid.mesh().dims[0]; i++) {
-      J.data(0)[i] += J.data(0)[i-1];
-    }
+    // In place scan
+    thrust::inclusive_scan(J.ptr(0), J.ptr(0) + grid.mesh().dims[0], J.ptr(0));
+    CudaCheckError();
   }
 }
 

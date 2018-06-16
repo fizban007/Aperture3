@@ -69,7 +69,7 @@ class Environment {
   // const Grid& data_grid() const { return m_data_grid; }
   // MetricType metric_type() const { return m_metric_type; }
 
-  // DataExporter& exporter() { return *m_exporter; }
+  DataExporter& exporter() { return *m_exporter; }
   // const MPICommWorld& world() const { return m_comm->world(); }
   // const MPICommCartesian& cartesian() const { return m_comm->cartesian(); }
   // const DomainInfo& domain_info() const { return m_domain_info; }

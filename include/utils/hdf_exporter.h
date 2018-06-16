@@ -5,7 +5,7 @@
 // #include <H5Cpp.h>
 #include <string>
 #include <vector>
-// #include "data/fields.h"
+#include "data/fields.h"
 #include "data/particles.h"
 #include "data/photons.h"
 #include "data/grid.h"
@@ -53,8 +53,8 @@ class DataExporter
 
   void AddArray(const std::string& name, float* data, int* dims, int ndims);
   void AddArray(const std::string& name, double* data, int* dims, int ndims);
-  // template <typename T>
-  // void AddArray(const std::string& name, VectorField<T>& field, int component);
+  template <typename T>
+  void AddArray(const std::string& name, VectorField<T>& field, int component);
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 

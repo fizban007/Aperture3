@@ -19,7 +19,9 @@ set(AperCuda_src
   "algorithms/field_solver_default.cu"
   "sim_environment.cu" "sim_data.cu"
   "cuda/constant_mem.cu"
-  "algorithms/ptc_pusher_beadonwire.cu"
+  "algorithms/ptc_pusher_beadonwire.cu" "algorithms/current_deposit_Esirkepov.cu"
+  "pic_sim.cpp"
+  # "algorithms/current_deposit_Esirkepov_cpu.cpp"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"
   # "data/multi_array.cpp" "data/grid.cpp" "data/fields.cpp" "data/particles.cpp" "data/photons.cpp"
@@ -55,8 +57,8 @@ target_link_libraries(AperCuda Aperture)
 
 # add_subdirectory(cuda)
 
-# add_executable(aperture "main.cpp")
-# target_link_libraries(aperture Aperlib)
+add_executable(aperture "main.cpp")
+target_link_libraries(aperture Aperture AperCuda)
 
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)

@@ -28,28 +28,44 @@ HD_INLINE double gamma(double beta_phi, double p) {
 
 namespace Kernels {
 
+// TODO: consider fusing these kernels?
+
 __global__
-void lorentz_push(Scalar* p, const Pos_t* x, const uint32_t* cell, const uint32_t* flag,
-                  const Scalar* E, double dt, uint32_t num) {
+void lorentz_push(particle_data ptc, const Scalar* E, double dt, uint32_t num) {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
        i += blockDim.x * gridDim.x) {
-    if (!check_bit(flag[i], ParticleFlag::ignore_EM)) {
-      auto c = cell[i];
-      auto rel_x = x[i];
-      auto p1 = p[i];
-      int sp = get_ptc_type(flag[i]);
+    if (!check_bit(ptc.flag[i], ParticleFlag::ignore_EM)) {
+      auto c = ptc.cell[i];
+      auto rel_x = ptc.x1[i];
+      auto p1 = ptc.p1[i];
+      int sp = get_ptc_type(ptc.flag[i]);
       Scalar E1 = E[c] * rel_x + E[c - 1] * (1.0 - rel_x);
 
       p1 += dev_charges[sp] * E1 * dt / dev_masses[sp];
-      p[i] = p1;
+      ptc.p1[i] = p1;
     }
   }
 }
 
 __global__
-void move_ptc(Pos_t* x, uint32_t* cell, const Scalar* p, double dt, uint32_t num) {
-  
+void move_ptc(particle_data ptc, double dt, uint32_t num) {
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[i];
+    auto p = ptc.p1[i];
+    Scalar gamma = sqrt(1.0 + p*p);
+
+    Scalar dx = p * dt / (gamma * dev_mesh.delta[0]);
+    Scalar new_x1 = ptc.x1[i] + dx;
+    int delta_c = floor(new_x1);
+    c += delta_c;
+
+    ptc.dx1[i] = dx;
+    ptc.cell[i] = c;
+    ptc.x1[i] = new_x1 - (Pos_t)delta_c;
+  }
 }
 
 }
@@ -73,6 +89,8 @@ ParticlePusher_BeadOnWire::move_ptc(Particles& particles, double x,
   auto& ptc = particles.data();
   auto& mesh = grid.mesh();
   if (mesh.dim() == 1) {
+    Kernels::move_ptc<<<512, 512>>>(ptc, dt, particles.number());
+    CudaCheckError();
   }
 }
 
@@ -82,8 +100,7 @@ ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, double x,
                                       const VectorField<Scalar>& B, double dt) {
   auto& ptc = particles.data();
   if (E.grid().dim() == 1) {
-    Kernels::lorentz_push<<<512, 512>>>(ptc.p1, ptc.x1, ptc.cell, ptc.flag,
-                                        E.ptr(0), dt, particles.number());
+    Kernels::lorentz_push<<<512, 512>>>(ptc, E.ptr(0), dt, particles.number());
     CudaCheckError();
   }
 }
