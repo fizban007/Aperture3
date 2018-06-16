@@ -180,7 +180,6 @@ VectorField<T>::VectorField(const grid_type& grid)
     : FieldBase(grid) {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
-    m_ptrs[i] = m_array[i].data();
     // Default initialize to face-centered
     m_stagger[i] = Stagger();
     m_stagger[i].set_bit(i, true);
@@ -237,6 +236,7 @@ void VectorField<T>::initialize() {
     m_array[i].assign(static_cast<T>(0));
   }
 }
+
 template <typename T>
 void VectorField<T>::init_array_ptrs() {
   CudaSafeCall(cudaMallocManaged(&m_ptrs, VECTOR_DIM*sizeof(T*)));
