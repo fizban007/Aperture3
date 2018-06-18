@@ -13,7 +13,8 @@ __global__ void update_field(Scalar* E, const Scalar* J, const Scalar* J_b) {
   for (int i = dev_params.guard[0] - 1 + blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_params.guard[0] + dev_params.N[0];
        i += blockDim.x * gridDim.x) {
-    E[i] += dt * (J_b[i] - J[i]);
+    if ( i >= dev_params.guard[0] - 1 && i < dev_params.guard[0] + dev_params.N[0])
+      E[i] += dt * (J_b[i] - J[i]);
   }
 }
 
@@ -47,14 +48,17 @@ void
 FieldSolver_Default::update_fields(Aperture::SimData &data, double dt,
                                     double time) {
   update_fields(data.E, data.B, data.J, dt, time);
-  Kernels::map_array_binary_op<<<256, 256>>>
-      (data.E.ptr(0), data.E.ptr(1), data.E.grid().extent(), detail::Op_PlusAssign<Scalar>());
-  CudaCheckError();
+  // Kernels::map_array_binary_op<<<256, 256>>>
+  //     (data.E.ptr(0), data.E.ptr(1), data.E.grid().extent(), detail::Op_PlusAssign<Scalar>());
+  // CudaCheckError();
 }
 
 void
 FieldSolver_Default::set_background_j(const vfield_t &j) {
   m_background_j = j;
+  m_background_j.sync_to_device(0);
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
 }
 
 
