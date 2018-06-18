@@ -27,7 +27,7 @@ struct SimData {
   std::vector<ScalarField<Scalar> > J_avg;
 
   Particles particles;
-  // Photons photons;
+  Photons photons;
   int num_species;
   double time = 0.0;
   // Keep an array of pointers for all the device pointers, convenient for

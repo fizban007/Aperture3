@@ -190,7 +190,7 @@ DataExporter::WriteOutput(int timestep, float time) {
           Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n], ds.ptc->data().x1[n]);
           ds.data_x[idx] = x;
           ds.data_p[idx] = ds.ptc->data().p1[n];
-          ds.data_l[idx] = ds.ptc->data().path[n];
+          // ds.data_l[idx] = ds.ptc->data().path[n];
           idx += 1;
         }
       }
@@ -242,11 +242,13 @@ DataExporter::writeConfig(const SimParams& params) {
     {"q_e", c.q_e},
     {"ptc_per_cell", c.ptc_per_cell},
     {"ion_mass", c.ion_mass},
+    {"num_species", c.num_species},
     {"periodic_boundary", c.periodic_boundary},
     {"create_pairs", c.create_pairs},
     {"trace_photons", c.trace_photons},
     {"gamma_thr", c.gamma_thr},
     {"photon_path", c.photon_path},
+    {"ic_path", c.ic_path},
     // {"grid", {
     {"N", c.N},
     {"guard", c.guard},
@@ -255,7 +257,6 @@ DataExporter::writeConfig(const SimParams& params) {
     //   }},
     {"interp_order", c.interpolation_order},
     {"track_pct", c.track_percent},
-    {"ic_path", c.ic_path},
     {"N_steps", c.max_steps},
     {"data_interval", c.data_interval},
     {"spectral_alpha", c.spectral_alpha},

@@ -99,6 +99,8 @@ Environment::setup_env(const std::string& conf_file) {
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 
   Logger::print_info("Setup environment completed.");
+  Logger::print_info("Each particle is worth {} bytes", particle_data::size);
+  Logger::print_info("Each photon is woth {} bytes", photon_data::size);
 }
 // void
 // Environment::setup_domain(int num_nodes) {
