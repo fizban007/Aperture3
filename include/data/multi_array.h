@@ -100,10 +100,11 @@ class MultiArray {
   }
 
   /// Copying the entire content from another vector
-  void copyFrom(const self_type& other) {
-    assert(_size == other._size);
-    std::copy_n(other._data, _size, _data);
-  }
+  void copyFrom(const self_type& other);
+  // {
+    // assert(_size == other._size);
+    // std::copy_n(other._data, _size, _data);
+  // }
 
   /// Set the whole array to a single initial value
   void assign(const data_type& value) {

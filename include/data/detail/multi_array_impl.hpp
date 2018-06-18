@@ -4,6 +4,8 @@
 #include "data/multi_array.h"
 #include "utils/memory.h"
 #include "utils/logger.h"
+#include <thrust/copy.h>
+#include <thrust/device_ptr.h>
 
 namespace Aperture {
 
@@ -62,6 +64,15 @@ MultiArray<T>::~MultiArray() {
     cudaFree(_data);
     _data = nullptr;
   }
+}
+
+template <typename T>
+void
+MultiArray<T>::copyFrom(const self_type& other) {
+  assert(_size == other._size);
+  auto ptr = thrust::device_pointer_cast(_data);
+  auto ptr_other = thrust::device_pointer_cast(other._data);
+  thrust::copy_n(ptr_other, _size, ptr);
 }
 
 template <typename T>
