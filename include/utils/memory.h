@@ -22,6 +22,7 @@ struct alloc_cuda_managed {
     // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
     void* p;
     cudaMallocManaged(&p, N_*sizeof(x_type));
+    cudaMemAdvise(p, N_*sizeof(x_type), cudaMemAdviseSetPreferredLocation, 0);
     x = reinterpret_cast<typename std::remove_reference<decltype(x)>::type>(p);
   }
 };
