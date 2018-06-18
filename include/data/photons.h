@@ -25,23 +25,23 @@ class Photons : public ParticleBase<single_photon_t>
   void put(std::size_t pos, Pos_t x, Scalar p, Scalar path_left, int cell, int flag = 0);
   void append(Pos_t x, Scalar p, Scalar path_left, int cell, int flag = 0);
 
-  void convert_pairs(Particles& electrons, Particles& positrons);
-  void emit_photons(Particles& electrons, Particles& positrons, const Quadmesh& mesh);
+  // void convert_pairs(Particles& electrons, Particles& positrons);
+  // void emit_photons(Particles& electrons, Particles& positrons, const Quadmesh& mesh);
   void move(const Grid& grid, double dt);
   void sort(const Grid& grid);
 
   bool check_flag(Index_t pos, PhotonFlag flag) const { return (m_data.flag[pos] & (unsigned int)flag) == (unsigned int)flag; }
   void set_flag(Index_t pos, PhotonFlag flag) { m_data.flag[pos] |= (unsigned int)flag; }
 
-  void compute_A1(double er);
-  void compute_A2(double er, double et);
-  double f_inv1(double u, double gamma);
-  double f_inv2(double u, double gamma);
-  double draw_photon_e1p(double gamma);
-  double draw_photon_ep(double e1p, double gamma);
-  double draw_photon_u1p(double e1p, double gamma);
-  double draw_photon_energy(double gamma, double p, double x);
-  double draw_photon_freepath(double Eph);
+  // void compute_A1(double er);
+  // void compute_A2(double er, double et);
+  // double f_inv1(double u, double gamma);
+  // double f_inv2(double u, double gamma);
+  // double draw_photon_e1p(double gamma);
+  // double draw_photon_ep(double e1p, double gamma);
+  // double draw_photon_u1p(double e1p, double gamma);
+  // double draw_photon_energy(double gamma, double p, double x);
+  // double draw_photon_freepath(double Eph);
 
  private:
   bool create_pairs = false;
@@ -62,7 +62,6 @@ class Photons : public ParticleBase<single_photon_t>
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;
   std::normal_distribution<float> m_normal;
-
 
 };
 

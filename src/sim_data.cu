@@ -13,8 +13,8 @@ SimData::SimData(const Environment& e) :
     env(e), E(env.local_grid()),
     B(env.local_grid()),
     J(env.local_grid()),
-    particles(env.params()) {
-  // photons(env) {
+    particles(env.params()),
+    photons(env) {
   // initialize(env);
   num_species = env.params().num_species;
   E.initialize();
