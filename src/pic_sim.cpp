@@ -92,14 +92,14 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   // Logger::print_info("J at boundary 2: {} | {} | {} | {}", data.J(0, 0),
   //                    data.J(0, 1), data.J(0, 2), data.J(0, 3));
 
+  m_pusher->handle_boundary(data);
   // Sort the particles every 20 timesteps to move empty slots to the back
-  if ((step % 100) == 0) {
+  if ((step % 20) == 0) {
     data.particles.sort_by_cell();
   }
   // if ((step % 200) == 0) {
   //   data.photons.sort(data.E.grid());
   // }
-  m_pusher->handle_boundary(data);
   Logger::print_info("There are {} particles in the pool", data.particles.number());
   // Logger::print_info("There are {} positrons in the pool", data.particles[1].number());
 
