@@ -1,4 +1,6 @@
+#include <iostream>
 #include <thrust/scan.h>
+#include <thrust/device_ptr.h>
 #include "algorithms/current_deposit_Esirkepov.h"
 #include "utils/util_functions.h"
 #include "data/detail/multi_array_utils.hpp"
@@ -25,6 +27,8 @@ void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc, uint
        i < num;
        i += blockDim.x * gridDim.x) {
     auto c = ptc.cell[i];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
     int c_p = c;
     auto x = ptc.x1[i];
     auto x_p = x - ptc.dx1[i];
@@ -32,21 +36,23 @@ void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc, uint
     int sp = get_ptc_type(flag);
     auto q = dev_charges[sp];
     auto w = ptc.weight[i];
+    // if (i == 0) printf("q is %f, w is %f\n", q, w);
 
     // c_p and x_p represent previous location of the particle
     c_p += floor(x_p);
     x_p -= (Scalar)c_p - c;
 
     Scalar s0, s1;
-    for (int delta_c = c_p - 2; delta_c <= c_p + 1; delta_c++) {
+    for (int delta_c = c_p - 2; delta_c <= c_p + 2; delta_c++) {
+      // if (i == 0) printf("x is %f, c is %d, c_p is %d, delta_c is %d, s1 is %f\n", x, c, c_p, delta_c, s1);
       s1 = interp(x, c, delta_c);
 
       if (!check_bit(flag, ParticleFlag::ignore_current)) {
         s0 = interp(x_p, c_p, delta_c);
-        atomicAdd(&delta_rho[0][delta_c], q * (s0 - s1) * dev_mesh.delta[0] / dev_params.delta_t);
+        atomicAdd(&delta_rho[0][delta_c], q * w * (s0 - s1) * dev_mesh.delta[0] / dev_params.delta_t);
       }
-
       atomicAdd(&rho[sp][delta_c], q * w * s1);
+      // if (i == 0) printf("rho is %f\n", rho[sp][delta_c]);
     }
   }
 }
@@ -63,20 +69,30 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   auto& part = data.particles;
   data.J.initialize();
 
+  Scalar** rho_ptrs;
+  CudaSafeCall(cudaMallocManaged(&rho_ptrs, data.num_species*sizeof(Scalar*)));
+
   for (Index_t i = 0; i < data.num_species; i++) {
     data.Rho[i].initialize();
+    rho_ptrs[i] = data.Rho[i].ptr();
     // data.J_s[i].initialize();
     // data.V[i].initialize();
     // compute_delta_rho(data.J_s[i], data.Rho[i], part[i], dt);
     // normalize_density(data.Rho[i], data.Rho[i]);
   }
-  Scalar** rho_ptrs = data.rho_ptrs;
+  // Scalar** rho_ptrs = data.rho_ptrs;
   Scalar** j_ptrs = data.J.array_ptrs();
 
   Kernels::compute_delta_rho<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), part.number());
   CudaCheckError();
+  cudaDeviceSynchronize();
 
   // TODO::Handle periodic boundary by copying over the deposited quantities
+
+  for (Index_t i = 0; i < data.num_species; i++) {
+    Logger::print_debug("Debug: rho at 10 is {}, rhoptr at 10 is {}", data.Rho[i](10), rho_ptrs[i][10]);
+  }
+  cudaFree(rho_ptrs);
 
   // communication on the just deposited Rho
   // if (m_comm_rho != nullptr) {
@@ -117,7 +133,9 @@ void CurrentDepositer_Esirkepov::scan_current(sfield& J) {
   auto& grid = J.grid();
   if (grid.dim() == 1) {
     // In place scan
-    thrust::inclusive_scan(J.ptr(), J.ptr() + grid.mesh().dims[0], J.ptr());
+    // Logger::print_info("Scanning current");
+    auto j_ptr = thrust::device_pointer_cast(J.ptr());
+    thrust::inclusive_scan(j_ptr, j_ptr + grid.mesh().dims[0], j_ptr);
     CudaCheckError();
   }
 }
@@ -126,8 +144,11 @@ void CurrentDepositer_Esirkepov::scan_current(vfield& J) {
   auto& grid = J.grid();
   if (grid.dim() == 1) {
     // In place scan
-    thrust::inclusive_scan(J.ptr(0), J.ptr(0) + grid.mesh().dims[0], J.ptr(0));
+    Logger::print_info("Scanning current");
+    auto j_ptr = thrust::device_pointer_cast(J.ptr(0));
+    thrust::inclusive_scan(j_ptr, j_ptr + grid.mesh().dims[0], j_ptr);
     CudaCheckError();
+    Logger::print_debug("last j is {}", J(0, grid.mesh().dims[0] - 1));
   }
 }
 
