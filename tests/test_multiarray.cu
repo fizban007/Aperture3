@@ -8,10 +8,10 @@
 using namespace Aperture;
 
 __global__
-void add(const float* a, const float* b, float* c);
+void add(const Scalar* a, const Scalar* b, Scalar* c);
 
 __global__
-void add2D(const Extent ext, const float* a, const float* b, float* c) {
+void add2D(const Extent ext, const Scalar* a, const Scalar* b, Scalar* c) {
 
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < ext.y;
@@ -27,13 +27,13 @@ void add2D(const Extent ext, const float* a, const float* b, float* c) {
 }
 
 struct Data {
-  MultiArray<float> a, b, c;
+  MultiArray<Scalar> a, b, c;
   size_t size, memSize;
 
   Data(int x, int y = 1, int z = 1) :
       a(x, y, z), b(x, y, z), c(x, y, z) {
     size = x * y * z;
-    memSize = size * sizeof(float);
+    memSize = size * sizeof(Scalar);
   }
 
   void prefetch(int deviceId) {
@@ -112,7 +112,7 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   // dim3 gridSize(32, 32);
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(16, 16, 8);
-  Kernels::map_array_binary_op<<<gridSize, blockSize>>>(data.a.data(), data.b.data(), data.c.data(), data.a.extent(), Op_Multiply<float>());
+  Kernels::map_array_binary_op<<<gridSize, blockSize>>>(data.a.data(), data.b.data(), data.c.data(), data.a.extent(), Op_Multiply<Scalar>());
   CudaCheckError();
 
   data.prefetch();

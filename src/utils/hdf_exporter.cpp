@@ -183,7 +183,7 @@ DataExporter::WriteOutput(int timestep, float time) {
     for (auto& ds : dbPhotonData) {
       std::string name_x = ds.name + "_x";
       std::string name_p = ds.name + "_p";
-      std::string name_l = ds.name + "_l";
+      // std::string name_l = ds.name + "_l";
       unsigned int idx = 0;
       for (Index_t n = 0; n < ds.ptc->number(); n++) {
         if (!ds.ptc->is_empty(n) && ds.ptc->check_flag(n, PhotonFlag::tracked) && idx < MAX_TRACKED) {
@@ -200,12 +200,12 @@ DataExporter::WriteOutput(int timestep, float time) {
       dataset_x->write((void*)ds.data_x.data(), H5::PredType::NATIVE_FLOAT);
       H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(name_p, H5::PredType::NATIVE_FLOAT, space));
       dataset_p->write((void*)ds.data_p.data(), H5::PredType::NATIVE_FLOAT);
-      H5::DataSet *dataset_l = new H5::DataSet(file->createDataSet(name_l, H5::PredType::NATIVE_FLOAT, space));
-      dataset_l->write((void*)ds.data_l.data(), H5::PredType::NATIVE_FLOAT);
+      // H5::DataSet *dataset_l = new H5::DataSet(file->createDataSet(name_l, H5::PredType::NATIVE_FLOAT, space));
+      // dataset_l->write((void*)ds.data_l.data(), H5::PredType::NATIVE_FLOAT);
 
       delete dataset_x;
       delete dataset_p;
-      delete dataset_l;
+      // delete dataset_l;
 
       Logger::print_info("Written {} tracked photons", idx);
     }

@@ -6,7 +6,7 @@ using namespace Aperture;
 ConfigFile config;
 
 void check_test_params(const SimParams& params) {
-  CHECK(params.delta_t == Approx(0.3));
+  CHECK(params.delta_t == Approx(0.3e-4));
   CHECK(params.q_e == Approx(0.1));
   CHECK(params.max_ptc_number == 100000000);
   CHECK(params.max_photon_number == 100000000);
