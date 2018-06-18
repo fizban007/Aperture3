@@ -11,6 +11,7 @@
 #include "data/particle_base.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
+#include "utils/logger.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 
@@ -47,8 +48,13 @@ void erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
        i += blockDim.x * gridDim.x) {
-    if (!dev_mesh.is_in_bulk(cell[i]))
-      cell[i] = MAX_CELL;
+    // if (i == 0) printf("num is %d\n", num);
+    if (i < num) {
+      auto c = cell[i];
+      if (!dev_mesh.is_in_bulk(c))
+      // if (c < dev_mesh.guard[0] || c >= dev_mesh.dims[0] - dev_mesh.guard[0])
+        cell[i] = MAX_CELL;
+    }
   }
 }
 
@@ -128,7 +134,7 @@ struct rearrange_array {
   void operator()(T i) const {
     auto ptr_index = thrust::device_pointer_cast(index_);
     auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
-    if (name == "cell" || name == "dx1") return;
+    if (name == "cell" || name == "dx1" || name == "dx2" || name == "dx3") return;
 
     // printf("%d, %s\n", T::value, name);
     auto x = boost::fusion::at_c<T::value>(array_);
@@ -136,6 +142,7 @@ struct rearrange_array {
     auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<decltype(x)>(tmp_ptr_));
     thrust::gather(ptr_index, ptr_index + N_, x_ptr, tmp_ptr);
     thrust::copy_n(tmp_ptr, N_, x_ptr);
+    CudaCheckError();
   }
 };
 
@@ -362,15 +369,19 @@ ParticleBase<ParticleClass>::sort_by_cell() {
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
+  CudaCheckError();
 }
 
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
   // auto ptr_idx = thrust::device_pointer_cast(m_index);
+  const uint32_t padding = 100;
   boost::fusion::for_each(boost::mpl::range_c<
                           unsigned, 0, boost::fusion::result_of::size<array_type>::value>(),
-                          rearrange_array<array_type>(m_data, m_index, m_numMax, m_tmp_data_ptr, skip));
+                          rearrange_array<array_type>(m_data, m_index,
+                                                      std::min(m_numMax, m_number + padding),
+                                                      m_tmp_data_ptr, skip));
 }
 
 template <typename ParticleClass>
