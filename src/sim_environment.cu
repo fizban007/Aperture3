@@ -51,15 +51,24 @@ Environment::setup_env(const std::string& conf_file) {
 
   // Setup the grid
   m_grid.init(m_params);
+  std::cout << "Grid dimension is " << m_grid.dim() << std::endl;
+  if (m_grid.mesh().delta[0] < m_params.delta_t) {
+    std::cerr << "Grid spacing should be larger than delta_t! Aborting!" << std::endl;
+    abort();
+  }
   // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1] << std::endl;
   // std::cout << "size of quadmesh is " << sizeof(Quadmesh) << std::endl;
   cudaMemcpyToSymbol(dev_mesh, (void*)m_grid.mesh_ptr(), sizeof(Quadmesh));
   CudaCheckError();
 
   // Setup particle charges and masses
-  float charges[8] = { m_params.q_e };
-  float masses[8] = { m_params.q_e };
-  charges[(int)ParticleType::electron] = -1.0;
+  float charges[8];
+  float masses[8];
+  for (int i = 0; i < 8; i++) {
+    charges[i] = m_params.q_e;
+    masses[i] = m_params.q_e;
+  }
+  charges[(int)ParticleType::electron] *= -1.0;
   masses[(int)ParticleType::ion] *= m_params.ion_mass;
   cudaMemcpyToSymbol(dev_charges, (void*)charges, sizeof(charges));
   cudaMemcpyToSymbol(dev_masses, (void*)masses, sizeof(masses));

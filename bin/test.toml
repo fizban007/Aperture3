@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 0.3
+delta_t = 0.3e-4
 
 # Charge of an electron
 q_e = 0.1
