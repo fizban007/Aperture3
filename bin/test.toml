@@ -1,0 +1,64 @@
+# Time step size
+delta_t = 0.3
+
+# Charge of an electron
+q_e = 0.1
+
+# Maximum number of particles per node
+max_ptc_number = 100000000
+
+# Maximum number of photons per node
+max_photon_number = 100000000
+
+# Create pairs or not
+create_pairs = true
+
+# Trace photons or not
+trace_photons = true
+
+# Threshold for creating a photon / pair
+gamma_thr = 5.0
+
+# Free path for energetic photons
+photon_path = 100.0
+
+# Free path for inverse Compton once a particle reaches threshold
+ic_path = 20.0
+
+# Spectral index alpha for the background soft photon
+spectral_alpha = 1.2
+
+# Minimum energy for the above power law soft photon
+e_min = 1.0e-5
+
+# Separation between two energy regimes for inverse Compton scattering
+e_s = 0.2
+
+# Whether to use periodic boundary condition in each direction
+periodic_boundary = [true, true]
+
+# Fraction of total particles to track
+track_percent = 0.1
+
+# Data output directory
+data_dir = "/home/alex/storage/Data/1DpicCuda/"
+
+# This section describes the grid parameters. Every parameter is an array with 3
+# elements, describing the number for each dimension. If you wish to disable one
+# dimension, just set N to 1 and guard to 0 on that dimension.
+[Grid]
+# Number of grid points in each direction, excluding guard cells
+N = [10000, 3, 9]
+
+# Number of guard cells on each end. Effective number of cells per dimension
+# will be N + 2*guard
+guard = [3, 1, 1]
+
+# Lower limit of the coordinate
+lower = [1.0, 2.0, 3.0]
+
+# Size of the box in each dimension
+size = [100.0, 10.0, 2.0]
+
+# Size of a tile of cells
+tile_size = [64, 1, 1]
