@@ -1,8 +1,14 @@
 # Time step size
-delta_t = 0.3
+delta_t = 0.01
 
 # Charge of an electron
 q_e = 0.1
+
+# Ion mass
+ion_mass = 5.0
+
+# Number of species
+num_species = 2
 
 # Maximum number of particles per node
 max_ptc_number = 100000000
@@ -49,17 +55,17 @@ data_dir = "/home/alex/storage/Data/1DpicCuda/"
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [65536, 1, 1]
+N = [131072, 1, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard
 guard = [3, 0, 0]
 
 # Lower limit of the coordinate
-lower = [1.5, 0.0, 0.0]
+lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [4.0, 1.0, 1.0]
+size = [1.0e4, 1.0, 1.0]
 
 # Size of a tile of cells
 tile_size = [64, 1, 1]
