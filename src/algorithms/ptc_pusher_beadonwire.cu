@@ -37,6 +37,8 @@ void lorentz_push(particle_data ptc, const Scalar* E, double dt, uint32_t num) {
        i += blockDim.x * gridDim.x) {
     if (!check_bit(ptc.flag[i], ParticleFlag::ignore_EM)) {
       auto c = ptc.cell[i];
+      // Skip empty particles
+      if (c == MAX_CELL) continue;
       auto rel_x = ptc.x1[i];
       auto p1 = ptc.p1[i];
       int sp = get_ptc_type(ptc.flag[i]);
@@ -54,6 +56,8 @@ void move_ptc(particle_data ptc, double dt, uint32_t num) {
        i < num;
        i += blockDim.x * gridDim.x) {
     auto c = ptc.cell[i];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
     auto p = ptc.p1[i];
     Scalar gamma = sqrt(1.0 + p*p);
 
@@ -81,11 +85,13 @@ ParticlePusher_BeadOnWire::push(SimData& data, double dt) {
   Logger::print_info("In particle pusher");
   auto& grid = data.E.grid();
   auto& mesh = grid.mesh();
+
+  lorentz_push(data.particles, data.E, data.B, dt);
+  move_ptc(data.particles, grid, dt);
 }
 
 void
-ParticlePusher_BeadOnWire::move_ptc(Particles& particles, double x,
-                                    const Grid& grid, double dt) {
+ParticlePusher_BeadOnWire::move_ptc(Particles& particles, const Grid& grid, double dt) {
   auto& ptc = particles.data();
   auto& mesh = grid.mesh();
   if (mesh.dim() == 1) {
@@ -95,8 +101,7 @@ ParticlePusher_BeadOnWire::move_ptc(Particles& particles, double x,
 }
 
 void
-ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, double x,
-                                      const VectorField<Scalar>& E,
+ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, const VectorField<Scalar>& E,
                                       const VectorField<Scalar>& B, double dt) {
   auto& ptc = particles.data();
   if (E.grid().dim() == 1) {
