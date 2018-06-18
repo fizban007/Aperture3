@@ -106,6 +106,12 @@ class ScalarField : public FieldBase {
   void set_stagger(Stagger stagger) {
     m_stagger = stagger;
   }
+  void sync_to_device(int devId = 0) {
+    m_array.sync_to_device(devId);
+  }
+  void sync_to_host() {
+    m_array.sync_to_host();
+  }
 
  private:
   array_type m_array;
@@ -199,6 +205,12 @@ class VectorField : public FieldBase {
     m_stagger = stagger;
   }
   void set_field_type(FieldType type);
+  void sync_to_device(int devId = 0) {
+    for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_device(devId);
+  }
+  void sync_to_host() {
+    for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_host();
+  }
 
  private:
   std::array<array_type, VECTOR_DIM> m_array;
