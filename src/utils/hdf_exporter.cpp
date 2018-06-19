@@ -249,6 +249,7 @@ DataExporter::writeConfig(const SimParams& params) {
     {"gamma_thr", c.gamma_thr},
     {"photon_path", c.photon_path},
     {"ic_path", c.ic_path},
+    {"rad_energy_bins", c.rad_energy_bins},
     // {"grid", {
     {"N", c.N},
     {"guard", c.guard},

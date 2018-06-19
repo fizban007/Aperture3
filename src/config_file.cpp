@@ -80,6 +80,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                        .value_or(defaults.photon_path);
   params.ic_path = config->get_as<double>("ic_path")
                        .value_or(defaults.ic_path);
+  params.rad_energy_bins = config->get_as<int>("rad_energy_bins")
+                           .value_or(defaults.rad_energy_bins);
   params.data_dir = config->get_as<std::string>("data_dir")
                     .value_or(defaults.data_dir);
   auto periodic_boundary = config->get_array_of<bool>("periodic_boundary");
