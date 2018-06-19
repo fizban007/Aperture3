@@ -53,6 +53,7 @@ struct SimParamsBase {
   float       e_min               = 1.0e-3;  // minimum energy of the background photons
   float       photon_path         = 1.0;
   float       ic_path             = 1.0;
+  int         rad_energy_bins     = 256;
 
   // Domain decomposition parameters
   int         dim_x               = 1;
