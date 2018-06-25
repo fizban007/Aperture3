@@ -4,6 +4,7 @@
 #include "cuda/cuda_control.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/constant_mem.h"
+#include "sim_environment.h"
 #include <curand_kernel.h>
 
 namespace Aperture {
@@ -125,7 +126,7 @@ void init_rand_states(curandState* states, int seed) {
 }
 
 InverseCompton::InverseCompton(const Environment& env) :
-    m_env(env) {
+    m_env(env), m_I0(env.local_grid()) {
   const int seed = 4321;
   m_threadsPerBlock = 512;
   m_blocksPerGrid = 512;
@@ -149,6 +150,14 @@ InverseCompton::convert_pairs(Particles& particles, Photons& photons) {
 void
 InverseCompton::emit_photons(Photons& photons, Particles& particles) {
 
+}
+
+void
+InverseCompton::set_I0(const ScalarField<Scalar>& I0) {
+  m_I0 = I0;
+  m_I0.sync_to_device(0);
+  // Wait for GPU to finish before accessing on host
+  cudaDeviceSynchronize();
 }
 
 }

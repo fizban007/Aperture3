@@ -18,6 +18,9 @@ class RadiationField
   void advect(Scalar dt);
 
   MultiArray<Scalar>& data() { return m_data; }
+  const MultiArray<Scalar>& data() { return m_data; }
+  Scalar* ptr() { return m_data.data(); }
+  const Scalar* ptr() { return m_data.data(); }
 
 
  private:
