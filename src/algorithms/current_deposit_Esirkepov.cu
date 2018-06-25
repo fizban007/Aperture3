@@ -22,7 +22,8 @@ HD_INLINE Scalar interp(Scalar rel_pos, int ptc_cell, int target_cell) {
 }
 
 __global__
-void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc, uint32_t num) {
+void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc,
+                       Grid::const_mesh_ptrs mp, uint32_t num) {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
        i += blockDim.x * gridDim.x) {
@@ -49,9 +50,10 @@ void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc, uint
 
       if (!check_bit(flag, ParticleFlag::ignore_current)) {
         s0 = interp(x_p, c_p, delta_c);
-        atomicAdd(&delta_rho[0][delta_c], q * w * (s0 - s1) * dev_mesh.delta[0] / dev_params.delta_t);
+        atomicAdd(&delta_rho[0][delta_c], q * w * (s0 - s1) * mp.A[delta_c]
+                  * dev_mesh.delta[0] / dev_params.delta_t);
       }
-      atomicAdd(&rho[sp][delta_c], q * w * s1);
+      atomicAdd(&rho[sp][delta_c], q * w * s1 * mp.A[delta_c]);
       // if (i == 0) printf("rho is %f\n", rho[sp][delta_c]);
     }
   }
@@ -67,6 +69,7 @@ CurrentDepositer_Esirkepov::~CurrentDepositer_Esirkepov() {}
 void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   Logger::print_detail("Depositing current");
   auto& part = data.particles;
+  auto& grid = data.E.grid();
   data.J.initialize();
 
   Scalar** rho_ptrs;
@@ -83,14 +86,14 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   // Scalar** rho_ptrs = data.rho_ptrs;
   Scalar** j_ptrs = data.J.array_ptrs();
 
-  Kernels::compute_delta_rho<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), part.number());
+  Kernels::compute_delta_rho<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), grid.get_mesh_ptrs(), part.number());
   CudaCheckError();
   cudaDeviceSynchronize();
 
   // TODO::Handle periodic boundary by copying over the deposited quantities
 
   for (Index_t i = 0; i < data.num_species; i++) {
-    Logger::print_debug("Debug: rho at 10 is {}, rhoptr at 10 is {}", data.Rho[i](10), rho_ptrs[i][10]);
+    Logger::print_debug("rho at 10 is {}, rhoptr at 10 is {}", data.Rho[i](10), rho_ptrs[i][10]);
   }
   cudaFree(rho_ptrs);
 

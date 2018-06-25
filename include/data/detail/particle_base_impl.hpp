@@ -100,7 +100,7 @@ struct sync_dev {
   template <typename T>
   void operator()(T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
+    // cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
   }
 };
 

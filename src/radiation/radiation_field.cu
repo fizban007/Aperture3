@@ -11,7 +11,9 @@ RadiationField::RadiationField(const Environment& env)
 
 RadiationField::~RadiationField() {}
 
-
-
+void
+RadiationField::advect(Scalar dt) {
+  
+}
 
 }

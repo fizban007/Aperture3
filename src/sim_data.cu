@@ -34,8 +34,8 @@ SimData::SimData(const Environment& e) :
     // particles.emplace_back(env.params(), static_cast<ParticleType>(i));
   }
 
-  particles.sync_to_device(0);
-  photons.sync_to_device(0);
+  // particles.sync_to_device(0);
+  // photons.sync_to_device(0);
   E.sync_to_device(0);
   B.sync_to_device(0);
   J.sync_to_device(0);

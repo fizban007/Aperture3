@@ -53,17 +53,17 @@ class Logger {
   }
 
   template <typename... Args>
-  static void print_debug(const char* str, Args&&... args) {
+  static void print_debug(const std::string& str, Args&&... args) {
     if (m_rank == 0 && m_level > LogLevel::detail) {
-      fmt::print(str, std::forward<Args>(args)...);
+      fmt::print("Debug: " + str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
   }
 
   template <typename... Args>
-  static void print_debug_all(const char* str, Args&&... args) {
+  static void print_debug_all(const std::string& str, Args&&... args) {
     if (m_level > LogLevel::detail) {
-      fmt::print(str, std::forward<Args>(args)...);
+      fmt::print("Debug: " + str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
   }
@@ -89,21 +89,21 @@ class Logger {
   }
 
   template <typename... Args>
-  static void log_debug(const char* str, Args&&... args) {
+  static void log_debug(const std::string& str, Args&&... args) {
     if (m_file == nullptr)
       if (!open_log_file()) return;
     if (m_rank == 0 && m_level > LogLevel::detail) {
-      fmt::print(m_file, str, std::forward<Args>(args)...);
+      fmt::print(m_file, "Debug: " + str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
   }
 
   template <typename... Args>
-  static void log_debug_all(const char* str, Args&&... args) {
+  static void log_debug_all(const std::string& str, Args&&... args) {
     if (m_file == nullptr)
       if (!open_log_file()) return;
     if (m_level > LogLevel::detail) {
-      fmt::print(m_file, str, std::forward<Args>(args)...);
+      fmt::print(m_file, "Debug: " + str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
   }
