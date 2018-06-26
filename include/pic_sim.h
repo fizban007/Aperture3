@@ -8,6 +8,7 @@
 #include "particle_pusher.h"
 #include "sim_data.h"
 #include "sim_environment.h"
+#include "radiation/inverse_compton.h"
 
 namespace Aperture {
 
@@ -23,6 +24,7 @@ class PICSim {
   void step(SimData& data, uint32_t step);
 
   FieldSolver& field_solver() { return *m_field_solver; }
+  InverseCompton& inverse_compton() { return *m_inverse_compton; }
 
  private:
   Environment& m_env;
@@ -31,6 +33,7 @@ class PICSim {
   std::unique_ptr<ParticlePusher> m_pusher;
   std::unique_ptr<CurrentDepositer> m_depositer;
   std::unique_ptr<FieldSolver> m_field_solver;
+  std::unique_ptr<InverseCompton> m_inverse_compton;
   // std::unique_ptr<DomainCommunicator> m_comm;
 };  // ----- end of class PICSim -----
 }
