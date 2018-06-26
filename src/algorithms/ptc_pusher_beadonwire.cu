@@ -80,6 +80,36 @@ void move_ptc(particle_data ptc, Grid::const_mesh_ptrs mp, double dt, uint32_t n
 }
 
 __global__
+void move_photon(photon_data photon, Grid::const_mesh_ptrs mp, double dt, uint32_t num) {
+  for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = photon.cell[i];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+    auto rel_x = photon.x1[i];
+    auto p = photon.p1[i];
+    // Scalar gamma = sqrt(1.0 + p*p);
+    Scalar a2 = mp.a2[c] * rel_x + mp.a2[c - 1] * (1.0 - rel_x);
+    Scalar D1 = mp.D1[c] * rel_x + mp.D1[c - 1] * (1.0 - rel_x);
+    Scalar D2 = mp.D2[c] * rel_x + mp.D2[c - 1] * (1.0 - rel_x);
+    Scalar D3 = mp.D3[c] * rel_x + mp.D3[c - 1] * (1.0 - rel_x);
+    Scalar u0 = std::sqrt((p*p/D2) / (a2 - D3 + D1 * D1 / D2));
+
+    // Scalar dx = p * dt / (gamma * dev_mesh.delta[0]);
+    // TODO: fix pitch angle thing!
+    Scalar dx = dt * (p / u0 - D1) / (D2 * dev_mesh.delta[0]);
+    Scalar new_x1 = photon.x1[i] + dx;
+    int delta_c = floor(new_x1);
+    c += delta_c;
+
+    photon.cell[i] = c;
+    photon.x1[i] = new_x1 - (Pos_t)delta_c;
+    photon.path_left[i] -= dx;
+  }
+}
+
+__global__
 void push_and_move(particle_data ptc, const Scalar* E, Grid::const_mesh_ptrs mp, double dt, uint32_t num) {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
@@ -140,6 +170,7 @@ ParticlePusher_BeadOnWire::push(SimData& data, double dt) {
   auto& mesh = grid.mesh();
 
   lorentz_push(data.particles, data.E, data.B, dt);
+  move_photons(data.photons, grid, dt);
   // move_ptc(data.particles, grid, dt);
 }
 
@@ -149,6 +180,16 @@ ParticlePusher_BeadOnWire::move_ptc(Particles& particles, const Grid& grid, doub
   auto& mesh = grid.mesh();
   if (mesh.dim() == 1) {
     Kernels::move_ptc<<<512, 512>>>(ptc, grid.get_mesh_ptrs(), dt, particles.number());
+    CudaCheckError();
+  }
+}
+
+void
+ParticlePusher_BeadOnWire::move_photons(Photons& photons, const Grid& grid, double dt) {
+  auto& ptc = particles.data();
+  auto& mesh = grid.mesh();
+  if (mesh.dim() == 1) {
+    Kernels::move_photon<<<512, 512>>>(photons, grid.get_mesh_ptrs(), dt, photons.number());
     CudaCheckError();
   }
 }
