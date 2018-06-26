@@ -134,7 +134,7 @@ struct rearrange_array {
   void operator()(T i) const {
     auto ptr_index = thrust::device_pointer_cast(index_);
     auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
-    if (name == "cell" || name == "dx1" || name == "dx2" || name == "dx3") return;
+    if (name == "cell") return;
 
     // printf("%d, %s\n", T::value, name);
     auto x = boost::fusion::at_c<T::value>(array_);

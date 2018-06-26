@@ -82,7 +82,7 @@ TEST_CASE("Boost fusion stuff", "[Cuda]") {
   boost::fusion::for_each(data, alloc_cuda_managed(N));
 
   for (size_t i = 0; i < N; i++) {
-    data.dx1[i] = 1.0;
+    data.x1[i] = 1.0;
     data.p1[i] = 2.0;
   }
 

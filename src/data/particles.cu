@@ -28,17 +28,17 @@ Particles::Particles(Particles&& other)
 Particles::~Particles() {}
 
 void
-Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight, uint32_t flag) {
+Particles::put(std::size_t pos, const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
+           int cell, ParticleType type, Scalar weight, uint32_t flag) {
   if (pos >= m_numMax)
     throw std::runtime_error("Trying to insert particle beyond the end of the array. Resize it first!");
 
-  m_data.x1[pos] = x;
-  // m_data.x2[pos] = x[1];
-  // m_data.x3[pos] = x[2];
-  // m_data.weight[pos] = x[3];
-  m_data.p1[pos] = p;
-  // m_data.p2[pos] = p[1];
-  // m_data.p3[pos] = p[2];
+  m_data.x1[pos] = x[0];
+  m_data.x2[pos] = x[1];
+  m_data.x3[pos] = x[2];
+  m_data.p1[pos] = p[0];
+  m_data.p2[pos] = p[1];
+  m_data.p3[pos] = p[2];
   m_data.weight[pos] = weight;
   m_data.cell[pos] = cell;
   m_data.flag[pos] = flag | gen_ptc_type_flag(type);
@@ -46,7 +46,8 @@ Particles::put(std::size_t pos, Pos_t x, Scalar p, int cell, ParticleType type, 
 }
 
 void
-Particles::append(Pos_t x, Scalar p, int cell, ParticleType type, Scalar weight, uint32_t flag) {
+Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
+              ParticleType type, Scalar weight, uint32_t flag) {
   put(m_number, x, p, cell, type, weight, flag);
 }
 
