@@ -19,10 +19,10 @@ TEST_CASE("Initializing and Adding particles", "[Particles]") {
   CHECK(ptc.number() == 0);
   CHECK(ptc.numMax() == N);
 
-  ptc.append(0.5, 1.0, 100, ParticleType::electron);
-  ptc.append(0.2, 1.0, 200, ParticleType::electron);
-  ptc.append(0.2, 0.0, 300, ParticleType::positron);
-  ptc.append(0.2, -1.0, 400, ParticleType::positron);
+  ptc.append({0.5, 0.0, 0.0}, {1.0, 0.0, 0.0}, 100, ParticleType::electron);
+  ptc.append({0.2, 0.0, 0.0}, {1.0, 0.0, 0.0}, 200, ParticleType::electron);
+  ptc.append({0.2, 0.0, 0.0}, {0.0, 0.0, 0.0}, 300, ParticleType::positron);
+  ptc.append({0.2, 0.0, 0.0}, {-1.0, 0.0, 0.0}, 400, ParticleType::positron);
 
   CHECK(ptc.number() == 4);
   CHECK(ptc.data().x1[0] == Approx(0.5));

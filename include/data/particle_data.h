@@ -17,8 +17,11 @@ namespace Aperture {
 
 struct single_particle_t {
   Pos_t x1 = 0.0;
-  Pos_t dx1 = 0.0;
+  Pos_t x2 = 0.0;
+  Pos_t x3 = 0.0;
   Scalar p1 = 0.0;
+  Scalar p2 = 0.0;
+  Scalar p3 = 0.0;
   Scalar weight = 0.0;
   // Defulat MAX_CELL means empty particle slot
   uint32_t cell = MAX_CELL;
@@ -26,80 +29,33 @@ struct single_particle_t {
   uint32_t flag = 0;
 
   HOST_DEVICE single_particle_t() {}
-
-  // A series of set methods so that one can chain them
-  HD_INLINE single_particle_t& set_x(Pos_t x) {
-    x1 = x;
-    return *this;
-  }
-
-  HD_INLINE single_particle_t& set_dx(Pos_t dx) {
-    dx1 = dx;
-    return *this;
-  }
-
-  HD_INLINE single_particle_t& set_p(Scalar p) {
-    p1 = p;
-    // gamma = sqrt(1.0 + p1 * p1);
-    return *this;
-  }
-
-  HD_INLINE single_particle_t& set_cell(uint32_t c) {
-    cell = c;
-    return *this;
-  }
-
-  HD_INLINE single_particle_t& set_flag(uint32_t f) {
-    flag = f;
-    return *this;
-  }
 };
 
 struct single_photon_t {
   Pos_t x1 = 0.0;
+  Pos_t x2 = 0.0;
+  Pos_t x3 = 0.0;
   Scalar p1 = 0.0;
+  Scalar p2 = 0.0;
+  Scalar p3 = 0.0;
   Scalar path_left = 0.0;
   Scalar weight = 0.0;
-  Scalar pitch_angle = 0.0;
   // Defulat MAX_CELL means empty particle slot
   uint32_t cell = MAX_CELL;
   uint32_t tile = 0;
   uint32_t flag = 0;
 
   HOST_DEVICE single_photon_t() {}
-
-  // A series of set methods so that one can chain them
-  HD_INLINE single_photon_t& set_x(Pos_t x) {
-    x1 = x;
-    return *this;
-  }
-
-  HD_INLINE single_photon_t& set_p(Scalar p) {
-    p1 = p;
-    return *this;
-  }
-
-  HD_INLINE single_photon_t& set_cell(uint32_t c) {
-    cell = c;
-    return *this;
-  }
-
-  HD_INLINE single_photon_t& set_path_left(double p) {
-    path_left = p;
-    return *this;
-  }
-
-  HD_INLINE single_photon_t& set_flag(uint32_t f) {
-    flag = f;
-    return *this;
-  }
 };
 }
 
 BOOST_FUSION_ADAPT_STRUCT(Aperture::single_particle_t,
                           (Aperture::Pos_t, x1)
-                          (Aperture::Pos_t, dx1)
+                          (Aperture::Pos_t, x2)
+                          (Aperture::Pos_t, x3)
                           (Aperture::Scalar, p1)
+                          (Aperture::Scalar, p2)
+                          (Aperture::Scalar, p3)
                           (Aperture::Scalar, weight)
                           (uint32_t, cell)
                           (uint32_t, tile)
@@ -107,10 +63,13 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::single_particle_t,
 
 BOOST_FUSION_ADAPT_STRUCT(Aperture::single_photon_t,
                           (Aperture::Pos_t, x1)
+                          (Aperture::Pos_t, x2)
+                          (Aperture::Pos_t, x3)
                           (Aperture::Scalar, p1)
+                          (Aperture::Scalar, p2)
+                          (Aperture::Scalar, p3)
                           (Aperture::Scalar, path_left)
                           (Aperture::Scalar, weight)
-                          (Aperture::Scalar, pitch_angle)
                           (uint32_t, cell)
                           (uint32_t, tile)
                           (uint32_t, flag));
@@ -124,12 +83,15 @@ struct particle_data {
   // NOTE: This size is also NOT equal to the size of the
   // single_particle_t struct, due to padding
   enum {
-    size = sizeof(Pos_t) * 2 + sizeof(Scalar) * 2 + sizeof(uint32_t) * 3
+    size = sizeof(Pos_t) * 3 + sizeof(Scalar) * 4 + sizeof(uint32_t) * 3
   };
 
   Pos_t* x1;
-  Pos_t* dx1;
+  Pos_t* x2;
+  Pos_t* x3;
   Scalar* p1;
+  Scalar* p2;
+  Scalar* p3;
   Scalar* weight;
 
   uint32_t* cell;
@@ -148,14 +110,17 @@ struct photon_data {
   // NOTE: This size is also NOT equal to the size of the
   // single_photon_t struct, due to padding
   enum {
-    size = sizeof(Pos_t) * 1 + sizeof(Scalar) * 4 + sizeof(uint32_t) * 3
+    size = sizeof(Pos_t) * 3 + sizeof(Scalar) * 5 + sizeof(uint32_t) * 3
   };
 
   Pos_t* x1;
+  Pos_t* x2;
+  Pos_t* x3;
   Scalar* p1;
+  Scalar* p2;
+  Scalar* p3;
   Scalar* path_left;
   Scalar* weight;
-  Scalar* pitch_angle;
   uint32_t* cell;
   uint32_t* tile;
   uint32_t* flag;
@@ -181,8 +146,11 @@ struct particle_array_type<single_photon_t> {
 
 BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data,
                           (Aperture::Pos_t*, x1)
-                          (Aperture::Pos_t*, dx1)
+                          (Aperture::Pos_t*, x2)
+                          (Aperture::Pos_t*, x3)
                           (Aperture::Scalar*, p1)
+                          (Aperture::Scalar*, p2)
+                          (Aperture::Scalar*, p3)
                           (Aperture::Scalar*, weight)
                           (uint32_t*, cell)
                           (uint32_t*, tile)
@@ -190,10 +158,13 @@ BOOST_FUSION_ADAPT_STRUCT(Aperture::particle_data,
 
 BOOST_FUSION_ADAPT_STRUCT(Aperture::photon_data,
                           (Aperture::Pos_t*, x1)
+                          (Aperture::Pos_t*, x2)
+                          (Aperture::Pos_t*, x3)
                           (Aperture::Scalar*, p1)
+                          (Aperture::Scalar*, p2)
+                          (Aperture::Scalar*, p3)
                           (Aperture::Scalar*, path_left)
                           (Aperture::Scalar*, weight)
-                          (Aperture::Scalar*, pitch_angle)
                           (uint32_t*, cell)
                           (uint32_t*, tile)
                           (uint32_t*, flag));

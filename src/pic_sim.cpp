@@ -1,6 +1,6 @@
 #include "pic_sim.h"
 #include "algorithms/field_solver_default.h"
-#include "algorithms/ptc_pusher_beadonwire.h"
+// #include "algorithms/ptc_pusher_beadonwire.h"
 #include "algorithms/current_deposit_Esirkepov.h"
 // #include "domain_communicator.h"
 #include <functional>
@@ -31,7 +31,7 @@ PICSim::PICSim(Environment& env) : m_env(env) {
 
   // Implement particle pusher
   // m_pusher = std::make_unique<ParticlePusher_Geodesic>();
-  m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(new ParticlePusher_BeadOnWire(m_env));
+  // m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(new ParticlePusher_BeadOnWire(m_env));
   // m_pusher->set_periodic(env.conf().boundary_periodic[0]);
   // m_pusher->set_interp_order(env.conf().interpolation_order);
 

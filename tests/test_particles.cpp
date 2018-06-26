@@ -13,7 +13,7 @@ TEST_CASE("Sorting Particles by tile", "[Particles]") {
   Particles ptc(N);
 
   for (size_t i = 0; i < N; i++) {
-    ptc.append(0.1, 0.0, i, ParticleType::electron);
+    ptc.append({1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, i, ParticleType::electron);
   }
   ptc.set_num(N);
 
@@ -33,10 +33,10 @@ TEST_CASE("Erasing particles in guard cells", "[Particles]") {
   size_t N = 10000000;
   Particles ptc(N);
 
-  ptc.append(0.1, 1.0, mesh.get_idx(1, 0, 0), ParticleType::electron);
-  ptc.append(0.1, 2.0, mesh.get_idx(100, 1, 2), ParticleType::positron);
-  ptc.append(0.1, 3.0, mesh.get_idx(10004, 1, 2), ParticleType::electron);
-  ptc.append(0.1, 3.0, mesh.get_idx(100, 1, 10), ParticleType::electron);
+  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(1, 0, 0), ParticleType::electron);
+  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(100, 1, 2), ParticleType::positron);
+  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(10004, 1, 2), ParticleType::electron);
+  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(100, 1, 10), ParticleType::electron);
 
   CHECK(ptc.number() == 4);
 

@@ -19,7 +19,8 @@ set(AperCuda_src
   "algorithms/field_solver_default.cu"
   "sim_environment.cu" "sim_data.cu"
   "cuda/constant_mem.cu"
-  "algorithms/ptc_pusher_beadonwire.cu" "algorithms/current_deposit_Esirkepov.cu"
+  # "algorithms/ptc_pusher_beadonwire.cu"
+  "algorithms/current_deposit_Esirkepov.cu"
   "radiation/inverse_compton.cu"
   "pic_sim.cpp"
   # "algorithms/current_deposit_Esirkepov_cpu.cpp"
@@ -58,8 +59,8 @@ target_link_libraries(AperCuda Aperture)
 
 # add_subdirectory(cuda)
 
-add_executable(aperture "main.cpp")
-target_link_libraries(aperture Aperture AperCuda)
+# add_executable(aperture "main.cpp")
+# target_link_libraries(aperture Aperture AperCuda)
 
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)

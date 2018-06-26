@@ -32,7 +32,8 @@ void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc,
     if (c == MAX_CELL) continue;
     int c_p = c;
     auto x = ptc.x1[i];
-    auto x_p = x - ptc.dx1[i];
+    // auto x_p = x - ptc.dx1[i];
+    auto x_p = x;
     auto flag = ptc.flag[i];
     int sp = get_ptc_type(flag);
     auto q = dev_charges[sp];
