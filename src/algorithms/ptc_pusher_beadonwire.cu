@@ -186,10 +186,10 @@ ParticlePusher_BeadOnWire::move_ptc(Particles& particles, const Grid& grid, doub
 
 void
 ParticlePusher_BeadOnWire::move_photons(Photons& photons, const Grid& grid, double dt) {
-  auto& ptc = particles.data();
+  auto& ph = photons.data();
   auto& mesh = grid.mesh();
   if (mesh.dim() == 1) {
-    Kernels::move_photon<<<512, 512>>>(photons, grid.get_mesh_ptrs(), dt, photons.number());
+    Kernels::move_photon<<<512, 512>>>(ph, grid.get_mesh_ptrs(), dt, photons.number());
     CudaCheckError();
   }
 }
