@@ -75,6 +75,8 @@ class Environment {
   // const DomainInfo& domain_info() const { return m_domain_info; }
   // // const BoundaryConditions& boundary_conditions() const { return m_bc; }
   // // const InitialCondition& initial_condition() const { return *m_ic; }
+  void check_dev_mesh(Quadmesh& mesh);
+  void check_dev_params(SimParams& params);
 
  private:
   // Environment() {}
