@@ -8,7 +8,10 @@ namespace Aperture {
 
 namespace Kernels {
 
-__global__ void update_field(Scalar* E, const Scalar* J, const Scalar* J_b) {
+// TODO: work out the cuda kernels for the 3D finite difference
+
+__global__
+void update_field(Scalar* E, const Scalar* J, const Scalar* J_b) {
   auto dt = dev_params.delta_t;
   for (int i = dev_params.guard[0] - 1 + blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_params.guard[0] + dev_params.N[0];
