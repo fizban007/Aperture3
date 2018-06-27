@@ -124,3 +124,18 @@ TEST_CASE("Transferring and access constant memory", "[Cuda]") {
   CHECK(t2.v[1] == 2.0);
   CHECK(t2.v[2] == 3.0);
 }
+
+TEST_CASE("Init and retrieve constant mem", "[Cuda]") {
+  Quadmesh mesh;
+  mesh.dims[0] = 100;
+  mesh.dims[1] = 200;
+  mesh.dims[2] = 300;
+  init_dev_mesh(mesh);
+
+  Quadmesh mesh_cmp;
+  get_dev_mesh(mesh_cmp);
+
+  CHECK(mesh_cmp.dims[0] == 100);
+  CHECK(mesh_cmp.dims[1] == 200);
+  CHECK(mesh_cmp.dims[2] == 300);
+}

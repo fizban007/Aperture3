@@ -30,6 +30,23 @@ TEST_CASE("Loading environment", "[Env]") {
 
   check_test_params(env.params());
   // delete env;
+  CHECK(env.mesh().dims[0] == 10006);
+  CHECK(env.mesh().dims[1] == 5);
+  CHECK(env.mesh().dims[2] == 11);
+
+  Quadmesh mesh;
+
+  env.check_dev_mesh(mesh);
+
+  CHECK(mesh.dims[0] == 10006);
+  CHECK(mesh.dims[1] == 5);
+  CHECK(mesh.dims[2] == 11);
+
+  SimParams p;
+  p.data_dir = env.params().data_dir;
+
+  env.check_dev_params(p);
+  check_test_params(p);
 
   for (int i = 0; i < my_argc; i++) delete[] my_argv[i];
   delete[] my_argv;
