@@ -46,8 +46,9 @@ Environment::setup_env(const std::string& conf_file) {
   // SimParamsBase* h_params = &m_params;
 
   // Copy the parameters to cuda constant memory
-  cudaMemcpyToSymbol(dev_params, (void*)&m_params, sizeof(SimParamsBase));
-  CudaCheckError();
+  // cudaMemcpyToSymbol(dev_params, (void*)&m_params, sizeof(SimParamsBase));
+  // CudaCheckError();
+  init_dev_params(m_params);
 
   // Setup the grid
   m_grid.init(m_params);
@@ -58,8 +59,9 @@ Environment::setup_env(const std::string& conf_file) {
   }
   // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1] << std::endl;
   // std::cout << "size of quadmesh is " << sizeof(Quadmesh) << std::endl;
-  cudaMemcpyToSymbol(dev_mesh, (void*)m_grid.mesh_ptr(), sizeof(Quadmesh));
-  CudaCheckError();
+  // cudaMemcpyToSymbol(dev_mesh, (void*)m_grid.mesh_ptr(), sizeof(Quadmesh));
+  // CudaCheckError();
+  init_dev_mesh(*m_grid.mesh_ptr());
 
   // Setup particle charges and masses
   float charges[8];
@@ -70,9 +72,11 @@ Environment::setup_env(const std::string& conf_file) {
   }
   charges[(int)ParticleType::electron] *= -1.0;
   masses[(int)ParticleType::ion] *= m_params.ion_mass;
-  cudaMemcpyToSymbol(dev_charges, (void*)charges, sizeof(charges));
-  cudaMemcpyToSymbol(dev_masses, (void*)masses, sizeof(masses));
-  CudaCheckError();
+  init_dev_charges(charges);
+  init_dev_masses(masses);
+  // cudaMemcpyToSymbol(dev_charges, (void*)charges, sizeof(charges));
+  // cudaMemcpyToSymbol(dev_masses, (void*)masses, sizeof(masses));
+  // CudaCheckError();
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -296,5 +300,15 @@ Environment::setup_env(const std::string& conf_file) {
 //   m_ic->set_data(data);
 //   m_bc.initialize(*this, data);
 // }
+
+void
+Environment::check_dev_mesh(Quadmesh& mesh) {
+  get_dev_mesh(mesh);
+}
+
+void
+Environment::check_dev_params(SimParams& params) {
+  get_dev_params(params);
+}
 
 }
