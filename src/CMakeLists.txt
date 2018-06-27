@@ -20,7 +20,7 @@ set(AperCuda_src
   "sim_environment.cu" "sim_data.cu"
   "cuda/constant_mem.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
-  "algorithms/current_deposit_Esirkepov.cu"
+  "algorithms/current_deposit_Esirkepov.cu" "algorithms/finite_diff.cu"
   "radiation/inverse_compton.cu"
   "pic_sim.cpp"
   # "algorithms/current_deposit_Esirkepov_cpu.cpp"
