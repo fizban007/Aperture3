@@ -31,21 +31,21 @@
 
 #define ADD_SIZEOF(s, state, elem) state + sizeof(elem)
 
-#define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0(...) \
-     ((__VA_ARGS__)) GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_1
+#define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0(...)      \
+  ((__VA_ARGS__)) GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_1
 
-#define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_1(...) \
-     ((__VA_ARGS__)) GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0
+#define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_1(...)      \
+  ((__VA_ARGS__)) GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0
 
 #define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0_END
 #define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_1_END
 
 // Double the parentheses of a Boost.PP sequence
 // I.e. (a, b)(c, d) becomes ((a, b))((c, d))
-#define GLK_PP_SEQ_DOUBLE_PARENS(seq) \
-    BOOST_PP_CAT(GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0 seq, _END)
+#define GLK_PP_SEQ_DOUBLE_PARENS(seq)                       \
+  BOOST_PP_CAT(GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0 seq, _END)
 
-#define DEF_PARTICLE_STRUCT(name, content)                                 \
+#define DEF_PARTICLE_STRUCT(name, content)                              \
   namespace Aperture {                                                  \
   struct single_ ## name ## _t {                                        \
     BOOST_PP_SEQ_FOR_EACH(DEF_ENTRY, _,                                 \
@@ -55,7 +55,7 @@
   struct name ## _data {                                                \
     BOOST_PP_SEQ_FOR_EACH(DEF_PTR_ENTRY, _,                             \
                           GLK_PP_SEQ_DOUBLE_PARENS(content))            \
-    single_ ## name ## _t operator[](size_t idx) const;     \
+    single_ ## name ## _t operator[](size_t idx) const;                 \
     enum {                                                              \
       size = BOOST_PP_SEQ_FOLD_RIGHT(ADD_SIZEOF, 0,                     \
                                      BOOST_PP_SEQ_FOR_EACH(GET_TYPE, _, GLK_PP_SEQ_DOUBLE_PARENS(content))) \
@@ -64,14 +64,14 @@
                                                                         \
   template <>                                                           \
   struct particle_array_type<single_ ## name ## _t> {                   \
-    typedef name ## _data type;                                              \
+    typedef name ## _data type;                                         \
   };                                                                    \
   }                                                                     \
-  VISITABLE_STRUCT(Aperture::single_ ## name ## _t,                  \
-                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(        \
+  VISITABLE_STRUCT(Aperture::single_ ## name ## _t,                     \
+                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(           \
                        BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content))))); \
-  VISITABLE_STRUCT(Aperture::name ## _data,                          \
-                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(        \
+  VISITABLE_STRUCT(Aperture::name ## _data,                             \
+                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(           \
                        BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content)))))
 
 
