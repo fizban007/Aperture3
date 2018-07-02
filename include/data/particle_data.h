@@ -47,7 +47,7 @@ namespace Aperture {
 // integral constant `size` is defined in `particle_data` for MPI purposes, and
 // an index operator is defined to easily read a single particle.
 
-def_PARTICLE_STRUCT(particle,
+DEF_PARTICLE_STRUCT(particle,
                     (Aperture::Pos_t, x1, 0.0)
                     (Aperture::Pos_t, x2, 0.0)
                     (Aperture::Pos_t, x3, 0.0)
