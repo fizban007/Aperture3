@@ -1,0 +1,12 @@
+%clang
+-std=c++11
+
+# Includes
+-I/home/alex/Projects/Aperture3/include/
+-I/home/alex/Projects/Aperture3/deps/catch/single_include/
+-I/home/alex/Projects/Aperture3/deps/fmt/
+-I/home/alex/Projects/Aperture3/deps/cpptoml/include/
+-I/home/alex/Projects/Aperture3/deps/json/include/
+-I/home/alex/Projects/Aperture3/deps/cxxopts/include/
+-I/home/alex/Projects/Aperture3/deps/visit_struct/include/
+-I/opt/cuda/include/
