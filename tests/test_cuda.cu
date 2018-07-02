@@ -74,29 +74,29 @@ struct free_cuda {
   }
 };
 
-TEST_CASE("Boost fusion stuff", "[Cuda]") {
-  size_t N = 256 * 256;
+// TEST_CASE("Boost fusion stuff", "[Cuda]") {
+//   size_t N = 256 * 256;
 
-  particle_data data;
+//   particle_data data;
 
-  boost::fusion::for_each(data, alloc_cuda_managed(N));
+//   boost::fusion::for_each(data, alloc_cuda_managed(N));
 
-  for (size_t i = 0; i < N; i++) {
-    data.x1[i] = 1.0;
-    data.p1[i] = 2.0;
-  }
+//   for (size_t i = 0; i < N; i++) {
+//     data.x1[i] = 1.0;
+//     data.p1[i] = 2.0;
+//   }
 
-  // add<<<256, 256>>>(data.dx1, data.p1, data.x1);
-  // Wait for GPU to finish before accessing on host
-  // cudaDeviceSynchronize();
+//   // add<<<256, 256>>>(data.dx1, data.p1, data.x1);
+//   // Wait for GPU to finish before accessing on host
+//   // cudaDeviceSynchronize();
 
-  // for (size_t i = 0; i < N; i++) {
-  //   CHECK(data.x1[i] == 3.0f);
-  // }
+//   // for (size_t i = 0; i < N; i++) {
+//   //   CHECK(data.x1[i] == 3.0f);
+//   // }
 
-  boost::fusion::for_each(data, free_cuda());
+//   boost::fusion::for_each(data, free_cuda());
 
-}
+// }
 
 TEST_CASE("Accessing sim params in kernel", "[Cuda]") {
   SimParams params;
