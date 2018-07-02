@@ -2,11 +2,12 @@
 #define _UTILS_MEMORY_H_
 
 #include <cstddef>
-#include "boost/container/vector.hpp"
-#include "boost/fusion/include/for_each.hpp"
-#include "boost/fusion/include/size.hpp"
-#include "boost/fusion/include/zip_view.hpp"
+// #include "boost/container/vector.hpp"
+// #include "boost/fusion/include/for_each.hpp"
+// #include "boost/fusion/include/size.hpp"
+// #include "boost/fusion/include/zip_view.hpp"
 #include "cuda/cuda_control.h"
+#include "visit_struct/visit_struct.hpp"
 
 namespace Aperture {
 
@@ -17,7 +18,7 @@ struct alloc_cuda_managed {
   alloc_cuda_managed(size_t N) : N_(N) {}
 
   template <typename T>
-  void operator()(T& x) const {
+  void operator()(const char* name, T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
     void* p;
@@ -25,28 +26,40 @@ struct alloc_cuda_managed {
     cudaMemAdvise(p, N_*sizeof(x_type), cudaMemAdviseSetPreferredLocation, 0);
     x = reinterpret_cast<typename std::remove_reference<decltype(x)>::type>(p);
   }
+
+  template <typename T>
+  void operator()(T& x) const {
+    this->operator()("", x);
+  }
 };
 
 struct free_cuda {
   template <typename x_type>
-  void operator()(x_type& x) const {
+  void operator()(const char* name, x_type& x) const {
     if (x != nullptr) {
       cudaFree(x);
       x = nullptr;
     }
+  }
+
+  template <typename T>
+  void operator()(T& x) const {
+    this->operator()("", x);
   }
 };
 
 template <typename StructOfArrays>
 void
 alloc_struct_of_arrays(StructOfArrays& data, std::size_t max_num) {
-  boost::fusion::for_each(data, alloc_cuda_managed(max_num));
+  // boost::fusion::for_each(data, alloc_cuda_managed(max_num));
+  visit_struct::for_each(data, alloc_cuda_managed(max_num));
 }
 
 template <typename StructOfArrays>
 void
 free_struct_of_arrays(StructOfArrays& data) {
-  boost::fusion::for_each(data, free_cuda());
+  // boost::fusion::for_each(data, free_cuda());
+  visit_struct::for_each(data, free_cuda());
 }
 
 }

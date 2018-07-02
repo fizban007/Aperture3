@@ -4,7 +4,7 @@
 #include "boost/container/vector.hpp"
 #include "boost/fusion/include/for_each.hpp"
 #include "boost/fusion/include/size.hpp"
-#include "boost/fusion/include/zip_view.hpp"
+// #include "boost/fusion/include/zip_view.hpp"
 #include "boost/mpl/range_c.hpp"
 #include "boost/mpl/integral_c.hpp"
 #include "data/detail/particle_data_impl.hpp"
@@ -12,6 +12,7 @@
 #include "utils/memory.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
+#include "utils/for_each_arg.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 
@@ -25,8 +26,10 @@
 #include <algorithm>
 #include <numeric>
 #include <string>
+#include <cstring>
 #include <stdexcept>
 #include <type_traits>
+#include "visit_struct/visit_struct.hpp"
 // #include "types/particles.h"
 
 namespace Aperture {
@@ -60,20 +63,20 @@ void erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
 
 }
 
-// using boost::fusion::at_c;
+// These are helper functors for for_each loops
 
 struct set_nullptr {
   template <typename T>
-  HD_INLINE void operator()(T& x) const { x = nullptr; }
+  HD_INLINE void operator()(const char* name, T& x) const { x = nullptr; }
 };
 
 struct assign_at_idx {
   size_t idx_;
   HOST_DEVICE assign_at_idx(size_t idx) : idx_(idx) {}
 
-  template <typename T>
-  HD_INLINE void operator()(const T& x) const {
-    boost::fusion::at_c<0>(x)[idx_] = boost::fusion::at_c<1>(x);
+  template <typename T, typename U>
+  HD_INLINE void operator()(T& t, const U& u) const {
+    t[idx_] = u;
   }
 };
 
@@ -83,10 +86,10 @@ struct fill_pos_amount {
   fill_pos_amount(size_t pos, size_t amount) :
       pos_(pos), amount_(amount) {}
 
-  template <typename T>
-  void operator()(const T& x) const {
-    std::fill_n(boost::fusion::at_c<0>(x) + pos_, amount_,
-                boost::fusion::at_c<1>(x));
+  template <typename T, typename U>
+  void operator()(T& t, U& u) const {
+    std::fill_n(t + pos_, amount_,
+                u);
   }
 };
 
@@ -98,9 +101,9 @@ struct sync_dev {
       devId_(devId), size_(size) {}
 
   template <typename T>
-  void operator()(T& x) const {
+  void operator()(const char* name, T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    // cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
+    cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
   }
 };
 
@@ -109,37 +112,37 @@ struct copy_to_dest {
   copy_to_dest(size_t num, size_t src_pos, size_t dest_pos) :
       num_(num), src_pos_(src_pos), dest_pos_(dest_pos) {}
 
-  template <typename T>
-  void operator()(const T& x) const {
-    std::copy(boost::fusion::at_c<1>(x) + src_pos_,
-              boost::fusion::at_c<1>(x) + src_pos_ + num_,
-              boost::fusion::at_c<0>(x) + dest_pos_);
+  template <typename T, typename U>
+  void operator()(T& t, U& u) const {
+    std::copy(u + src_pos_,
+              u + src_pos_ + num_,
+              t + dest_pos_);
   }
 };
 
-template <typename ArrayType>
+// template <typename ArrayType>
 struct rearrange_array {
-  ArrayType& array_;
+  // ArrayType& array_;
   // thrust::device_ptr<Index_t>& index_;
   Index_t* index_;
   size_t N_;
   void* tmp_ptr_;
   std::string skip_;
 
-  rearrange_array(ArrayType& array, Index_t* index,
-                  size_t N, void* tmp_ptr, const std::string& skip) :
-      array_(array), index_(index), N_(N), tmp_ptr_(tmp_ptr), skip_(skip) {}
+  rearrange_array(Index_t* index, size_t N, void* tmp_ptr, const std::string& skip) :
+      index_(index), N_(N), tmp_ptr_(tmp_ptr), skip_(skip) {}
 
-  template <typename T>
-  void operator()(T i) const {
+  template <typename T, typename U>
+  void operator()(const char* name, T& x, U& u) const {
     auto ptr_index = thrust::device_pointer_cast(index_);
-    auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
-    if (name == "cell") return;
+    // auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
+    if (std::strcmp(name, skip_.c_str()) == 0) return;
 
     // printf("%d, %s\n", T::value, name);
-    auto x = boost::fusion::at_c<T::value>(array_);
+    // auto x = boost::fusion::at_c<T::value>(array_);
+    // auto x = visit_struct::get<T::value>(array_);
     auto x_ptr = thrust::device_pointer_cast(x);
-    auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<decltype(x)>(tmp_ptr_));
+    auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<U*>(tmp_ptr_));
     thrust::gather(ptr_index, ptr_index + N_, x_ptr, tmp_ptr);
     thrust::copy_n(tmp_ptr, N_, x_ptr);
     CudaCheckError();
@@ -149,7 +152,8 @@ struct rearrange_array {
 template <typename ParticleClass>
 ParticleBase<ParticleClass>::ParticleBase()
     : m_numMax(0), m_number(0), m_tmp_data_ptr(nullptr), m_index(nullptr) {
-  boost::fusion::for_each(m_data, set_nullptr());
+  // boost::fusion::for_each(m_data, set_nullptr());
+  visit_struct::for_each(m_data, set_nullptr{});
 }
 
 template <typename ParticleClass>
@@ -198,7 +202,8 @@ ParticleBase<ParticleClass>::ParticleBase(ParticleBase<ParticleClass>&& other) {
   // m_index.resize(other.m_numMax);
   // m_index_bak.resize(other.m_numMax);
 
-  boost::fusion::for_each(other.m_data, set_nullptr());
+  // boost::fusion::for_each(other.m_data, set_nullptr());
+  visit_struct::for_each(other.m_data, set_nullptr{});
   // other.m_data_ptr = nullptr;
 }
 
@@ -252,13 +257,14 @@ template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::erase(std::size_t pos, std::size_t amount) {
   if (pos + amount > m_numMax) amount = m_numMax - pos;
-  // std::cout << "Erasing from " << pos << " for " << amount << " number of
-  // particles" << std::endl;
+  std::cout << "Erasing from " << pos << " for " << amount << " number of particles" << std::endl;
 
-  typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  boost::fusion::for_each(
-      boost::fusion::zip_view<seq>(seq(m_data, ParticleClass())),
-      fill_pos_amount(pos, amount));
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
+  // boost::fusion::for_each(
+  //     boost::fusion::zip_view<seq>(seq(m_data, ParticleClass())),
+  //     fill_pos_amount(pos, amount));
+  auto ptc = ParticleClass{};
+  for_each_arg(m_data, ptc, fill_pos_amount{pos, amount});
 }
 
 template <typename ParticleClass>
@@ -269,9 +275,10 @@ ParticleBase<ParticleClass>::put(Index_t pos, const ParticleClass& part) {
         "Trying to insert particle beyond the end of the array. Resize it "
         "first!");
 
-  typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
-                          assign_at_idx(pos) );
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
+  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
+  //                         assign_at_idx(pos) );
+  for_each_arg(m_data, part, assign_at_idx(pos));
   if (pos >= m_number) m_number = pos + 1;
 }
 
@@ -284,9 +291,10 @@ ParticleBase<ParticleClass>::swap(Index_t pos, ParticleClass& part) {
         "Trying to swap particle beyond the end of the array. Resize it "
         "first!");
 
-  typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
-                          assign_at_idx(pos) );
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
+  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
+  //                         assign_at_idx(pos) );
+  for_each_arg(m_data, part, assign_at_idx(pos));
   part = p_tmp;
   if (pos >= m_number) m_number = pos + 1;
 }
@@ -305,10 +313,11 @@ ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
                                        std::size_t dest_pos) {
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_numMax) num = m_numMax - dest_pos;
-  typedef boost::fusion::vector<array_type&, const array_type&> seq;
-  boost::fusion::for_each(
-      boost::fusion::zip_view<seq>(seq(m_data, other.m_data)),
-      copy_to_dest(num, src_pos, dest_pos));
+  // typedef boost::fusion::vector<array_type&, const array_type&> seq;
+  // boost::fusion::for_each(
+  //     boost::fusion::zip_view<seq>(seq(m_data, other.m_data)),
+  //     copy_to_dest(num, src_pos, dest_pos));
+  for_each_arg(m_data, other.m_data, copy_to_dest(num, src_pos, dest_pos));
   // Adjust the new number of particles in the array
   if (dest_pos + num > m_number) m_number = dest_pos + num;
 }
@@ -377,24 +386,30 @@ void
 ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
   // auto ptr_idx = thrust::device_pointer_cast(m_index);
   const uint32_t padding = 100;
-  boost::fusion::for_each(boost::mpl::range_c<
-                          unsigned, 0, boost::fusion::result_of::size<array_type>::value>(),
-                          rearrange_array<array_type>(m_data, m_index,
-                                                      std::min(m_numMax, m_number + padding),
-                                                      m_tmp_data_ptr, skip));
+  auto ptc = ParticleClass();
+  // boost::fusion::for_each(boost::mpl::range_c<
+  //                         unsigned, 0, visit_struct::field_count<ParticleClass>()>(),
+  //                         rearrange_array<array_type>(m_data, m_index,
+  //                                                     std::min(m_numMax, m_number + padding),
+  //                                                     m_tmp_data_ptr, skip));
+  for_each_arg_with_name(m_data, ptc,
+                         rearrange_array{m_index, std::min(m_numMax, m_number + padding),
+                               m_tmp_data_ptr, skip});
 }
 
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::sync_to_device(int deviceId) {
-  boost::fusion::for_each(m_data, sync_dev(deviceId, m_number));
+  // boost::fusion::for_each(m_data, sync_dev(deviceId, m_number));
+  visit_struct::for_each(m_data, sync_dev(deviceId, m_number));
   cudaDeviceSynchronize();
 }
 
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::sync_to_host() {
-  boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
+  // boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
+  visit_struct::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
   cudaDeviceSynchronize();
 }
 // template <typename ParticleClass>

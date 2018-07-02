@@ -1,15 +1,15 @@
 #ifndef _PARTICLE_DATA_H_
 #define _PARTICLE_DATA_H_
 
-#include "boost/fusion/container/vector.hpp"
-#include "boost/fusion/include/adapt_struct.hpp"
-#include "boost/fusion/include/for_each.hpp"
-#include "boost/fusion/include/zip_view.hpp"
+// #include "boost/fusion/container/vector.hpp"
+// #include "boost/fusion/include/adapt_struct.hpp"
+// #include "boost/fusion/include/for_each.hpp"
+// #include "boost/fusion/include/zip_view.hpp"
 #include "constant_defs.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
 #include "cuda/cuda_control.h"
-// #include "visit_struct/visit_struct.hpp"
+#include "visit_struct/visit_struct.hpp"
 // #include "data/vec4.h"
 #include <cinttypes>
 #include <type_traits>
@@ -68,7 +68,7 @@
   struct name ## _data {                                                \
     BOOST_PP_SEQ_FOR_EACH(DEF_PTR_ENTRY, _,                             \
                           GLK_PP_SEQ_DOUBLE_PARENS(content))            \
-    HOST_DEVICE single_ ## name ## _t operator[](size_t idx) const;     \
+    single_ ## name ## _t operator[](size_t idx) const;     \
     enum {                                                              \
       size = BOOST_PP_SEQ_FOLD_RIGHT(ADD_SIZEOF, 0,                     \
                                      BOOST_PP_SEQ_FOR_EACH(GET_TYPE, _, GLK_PP_SEQ_DOUBLE_PARENS(content))) \
@@ -80,17 +80,16 @@
     typedef name ## _data type;                                              \
   };                                                                    \
   }                                                                     \
-  BOOST_FUSION_ADAPT_STRUCT(Aperture::single_ ## name ## _t,                  \
-                            BOOST_PP_SEQ_FOR_EACH(GET_TYPE_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content))); \
-  BOOST_FUSION_ADAPT_STRUCT(Aperture::name ## _data,                          \
-                       BOOST_PP_SEQ_FOR_EACH(GET_PTR_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content)))
-
-  // VISITABLE_STRUCT(Aperture::single_ ## name ## _t,                     \
-  //                  BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(             \
-  //                      BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content))))); \
-  // VISITABLE_STRUCT(Aperture::name ## _data,                             \
-  //                  BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(             \
-  //                      BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content)))))
+  VISITABLE_STRUCT(Aperture::single_ ## name ## _t,                  \
+                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(        \
+                       BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content))))); \
+  VISITABLE_STRUCT(Aperture::name ## _data,                          \
+                   BOOST_PP_EXPAND(ESC BOOST_PP_SEQ_TO_TUPLE(        \
+                       BOOST_PP_SEQ_FOR_EACH(GET_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content)))))
+  // BOOST_FUSION_ADAPT_STRUCT(Aperture::single_ ## name ## _t,                  \
+  //                           BOOST_PP_SEQ_FOR_EACH(GET_TYPE_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content))); \
+  // BOOST_FUSION_ADAPT_STRUCT(Aperture::name ## _data,                          \
+  //                      BOOST_PP_SEQ_FOR_EACH(GET_PTR_NAME, _, GLK_PP_SEQ_DOUBLE_PARENS(content)))
 
 namespace Aperture {
   template <typename SingleType>
