@@ -4,6 +4,7 @@
 #include "data/multi_array.h"
 #include "utils/memory.h"
 #include "utils/logger.h"
+#include "cuda/cudaUtility.h"
 #include <thrust/copy.h>
 #include <thrust/device_ptr.h>
 
@@ -117,10 +118,7 @@ MultiArray<T>::resize(int width, int height, int depth) {
     cudaFree(_data);
   }
   // _data = new T[_size];
-  auto error = cudaMallocManaged(&_data, _size * sizeof(T));
-  if (error != cudaSuccess)
-    Logger::print_err("Cuda Malloc error!");
-  assign( static_cast<T>(0) );
+  CudaSafeCall(cudaMallocManaged(&_data, _size * sizeof(T)));
 }
 
 template <typename T>
@@ -143,13 +141,13 @@ MultiArray<T>::find_dim() {
 template <typename T>
 void
 MultiArray<T>::sync_to_device(int devId) {
-  cudaMemPrefetchAsync(_data, _size * sizeof(T), devId);
+  CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T), devId));
 }
 
 template <typename T>
 void
 MultiArray<T>::sync_to_host() {
-  cudaMemPrefetchAsync(_data, _size * sizeof(T), cudaCpuDeviceId);
+  CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T), cudaCpuDeviceId));
 }
 
 }
