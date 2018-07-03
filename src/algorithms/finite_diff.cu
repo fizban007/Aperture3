@@ -87,34 +87,55 @@ void compute_curl(Scalar* v1, Scalar* v2, Scalar* v3,
   __shared__ Scalar s_u2[DIM3 + 2][DIM2 + 2][DIM1 + 2];
   __shared__ Scalar s_u3[DIM3 + 2][DIM2 + 2][DIM1 + 2];
 
-  // Load indices
-  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  // Load shared memory
   int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
-  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 +
-                  (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1) * dev_mesh.dims[0] +
-                  (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1) *
-                  dev_mesh.dims[0] * dev_mesh.dims[1];
-  init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
-                                       globalIdx, c1, c2, c3);
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int globalIdx;
+  for (int offset3 = 0; offset3 < DIM3; offset3 += blockDim.z) {
+    for (int offset2 = 0; offset2 < DIM2; offset2 += blockDim.y) {
+      for (int offset1 = 0; offset1 < DIM1; offset1 += blockDim.x) {
+        globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 + offset1 +
+                    (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1 + offset2) *
+                    dev_mesh.dims[0] +
+                    (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1 + offset3) *
+                    dev_mesh.dims[0] * dev_mesh.dims[1];
+        init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                             globalIdx, c1 + offset1,
+                                             c2 + offset2,
+                                             c3 + offset3);
+      }
+    }
+  }
   __syncthreads();
 
   // Do the actual computation here
-  // (Curl u)_1 = d2u3 - d3u2
-  v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
-                   d3<DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2]));
-  // v1[globalIdx] = (s_u3[c3][c2 + flip(s3[1])][c1] - s_u3[c3][c2 - 1 + flip(s3[1])][c1]) / dev_mesh.delta[1] -
-  //                 (s_u2[c3 + flip(s2[2])][c2][c1] - s_u2[c3 - 1 + flip(s2[2])][c2][c1]) / dev_mesh.delta[2];
-  // (Curl u)_2 = d3u1 - d1u3
-  v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1, c2, c3 + flip(s1[2])) -
-                   d1<DIM1, DIM2, DIM3>(s_u3, c1 + flip(s3[0]), c2, c3);
-  // v2[globalIdx] = (s_u1[c3 + flip(s1[2])][c2][c1] - s_u1[c3 - 1 + flip(s1[2])][c2][c1]) / dev_mesh.delta[2] -
-  //                 (s_u3[c3][c2][c1 + flip(s3[0])] - s_u3[c3][c2][c1 - 1 + flip(s3[0])]) / dev_mesh.delta[0];
+  for (int offset3 = 0; offset3 < DIM3; offset3 += blockDim.z) {
+    for (int offset2 = 0; offset2 < DIM2; offset2 += blockDim.y) {
+      for (int offset1 = 0; offset1 < DIM1; offset1 += blockDim.x) {
+        globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 + offset1 +
+                    (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1 + offset2) *
+                    dev_mesh.dims[0] +
+                    (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1 + offset3) *
+                    dev_mesh.dims[0] * dev_mesh.dims[1];
+        // (Curl u)_1 = d2u3 - d3u2
+        v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1+offset1, c2+offset2 + flip(s3[1]), c3+offset3) -
+                         d3<DIM1, DIM2, DIM3>(s_u2, c1+offset1, c2+offset2, c3+offset3 + flip(s2[2]));
+        // v1[globalIdx] = (s_u3[c3][c2 + flip(s3[1])][c1] - s_u3[c3][c2 - 1 + flip(s3[1])][c1]) / dev_mesh.delta[1] -
+        //                 (s_u2[c3 + flip(s2[2])][c2][c1] - s_u2[c3 - 1 + flip(s2[2])][c2][c1]) / dev_mesh.delta[2];
+        // (Curl u)_2 = d3u1 - d1u3
+        v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1+offset1, c2+offset2, c3+offset3 + flip(s1[2])) -
+                         d1<DIM1, DIM2, DIM3>(s_u3, c1+offset1 + flip(s3[0]), c2+offset2, c3+offset3);
+        // v2[globalIdx] = (s_u1[c3 + flip(s1[2])][c2][c1] - s_u1[c3 - 1 + flip(s1[2])][c2][c1]) / dev_mesh.delta[2] -
+        //                 (s_u3[c3][c2][c1 + flip(s3[0])] - s_u3[c3][c2][c1 - 1 + flip(s3[0])]) / dev_mesh.delta[0];
 
-  // (Curl u)_3 = d1u2 - d2u1
-  v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
-                   d2<DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3);
-  // v3[globalIdx] = (s_u2[c3][c2][c1 + flip(s2[0])] - s_u2[c3][c2][c1 - 1 + flip(s2[0])]) / dev_mesh.delta[0] -
-  //                 (s_u1[c3][c2 + flip(s1[1])][c1] - s_u1[c3][c2 - 1 + flip(s1[1])][c1]) / dev_mesh.delta[1];
+        // (Curl u)_3 = d1u2 - d2u1
+        v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1+offset1 + flip(s2[0]), c2+offset2, c3+offset3) -
+                         d2<DIM1, DIM2, DIM3>(s_u1, c1+offset1, c2+offset2 + flip(s1[1]), c3+offset3);
+        // v3[globalIdx] = (s_u2[c3][c2][c1 + flip(s2[0])] - s_u2[c3][c2][c1 - 1 + flip(s2[0])]) / dev_mesh.delta[0] -
+        //                 (s_u1[c3][c2 + flip(s1[1])][c1] - s_u1[c3][c2 - 1 + flip(s1[1])][c1]) / dev_mesh.delta[1];
+      }
+    }
+  }
 }
 
 template <int DIM1, int DIM2, int DIM3>
@@ -195,10 +216,10 @@ void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
   // TODO: The kernel launch parameters might need some tuning for different
   // architectures
 
-  dim3 blockSize(8, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
+  dim3 blockSize(32, 4, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
                 mesh.reduced_dim(2) / 8);
-  Kernels::compute_curl<8, 8, 8><<<gridSize, blockSize>>>
+  Kernels::compute_curl<32, 8, 8><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
        u.ptr(0), u.ptr(1), u.ptr(2),
        u.stagger(0), u.stagger(1), u.stagger(2));
