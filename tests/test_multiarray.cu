@@ -7,24 +7,24 @@
 
 using namespace Aperture;
 
-__global__
-void add(const Scalar* a, const Scalar* b, Scalar* c);
+// __global__
+// void add(const Scalar* a, const Scalar* b, Scalar* c);
 
-__global__
-void add2D(const Extent ext, const Scalar* a, const Scalar* b, Scalar* c) {
+// __global__
+// void add2D(const Extent ext, const Scalar* a, const Scalar* b, Scalar* c) {
 
-  for (int j = blockIdx.y * blockDim.y + threadIdx.y;
-       j < ext.y;
-       j += blockDim.y * gridDim.y) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-        i < ext.x;
-        i += blockDim.x * gridDim.x) {
-      size_t idx = i + j * ext.x;
-      c[idx] = a[idx] + b[idx];
-    }
-  }
+//   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+//        j < ext.y;
+//        j += blockDim.y * gridDim.y) {
+//     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+//         i < ext.x;
+//         i += blockDim.x * gridDim.x) {
+//       size_t idx = i + j * ext.x;
+//       c[idx] = a[idx] + b[idx];
+//     }
+//   }
   
-}
+// }
 
 struct Data {
   MultiArray<Scalar> a, b, c;
@@ -34,6 +34,15 @@ struct Data {
       a(x, y, z), b(x, y, z), c(x, y, z) {
     size = x * y * z;
     memSize = size * sizeof(Scalar);
+    a.assign_dev(0.0);
+    b.assign_dev(0.0);
+    c.assign_dev(0.0);
+    cudaDeviceSynchronize();
+    a.assign(0.0);
+    b.assign(0.0);
+    c.assign(0.0);
+    // b.sync_to_host();
+    // c.sync_to_host();
   }
 
   void prefetch(int deviceId) {
@@ -52,16 +61,22 @@ struct Data {
 };
 
 TEST_CASE("Initialize multi_array", "[MultiArray]") {
-  cudaFree(0);
   Data data(256, 256);
 
-  data.a.assign(1.0);
-  data.b.assign(2.0);
+  data.a.assign_dev(1.0);
+  data.b.assign_dev(2.0);
 
-  add<<<256, 256>>>(data.a.data(), data.b.data(), data.c.data());
+  // // add<<<256, 256>>>(data.a.data(), data.b.data(), data.c.data());
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
+  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>
+      (data.a.data_d(), data.b.data_d(), data.c.data_d(), data.a.extent(), detail::Op_Plus<Scalar>());
+  CudaCheckError();
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
+
+  data.c.sync_to_host();
 
   size_t N = data.a.size();
   for (size_t i = 0; i < N; i++) {
@@ -70,31 +85,31 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
 
 }
 
-TEST_CASE("Add 2D multi_array", "[MultiArray]") {
-  Data data(1500, 1500);
+// TEST_CASE("Add 2D multi_array", "[MultiArray]") {
+//   Data data(1500, 1500);
 
-  data.a.assign(1.0);
-  data.b.assign(2.0);
+//   data.a.assign(1.0);
+//   data.b.assign(2.0);
 
-  cudaDeviceProp p;
-  int deviceId;
-  cudaGetDevice(&deviceId);
-  cudaGetDeviceProperties(&p, deviceId);
-  data.prefetch(deviceId);
+//   cudaDeviceProp p;
+//   int deviceId;
+//   cudaGetDevice(&deviceId);
+//   cudaGetDeviceProperties(&p, deviceId);
+//   data.prefetch(deviceId);
 
-  dim3 blockSize(32, 32);
-  dim3 gridSize(32, 32);
-  add2D<<<gridSize, blockSize>>>(data.a.extent(), data.a.data(), data.b.data(), data.c.data());
+//   dim3 blockSize(32, 32);
+//   dim3 gridSize(32, 32);
+//   add2D<<<gridSize, blockSize>>>(data.a.extent(), data.a.data(), data.b.data(), data.c.data());
 
-  data.prefetch();
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
+//   data.prefetch();
+//   // Wait for GPU to finish before accessing on host
+//   cudaDeviceSynchronize();
 
-  size_t N = data.a.size();
-  for (size_t i = 0; i < N; i++) {
-    CHECK(data.c[i] == 3.0f);
-  }
-}
+//   size_t N = data.a.size();
+//   for (size_t i = 0; i < N; i++) {
+//     CHECK(data.c[i] == 3.0f);
+//   }
+// }
 
 TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   using namespace Aperture::detail;
@@ -105,14 +120,14 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   std::cout << data.a.extent() << std::endl;
 
   int deviceId;
-  cudaGetDevice(&deviceId);
+  // cudaGetDevice(&deviceId);
   data.prefetch(deviceId);
 
   // dim3 blockSize(32, 32);
   // dim3 gridSize(32, 32);
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(16, 16, 8);
-  Kernels::map_array_binary_op<<<gridSize, blockSize>>>(data.a.data(), data.b.data(), data.c.data(), data.a.extent(), Op_Multiply<Scalar>());
+  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(data.a.data_d(), data.b.data_d(), data.c.data_d(), data.a.extent(), Op_Multiply<Scalar>());
   CudaCheckError();
 
   data.prefetch();

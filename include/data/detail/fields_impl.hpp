@@ -19,6 +19,7 @@ void ScalarField<T>::initialize(const Func& f) {
       }
     }
   }
+  m_array.sync_to_device();
 }
 
 
@@ -37,6 +38,7 @@ void VectorField<T>::initialize(int component, const Func& f) {
       }
     }
   }
+  m_array[component].sync_to_device();
 }
 
 template <typename T>

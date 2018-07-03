@@ -106,8 +106,8 @@ class ScalarField : public FieldBase {
   void set_stagger(Stagger stagger) {
     m_stagger = stagger;
   }
-  void sync_to_device(int devId = 0) {
-    m_array.sync_to_device(devId);
+  void sync_to_device() {
+    m_array.sync_to_device();
   }
   void sync_to_host() {
     m_array.sync_to_host();
@@ -185,15 +185,15 @@ class VectorField : public FieldBase {
   }
 
   /// Setting ptr. Pointer is unmanaged!
-  void set_ptr(int n, T* p) { m_array[n].set_data(p); }
+  // void set_ptr(int n, T* p) { m_array[n].set_data(p); }
 
   /// Accessor methods
   array_type &data(int n) { return m_array[n]; }
   const array_type &data(int n) const { return m_array[n]; }
-  data_type *ptr(int n) { return m_array[n].data(); }
-  const data_type *ptr(int n) const { return m_array[n].data(); }
+  cudaPitchedPtr ptr(int n) { return m_array[n].data_d(); }
+  const cudaPitchedPtr ptr(int n) const { return m_array[n].data_d(); }
   data_type **array_ptrs() { return m_ptrs; }
-  const data_type * const*array_ptrs() const { return m_ptrs; }
+  const data_type * const* array_ptrs() const { return m_ptrs; }
   Stagger stagger(int n) const { return m_stagger[n]; }
   const std::array<Stagger, VECTOR_DIM>& stagger() const { return m_stagger; }
   std::array<Stagger, VECTOR_DIM> stagger_dual() const;
@@ -205,8 +205,8 @@ class VectorField : public FieldBase {
     m_stagger = stagger;
   }
   void set_field_type(FieldType type);
-  void sync_to_device(int devId = 0) {
-    for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_device(devId);
+  void sync_to_device() {
+    for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_device();
   }
   void sync_to_host() {
     for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_host();
