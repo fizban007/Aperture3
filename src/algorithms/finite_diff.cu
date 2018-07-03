@@ -16,12 +16,16 @@ Scalar deriv(Scalar f0, Scalar f1, Scalar delta) {
 template <int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__
 Scalar d1(Scalar array[][DIM2 + 2][DIM1 + 2], int c1, int c2, int c3) {
+  // printf("d1, %f, %f, %f, %f\n", array[c3][c2][c1 - 1], array[c3][c2][c1], dev_mesh.delta[0],
+  //        deriv(array[c3][c2][c1 - 1], array[c3][c2][c1], dev_mesh.delta[0]));
   return deriv(array[c3][c2][c1 - 1], array[c3][c2][c1], dev_mesh.delta[0]);
 }
 
 template <int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__
 Scalar d2(Scalar array[][DIM2 + 2][DIM1 + 2], int c1, int c2, int c3) {
+  // printf("d2, %f, %f, %f, %f\n", array[c3][c2 - 1][c1], array[c3][c2][c1], dev_mesh.delta[1],
+  //        deriv(array[c3][c2 - 1][c1], array[c3][c2][c1], dev_mesh.delta[1]));
   return deriv(array[c3][c2 - 1][c1], array[c3][c2][c1], dev_mesh.delta[1]);
 }
 
@@ -96,19 +100,19 @@ void compute_curl(Scalar* v1, Scalar* v2, Scalar* v3,
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
-                   d3<DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2]));
+  v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1+1, c2+1 + flip(s3[1]), c3+1) -
+                   d3<DIM1, DIM2, DIM3>(s_u2, c1+1, c2+1, c3+1 + flip(s2[2]));
   // v1[globalIdx] = (s_u3[c3][c2 + flip(s3[1])][c1] - s_u3[c3][c2 - 1 + flip(s3[1])][c1]) / dev_mesh.delta[1] -
   //                 (s_u2[c3 + flip(s2[2])][c2][c1] - s_u2[c3 - 1 + flip(s2[2])][c2][c1]) / dev_mesh.delta[2];
   // (Curl u)_2 = d3u1 - d1u3
-  v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1, c2, c3 + flip(s1[2])) -
-                   d1<DIM1, DIM2, DIM3>(s_u3, c1 + flip(s3[0]), c2, c3);
+  v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1+1, c2+1, c3+1 + flip(s1[2])) -
+                   d1<DIM1, DIM2, DIM3>(s_u3, c1+1 + flip(s3[0]), c2+1, c3+1);
   // v2[globalIdx] = (s_u1[c3 + flip(s1[2])][c2][c1] - s_u1[c3 - 1 + flip(s1[2])][c2][c1]) / dev_mesh.delta[2] -
   //                 (s_u3[c3][c2][c1 + flip(s3[0])] - s_u3[c3][c2][c1 - 1 + flip(s3[0])]) / dev_mesh.delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
-  v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
-                   d2<DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3);
+  v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1+1 + flip(s2[0]), c2+1, c3+1) -
+                   d2<DIM1, DIM2, DIM3>(s_u1, c1+1, c2+1 + flip(s1[1]), c3+1);
   // v3[globalIdx] = (s_u2[c3][c2][c1 + flip(s2[0])] - s_u2[c3][c2][c1 - 1 + flip(s2[0])]) / dev_mesh.delta[0] -
   //                 (s_u1[c3][c2 + flip(s1[1])][c1] - s_u1[c3][c2 - 1 + flip(s1[1])][c1]) / dev_mesh.delta[1];
 }

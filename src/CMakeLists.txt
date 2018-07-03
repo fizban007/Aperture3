@@ -1,7 +1,7 @@
 # if (CUDA_FOUND)
 add_definitions(-DCUDA_ENABLED)
-include_directories(${CUDA_INCLUDE_DIRS})
-message("Cuda library found, enabling the GPU part of the code.")
+# include_directories(${CUDA_INCLUDE_DIRS})
+# message("Cuda library found, enabling the GPU part of the code.")
 # else()
   # message("Cuda library not found, skipping the GPU part of the code.")
 # endif()
@@ -12,7 +12,7 @@ set(Aperture_src
   "commandline_args.cpp" "config_file.cpp"
   )
 add_library(Aperture ${Aperture_src})
-target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
+target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
 
 set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu" "data/photons.cu"
