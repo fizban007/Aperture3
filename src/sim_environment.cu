@@ -2,6 +2,7 @@
 #include "fmt/format.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/constant_mem.h"
+#include "cuda/constant_mem_func.h"
 #include <memory>
 // #include "data/detail/grid_impl.hpp"
 // #include "sim_data.h"

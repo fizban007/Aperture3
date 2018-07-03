@@ -7,6 +7,7 @@
 #include <random>
 #include "cuda/cudaUtility.h"
 #include "cuda/constant_mem.h"
+#include "cuda/constant_mem_func.h"
 #include "sim_environment.h"
 #include "catch.hpp"
 #include "cub/cub.cuh"
@@ -120,47 +121,4 @@ TEST_CASE("Sorting particles, using cub", "[Particles]") {
   cudaFree(d_temp_storage);
   cudaFree(cell_alt);
   cudaFree(x1_alt);
-}
-
-TEST_CASE("Erasing particles in guard cells", "[Particles]") {
-  // Environment env("test.toml");
-  // auto& mesh = env.mesh();
-  Quadmesh mesh;
-  mesh.dims[0] = 106;
-  mesh.dims[1] = 5;
-  mesh.dims[2] = 11;
-  mesh.guard[0] = 3;
-  mesh.guard[1] = 1;
-  mesh.guard[2] = 1;
-  mesh.tileSize[0] = 64;
-  mesh.tileSize[1] = 1;
-  mesh.tileSize[2] = 1;
-  init_dev_mesh(mesh);
-
-  size_t N = 10000000;
-  Particles ptc(N);
-
-  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(1, 0, 0), ParticleType::electron);
-  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(100, 2, 2), ParticleType::positron);
-  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(10004, 1, 2), ParticleType::electron);
-  ptc.append({0.1, 0.2, 0.1}, {0.1, 0.2, 0.1}, mesh.get_idx(100, 1, 10), ParticleType::electron);
-
-  CHECK(ptc.number() == 4);
-
-  ptc.clear_guard_cells();
-  CHECK(ptc.data().cell[0] == MAX_CELL);
-  CHECK(ptc.data().cell[1] == mesh.get_idx(100, 2, 2));
-  CHECK(ptc.data().cell[2] == MAX_CELL);
-  CHECK(ptc.data().cell[3] == MAX_CELL);
-
-  // Checking if MAX_CELL gives MAX_TILE as well
-  ptc.compute_tile_num();
-  CHECK(ptc.data().tile[0] == MAX_TILE);
-  CHECK(ptc.data().tile[1] == 1);
-  CHECK(ptc.data().tile[2] == MAX_TILE);
-  CHECK(ptc.data().tile[3] == MAX_TILE);
-
-  // Sort the particle now to see if the number updates
-  ptc.sort_by_cell();
-  CHECK(ptc.number() == 1);
 }
