@@ -6,6 +6,7 @@
 // #include <mpi.h>
 #include "data/typedefs.h"
 #include "cuda/cuda_control.h"
+#include "cuda_runtime.h"
 
 namespace Aperture {
 
@@ -194,6 +195,11 @@ struct Extent : public Vec3<int> {
   HD_INLINE const int& depth() const { return z; }
 
   HD_INLINE int size() const { return x * y * z; }
+
+  template <typename T>
+  cudaExtent cuda_ext(const T& t) const {
+    return make_cudaExtent(x*sizeof(T), y, z);
+  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

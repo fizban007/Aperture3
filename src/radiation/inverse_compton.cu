@@ -155,7 +155,7 @@ InverseCompton::emit_photons(Photons& photons, Particles& particles) {
 void
 InverseCompton::set_I0(const ScalarField<Scalar>& I0) {
   m_I0 = I0;
-  m_I0.sync_to_device(0);
+  m_I0.sync_to_device();
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 }

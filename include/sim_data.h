@@ -12,7 +12,7 @@ namespace Aperture {
 
 struct SimData {
   // SimData();
-  SimData(const Environment& env);
+  SimData(const Environment& env, int deviceId = 0);
   ~SimData();
 
   void initialize(const Environment& env);
@@ -33,6 +33,7 @@ struct SimData {
   // Keep an array of pointers for all the device pointers, convenient for
   // kernels
   Scalar** rho_ptrs;
+  int devId;
 };
 
 

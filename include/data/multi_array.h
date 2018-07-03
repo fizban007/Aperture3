@@ -6,9 +6,7 @@
 #include <algorithm>
 #include <cassert>
 
-#ifdef ENABLE_CUDA
-#include <cuda_runtime.h>
-#endif
+#include "cuda_runtime.h"
 
 namespace Aperture {
 
@@ -42,11 +40,11 @@ class MultiArray {
 
   /// Main constructor, initializes with given width, height, and
   /// depth of the array. Allocate memory in the initialization.
-  explicit MultiArray(int width, int height = 1, int depth = 1);
+  explicit MultiArray(int width, int height = 1, int depth = 1, int deviceId = 0);
 
   /// Alternative main constructor, takes in an @ref Extent object and
   /// initializes an array of the corresponding extent.
-  explicit MultiArray(const Extent& extent);
+  explicit MultiArray(const Extent& extent, int deviceId = 0);
 
   /// Standard copy constructor.
   MultiArray(const self_type& other);
@@ -66,64 +64,71 @@ class MultiArray {
   /// Linearized indexing operator, read only
   const data_type& operator[](int idx) const {
     assert(idx >= 0 && idx < _size);
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Linearized indexing operator, read and write
   data_type& operator[](int idx) {
     assert(idx >= 0 && idx < _size);
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Vector indexing operator, read only
   const data_type& operator()(int x, int y = 0, int z = 0) const {
     int idx = x + y * _extent.width() + z * _extent.width() * _extent.height();
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Vector indexing operator, read and write
   data_type& operator()(int x, int y = 0, int z = 0) {
     int idx = x + y * _extent.width() + z * _extent.width() * _extent.height();
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Vector indexing operator using an @ref Index object, read only
   const data_type& operator()(const Index& index) const {
     int idx = index.index(_extent);
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Vector indexing operator using an @ref Index object, read and write
   data_type& operator()(const Index& index) {
     int idx = index.index(_extent);
-    return _data[idx];
+    return _data_h[idx];
   }
 
   /// Copying the entire content from another vector
   void copyFrom(const self_type& other);
-  // {
-    // assert(_size == other._size);
-    // std::copy_n(other._data, _size, _data);
-  // }
 
   /// Set the whole array to a single initial value
-  void assign(const data_type& value) {
+  void assign(const data_type& value);
     // std::cout << "Assigning value " << value << " for size " << _size <<
     // std::endl;
-    std::fill_n(_data, _size, value);
-  }
+    // std::fill_n(_data, _size, value);
+  // }
+  /// Set the whole array to a single initial value through device kernel
+  void assign_dev(const data_type& value);
 
   /// Resize the array.
-  void resize(int width, int height = 1, int depth = 1);
+  void resize(int width, int height = 1, int depth = 1, int deviceId = 0);
 
   /// Resize the array according to an \ref Extent object.
-  void resize(Extent extent);
+  void resize(Extent extent, int deviceId = 0);
 
   /// Sync the content between host and device
-  void sync_to_device(int devId = 0);
+  void sync_to_device(int devId);
+
+  /// Sync the content between host and device
+  void sync_to_device();
 
   /// Sync the content between host and device
   void sync_to_host();
+
+  /// Allocate memory on both host and device
+  void alloc_mem(const Extent& ext, int deviceId = 0);
+
+  /// Free memory on both host and device
+  void free_mem();
 
   ////////////////////////////////////////////////////////////////////////////////
   //  Iterators
@@ -161,24 +166,29 @@ class MultiArray {
   const Extent& extent() const { return _extent; }
 
   /// Setting data ptr
-  void set_data(T* p) {
-    if (_data != nullptr)
-      delete[] _data;
-    _data = p;
-  }
+  // void set_data(T* p) {
+  //   if (_data != nullptr)
+  //     delete[] _data;
+  //   _data = p;
+  // }
 
   /// Direct access to the encapsulated pointer
-  T* data() { return _data; }
-  const T* data() const { return _data; }
+  T* data() { return _data_h; }
+  const T* data() const { return _data_h; }
+  cudaPitchedPtr& data_d() { return _data_d; }
+  cudaPitchedPtr data_d() const { return _data_d; }
+  int devId() const { return _devId; }
 
  private:
   void find_dim();
 
-  ptr_type _data;  ///< Pointer to the data stored
+  cudaPitchedPtr _data_d;  ///< Pointer to the data stored on the GPU
+  ptr_type _data_h;  ///< Pointer to the data stored on the host
 
   Extent _extent;  ///< Extent of the array in all dimensions
   int _size;       ///< Total size of the array
   int _dim;        ///< Dimension of the array
+  int _devId = 0;  ///< Id of the GPU where the memory is allocated
 
 };  // ----- end of class multi_array -----
 

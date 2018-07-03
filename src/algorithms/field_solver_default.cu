@@ -38,7 +38,8 @@ FieldSolver_Default::update_fields(vfield_t &E, vfield_t &B, const vfield_t &J,
   auto &mesh = grid.mesh();
   // Explicit update
   if (grid.dim() == 1) {
-    Kernels::update_field<<<512, 512>>>(E.ptr(0), J.ptr(0), m_background_j.ptr(0));
+    Kernels::update_field<<<512, 512>>>(E.data(0).data(), J.data(0).data(),
+                                        m_background_j.data(0).data());
     CudaCheckError();
   }
 
@@ -59,7 +60,7 @@ FieldSolver_Default::update_fields(Aperture::SimData &data, double dt,
 void
 FieldSolver_Default::set_background_j(const vfield_t &j) {
   m_background_j = j;
-  m_background_j.sync_to_device(0);
+  m_background_j.sync_to_device();
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 }

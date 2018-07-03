@@ -138,7 +138,7 @@ void CurrentDepositer_Esirkepov::scan_current(sfield& J) {
   if (grid.dim() == 1) {
     // In place scan
     // Logger::print_info("Scanning current");
-    auto j_ptr = thrust::device_pointer_cast(J.ptr());
+    auto j_ptr = thrust::device_pointer_cast(J.data().data());
     thrust::inclusive_scan(j_ptr, j_ptr + grid.mesh().dims[0], j_ptr);
     CudaCheckError();
   }
@@ -149,7 +149,7 @@ void CurrentDepositer_Esirkepov::scan_current(vfield& J) {
   if (grid.dim() == 1) {
     // In place scan
     Logger::print_info("Scanning current");
-    auto j_ptr = thrust::device_pointer_cast(J.ptr(0));
+    auto j_ptr = thrust::device_pointer_cast(J.data(0).data());
     thrust::inclusive_scan(j_ptr, j_ptr + grid.mesh().dims[0], j_ptr);
     CudaCheckError();
     Logger::print_debug("last j is {}", J(0, grid.mesh().dims[0] - 1));

@@ -39,13 +39,13 @@ ScalarField<T>::~ScalarField() {}
 template <typename T>
 void ScalarField<T>::initialize() {
   // Assign the field to zero, whatever 0 corresponds to for type #T
-  m_array.assign(static_cast<T>(0));
+  m_array.assign_dev(static_cast<T>(0));
 }
 
 template <typename T>
 void ScalarField<T>::assign(data_type value) {
   // Assign a uniform value to the array
-  m_array.assign(value);
+  m_array.assign_dev(value);
 }
 
 template <typename T>
@@ -76,13 +76,16 @@ template <typename T>
 void ScalarField<T>::resize (const Grid& grid) {
   this -> m_grid = &grid;
   this -> m_grid_size = grid.size();
-  m_array.resize(grid.extent());
+  m_array.resize(grid.extent(), m_array.devId());
 }
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::multiplyBy(data_type value) {
   // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MultConst<T>(value));
-  Kernels::map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_MultConst<T>(value));
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+      (m_array.data_d(), m_grid->extent(), detail::Op_MultConst<T>(value));
   return (*this);
 }
 
@@ -93,15 +96,20 @@ ScalarField<T>& ScalarField<T>::multiplyBy(
 
   // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
   //                         detail::Op_MultAssign<T>());
-  Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
-                                  detail::Op_MultAssign<T>());
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
+  Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+      (field.data().data_d(), m_array.data_d(), m_grid->extent(), detail::Op_MultAssign<T>());
   return (*this);
 }
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::addBy(data_type value) {
   // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_PlusConst<T>(value));
-  Kernels::map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_PlusConst<T>(value));
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+      (m_array.data_d(), m_grid->extent(), detail::Op_PlusConst<T>(value));
   return (*this);
 }
 
@@ -110,17 +118,22 @@ ScalarField<T>& ScalarField<T>::addBy(
     const ScalarField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
   // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
   //                         detail::Op_PlusAssign<T>());
-  Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
-                                  detail::Op_PlusAssign<T>());
+  Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+      (field.data().data_d(), m_array.data_d(), m_grid->extent(), detail::Op_PlusAssign<T>());
   return (*this);
 }
 
 template <typename T>
 ScalarField<T>& ScalarField<T>::subtractBy(data_type value) {
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
   // detail::map_multi_array(m_array.begin(), this -> m_grid -> extent(), detail::Op_MinusConst<T>(value));
-  Kernels::map_array_unary_op<<<256, 256>>>(m_array.data(), m_grid->extent(), detail::Op_MinusConst<T>(value));
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+      (m_array.data_d(), m_grid->extent(), detail::Op_MinusConst<T>(value));
   return (*this);
 }
 
@@ -130,8 +143,10 @@ ScalarField<T>& ScalarField<T>::subtractBy(const ScalarField<T> &field) {
 
   // detail::map_multi_array(m_array.begin(), field.data().begin(), this -> m_grid -> extent(),
   //                         detail::Op_MinusAssign<T>());
-  Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(), m_array.data(), m_grid->extent(),
-                                  detail::Op_MinusAssign<T>());
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(8, 8, 8);
+  Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+      (field.data().data_d(), m_array.data_d(), m_grid->extent(), detail::Op_MinusAssign<T>());
   return (*this);
 
 }
@@ -233,7 +248,7 @@ VectorField<T>& VectorField<T>::operator= ( self_type&& other) {
 template <typename T>
 void VectorField<T>::initialize() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_array[i].assign(static_cast<T>(0));
+    m_array[i].assign_dev(static_cast<T>(0));
   }
 }
 
@@ -272,13 +287,13 @@ void VectorField<T>::init_array_ptrs() {
 
 template <typename T>
 void VectorField<T>::assign(data_type value, int n) {
-  m_array[n].assign(value);
+  m_array[n].assign_dev(value);
 }
 
 template <typename T>
 void VectorField<T>::assign(data_type value) {
   for (int i = 0; i < VECTOR_DIM; i++) {
-    m_array[i].assign(value);
+    m_array[i].assign_dev(value);
   }
 }
 
@@ -303,11 +318,13 @@ void VectorField<T>::resize (const Grid& grid) {
 
 template <typename T>
 VectorField<T>& VectorField<T>::multiplyBy(data_type value) {
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // detail::map_multi_array(m_array[i].begin(), this -> m_grid -> extent(),
     //                         detail::Op_MultConst<T>(value));
-    Kernels::map_array_unary_op<<<256, 256>>>(m_array[i].data(),
-                                                 m_grid->extent(), detail::Op_MultConst<T>(value));
+    Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+        (m_array[i].data_d(), m_grid->extent(), detail::Op_MultConst<T>(value));
   }
   return (*this);
 }
@@ -316,9 +333,11 @@ template <typename T>
 VectorField<T>& VectorField<T>::multiplyBy(const ScalarField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(), m_array[i].data(), m_grid->extent(),
-                                  detail::Op_MultAssign<T>());
+    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+        (field.data().data_d(), m_array[i].data_d(), m_grid->extent(), detail::Op_MultAssign<T>());
     // detail::map_multi_array(m_array[i].begin(), field.data().begin(),
     //                         this -> m_grid -> extent(), detail::Op_MultAssign<T>());
   }
@@ -329,8 +348,10 @@ template <typename T>
 VectorField<T>& VectorField<T>::addBy(data_type value, int n) {
   // detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
   //                         detail::Op_PlusConst<T>(value));
-  Kernels::map_array_unary_op<<<256, 256>>>(m_array[n].data(),
-                                               m_grid->extent(), detail::Op_PlusConst<T>(value));
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+      (m_array[n].data_d(), m_grid->extent(), detail::Op_PlusConst<T>(value));
   return (*this);
 }
 
@@ -338,11 +359,13 @@ template <typename T>
 VectorField<T>& VectorField<T>::addBy(const VectorField<T>& field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
     //                         this -> m_grid -> extent(), detail::Op_PlusAssign<T>());
-    Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(i), m_array[i].data(), m_grid->extent(),
-                                  detail::Op_PlusAssign<T>());
+    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+        (field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(), detail::Op_PlusAssign<T>());
   }
   return (*this);
 }
@@ -351,8 +374,10 @@ template <typename T>
 VectorField<T>& VectorField<T>::subtractBy(data_type value, int n) {
   // detail::map_multi_array(m_array[n].begin(), this -> m_grid -> extent(),
   //                         detail::Op_MinusConst<T>(value));
-  Kernels::map_array_unary_op<<<256, 256>>>(m_array[n].data(),
-                                               m_grid->extent(), detail::Op_MinusConst<T>(value));
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
+      (m_array[n].data_d(), m_grid->extent(), detail::Op_MinusConst<T>(value));
   return (*this);
 }
 
@@ -360,9 +385,11 @@ template <typename T>
 VectorField<T>& VectorField<T>::subtractBy(const VectorField<T> &field) {
   this -> check_grid_extent(this -> m_grid -> extent(), field.grid().extent());
 
+  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    Kernels::map_array_binary_op<<<256, 256>>>(field.ptr(i), m_array[i].data(), m_grid->extent(),
-                                  detail::Op_MinusAssign<T>());
+    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>
+        (field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(), detail::Op_MinusAssign<T>());
     // detail::map_multi_array(m_array[i].begin(), field.data(i).begin(),
     //                         this -> m_grid -> extent(), detail::Op_MinusAssign<T>());
   }
