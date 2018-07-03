@@ -43,37 +43,37 @@ void init_shared_memory(Scalar s_u1[][DIM2 + 2][DIM1 + 2],
                         const Scalar* u1, const Scalar* u2, const Scalar* u3,
                         int globalIdx, int c1, int c2, int c3) {
   // Load field values into shared memory
-  s_u1[c3 + 1][c2 + 1][c1 + 1] = u1[globalIdx];
-  s_u2[c3 + 1][c2 + 1][c1 + 1] = u2[globalIdx];
-  s_u3[c3 + 1][c2 + 1][c1 + 1] = u3[globalIdx];
+  s_u1[c3][c2][c1] = u1[globalIdx];
+  s_u2[c3][c2][c1] = u2[globalIdx];
+  s_u3[c3][c2][c1] = u3[globalIdx];
 
   // Handle extra guard cells
-  if (c1 == 0) {
-    s_u1[c3 + 1][c2 + 1][c1] = u1[globalIdx - 1];
-    s_u2[c3 + 1][c2 + 1][c1] = u2[globalIdx - 1];
-    s_u3[c3 + 1][c2 + 1][c1] = u3[globalIdx - 1];
-  } else if (c1 == DIM1 - 1) {
-    s_u1[c3 + 1][c2 + 1][c1 + 2] = u1[globalIdx + 1];
-    s_u2[c3 + 1][c2 + 1][c1 + 2] = u2[globalIdx + 1];
-    s_u3[c3 + 1][c2 + 1][c1 + 2] = u3[globalIdx + 1];
+  if (c1 == 1) {
+    s_u1[c3][c2][c1 - 1] = u1[globalIdx - 1];
+    s_u2[c3][c2][c1 - 1] = u2[globalIdx - 1];
+    s_u3[c3][c2][c1 - 1] = u3[globalIdx - 1];
+  } else if (c1 == DIM1) {
+    s_u1[c3][c2][c1 + 1] = u1[globalIdx + 1];
+    s_u2[c3][c2][c1 + 1] = u2[globalIdx + 1];
+    s_u3[c3][c2][c1 + 1] = u3[globalIdx + 1];
   }
-  if (c2 == 0) {
-    s_u1[c3 + 1][c2][c1 + 1] = u1[globalIdx - dev_mesh.dims[0]];
-    s_u2[c3 + 1][c2][c1 + 1] = u2[globalIdx - dev_mesh.dims[0]];
-    s_u3[c3 + 1][c2][c1 + 1] = u3[globalIdx - dev_mesh.dims[0]];
-  } else if (c2 == DIM2 - 1) {
-    s_u1[c3 + 1][c2 + 2][c1 + 1] = u1[globalIdx + dev_mesh.dims[0]];
-    s_u2[c3 + 1][c2 + 2][c1 + 1] = u2[globalIdx + dev_mesh.dims[0]];
-    s_u3[c3 + 1][c2 + 2][c1 + 1] = u3[globalIdx + dev_mesh.dims[0]];
+  if (c2 == 1) {
+    s_u1[c3][c2 - 1][c1] = u1[globalIdx - dev_mesh.dims[0]];
+    s_u2[c3][c2 - 1][c1] = u2[globalIdx - dev_mesh.dims[0]];
+    s_u3[c3][c2 - 1][c1] = u3[globalIdx - dev_mesh.dims[0]];
+  } else if (c2 == DIM2) {
+    s_u1[c3][c2 + 1][c1] = u1[globalIdx + dev_mesh.dims[0]];
+    s_u2[c3][c2 + 1][c1] = u2[globalIdx + dev_mesh.dims[0]];
+    s_u3[c3][c2 + 1][c1] = u3[globalIdx + dev_mesh.dims[0]];
   }
-  if (c3 == 0) {
-    s_u1[c3][c2 + 1][c1 + 1] = u1[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
-    s_u2[c3][c2 + 1][c1 + 1] = u2[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
-    s_u3[c3][c2 + 1][c1 + 1] = u3[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
-  } else if (c3 == DIM3 - 1) {
-    s_u1[c3 + 2][c2 + 1][c1 + 1] = u1[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
-    s_u2[c3 + 2][c2 + 1][c1 + 1] = u2[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
-    s_u3[c3 + 2][c2 + 1][c1 + 1] = u3[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
+  if (c3 == 1) {
+    s_u1[c3 - 1][c2][c1] = u1[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
+    s_u2[c3 - 1][c2][c1] = u2[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
+    s_u3[c3 - 1][c2][c1] = u3[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
+  } else if (c3 == DIM3) {
+    s_u1[c3 + 1][c2][c1] = u1[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
+    s_u2[c3 + 1][c2][c1] = u2[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
+    s_u3[c3 + 1][c2][c1] = u3[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
   }
 }
 
@@ -89,10 +89,10 @@ void compute_curl(Scalar* v1, Scalar* v2, Scalar* v3,
 
   // Load indices
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
-  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 +
-                  (dev_mesh.guard[1] + t2 * DIM2 + c2) * dev_mesh.dims[0] +
-                  (dev_mesh.guard[2] + t3 * DIM3 + c3) *
+  int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
+  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 +
+                  (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1) * dev_mesh.dims[0] +
+                  (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1) *
                   dev_mesh.dims[0] * dev_mesh.dims[1];
   init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalIdx, c1, c2, c3);
@@ -100,19 +100,19 @@ void compute_curl(Scalar* v1, Scalar* v2, Scalar* v3,
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1+1, c2+1 + flip(s3[1]), c3+1) -
-                   d3<DIM1, DIM2, DIM3>(s_u2, c1+1, c2+1, c3+1 + flip(s2[2]));
+  v1[globalIdx] += d2<DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
+                   d3<DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2]));
   // v1[globalIdx] = (s_u3[c3][c2 + flip(s3[1])][c1] - s_u3[c3][c2 - 1 + flip(s3[1])][c1]) / dev_mesh.delta[1] -
   //                 (s_u2[c3 + flip(s2[2])][c2][c1] - s_u2[c3 - 1 + flip(s2[2])][c2][c1]) / dev_mesh.delta[2];
   // (Curl u)_2 = d3u1 - d1u3
-  v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1+1, c2+1, c3+1 + flip(s1[2])) -
-                   d1<DIM1, DIM2, DIM3>(s_u3, c1+1 + flip(s3[0]), c2+1, c3+1);
+  v2[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u1, c1, c2, c3 + flip(s1[2])) -
+                   d1<DIM1, DIM2, DIM3>(s_u3, c1 + flip(s3[0]), c2, c3);
   // v2[globalIdx] = (s_u1[c3 + flip(s1[2])][c2][c1] - s_u1[c3 - 1 + flip(s1[2])][c2][c1]) / dev_mesh.delta[2] -
   //                 (s_u3[c3][c2][c1 + flip(s3[0])] - s_u3[c3][c2][c1 - 1 + flip(s3[0])]) / dev_mesh.delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
-  v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1+1 + flip(s2[0]), c2+1, c3+1) -
-                   d2<DIM1, DIM2, DIM3>(s_u1, c1+1, c2+1 + flip(s1[1]), c3+1);
+  v3[globalIdx] += d1<DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
+                   d2<DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3);
   // v3[globalIdx] = (s_u2[c3][c2][c1 + flip(s2[0])] - s_u2[c3][c2][c1 - 1 + flip(s2[0])]) / dev_mesh.delta[0] -
   //                 (s_u1[c3][c2 + flip(s1[1])][c1] - s_u1[c3][c2 - 1 + flip(s1[1])][c1]) / dev_mesh.delta[1];
 }
@@ -128,10 +128,10 @@ void compute_div(Scalar* v, const Scalar* u1, const Scalar* u2, const Scalar* u3
 
   // Load indices
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
-  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 +
-                  (dev_mesh.guard[1] + t2 * DIM2 + c2) * dev_mesh.dims[0] +
-                  (dev_mesh.guard[2] + t3 * DIM3 + c3) *
+  int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
+  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1-1 +
+                  (dev_mesh.guard[1] + t2 * DIM2 + c2-1) * dev_mesh.dims[0] +
+                  (dev_mesh.guard[2] + t3 * DIM3 + c3-1) *
                   dev_mesh.dims[0] * dev_mesh.dims[1];
   init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalIdx, c1, c2, c3);
@@ -152,30 +152,30 @@ void compute_grad(Scalar* v1, Scalar* v2, Scalar* v3,
 
   // Load indices
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
-  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 +
-                  (dev_mesh.guard[1] + t2 * DIM2 + c2) * dev_mesh.dims[0] +
-                  (dev_mesh.guard[2] + t3 * DIM3 + c3) *
+  int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
+  int globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1-1 +
+                  (dev_mesh.guard[1] + t2 * DIM2 + c2-1) * dev_mesh.dims[0] +
+                  (dev_mesh.guard[2] + t3 * DIM3 + c3-1) *
                   dev_mesh.dims[0] * dev_mesh.dims[1];
 
   // Load field values into shared memory
-  s_u[c3 + 1][c2 + 1][c1 + 1] = u[globalIdx];
+  s_u[c3][c2][c1] = u[globalIdx];
 
   // Handle extra guard cells
-  if (c1 == 0) {
-    s_u[c3 + 1][c2 + 1][c1] = u[globalIdx - 1];
-  } else if (c1 == DIM1 - 1) {
-    s_u[c3 + 1][c2 + 1][c1 + 2] = u[globalIdx + 1];
+  if (c1 == 1) {
+    s_u[c3][c2][c1 - 1] = u[globalIdx - 1];
+  } else if (c1 == DIM1) {
+    s_u[c3][c2][c1 + 1] = u[globalIdx + 1];
   }
-  if (c2 == 0) {
-    s_u[c3 + 1][c2][c1 + 1] = u[globalIdx - dev_mesh.dims[0]];
-  } else if (c2 == DIM2 - 1) {
-    s_u[c3 + 1][c2 + 2][c1 + 1] = u[globalIdx + dev_mesh.dims[0]];
+  if (c2 == 1) {
+    s_u[c3][c2 - 1][c1] = u[globalIdx - dev_mesh.dims[0]];
+  } else if (c2 == DIM2) {
+    s_u[c3][c2 + 1][c1] = u[globalIdx + dev_mesh.dims[0]];
   }
-  if (c3 == 0) {
-    s_u[c3][c2 + 1][c1 + 1] = u[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
-  } else if (c3 == DIM3 - 1) {
-    s_u[c3 + 2][c2 + 1][c1 + 1] = u[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
+  if (c3 == 1) {
+    s_u[c3 - 1][c2][c1] = u[globalIdx - dev_mesh.dims[0] * dev_mesh.dims[1]];
+  } else if (c3 == DIM3) {
+    s_u[c3 + 1][c2][c1] = u[globalIdx + dev_mesh.dims[0] * dev_mesh.dims[1]];
   }
   __syncthreads();
 
