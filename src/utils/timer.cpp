@@ -35,3 +35,21 @@ timer::show_duration_since_stamp(const std::string& routine_name, const std::str
     std::cout << dur.count() << "ns" << std::endl;
   }
 }
+
+float
+timer::get_duration_since_stamp(const std::string &unit, const std::string &stamp_name) {
+  t_now = high_resolution_clock::now();
+  if (unit == "millisecond" || unit == "ms") {
+    auto dur = duration_cast<milliseconds>(t_now - t_stamps[stamp_name]);
+    return dur.count();
+  } else if (unit == "microsecond" || unit == "us") {
+    auto dur = duration_cast<microseconds>(t_now - t_stamps[stamp_name]);
+    return dur.count();
+  } else if (unit == "nanosecond" || unit == "ns") {
+    auto dur = duration_cast<nanoseconds>(t_now - t_stamps[stamp_name]);
+    return dur.count();
+  } else {
+    auto dur = duration_cast<duration<float, std::ratio<1, 1> > >(t_now - t_stamps[stamp_name]);
+    return dur.count();
+  }
+}
