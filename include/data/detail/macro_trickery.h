@@ -7,6 +7,10 @@
 #include <boost/preprocessor/seq/to_tuple.hpp>
 #include <boost/preprocessor/seq/fold_right.hpp>
 
+////////////////////////////////////////////////////////////////////
+// These are helper macros for defining the particle data structure.
+////////////////////////////////////////////////////////////////////
+
 #define ESC(...) __VA_ARGS__
 
 #define EXPAND_ELEMS(macro, elem)               \
@@ -44,6 +48,9 @@
 // I.e. (a, b)(c, d) becomes ((a, b))((c, d))
 #define GLK_PP_SEQ_DOUBLE_PARENS(seq)                       \
   BOOST_PP_CAT(GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0 seq, _END)
+
+////////////////////////////////////////////////////////////////////
+
 
 #define DEF_PARTICLE_STRUCT(name, content)                              \
   namespace Aperture {                                                  \

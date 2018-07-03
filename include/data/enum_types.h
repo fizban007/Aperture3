@@ -48,7 +48,7 @@ enum class FieldBCType {
 };  // ----- end of enum FieldBCType -----
 
 // Use util functions check_bit, set_bit, bit_or, clear_bit, and toggle_bit to
-// interact with particle and photon flags
+// interact with particle and photon flags. These are defined from lower bits.
 enum class ParticleFlag : uint32_t {
   tracked = 1,
   ignore_force,
