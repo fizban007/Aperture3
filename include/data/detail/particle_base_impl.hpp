@@ -42,7 +42,8 @@ void compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
        i < num;
        i += blockDim.x * gridDim.x) {
     // tile[i] = cell[i] / dev_mesh.tileSize[0];
-    tile[i] = dev_mesh.tile_id(cell[i]);
+    if (i < num)
+      tile[i] = dev_mesh.tile_id(cell[i]);
   }
 }
 
