@@ -46,6 +46,8 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl", "[FiniteDiff]") {
   Scalar d1du2 = (u(1, half, half, half) - u(1, half-1, half, half)) / mesh.delta[0];
   Scalar d2du1 = (u(0, half, half, half) - u(0, half, half-1, half)) / mesh.delta[1];
   CHECK(d1du2 - d2du1 == Approx(-1.0f));
+  u.sync_to_device(0);
+  cudaDeviceSynchronize();
 
   timer::stamp();
   // Compute the curl and add the result to v
@@ -54,10 +56,15 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl", "[FiniteDiff]") {
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Taking curl", "ms");
 
-  for (int k = mesh.guard[2]; k < mesh.dims[2] - mesh.guard[2]; k++) {
-    for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1]; j++) {
-      for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-        REQUIRE(v(2, i, j, k) == Approx(-1.0f));
+  for (int k = 0; k < mesh.dims[2]; k++) {
+    for (int j = 0; j < mesh.dims[1]; j++) {
+      for (int i = 0; i < mesh.dims[0]; i++) {
+        if (i == 0 || i == mesh.dims[0] - 1 ||
+            j == 0 || j == mesh.dims[1] - 1 ||
+            k == 0 || k == mesh.dims[2] - 1)
+          REQUIRE(v(2, i, j, k) == 0.0f);
+        else
+          REQUIRE(v(2, i, j, k) == Approx(-1.0f));
       }
     }
   }
@@ -71,6 +78,8 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
   u.initialize(1, [](Scalar x1, Scalar x2, Scalar x3) {
                     return 2.0 * x2;
                   });
+  u.sync_to_device(0);
+  cudaDeviceSynchronize();
 
   timer::stamp();
   // Compute the curl and add the result to v
@@ -79,10 +88,15 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Taking div", "ms");
 
-  for (int k = mesh.guard[2]; k < mesh.dims[2] - mesh.guard[2]; k++) {
-    for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1]; j++) {
-      for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-        REQUIRE(f(i, j, k) == Approx(5.0f));
+  for (int k = 0; k < mesh.dims[2]; k++) {
+    for (int j = 0; j < mesh.dims[1]; j++) {
+      for (int i = 0; i < mesh.dims[0]; i++) {
+        if (i == 0 || i == mesh.dims[0] - 1 ||
+            j == 0 || j == mesh.dims[1] - 1 ||
+            k == 0 || k == mesh.dims[2] - 1)
+          REQUIRE(f(i, j, k) == 0.0f);
+        else
+          REQUIRE(f(i, j, k) == Approx(5.0f));
       }
     }
   }
