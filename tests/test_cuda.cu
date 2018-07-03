@@ -3,6 +3,7 @@
 #include "catch.hpp"
 #include "sim_environment.h"
 #include "cuda/constant_mem.h"
+#include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
 
 using namespace Aperture;
