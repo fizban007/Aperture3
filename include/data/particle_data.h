@@ -60,6 +60,11 @@ DEF_PARTICLE_STRUCT(particle,
                     (uint32_t, flag, 0)
                     );
 
+// We use a 32-bit integer to give every particle a "flag". The highest 3 bits
+// are used to represent the particle species (able to represent 8 different
+// kinds of particles). The lower bits are given to pre-defined `ParticleFlag`s
+// in the `enum_types.h` header.
+
 DEF_PARTICLE_STRUCT(photon,
                     (Aperture::Pos_t, x1, 0.0)
                     (Aperture::Pos_t, x2, 0.0)
