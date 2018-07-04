@@ -99,8 +99,8 @@ class ScalarField : public FieldBase {
   // Accessor methods
   array_type &data() { return m_array; }
   const array_type &data() const { return m_array; }
-  data_type *ptr() { return m_array.data(); }
-  const data_type *ptr() const { return m_array.data(); }
+  cudaPitchedPtr& ptr() { return m_array.data_d(); }
+  cudaPitchedPtr ptr() const { return m_array.data_d(); }
   Stagger stagger() const { return m_stagger; }
 
   void set_stagger(Stagger stagger) {
