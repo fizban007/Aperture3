@@ -112,6 +112,9 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
 // }
 
 TEST_CASE("Map Array Multiply", "[MultiArray]")  {
+  int deviceId;
+  cudaGetDevice(&deviceId);
+  std::cout << "device is " << deviceId << std::endl;
   using namespace Aperture::detail;
   Data data(150, 150, 100);
 
@@ -119,8 +122,6 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   data.b.assign(1.5);
   std::cout << data.a.extent() << std::endl;
 
-  int deviceId;
-  // cudaGetDevice(&deviceId);
   data.prefetch(deviceId);
 
   // dim3 blockSize(32, 32);
