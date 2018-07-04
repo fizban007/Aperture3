@@ -8,7 +8,7 @@ namespace Aperture {
 
 namespace Kernels {
 
-#define PAD 1
+const int pad = 1;
 
 HD_INLINE
 Scalar deriv(Scalar f0, Scalar f1, Scalar delta) {
@@ -37,30 +37,30 @@ Scalar d3(Scalar array[][DIM2 + 2][DIM1 + 2], int c1, int c2, int c3) {
   return deriv(array[c3 - 1][c2][c1], array[c3][c2][c1], dev_mesh.delta[2]);
 }
 
-template <int TILE1, int TILE2>
+template <int DIM1, int DIM2>
 __global__
 void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
-  __shared__ Scalar s_f[TILE2][TILE1 + PAD*2];
+  __shared__ Scalar s_f[DIM2][DIM1 + pad*2];
 
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
-      // j = threadIdx.y;
-  int si = threadIdx.x + PAD;
-  int t2 = blockIdx.y * blockDim.y + dev_mesh.guard[1],
-       k = blockIdx.z + dev_mesh.guard[2],
-      t3 = (k * f.ysize + (threadIdx.y + t2)) * f.pitch;
+  int si = threadIdx.x + pad;
+  // int t2 = blockIdx.y * blockDim.y + dev_mesh.guard[1],
+       // k = blockIdx.z + dev_mesh.guard[2];
+  int globalOffset = ((blockIdx.z + dev_mesh.guard[2]) * f.ysize +
+                      (threadIdx.y + blockIdx.y * blockDim.y +
+                       dev_mesh.guard[1])) * f.pitch;
 
-  Scalar* row = (Scalar*)((char*)f.ptr + t3);
-  Scalar* row_df = (Scalar*)((char*)df.ptr + t3);
-  // int offset = 1 + i;
+  Scalar* row = (Scalar*)((char*)f.ptr + globalOffset);
+  Scalar* row_df = (Scalar*)((char*)df.ptr + globalOffset);
 
   s_f[threadIdx.y][si] = row[i];
   // __syncthreads();
 
   // Fill the boundary guard cells
-  if (si < PAD * 2) {
-    s_f[threadIdx.y][si - PAD] = row[i - PAD];
-  // } else if (i >= TILE1 - PAD) {
-    s_f[threadIdx.y][si + TILE1] = row[i + TILE1];
+  if (si < pad * 2) {
+    s_f[threadIdx.y][si - pad] = row[i - pad];
+    s_f[threadIdx.y][si + DIM1] = row[i + DIM1];
+    // printf("%f\n", dev_mesh.delta[0]);
   }
   __syncthreads();
 
@@ -70,50 +70,54 @@ void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
                dev_mesh.delta[0];
 }
 
-template <int TILE1, int TILE2>
+template <int DIM1, int DIM2>
 __global__
-void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, Stagger s, Scalar q) {
-  __shared__ Scalar s_f[TILE2 + PAD*2][TILE1];
+void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
+  __shared__ Scalar s_f[DIM2 + pad*2][DIM1];
 
-  int i = threadIdx.x;
-  int t1 = blockIdx.x * blockDim.x,
-      t2 = TILE2 * blockIdx.y,
-       k = blockIdx.z;
+  int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
+  // int t2 = (DIM2 * blockIdx.y + dev_mesh.guard[1]) * f.pitch,
+  //      k = (blockIdx.z + dev_mesh.guard[2]) * f.pitch * f.ysize;
+  int offset = (DIM2 * blockIdx.y + dev_mesh.guard[1]
+               + (blockIdx.z + dev_mesh.guard[2]) * f.ysize) * f.pitch;
 
-  for (int j = threadIdx.y; j < TILE2; j += blockDim.y) {
-    int sj = j + PAD;
-    size_t globalOffset = (dev_mesh.guard[2] + k) * f.pitch * f.ysize +
-                          (dev_mesh.guard[1] + j + t2) * f.pitch +
-                          (dev_mesh.guard[0] + i + t1) * sizeof(Scalar);
-    s_f[sj][i] = *(Scalar*)((char*)f.ptr + globalOffset);
+  for (int j = threadIdx.y; j < DIM2; j += blockDim.y) {
+    int sj = j + pad;
+    // size_t globalOffset = k * f.pitch * f.ysize +
+    //                       (j + t2) * f.pitch +
+    //                       i * sizeof(Scalar);
+    Scalar* row = (Scalar*)((char*)f.ptr + offset
+                            + j * f.pitch);
+    s_f[sj][threadIdx.x] = row[i];
+    // s_f[sj][threadIdx.x] = 0.0;
   }
 
   __syncthreads();
 
   // Fill the guard cells
-  if (threadIdx.y < PAD) {
-    size_t offset = (dev_mesh.guard[2] + k) * f.pitch * f.ysize +
-                    (dev_mesh.guard[1] + threadIdx.y - PAD + t2) * f.pitch +
-                    (dev_mesh.guard[0] + i + t1) * sizeof(Scalar);
-    s_f[threadIdx.y][i] = *(Scalar*)((char*)f.ptr + offset);
-  // } else if (threadIdx.y >= blockDim.y - PAD) {
-    offset = (dev_mesh.guard[2] + k) * f.pitch * f.ysize +
-             (dev_mesh.guard[1] + TILE2 + threadIdx.y + t2) * f.pitch +
-             (dev_mesh.guard[0] + i + t1) * sizeof(Scalar);
-    s_f[TILE2 + PAD + threadIdx.y][i] = *(Scalar*)((char*)f.ptr + offset);
+  if (threadIdx.y < pad) {
+    // char* ptr = ((char*)f.ptr) + (threadIdx.y - pad) * f.pitch + offset;
+    Scalar* row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y - pad) * f.pitch);
+    // s_f[threadIdx.y][threadIdx.x] = ((Scalar*)ptr)[i];
+    s_f[threadIdx.y][threadIdx.x] = row[i];
+    // s_f[threadIdx.y][threadIdx.x] = 0.0f;
+  // } else if (threadIdx.y >= blockDim.y - pad) {
+    // ptr += (DIM2 + pad) * f.pitch;
+    row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM2) * f.pitch);
+    s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = row[i];
+    // s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = ((Scalar*)ptr)[i];
+    // s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = 0.0f;
   }
 
   __syncthreads();
 
   // compute the derivative
-  for (int j = threadIdx.y; j < TILE2; j += blockDim.y) {
-    int sj = j + PAD;
-    size_t globalOffset = (dev_mesh.guard[2] + k) * f.pitch * f.ysize +
-                          (dev_mesh.guard[1] + j + t2) * f.pitch +
-                          (dev_mesh.guard[0] + i + t1) * sizeof(Scalar);
-    (*(Scalar*)((char*)df.ptr + globalOffset)) += deriv(s_f[sj + flip(s[1]) - 1][i],
-                                                        s_f[sj + flip(s[1])][i],
-                                                        dev_mesh.delta[1]) * q;
+  for (int j = threadIdx.y; j < DIM2; j += blockDim.y) {
+    int sj = j + pad;
+    Scalar* row_df = (Scalar*)((char*)df.ptr + j * df.pitch + offset);
+    row_df[i] += (s_f[sj + stagger][threadIdx.x] -
+                  s_f[sj + stagger - 1][threadIdx.x]) * q /
+                 dev_mesh.delta[1];
   }
 }
 
@@ -307,23 +311,24 @@ void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
   // TODO: The kernel launch parameters might need some tuning for different
   // architectures
 
-  dim3 blockSize(64, 8, 1);
-  dim3 gridSize(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2));
   // Kernels::compute_curl<16, 8, 8><<<gridSize, blockSize>>>
   //     (result.ptr(0), result.ptr(1), result.ptr(2),
   //      u.ptr(0), u.ptr(1), u.ptr(2),
   //      u.stagger(0), u.stagger(1), u.stagger(2));
+
+  dim3 blockSize(64, 8, 1);
+  dim3 gridSize(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2));
   Kernels::deriv_x<64, 8><<<gridSize, blockSize>>>
       (result.ptr(2), u.ptr(1), flip(u.stagger(1)[0]), 1.0);
   CudaCheckError();
 
-  // blockSize = dim3(32, 16, 1);
-  // gridSize = dim3(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
-  //                 mesh.reduced_dim(2));
-  // Kernels::deriv_y<32, 64><<<gridSize, blockSize>>>
-  //     (result.ptr(2), u.ptr(0), u.stagger(0), -1.0);
-  // CudaCheckError();
+  blockSize = dim3(32, 16, 1);
+  gridSize = dim3(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
+                  mesh.reduced_dim(2));
+  Kernels::deriv_y<32, 64><<<gridSize, blockSize>>>
+      (result.ptr(2), u.ptr(0), flip(u.stagger(0)[1]), -1.0);
+  CudaCheckError();
 }
 
 void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
