@@ -78,7 +78,7 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
 
   for (Index_t i = 0; i < data.num_species; i++) {
     data.Rho[i].initialize();
-    rho_ptrs[i] = data.Rho[i].ptr();
+    rho_ptrs[i] = data.Rho[i].data().data();
     // data.J_s[i].initialize();
     // data.V[i].initialize();
     // compute_delta_rho(data.J_s[i], data.Rho[i], part[i], dt);
