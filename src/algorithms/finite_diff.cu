@@ -8,7 +8,8 @@ namespace Aperture {
 
 namespace Kernels {
 
-#define PAD 1
+// #define PAD 1
+const int pad = 1;
 
 HD_INLINE
 Scalar deriv(Scalar f0, Scalar f1, Scalar delta) {
@@ -40,13 +41,13 @@ Scalar d3(Scalar array[][DIM2 + 2][DIM1 + 2], int c1, int c2, int c3) {
 template <int DIM1, int DIM2>
 __global__
 void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
-  __shared__ Scalar s_f[DIM2][DIM1 + PAD*2];
+  __shared__ Scalar s_f[DIM2][DIM1 + pad*2];
 
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
-  int si = threadIdx.x + PAD;
+  int si = threadIdx.x + pad;
   // int t2 = blockIdx.y * blockDim.y + dev_mesh.guard[1],
        // k = blockIdx.z + dev_mesh.guard[2];
-  int globalOffset = ((blockIdx.z + dev_mesh.guard[2]) * f.ysize +
+  size_t globalOffset = ((blockIdx.z + dev_mesh.guard[2]) * f.ysize +
                       (threadIdx.y + blockIdx.y * blockDim.y +
                        dev_mesh.guard[1])) * f.pitch;
 
@@ -57,8 +58,8 @@ void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   // __syncthreads();
 
   // Fill the boundary guard cells
-  if (si < PAD * 2) {
-    s_f[threadIdx.y][si - PAD] = row[i - PAD];
+  if (si < pad * 2) {
+    s_f[threadIdx.y][si - pad] = row[i - pad];
     s_f[threadIdx.y][si + DIM1] = row[i + DIM1];
     // printf("%f\n", dev_mesh.delta[0]);
   }
@@ -73,16 +74,16 @@ void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
 template <int DIM1, int DIM2>
 __global__
 void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
-  __shared__ Scalar s_f[DIM2 + PAD*2][DIM1];
+  __shared__ Scalar s_f[DIM2 + pad*2][DIM1];
 
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
-  int offset = (DIM2 * blockIdx.y + dev_mesh.guard[1]) * f.pitch +
-               (blockIdx.z + dev_mesh.guard[2]) * f.ysize * f.pitch;
+  long offset = ((DIM2 * blockIdx.y) +
+                   (blockIdx.z + dev_mesh.guard[2]) * f.ysize) * f.pitch;
 
   for (int j = threadIdx.y; j < DIM2; j += blockDim.y) {
-    int sj = j + PAD;
+    int sj = j + pad;
     Scalar* row = (Scalar*)((char*)f.ptr + offset
-                            + j * f.pitch);
+                            + (j + dev_mesh.guard[1]) * f.pitch);
     s_f[sj][threadIdx.x] = row[i];
     // s_f[sj][threadIdx.x] = 0.0;
   }
@@ -90,21 +91,23 @@ void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   __syncthreads();
 
   // Fill the guard cells
-  if (threadIdx.y < PAD) {
-    Scalar* row = (Scalar*)((char*)f.ptr + offset + threadIdx.y * f.pitch);
+  if (threadIdx.y < pad) {
+    // if (threadIdx.y == 0 && blockIdx.y == 0)
+    //   printf("Diff is %d\n", offset + (threadIdx.y - pad) * (int)f.pitch);
+    Scalar* row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y - pad + dev_mesh.guard[1]) * f.pitch);
     s_f[threadIdx.y][threadIdx.x] = row[i];
     // s_f[threadIdx.y][threadIdx.x] = 0.0f;
-    row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM2) * f.pitch);
-    s_f[DIM2 + PAD + threadIdx.y][threadIdx.x] = row[i];
-    // s_f[DIM2 + PAD + threadIdx.y][threadIdx.x] = 0.0f;
+    row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM2 + dev_mesh.guard[1]) * f.pitch);
+    s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = row[i];
+    // s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = 0.0f;
   }
 
   __syncthreads();
 
   // compute the derivative
   for (int j = threadIdx.y; j < DIM2; j += blockDim.y) {
-    int sj = j + PAD;
-    Scalar* row_df = (Scalar*)((char*)df.ptr + j * df.pitch + offset);
+    int sj = j + pad;
+    Scalar* row_df = (Scalar*)((char*)df.ptr + (j + dev_mesh.guard[1]) * df.pitch + offset);
     row_df[i] += (s_f[sj + stagger][threadIdx.x] -
                   s_f[sj + stagger - 1][threadIdx.x]) * q /
                  dev_mesh.delta[1];
@@ -114,17 +117,18 @@ void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
 template <int DIM1, int DIM3>
 __global__
 void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
-  __shared__ Scalar s_f[DIM3 + PAD*2][DIM1];
+  __shared__ Scalar s_f[DIM3 + pad*2][DIM1];
 
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
-  int offset = (blockIdx.z + dev_mesh.guard[1]) * f.pitch +
-               (DIM3 * blockIdx.y + dev_mesh.guard[2]) * f.ysize * f.pitch;
+  int dz = f.ysize * f.pitch;
+  long offset = (blockIdx.z + dev_mesh.guard[1]) * f.pitch +
+               (DIM3 * blockIdx.y) * dz;
                
 
   for (int j = threadIdx.y; j < DIM3; j += blockDim.y) {
-    int sj = j + PAD;
+    int sj = j + pad;
     Scalar* row = (Scalar*)((char*)f.ptr + offset
-                            + j * f.pitch * f.ysize);
+                            + (j + dev_mesh.guard[2]) * dz);
     s_f[sj][threadIdx.x] = row[i];
     // s_f[sj][threadIdx.x] = 0.0;
   }
@@ -132,21 +136,23 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   __syncthreads();
 
   // Fill the guard cells
-  if (threadIdx.y < PAD) {
-    Scalar* row = (Scalar*)((char*)f.ptr + offset + threadIdx.y * f.pitch * f.ysize);
+  if (threadIdx.y < pad) {
+    // if (threadIdx.x == 3 && threadIdx.y == 0 && blockIdx.x == 5 && blockIdx.y == 0)
+    //   printf("Diff is %d\n", offset + (threadIdx.y - pad)*f.pitch);
+    Scalar* row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y - pad + dev_mesh.guard[2]) * dz);
     s_f[threadIdx.y][threadIdx.x] = row[i];
     // s_f[threadIdx.y][threadIdx.x] = 0.0f;
-    row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM3) * f.pitch * f.ysize);
-    s_f[DIM3 + PAD + threadIdx.y][threadIdx.x] = row[i];
-    // s_f[DIM2 + PAD + threadIdx.y][threadIdx.x] = 0.0f;
+    row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM3 + dev_mesh.guard[2]) * dz);
+    s_f[DIM3 + pad + threadIdx.y][threadIdx.x] = row[i];
+    // s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = 0.0f;
   }
 
   __syncthreads();
 
   // compute the derivative
   for (int j = threadIdx.y; j < DIM3; j += blockDim.y) {
-    int sj = j + PAD;
-    Scalar* row_df = (Scalar*)((char*)df.ptr + j * df.pitch * f.ysize + offset);
+    int sj = j + pad;
+    Scalar* row_df = (Scalar*)((char*)df.ptr + (j + dev_mesh.guard[2]) * dz + offset);
     row_df[i] += (s_f[sj + stagger][threadIdx.x] -
                   s_f[sj + stagger - 1][threadIdx.x]) * q /
                  dev_mesh.delta[2];
