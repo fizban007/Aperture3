@@ -69,9 +69,9 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like E", "[FiniteDiff]") {
                      mesh.size()*sizeof(Scalar)*12.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
   v.sync_to_host();
-  for (int k = 0; k < mesh.dims[2]; k++) {
-    for (int j = 0; j < mesh.dims[1]; j++) {
-      for (int i = 0; i < mesh.dims[0]; i++) {
+  for (int k = 0; k < mesh.dims[2]; k+=4) {
+    for (int j = 0; j < mesh.dims[1]; j+=4) {
+      for (int i = 0; i < mesh.dims[0]; i+=4) {
         // std::cout << i << ", " << j << ", " << k << std::endl;
         if (i == 0 || i == mesh.dims[0] - 1 ||
             j == 0 || j == mesh.dims[1] - 1 ||
@@ -132,9 +132,9 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like B", "[FiniteDiff]") {
                      mesh.size()*sizeof(Scalar)*12.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
   v.sync_to_host();
-  for (int k = 0; k < mesh.dims[2]; k++) {
-    for (int j = 0; j < mesh.dims[1]; j++) {
-      for (int i = 0; i < mesh.dims[0]; i++) {
+  for (int k = 0; k < mesh.dims[2]; k+=4) {
+    for (int j = 0; j < mesh.dims[1]; j+=4) {
+      for (int i = 0; i < mesh.dims[0]; i+=4) {
         // std::cout << i << ", " << j << ", " << k << std::endl;
         if (i == 0 || i == mesh.dims[0] - 1 ||
             j == 0 || j == mesh.dims[1] - 1 ||
