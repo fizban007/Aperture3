@@ -6,6 +6,7 @@
 namespace Aperture {
 
 void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u);
+void curl_2(VectorField<Scalar>& result, const VectorField<Scalar>& u);
 void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u);
 void grad(VectorField<Scalar>& result, const ScalarField<Scalar>& f);
 

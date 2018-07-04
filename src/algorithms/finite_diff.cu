@@ -249,14 +249,14 @@ void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   // v1[globalIdx] = (s_u3[c3][c2 + flip(s3[1])][c1] - s_u3[c3][c2 - 1 + flip(s3[1])][c1]) / dev_mesh.delta[1] -
   //                 (s_u2[c3 + flip(s2[2])][c2][c1] - s_u2[c3 - 1 + flip(s2[2])][c2][c1]) / dev_mesh.delta[2];
   // (Curl u)_2 = d3u1 - d1u3
-  (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+  (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
       d3<DIM1, DIM2, DIM3>(s_u1, c1, c2, c3 + flip(s1[2])) -
       d1<DIM1, DIM2, DIM3>(s_u3, c1 + flip(s3[0]), c2, c3);
   // v2[globalIdx] = (s_u1[c3 + flip(s1[2])][c2][c1] - s_u1[c3 - 1 + flip(s1[2])][c2][c1]) / dev_mesh.delta[2] -
   //                 (s_u3[c3][c2][c1 + flip(s3[0])] - s_u3[c3][c2][c1 - 1 + flip(s3[0])]) / dev_mesh.delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
-  (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+  (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
       d1<DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
       d2<DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3);
   // v3[globalIdx] = (s_u2[c3][c2][c1 + flip(s2[0])] - s_u2[c3][c2][c1 - 1 + flip(s2[0])]) / dev_mesh.delta[0] -
@@ -334,6 +334,21 @@ void compute_grad(Scalar* v1, Scalar* v2, Scalar* v3,
   v3[globalIdx] += d3<DIM1, DIM2, DIM3>(s_u, c1, c2, c3 + flip(s[2]));
 }
 
+}
+
+void curl_2(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
+  auto& grid = u.grid();
+  auto& mesh = grid.mesh();
+
+  
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+  Kernels::compute_curl<16, 8, 8><<<gridSize, blockSize>>>
+      (result.ptr(0), result.ptr(1), result.ptr(2),
+       u.ptr(0), u.ptr(1), u.ptr(2),
+       u.stagger(0), u.stagger(1), u.stagger(2));
+  CudaCheckError();
 }
 
 void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
