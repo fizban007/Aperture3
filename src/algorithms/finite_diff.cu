@@ -88,7 +88,7 @@ void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
     // s_f[sj][threadIdx.x] = 0.0;
   }
 
-  __syncthreads();
+  // __syncthreads();
 
   // Fill the guard cells
   if (threadIdx.y < pad) {
@@ -133,18 +133,14 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
     // s_f[sj][threadIdx.x] = 0.0;
   }
 
-  __syncthreads();
+  // __syncthreads();
 
   // Fill the guard cells
   if (threadIdx.y < pad) {
-    // if (threadIdx.x == 3 && threadIdx.y == 0 && blockIdx.x == 5 && blockIdx.y == 0)
-    //   printf("Diff is %d\n", offset + (threadIdx.y - pad)*f.pitch);
     Scalar* row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y - pad + dev_mesh.guard[2]) * dz);
     s_f[threadIdx.y][threadIdx.x] = row[i];
-    // s_f[threadIdx.y][threadIdx.x] = 0.0f;
     row = (Scalar*)((char*)f.ptr + offset + (threadIdx.y + DIM3 + dev_mesh.guard[2]) * dz);
     s_f[DIM3 + pad + threadIdx.y][threadIdx.x] = row[i];
-    // s_f[DIM2 + pad + threadIdx.y][threadIdx.x] = 0.0f;
   }
 
   __syncthreads();
@@ -402,13 +398,33 @@ void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
 
   // TODO: The kernel launch parameters might need some tuning for different
   // architectures
+  dim3 blockSizeX(64, 8, 1);
+  dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
+                 mesh.reduced_dim(2));
+  dim3 blockSizeY(32, 16, 1);
+  dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
+                 mesh.reduced_dim(2));
+  dim3 blockSizeZ(32, 16, 1);
+  dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
+                 mesh.reduced_dim(1));
 
-  dim3 blockSize(8, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
-  Kernels::compute_div<8, 8, 8><<<gridSize, blockSize>>>
-      (result.data().data_d(), u.ptr(0), u.ptr(1), u.ptr(2),
-       u.stagger(0), u.stagger(1), u.stagger(2));
+  // dim3 blockSize(8, 8, 8);
+  // dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
+  //               mesh.reduced_dim(2) / 8);
+  // Kernels::compute_div<8, 8, 8><<<gridSize, blockSize>>>
+  //     (result.data().data_d(), u.ptr(0), u.ptr(1), u.ptr(2),
+  //      u.stagger(0), u.stagger(1), u.stagger(2));
+  Kernels::deriv_x<64, 8><<<gridSizeX, blockSizeX>>>
+      (result.ptr(), u.ptr(0), flip(u.stagger(0)[0]), 1.0);
+  CudaCheckError();
+
+  // v1 = d2u3 - d3u2
+  Kernels::deriv_y<32, 64><<<gridSizeY, blockSizeY>>>
+      (result.ptr(), u.ptr(1), flip(u.stagger(1)[1]), 1.0);
+  CudaCheckError();
+
+  Kernels::deriv_z<32, 64><<<gridSizeZ, blockSizeZ>>>
+      (result.ptr(), u.ptr(2), flip(u.stagger(2)[2]), 1.0);
   CudaCheckError();
 }
 
