@@ -201,7 +201,7 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   }
 }
 
-template <int DIM1, int DIM2, int DIM3>
+template <int Order, int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__
 void init_shared_memory(Scalar s_u1[][DIM2 + 2][DIM1 + 2],
                         Scalar s_u2[][DIM2 + 2][DIM1 + 2],
@@ -214,80 +214,77 @@ void init_shared_memory(Scalar s_u1[][DIM2 + 2][DIM1 + 2],
   s_u3[c3][c2][c1] = *(Scalar*)((char*)u3.ptr + globalOffset);
 
   // Handle extra guard cells
-  if (c1 == 1) {
-    s_u1[c3][c2][c1 - 1] = *(Scalar*)((char*)u1.ptr + globalOffset - sizeof(Scalar));
-    s_u2[c3][c2][c1 - 1] = *(Scalar*)((char*)u2.ptr + globalOffset - sizeof(Scalar));
-    s_u3[c3][c2][c1 - 1] = *(Scalar*)((char*)u3.ptr + globalOffset - sizeof(Scalar));
-  } else if (c1 == DIM1) {
-    s_u1[c3][c2][c1 + 1] = *(Scalar*)((char*)u1.ptr + globalOffset + sizeof(Scalar));
-    s_u2[c3][c2][c1 + 1] = *(Scalar*)((char*)u2.ptr + globalOffset + sizeof(Scalar));
-    s_u3[c3][c2][c1 + 1] = *(Scalar*)((char*)u3.ptr + globalOffset + sizeof(Scalar));
+  if (c1 < 2*Pad<Order>::val) {
+    s_u1[c3][c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
+    s_u2[c3][c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
+    s_u3[c3][c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
+    s_u1[c3][c2][c1 + DIM1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset + DIM1*sizeof(Scalar));
+    s_u2[c3][c2][c1 + DIM1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset + DIM1*sizeof(Scalar));
+    s_u3[c3][c2][c1 + DIM1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset + DIM1*sizeof(Scalar));
   }
-  if (c2 == 1) {
-    s_u1[c3][c2 - 1][c1] = *(Scalar*)((char*)u1.ptr + globalOffset - u1.pitch);
-    s_u2[c3][c2 - 1][c1] = *(Scalar*)((char*)u2.ptr + globalOffset - u2.pitch);
-    s_u3[c3][c2 - 1][c1] = *(Scalar*)((char*)u3.ptr + globalOffset - u3.pitch);
-  } else if (c2 == DIM2) {
-    s_u1[c3][c2 + 1][c1] = *(Scalar*)((char*)u1.ptr + globalOffset + u1.pitch);
-    s_u2[c3][c2 + 1][c1] = *(Scalar*)((char*)u2.ptr + globalOffset + u2.pitch);
-    s_u3[c3][c2 + 1][c1] = *(Scalar*)((char*)u3.ptr + globalOffset + u3.pitch);
+  if (c2 < 2*Pad<Order>::val) {
+    s_u1[c3][c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*u1.pitch);
+    s_u2[c3][c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*u2.pitch);
+    s_u3[c3][c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*u3.pitch);
+    s_u1[c3][c2 + DIM2][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset + DIM2*u1.pitch);
+    s_u2[c3][c2 + DIM2][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset + DIM2*u2.pitch);
+    s_u3[c3][c2 + DIM2][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset + DIM2*u3.pitch);
   }
-  if (c3 == 1) {
-    s_u1[c3 - 1][c2][c1] = *(Scalar*)((char*)u1.ptr + globalOffset - u1.pitch * u1.ysize);
-    s_u2[c3 - 1][c2][c1] = *(Scalar*)((char*)u2.ptr + globalOffset - u2.pitch * u2.ysize);
-    s_u3[c3 - 1][c2][c1] = *(Scalar*)((char*)u3.ptr + globalOffset - u3.pitch * u3.ysize);
-  } else if (c3 == DIM3) {
-    s_u1[c3 + 1][c2][c1] = *(Scalar*)((char*)u1.ptr + globalOffset + u1.pitch * u1.ysize);
-    s_u2[c3 + 1][c2][c1] = *(Scalar*)((char*)u2.ptr + globalOffset + u2.pitch * u2.ysize);
-    s_u3[c3 + 1][c2][c1] = *(Scalar*)((char*)u3.ptr + globalOffset + u3.pitch * u3.ysize);
+  if (c3 < 2*Pad<Order>::val) {
+    s_u1[c3 - Pad<Order>::val][c2][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*u1.pitch * u1.ysize);
+    s_u2[c3 - Pad<Order>::val][c2][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*u2.pitch * u2.ysize);
+    s_u3[c3 - Pad<Order>::val][c2][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*u3.pitch * u3.ysize);
+    s_u1[c3 + DIM3][c2][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset + DIM3*u1.pitch * u1.ysize);
+    s_u2[c3 + DIM3][c2][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset + DIM3*u2.pitch * u2.ysize);
+    s_u3[c3 + DIM3][c2][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset + DIM3*u3.pitch * u3.ysize);
   }
 }
 
-template <int DIM1, int DIM2, int DIM3>
+template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
 void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
                   cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
                   Stagger s1, Stagger s2, Stagger s3) {
   // Declare cache array in shared memory
-  __shared__ Scalar s_u1[DIM3 + 2][DIM2 + 2][DIM1 + 2];
-  __shared__ Scalar s_u2[DIM3 + 2][DIM2 + 2][DIM1 + 2];
-  __shared__ Scalar s_u3[DIM3 + 2][DIM2 + 2][DIM1 + 2];
+  __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u2[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u3[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
 
   // Load shared memory
-  int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  size_t globalOffset =  (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1) * u1.pitch * u1.ysize +
-                         (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1) * u1.pitch +
-                         (dev_mesh.guard[0] + t1 * DIM1 + c1 - 1) * sizeof(Scalar);
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val,
+      c3 = threadIdx.z + Pad<Order>::val;
+  size_t globalOffset =  (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize +
+                         (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch +
+                         (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
-  init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+  init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalOffset, c1, c2, c3);
-  // for (int offset3 = 0; offset3 < DIM3; offset3 += blockDim.z) {
-  //   for (int offset2 = 0; offset2 < DIM2; offset2 += blockDim.y) {
-  //     for (int offset1 = 0; offset1 < DIM1; offset1 += blockDim.x) {
-  //       globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 + offset1 +
-  //                   (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1 + offset2) *
-  //                   dev_mesh.dims[0] +
-  //                   (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1 + offset3) *
-  //                   dev_mesh.dims[0] * dev_mesh.dims[1];
-  //       init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
-  //                                            globalIdx, c1 + offset1,
-  //                                            c2 + offset2,
-  //                                            c3 + offset3);
-  //     }
-  //   }
-  // }
   __syncthreads();
 
   // Do the actual computation here
-  // for (int offset3 = 0; offset3 < DIM3; offset3 += blockDim.z) {
-  //   for (int offset2 = 0; offset2 < DIM2; offset2 += blockDim.y) {
-  //     for (int offset1 = 0; offset1 < DIM1; offset1 += blockDim.x) {
-  //       globalIdx = dev_mesh.guard[0] + t1 * DIM1 + c1 - 1 + offset1 +
-  //                   (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1 + offset2) *
-  //                   dev_mesh.dims[0] +
-  //                   (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1 + offset3) *
-  //                   dev_mesh.dims[0] * dev_mesh.dims[1];
   // (Curl u)_1 = d2u3 - d3u2
   (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
       d2<2, DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
@@ -329,7 +326,7 @@ void compute_div(cudaPitchedPtr v, cudaPitchedPtr u1,
                          + (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch
                          + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
-  init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+  init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalOffset, c1, c2, c3);
   __syncthreads();
 
@@ -386,10 +383,10 @@ void curl_2(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(32, 8, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 4);
-  Kernels::compute_curl<32, 8, 4><<<gridSize, blockSize>>>
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+  Kernels::compute_curl<2, 16, 8, 8><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
        u.ptr(0), u.ptr(1), u.ptr(2),
        u.stagger(0), u.stagger(1), u.stagger(2));
