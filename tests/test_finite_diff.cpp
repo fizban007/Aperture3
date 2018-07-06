@@ -234,9 +234,9 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
                      mesh.size()*sizeof(Scalar)*4.0*1.0e-6/time);
   f.sync_to_host();
 
-  for (int k = 0; k < mesh.dims[2]; k++) {
-    for (int j = 0; j < mesh.dims[1]; j++) {
-      for (int i = 0; i < mesh.dims[0]; i++) {
+  for (int k = 0; k < mesh.dims[2]; k+=4) {
+    for (int j = 0; j < mesh.dims[1]; j+=4) {
+      for (int i = 0; i < mesh.dims[0]; i+=4) {
         if (!mesh.is_in_bulk(i, j, k)) {
           INFO(i << ", " << j << ", " << k);
           REQUIRE(f(i, j, k)/(double)N == 0.0f);
