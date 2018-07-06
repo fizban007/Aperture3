@@ -307,22 +307,27 @@ void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   // }
 }
 
-template <int DIM1, int DIM2, int DIM3>
+template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
 void compute_div(cudaPitchedPtr v, cudaPitchedPtr u1,
                  cudaPitchedPtr u2, cudaPitchedPtr u3,
                  Stagger s1, Stagger s2, Stagger s3) {
   // Declare cache array in shared memory
-  __shared__ Scalar s_u1[DIM3 + 2][DIM2 + 2][DIM1 + 2];
-  __shared__ Scalar s_u2[DIM3 + 2][DIM2 + 2][DIM1 + 2];
-  __shared__ Scalar s_u3[DIM3 + 2][DIM2 + 2][DIM1 + 2];
+  __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u2[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u3[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
 
   // Load indices
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x + 1, c2 = threadIdx.y + 1, c3 = threadIdx.z + 1;
-  size_t globalOffset =  + (dev_mesh.guard[2] + t3 * DIM3 + c3 - 1) * u1.pitch * u1.ysize
-                         + (dev_mesh.guard[1] + t2 * DIM2 + c2 - 1) * u1.pitch
-                         + (dev_mesh.guard[0] + t1 * DIM1 + c1 - 1) * sizeof(Scalar);
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val,
+      c3 = threadIdx.z + Pad<Order>::val;
+  size_t globalOffset =  + (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize
+                         + (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch
+                         + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
   init_shared_memory<DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalOffset, c1, c2, c3);
@@ -454,15 +459,14 @@ void div_2(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
   // TODO: The kernel launch parameters might need some tuning for different
   // architectures
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
-  Kernels::compute_div<16, 8, 8><<<gridSize, blockSize>>>
+  dim3 blockSize(32, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 4);
+  Kernels::compute_div<2, 32, 8, 4><<<gridSize, blockSize>>>
       (result.ptr(), u.ptr(0), u.ptr(1), u.ptr(2),
        u.stagger(0), u.stagger(1), u.stagger(2));
   CudaCheckError();
 }
-
 
 void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
   auto& grid = u.grid();

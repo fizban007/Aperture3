@@ -206,6 +206,10 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
 }
 
 TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
+  u.set_stagger(0, 0b001);
+  u.set_stagger(1, 0b010);
+  u.set_stagger(2, 0b100);
+
   // Initialize field components
   u.initialize(0, [](Scalar x1, Scalar x2, Scalar x3) {
                     return 4.0f * x1;
@@ -222,10 +226,12 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    div(f, u);
+    div_2(f, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Taking div", "ms");
+  auto time = timer::get_duration_since_stamp("ms") / (float)N;
+  Logger::print_info("Div took {}ms, overall bandwidth is {}GB/s", time,
+                     mesh.size()*sizeof(Scalar)*4.0*1.0e-6/time);
   f.sync_to_host();
 
   for (int k = 0; k < mesh.dims[2]; k++) {
