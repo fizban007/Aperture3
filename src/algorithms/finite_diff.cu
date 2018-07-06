@@ -6,6 +6,9 @@
 
 namespace Aperture {
 
+// It is not worth using 4th order differentiation when using float accuracy
+constexpr int order = 2;
+
 namespace Kernels {
 
 // #define PAD 1
@@ -30,7 +33,7 @@ Scalar deriv<2>(Scalar f[], Scalar delta) {
 template <>
 HD_INLINE
 Scalar deriv<4>(Scalar f[], Scalar delta) {
-  return ((f[2] - f[1]) * (9.0 / 8.0) - (f[3] - f[0]) / 24.0) / delta;
+  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) / delta;
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -407,37 +410,56 @@ void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
                  mesh.reduced_dim(1));
 
   // v3 = d1u2 - d2u1
-  Kernels::deriv_x<4, 64, 8><<<gridSizeX, blockSizeX>>>
+  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
       (result.ptr(2), u.ptr(1), flip(u.stagger(1)[0]), 1.0);
   CudaCheckError();
   // cudaDeviceSynchronize();
   
-  Kernels::deriv_y<4, 32, 64><<<gridSizeY, blockSizeY>>>
+  Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
       (result.ptr(2), u.ptr(0), flip(u.stagger(0)[1]), -1.0);
   CudaCheckError();
 
   // v2 = d3u1 - d1u3
-  Kernels::deriv_z<4, 32, 64><<<gridSizeZ, blockSizeZ>>>
+  Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
       (result.ptr(1), u.ptr(0), flip(u.stagger(0)[2]), 1.0);
   CudaCheckError();
   // cudaDeviceSynchronize();
   
-  Kernels::deriv_x<4, 64, 8><<<gridSizeX, blockSizeX>>>
+  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
       (result.ptr(1), u.ptr(2), flip(u.stagger(2)[0]), -1.0);
   CudaCheckError();
 
   // v1 = d2u3 - d3u2
-  Kernels::deriv_y<4, 32, 64><<<gridSizeY, blockSizeY>>>
+  Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
       (result.ptr(0), u.ptr(2), flip(u.stagger(2)[1]), 1.0);
   CudaCheckError();
 
-  Kernels::deriv_z<4, 32, 64><<<gridSizeZ, blockSizeZ>>>
+  Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
       (result.ptr(0), u.ptr(1), flip(u.stagger(1)[2]), -1.0);
   CudaCheckError();
 
 }
 
 void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
+  auto& grid = u.grid();
+  auto& mesh = grid.mesh();
+
+  // TODO: reset the result first?
+
+  // TODO: The kernel launch parameters might need some tuning for different
+  // architectures
+
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+  Kernels::compute_div<16, 8, 8><<<gridSize, blockSize>>>
+      (result.ptr(), u.ptr(0), u.ptr(1), u.ptr(2),
+       u.stagger(0), u.stagger(1), u.stagger(2));
+  CudaCheckError();
+}
+
+
+void div_2(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
 
@@ -455,16 +477,16 @@ void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u) {
   dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
                  mesh.reduced_dim(1));
 
-  Kernels::deriv_x<4, 64, 8><<<gridSizeX, blockSizeX>>>
+  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
       (result.ptr(), u.ptr(0), flip(u.stagger(0)[0]), 1.0);
   CudaCheckError();
 
   // v1 = d2u3 - d3u2
-  Kernels::deriv_y<4, 32, 64><<<gridSizeY, blockSizeY>>>
+  Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
       (result.ptr(), u.ptr(1), flip(u.stagger(1)[1]), 1.0);
   CudaCheckError();
 
-  Kernels::deriv_z<4, 32, 64><<<gridSizeZ, blockSizeZ>>>
+  Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
       (result.ptr(), u.ptr(2), flip(u.stagger(2)[2]), 1.0);
   CudaCheckError();
 }
@@ -505,16 +527,16 @@ void grad_2(VectorField<Scalar>& result, const ScalarField<Scalar>& u) {
   dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
                  mesh.reduced_dim(1));
 
-  Kernels::deriv_x<2, 64, 8><<<gridSizeX, blockSizeX>>>
+  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
       (result.ptr(0), u.ptr(), flip(u.stagger()[0]), 1.0);
   CudaCheckError();
 
   // v1 = d2u3 - d3u2
-  Kernels::deriv_y<2, 32, 64><<<gridSizeY, blockSizeY>>>
+  Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
       (result.ptr(1), u.ptr(), flip(u.stagger()[1]), 1.0);
   CudaCheckError();
 
-  Kernels::deriv_z<2, 32, 64><<<gridSizeZ, blockSizeZ>>>
+  Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
       (result.ptr(2), u.ptr(), flip(u.stagger()[2]), 1.0);
   CudaCheckError();
 }
