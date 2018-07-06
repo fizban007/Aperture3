@@ -52,7 +52,7 @@ N = [256, 256, 256]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard
-guard = [1, 1, 1]
+guard = [3, 3, 3]
 
 # Lower limit of the coordinate
 lower = [0.0, 0.0, 0.0]
