@@ -222,7 +222,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    div_2(f, u);
+    div(f, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Taking div", "ms");
