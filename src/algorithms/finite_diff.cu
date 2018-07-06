@@ -20,6 +20,9 @@ struct Pad<2> { enum { val = 1 }; };
 template <>
 struct Pad<4> { enum { val = 2 }; };
 
+template <>
+struct Pad<6> { enum { val = 3 }; };
+
 template <int Order>
 HD_INLINE
 Scalar deriv(Scalar f[], Scalar delta);
@@ -33,6 +36,13 @@ Scalar deriv<2>(Scalar f[], Scalar delta) {
 template <>
 HD_INLINE
 Scalar deriv<4>(Scalar f[], Scalar delta) {
+  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) / delta;
+}
+
+template <>
+HD_INLINE
+Scalar deriv<6>(Scalar f[], Scalar delta) {
+  // TODO: Add support for 6th order differentiation
   return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) / delta;
 }
 
@@ -383,10 +393,10 @@ void curl_2(VectorField<Scalar>& result, const VectorField<Scalar>& u) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
-  Kernels::compute_curl<2, 16, 8, 8><<<gridSize, blockSize>>>
+  dim3 blockSize(32, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 4);
+  Kernels::compute_curl<2, 32, 8, 4><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
        u.ptr(0), u.ptr(1), u.ptr(2),
        u.stagger(0), u.stagger(1), u.stagger(2));
