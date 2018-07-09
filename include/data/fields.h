@@ -163,7 +163,14 @@ class VectorField : public FieldBase {
   Vec3<T> interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,
                       int order = 1) const;
 
-  void recenter(self_type& output) const;
+  // Interpolate the field to cell center and store the result to @result
+  void interpolate_to_center(self_type& result);
+
+  // Interpolate the field from cell center to the stagger position according to
+  // m_stagger, and store the result to @result
+  void interpolate_from_center(self_type& result);
+
+  // void recenter(self_type& output) const;
 
   self_type &convertToFlux();
   self_type &convertFromFlux();
