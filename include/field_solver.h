@@ -18,8 +18,6 @@ class FieldSolver {
   FieldSolver() {}
   virtual ~FieldSolver() {}
 
-  virtual void update_fields(vfield_t& E, vfield_t& B, const vfield_t& J,
-                             double dt, double time = 0.0) = 0;
   virtual void update_fields(SimData& data, double dt, double time = 0.0) = 0;
 
   virtual void set_background_j(const vfield_t& j) = 0;
