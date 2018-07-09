@@ -20,7 +20,7 @@ add_dependencies(check test_fd)
 set(tests_src
   "test.cpp" "test_AD.cpp" "test_config.cpp" "test_env.cpp" "test_stagger.cpp"
   # "test_particles.cpp"
-  "test_finite_diff.cpp"
+  "test_finite_diff.cpp" "test_ffe.cpp"
   )
 add_executable(tests ${tests_src})
 target_link_libraries(tests
