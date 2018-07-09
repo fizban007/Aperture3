@@ -210,6 +210,14 @@ struct Op_MultConstRet {
   HD_INLINE T operator()(const T& a) const { return a * _value; }
 };
 
+template <typename T>
+struct Op_MultConstAdd {
+  T _value;
+  HOST_DEVICE Op_MultConstAdd(const T& value) : _value(value) {}
+
+  HD_INLINE void operator()(T& dest, const T& src) const { dest += src * _value; }
+};
+
 }
 
 // template <typename It>
