@@ -16,6 +16,7 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 
 set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu" "data/photons.cu"
+  "data/fields_utils.cu"
   "algorithms/field_solver_default.cu"
   "sim_environment.cu" "sim_data.cu"
   "cuda/constant_mem.cu"
