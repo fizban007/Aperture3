@@ -76,7 +76,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like E", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    curl(v, u);
+    curl_add(v, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
@@ -129,7 +129,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like B", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    curl(v, u);
+    curl_add(v, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
@@ -175,7 +175,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    curl_2(v, u);
+    curl(v, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
@@ -193,11 +193,11 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
         } else {
           INFO(i << ", " << j << ", " << k);
           // REQUIRE(v(2, i, j, k) == Approx(-1.0f*N));
-          REQUIRE(v(2, i, j, k)/(double)N == Approx((u(1, i, j, k) - u(1, i - 1, j, k))/mesh.delta[0]
+          REQUIRE(v(2, i, j, k) == Approx((u(1, i, j, k) - u(1, i - 1, j, k))/mesh.delta[0]
                                           -(u(0, i, j, k) - u(0, i, j - 1, k))/mesh.delta[1]));
-          REQUIRE(v(1, i, j, k)/(double)N == Approx((u(0, i, j, k) - u(0, i, j, k - 1))/mesh.delta[2]
+          REQUIRE(v(1, i, j, k) == Approx((u(0, i, j, k) - u(0, i, j, k - 1))/mesh.delta[2]
                                                 -(u(2, i, j, k) - u(2, i - 1, j, k))/mesh.delta[0]));
-          REQUIRE(v(0, i, j, k)/(double)N == Approx((u(2, i, j, k) - u(2, i, j - 1, k))/mesh.delta[1]
+          REQUIRE(v(0, i, j, k) == Approx((u(2, i, j, k) - u(2, i, j - 1, k))/mesh.delta[1]
                                                 -(u(1, i, j, k) - u(1, i, j, k - 1))/mesh.delta[2]));
         }
       }
@@ -226,7 +226,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
   // Compute the curl and add the result to v
   const int N = 20;
   for (int i = 0; i < N; i++)
-    div_2(f, u);
+    div(f, u);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
@@ -239,10 +239,10 @@ TEST_CASE_METHOD(FiniteDiffTests, "Div", "[FiniteDiff]") {
       for (int i = 0; i < mesh.dims[0]; i+=4) {
         if (!mesh.is_in_bulk(i, j, k)) {
           INFO(i << ", " << j << ", " << k);
-          REQUIRE(f(i, j, k)/(double)N == 0.0f);
+          REQUIRE(f(i, j, k) == 0.0f);
         } else {
           INFO(i << ", " << j << ", " << k);
-          REQUIRE(f(i, j, k)/(double)N == 6.0f);
+          REQUIRE(f(i, j, k) == 6.0f);
           // REQUIRE(f(i, j, k)/(double)N == Approx((u(0, i, j, k) - u(0, i - 1, j, k))/mesh.delta[0]
           //                                        +(u(1, i, j, k) - u(1, i, j - 1, k))/mesh.delta[1]));
         }
