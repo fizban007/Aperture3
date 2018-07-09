@@ -439,24 +439,24 @@ VectorField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, int 
   return result;
 }
 
-template <typename T>
-void
-VectorField<T>::recenter(self_type &output) const {
-  check_grid_extent(m_grid -> extent(), output.m_grid -> extent());
-  output.assign(0.0);
-  auto& mesh = m_grid -> mesh();
-  auto center = Vec3<Pos_t>(0.5, 0.5, 0.5);
-  for (int k = 0; k < mesh.dims[2]; k++) {
-    for (int j = 0; j < mesh.dims[1]; j++) {
-      for (int i = 0; i < mesh.dims[0]; i++) {
-        auto v = interpolate(Vec3<int>(i, j, k), center, 1);
-        output(0, i, j, k) = v.x;
-        output(1, i, j, k) = v.y;
-        output(2, i, j, k) = v.z;
-      }
-    }
-  }
-}
+// template <typename T>
+// void
+// VectorField<T>::recenter(self_type &output) const {
+//   check_grid_extent(m_grid -> extent(), output.m_grid -> extent());
+//   output.assign(0.0);
+//   auto& mesh = m_grid -> mesh();
+//   auto center = Vec3<Pos_t>(0.5, 0.5, 0.5);
+//   for (int k = 0; k < mesh.dims[2]; k++) {
+//     for (int j = 0; j < mesh.dims[1]; j++) {
+//       for (int i = 0; i < mesh.dims[0]; i++) {
+//         auto v = interpolate(Vec3<int>(i, j, k), center, 1);
+//         output(0, i, j, k) = v.x;
+//         output(1, i, j, k) = v.y;
+//         output(2, i, j, k) = v.z;
+//       }
+//     }
+//   }
+// }
 
 // template <typename T>
 // void
@@ -533,6 +533,7 @@ VectorField<T>::recenter(self_type &output) const {
 template <typename T>
 void
 VectorField<T>::set_field_type(Aperture::FieldType type) {
+  // TODO: If less than 3D, some components do not need to be staggered
   if (type == FieldType::E) {
     set_stagger(0, Stagger(0b001));
     set_stagger(1, Stagger(0b010));
