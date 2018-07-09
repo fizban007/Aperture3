@@ -3,25 +3,16 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "utils/util_functions.h"
+#include "algorithms/field_solver_helper.cuh"
 
 namespace Aperture {
+
+// TODO: Make changes to 2D and 1D kernels such that they are optimized
 
 // It is not worth using 4th order differentiation when using float accuracy
 constexpr int order = 2;
 
 namespace Kernels {
-
-// #define PAD 1
-template <int Order> struct Pad;
-
-template <>
-struct Pad<2> { enum { val = 1 }; };
-
-template <>
-struct Pad<4> { enum { val = 2 }; };
-
-template <>
-struct Pad<6> { enum { val = 3 }; };
 
 template <int Order>
 HD_INLINE
@@ -213,203 +204,6 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
     row_df[i] += q * dy<Order>(s_f, threadIdx.x, sj + stagger, dev_mesh.delta[2]);
   }
 }
-
-template <int Order, int DIM1, int DIM2, int DIM3>
-__device__ __forceinline__
-void init_shared_memory(Scalar s_u1[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
-                        Scalar s_u2[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
-                        Scalar s_u3[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
-                        cudaPitchedPtr& u1, cudaPitchedPtr& u2, cudaPitchedPtr& u3,
-                        size_t globalOffset, int c1, int c2, int c3) {
-  // Load field values into shared memory
-  s_u1[c3][c2][c1] = *(Scalar*)((char*)u1.ptr + globalOffset);
-  s_u2[c3][c2][c1] = *(Scalar*)((char*)u2.ptr + globalOffset);
-  s_u3[c3][c2][c1] = *(Scalar*)((char*)u3.ptr + globalOffset);
-
-  // Handle extra guard cells
-  if (c1 < 2*Pad<Order>::val) {
-    s_u1[c3][c2][c1 - Pad<Order>::val] =
-        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
-    s_u2[c3][c2][c1 - Pad<Order>::val] =
-        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
-    s_u3[c3][c2][c1 - Pad<Order>::val] =
-        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
-    s_u1[c3][c2][c1 + DIM1] =
-        *(Scalar*)((char*)u1.ptr + globalOffset + DIM1*sizeof(Scalar));
-    s_u2[c3][c2][c1 + DIM1] =
-        *(Scalar*)((char*)u2.ptr + globalOffset + DIM1*sizeof(Scalar));
-    s_u3[c3][c2][c1 + DIM1] =
-        *(Scalar*)((char*)u3.ptr + globalOffset + DIM1*sizeof(Scalar));
-  }
-  if (c2 < 2*Pad<Order>::val) {
-    s_u1[c3][c2 - Pad<Order>::val][c1] =
-        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*u1.pitch);
-    s_u2[c3][c2 - Pad<Order>::val][c1] =
-        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*u2.pitch);
-    s_u3[c3][c2 - Pad<Order>::val][c1] =
-        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*u3.pitch);
-    s_u1[c3][c2 + DIM2][c1] =
-        *(Scalar*)((char*)u1.ptr + globalOffset + DIM2*u1.pitch);
-    s_u2[c3][c2 + DIM2][c1] =
-        *(Scalar*)((char*)u2.ptr + globalOffset + DIM2*u2.pitch);
-    s_u3[c3][c2 + DIM2][c1] =
-        *(Scalar*)((char*)u3.ptr + globalOffset + DIM2*u3.pitch);
-  }
-  if (c3 < 2*Pad<Order>::val) {
-    s_u1[c3 - Pad<Order>::val][c2][c1] =
-        *(Scalar*)((char*)u1.ptr + globalOffset - Pad<Order>::val*u1.pitch * u1.ysize);
-    s_u2[c3 - Pad<Order>::val][c2][c1] =
-        *(Scalar*)((char*)u2.ptr + globalOffset - Pad<Order>::val*u2.pitch * u2.ysize);
-    s_u3[c3 - Pad<Order>::val][c2][c1] =
-        *(Scalar*)((char*)u3.ptr + globalOffset - Pad<Order>::val*u3.pitch * u3.ysize);
-    s_u1[c3 + DIM3][c2][c1] =
-        *(Scalar*)((char*)u1.ptr + globalOffset + DIM3*u1.pitch * u1.ysize);
-    s_u2[c3 + DIM3][c2][c1] =
-        *(Scalar*)((char*)u2.ptr + globalOffset + DIM3*u2.pitch * u2.ysize);
-    s_u3[c3 + DIM3][c2][c1] =
-        *(Scalar*)((char*)u3.ptr + globalOffset + DIM3*u3.pitch * u3.ysize);
-  }
-}
-
-template <int Order, int DIM1, int DIM2, int DIM3>
-__device__ __forceinline__
-void init_shared_memory(Scalar s_f[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
-                        cudaPitchedPtr& f, size_t globalOffset, int c1, int c2, int c3) {
-  // Load field values into shared memory
-  s_f[c3][c2][c1] = *(Scalar*)((char*)f.ptr + globalOffset);
-
-  // Handle extra guard cells
-  if (c1 < 2*Pad<Order>::val) {
-    s_f[c3][c2][c1 - Pad<Order>::val] =
-        *(Scalar*)((char*)f.ptr + globalOffset - Pad<Order>::val*sizeof(Scalar));
-    s_f[c3][c2][c1 + DIM1] =
-        *(Scalar*)((char*)f.ptr + globalOffset + DIM1*sizeof(Scalar));
-  }
-  if (c2 < 2*Pad<Order>::val) {
-    s_f[c3][c2 - Pad<Order>::val][c1] =
-        *(Scalar*)((char*)f.ptr + globalOffset - Pad<Order>::val*f.pitch);
-    s_f[c3][c2 + DIM2][c1] =
-        *(Scalar*)((char*)f.ptr + globalOffset + DIM2*f.pitch);
-  }
-  if (c3 < 2*Pad<Order>::val) {
-    s_f[c3 - Pad<Order>::val][c2][c1] =
-        *(Scalar*)((char*)f.ptr + globalOffset - Pad<Order>::val*f.pitch * f.ysize);
-    s_f[c3 + DIM3][c2][c1] =
-        *(Scalar*)((char*)f.ptr + globalOffset + DIM3*f.pitch * f.ysize);
-  }
-}
-
-template <int DIM1, int DIM2, int DIM3>
-__global__
-void compute_FFE_EdotB(cudaPitchedPtr eb, 
-                       cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
-                       cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3, Scalar q) {
-  // Declare cache array in shared memory
-  __shared__ Scalar s_e1[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_e2[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_e3[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b1[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b2[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b3[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-
-  // Load shared memory
-  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x + Pad<2>::val,
-      c2 = threadIdx.y + Pad<2>::val,
-      c3 = threadIdx.z + Pad<2>::val;
-  size_t globalOffset =  (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<2>::val) * e1.pitch * e1.ysize +
-                         (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) * e1.pitch +
-                         (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) * sizeof(Scalar);
-
-  init_shared_memory<2, DIM1, DIM2, DIM3>(s_e1, s_e2, s_e3, e1, e2, e3,
-                                       globalOffset, c1, c2, c3);
-  init_shared_memory<2, DIM1, DIM2, DIM3>(s_b1, s_b2, s_b3, b1, b2, b3,
-                                       globalOffset, c1, c2, c3);
-  __syncthreads();
-
-  Scalar vecE1 = 0.5f * (s_e1[c3][c2][c1] + s_e1[c3][c2][c1 - 1]);
-  Scalar vecE2 = 0.5f * (s_e2[c3][c2][c1] + s_e2[c3][c2 - 1][c1]);
-  Scalar vecE3 = 0.5f * (s_e3[c3][c2][c1] + s_e3[c3 - 1][c2][c1]);
-  Scalar vecB1 = 0.25f * (s_b1[c3][c2][c1] + s_b1[c3 - 1][c2][c1] +
-                          s_b1[c3][c2 - 1][c1] + s_b1[c3 - 1][c2 - 1][c1]);
-  Scalar vecB2 = 0.25f * (s_b2[c3][c2][c1] + s_b2[c3 - 1][c2][c1] +
-                          s_b2[c3][c2][c1 - 1] + s_b2[c3 - 1][c2][c1 - 1]);
-  Scalar vecB3 = 0.25f * (s_b3[c3][c2][c1] + s_b3[c3][c2][c1 - 1] +
-                          s_b3[c3][c2 - 1][c1] + s_b3[c3][c2 - 1][c1 - 1]);
-  Scalar EdotB = vecE1 * vecB1 + vecE2 * vecB2 + vecE3 * vecB3;
-
-  // Do the actual computation here
-  (*(Scalar*)((char*)eb.ptr + globalOffset)) += q * EdotB;
-}
-
-template <int DIM1, int DIM2, int DIM3>
-__global__
-void compute_FFE_J(cudaPitchedPtr j1, cudaPitchedPtr j2, cudaPitchedPtr j3, 
-                   cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
-                   cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
-                   cudaPitchedPtr f, Scalar q) {
-  // Declare cache array in shared memory
-  __shared__ Scalar s_e1[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_e2[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_e3[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b1[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b2[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_b3[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-  __shared__ Scalar s_f[DIM3 + 2*Pad<2>::val]
-      [DIM2 + 2*Pad<2>::val][DIM1 + 2*Pad<2>::val];
-
-  // Load shared memory
-  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
-  int c1 = threadIdx.x + Pad<2>::val,
-      c2 = threadIdx.y + Pad<2>::val,
-      c3 = threadIdx.z + Pad<2>::val;
-  size_t globalOffset =  (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<2>::val) * e1.pitch * e1.ysize +
-                         (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) * e1.pitch +
-                         (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) * sizeof(Scalar);
-
-  init_shared_memory<2, DIM1, DIM2, DIM3>(s_e1, s_e2, s_e3, e1, e2, e3,
-                                       globalOffset, c1, c2, c3);
-  init_shared_memory<2, DIM1, DIM2, DIM3>(s_b1, s_b2, s_b3, b1, b2, b3,
-                                       globalOffset, c1, c2, c3);
-  init_shared_memory<2, DIM1, DIM2, DIM3>(s_f, f, globalOffset, c1, c2, c3);
-  __syncthreads();
-
-  Scalar vecE1 = 0.5f * (s_e1[c3][c2][c1] + s_e1[c3][c2][c1 - 1]);
-  Scalar vecE2 = 0.5f * (s_e2[c3][c2][c1] + s_e2[c3][c2 - 1][c1]);
-  Scalar vecE3 = 0.5f * (s_e3[c3][c2][c1] + s_e3[c3 - 1][c2][c1]);
-  Scalar vecB1 = 0.25f * (s_b1[c3][c2][c1] + s_b1[c3 - 1][c2][c1] +
-                          s_b1[c3][c2 - 1][c1] + s_b1[c3 - 1][c2 - 1][c1]);
-  Scalar vecB2 = 0.25f * (s_b2[c3][c2][c1] + s_b2[c3 - 1][c2][c1] +
-                          s_b2[c3][c2][c1 - 1] + s_b2[c3 - 1][c2][c1 - 1]);
-  Scalar vecB3 = 0.25f * (s_b3[c3][c2][c1] + s_b3[c3][c2][c1 - 1] +
-                          s_b3[c3][c2 - 1][c1] + s_b3[c3][c2 - 1][c1 - 1]);
-  Scalar inv_B_sqr = 1.0f / (vecB1 * vecB1 + vecB2 * vecB2 + vecB3 * vecB3);
-  Scalar divE = (s_e1[c3][c2][c1] - s_e1[c3][c2][c1 - 1]) / dev_mesh.delta[0] +
-                (s_e2[c3][c2][c1] - s_e2[c3][c2 - 1][c1]) / dev_mesh.delta[1] +
-                (s_e3[c3][c2][c1] - s_e3[c3 - 1][c2][c1]) / dev_mesh.delta[2];
-  Scalar EcrossB1 = vecE2 * vecB3 - vecE3 * vecB2;
-  Scalar EcrossB2 = vecE3 * vecB1 - vecE1 * vecB3;
-  Scalar EcrossB3 = vecE1 * vecB2 - vecE2 * vecB1;
-  // Scalar EdotB = vecE1 * vecB1 + vecE2 * vecB2 + vecE3 * vecB3;
-
-  // Do the actual computation here
-  (*(Scalar*)((char*)j1.ptr + globalOffset)) = q * (s_f[c3][c2][c1] * vecB1 + divE * EcrossB1) * inv_B_sqr;
-  (*(Scalar*)((char*)j2.ptr + globalOffset)) = q * (s_f[c3][c2][c1] * vecB2 + divE * EcrossB2) * inv_B_sqr;
-  (*(Scalar*)((char*)j3.ptr + globalOffset)) = q * (s_f[c3][c2][c1] * vecB3 + divE * EcrossB3) * inv_B_sqr;
-}
-
 
 template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
@@ -693,37 +487,6 @@ void grad_add(VectorField<Scalar>& result, const ScalarField<Scalar>& u, Scalar 
   }
 }
 
-void ffe_edotb(ScalarField<Scalar>& result, const VectorField<Scalar>& E,
-               const VectorField<Scalar>& B, Scalar q) {
-  auto& grid = E.grid();
-  auto& mesh = grid.mesh();
-
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
-  Kernels::compute_FFE_EdotB<16, 8, 8><<<gridSize, blockSize>>>
-      (result.ptr(), E.ptr(0), E.ptr(1), E.ptr(2),
-       B.ptr(0), B.ptr(1), B.ptr(2), q);
-  CudaCheckError();
-}
-
-void ffe_j(VectorField<Scalar>& result, const ScalarField<Scalar>& tmp_f,
-           const VectorField<Scalar>& E, const VectorField<Scalar>& B,
-           Scalar q) {
-  auto& grid = E.grid();
-  auto& mesh = grid.mesh();
-
-  dim3 blockSize(16, 8, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 4);
-  
-  Kernels::compute_FFE_J<16, 8, 4><<<gridSize, blockSize>>>
-      (result.ptr(0), result.ptr(1), result.ptr(2),
-       E.ptr(0), E.ptr(1), E.ptr(2),
-       B.ptr(0), B.ptr(1), B.ptr(2),
-       tmp_f.ptr(), q);
-  CudaCheckError();
-}
 
 
 }

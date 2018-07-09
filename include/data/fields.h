@@ -170,6 +170,10 @@ class VectorField : public FieldBase {
   // m_stagger, and store the result to @result
   void interpolate_from_center(self_type& result);
 
+  // Interpolate the field from cell center to the stagger position according to
+  // m_stagger, and add the result to @result
+  void interpolate_from_center_add(self_type& result);
+
   // void recenter(self_type& output) const;
 
   self_type &convertToFlux();
@@ -222,6 +226,7 @@ class VectorField : public FieldBase {
  private:
   std::array<array_type, VECTOR_DIM> m_array;
   std::array<Stagger, VECTOR_DIM> m_stagger;
+  FieldType m_type;
   // Keep a cached array of pointers to the actual device pointers, convenient
   // for the kernels
   data_type** m_ptrs;
