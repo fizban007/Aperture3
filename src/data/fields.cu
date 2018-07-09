@@ -1,9 +1,103 @@
 #include "data/fields.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "algorithms/interpolation.h"
+#include "algorithms/field_solver_helper.cuh"
+#include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 
 namespace Aperture {
+
+namespace Kernels {
+
+template <int Order, int DIM1, int DIM2, int DIM3>
+__global__
+void interp_to_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
+                      cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
+                      FieldType type) {
+    // Declare cache array in shared memory
+  __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u2[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u3[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+
+  // Load indices
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val,
+      c3 = threadIdx.z + Pad<Order>::val;
+  size_t globalOffset =  + (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize
+                         + (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch
+                         + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
+
+  // Load shared memory
+  init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                       globalOffset, c1, c2, c3);
+  __syncthreads();
+
+  if (type == FieldType::E) {
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) += 0.5f * (s_u1[c3][c2][c1] + s_u1[c3][c2][c1 - 1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) += 0.5f * (s_u2[c3][c2][c1] + s_u2[c3][c2 - 1][c1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) += 0.5f * (s_u3[c3][c2][c1] + s_u3[c3 - 1][c2][c1]);
+  } else {
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+        0.25f * (s_u1[c3][c2][c1] + s_u1[c3 - 1][c2][c1] +
+                 s_u1[c3][c2 - 1][c1] + s_u1[c3 - 1][c2 - 1][c1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+        0.25f * (s_u2[c3][c2][c1] + s_u2[c3 - 1][c2][c1] +
+                 s_u2[c3][c2][c1 - 1] + s_u2[c3 - 1][c2][c1 - 1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+        0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 - 1] +
+                 s_u3[c3][c2 - 1][c1] + s_u3[c3][c2 - 1][c1 - 1]);
+  }
+}
+
+template <int Order, int DIM1, int DIM2, int DIM3>
+__global__
+void interp_from_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
+                        cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
+                        FieldType type) {
+    // Declare cache array in shared memory
+  __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u2[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u3[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+
+  // Load indices
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val,
+      c3 = threadIdx.z + Pad<Order>::val;
+  size_t globalOffset =  + (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize
+                         + (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch
+                         + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
+
+  // Load shared memory
+  init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                       globalOffset, c1, c2, c3);
+  __syncthreads();
+
+  if (type == FieldType::E) {
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) += 0.5f * (s_u1[c3][c2][c1 + 1] + s_u1[c3][c2][c1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) += 0.5f * (s_u2[c3][c2 + 1][c1] + s_u2[c3][c2][c1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) += 0.5f * (s_u3[c3 + 1][c2][c1] + s_u3[c3][c2][c1]);
+  } else {
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+        0.25f * (s_u1[c3][c2][c1] + s_u1[c3 + 1][c2][c1] +
+                 s_u1[c3][c2 + 1][c1] + s_u1[c3 + 1][c2 + 1][c1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+        0.25f * (s_u2[c3][c2][c1] + s_u2[c3 + 1][c2][c1] +
+                 s_u2[c3][c2][c1 + 1] + s_u2[c3 + 1][c2][c1 + 1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+        0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 + 1] +
+                 s_u3[c3][c2 + 1][c1] + s_u3[c3][c2 + 1][c1 + 1]);
+  }
+}
+
+}
 
 void FieldBase::check_grid_extent(const Extent& ext1, const Extent& ext2) const {
   if (ext1 != ext2) throw std::invalid_argument("Field grids don't match!");
@@ -193,6 +287,7 @@ T ScalarField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, in
 template <typename T>
 VectorField<T>::VectorField(const grid_type& grid)
     : FieldBase(grid) {
+  m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
     // Default initialize to face-centered
@@ -204,15 +299,17 @@ VectorField<T>::VectorField(const grid_type& grid)
 
 template <typename T>
 VectorField<T>::VectorField(const self_type& field)
-    : FieldBase(*field.m_grid), m_array(field.m_array)
-    , m_stagger(field.m_stagger) {
+    : FieldBase(*field.m_grid), m_array(field.m_array),
+        m_stagger(field.m_stagger),
+        m_type(field.m_type) {
   init_array_ptrs();
 }
 
 template <typename T>
 VectorField<T>::VectorField(self_type&& field)
-    : FieldBase(*field.m_grid), m_array(std::move(field.m_array))
-    , m_stagger(field.m_stagger) {
+    : FieldBase(*field.m_grid), m_array(std::move(field.m_array)),
+      m_stagger(field.m_stagger),
+      m_type(field.m_type) {
   init_array_ptrs();
 }
 
@@ -226,6 +323,7 @@ VectorField<T>& VectorField<T>::operator= (const self_type& other) {
   this -> m_grid = other.m_grid;
   this -> m_grid_size = other.m_grid_size;
   m_array = other.m_array;
+  m_type = other.m_type;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_ptrs[i] = m_array[i].data();
   }
@@ -238,6 +336,7 @@ VectorField<T>& VectorField<T>::operator= ( self_type&& other) {
   this -> m_grid = other.m_grid;
   this -> m_grid_size = other.m_grid_size;
   m_array = std::move(other.m_array);
+  m_type = other.m_type;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_ptrs[i] = m_array[i].data();
   }
@@ -439,6 +538,53 @@ VectorField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, int 
   return result;
 }
 
+template <typename T>
+void
+VectorField<T>::interpolate_to_center(self_type &result) {
+  result.initialize();
+  auto& mesh = m_grid->mesh();
+
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+
+  Kernels::interp_to_center<2, 16, 8, 8><<<gridSize, blockSize>>>
+      (result.ptr(0), result.ptr(1), result.ptr(2),
+       m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(), m_type);
+  CudaCheckError();
+}
+
+template <typename T>
+void
+VectorField<T>::interpolate_from_center(self_type &result) {
+  result.initialize();
+  auto& mesh = m_grid->mesh();
+
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+
+  Kernels::interp_from_center<2, 16, 8, 8><<<gridSize, blockSize>>>
+      (result.ptr(0), result.ptr(1), result.ptr(2),
+       m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(), m_type);
+  CudaCheckError();
+}
+
+template <typename T>
+void
+VectorField<T>::interpolate_from_center_add(self_type &result) {
+  auto& mesh = m_grid->mesh();
+
+  dim3 blockSize(16, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 8);
+
+  Kernels::interp_from_center<2, 16, 8, 8><<<gridSize, blockSize>>>
+      (result.ptr(0), result.ptr(1), result.ptr(2),
+       m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(), m_type);
+  CudaCheckError();
+}
+
 // template <typename T>
 // void
 // VectorField<T>::recenter(self_type &output) const {
@@ -533,6 +679,7 @@ VectorField<T>::interpolate(const Vec3<int>& c, const Vec3<Pos_t>& rel_pos, int 
 template <typename T>
 void
 VectorField<T>::set_field_type(Aperture::FieldType type) {
+  m_type = type;
   // TODO: If less than 3D, some components do not need to be staggered
   if (type == FieldType::E) {
     set_stagger(0, Stagger(0b001));

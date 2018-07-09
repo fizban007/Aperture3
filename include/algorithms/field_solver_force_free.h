@@ -16,8 +16,15 @@ class FieldSolver_FFE : public FieldSolver
   void compute_J(vfield_t& J, const vfield_t& E, const vfield_t& B);
   void update_field_substep(vfield_t& E_out, vfield_t& B_out, vfield_t& J_out,
                             const vfield_t& E_in, const vfield_t& B_in, Scalar dt);
+  virtual void set_background_j(const vfield_t& j) override {}
 
  private:
+  void ffe_edotb(ScalarField<Scalar>& result, const VectorField<Scalar>& E,
+                 const VectorField<Scalar>& B, Scalar q = 1.0);
+  void ffe_j(VectorField<Scalar>& result, const ScalarField<Scalar>& tmp_f,
+             const VectorField<Scalar>& E, const VectorField<Scalar>& B,
+             Scalar q = 1.0);
+
   sfield_t m_sf;
   vfield_t m_tmp, m_tmp2;
   vfield_t m_e1, m_e2, m_e3, m_e4;
