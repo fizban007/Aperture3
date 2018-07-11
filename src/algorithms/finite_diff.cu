@@ -253,6 +253,52 @@ void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
 
 template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
+void compute_curl_add(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
+                      cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
+                      Stagger s1, Stagger s2, Stagger s3, Scalar q = 1.0) {
+  // Declare cache array in shared memory
+  __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u2[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+  __shared__ Scalar s_u3[DIM3 + 2*Pad<Order>::val]
+      [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
+
+  // Load shared memory
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val,
+      c3 = threadIdx.z + Pad<Order>::val;
+  size_t globalOffset =  (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize +
+                         (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch +
+                         (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
+
+  init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                       globalOffset, c1, c2, c3);
+  __syncthreads();
+
+  // Do the actual computation here
+  // (Curl u)_1 = d2u3 - d3u2
+  (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+      q * (d2<Order, DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
+       d3<Order, DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2])));
+
+  // (Curl u)_2 = d3u1 - d1u3
+  (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+      q * (d3<Order, DIM1, DIM2, DIM3>(s_u1, c1, c2, c3 + flip(s1[2])) -
+           d1<Order, DIM1, DIM2, DIM3>(s_u3, c1 + flip(s3[0]), c2, c3));
+
+  // (Curl u)_3 = d1u2 - d2u1
+  (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+      q * (d1<Order, DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
+           d2<Order, DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3));
+  //     }
+  //   }
+  // }
+}
+
+template <int Order, int DIM1, int DIM2, int DIM3>
+__global__
 void compute_div(cudaPitchedPtr v, cudaPitchedPtr u1,
                  cudaPitchedPtr u2, cudaPitchedPtr u3,
                  Stagger s1, Stagger s2, Stagger s3, Scalar q = 1.0) {
@@ -331,55 +377,69 @@ void curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u, Scalar 
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
 
-  // TODO: reset the result first?
-
-  // TODO: The kernel launch parameters might need some tuning for different
-  // architectures
-  dim3 blockSizeX(64, 8, 1);
-  dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeY(32, 16, 1);
-  dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeZ(32, 16, 1);
-  dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
-                 mesh.reduced_dim(1));
-
-  // v3 = d1u2 - d2u1
-  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
-      (result.ptr(2), u.ptr(1), flip(u.stagger(1)[0]), 1.0f);
+  dim3 blockSize(32, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 4);
+  Kernels::compute_curl_add<order, 32, 8, 4><<<gridSize, blockSize>>>
+      (result.ptr(0), result.ptr(1), result.ptr(2),
+       u.ptr(0), u.ptr(1), u.ptr(2),
+       u.stagger(0), u.stagger(1), u.stagger(2), q);
   CudaCheckError();
-
-  if (u.grid().dim() > 1) {
-    Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
-        (result.ptr(2), u.ptr(0), flip(u.stagger(0)[1]), -1.0f);
-    CudaCheckError();
-  }
-
-  // v2 = d3u1 - d1u3
-  if (u.grid().dim() > 2) {
-    Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
-        (result.ptr(1), u.ptr(0), flip(u.stagger(0)[2]), 1.0f);
-    CudaCheckError();
-  }
-
-    Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
-        (result.ptr(1), u.ptr(2), flip(u.stagger(2)[0]), -1.0f);
-    CudaCheckError();
-
-  // v1 = d2u3 - d3u2
-  if (u.grid().dim() > 1) {
-    Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
-        (result.ptr(0), u.ptr(2), flip(u.stagger(2)[1]), 1.0f);
-    CudaCheckError();
-  }
-
-  if (u.grid().dim() > 2) {
-    Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
-        (result.ptr(0), u.ptr(1), flip(u.stagger(1)[2]), -1.0f);
-    CudaCheckError();
-  }
 }
+
+// void curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u, Scalar q) {
+//   auto& grid = u.grid();
+//   auto& mesh = grid.mesh();
+
+//   // TODO: reset the result first?
+
+//   // TODO: The kernel launch parameters might need some tuning for different
+//   // architectures
+//   dim3 blockSizeX(64, 8, 1);
+//   dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeY(32, 16, 1);
+//   dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeZ(32, 16, 1);
+//   dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
+//                  mesh.reduced_dim(1));
+
+//   // v3 = d1u2 - d2u1
+//   Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
+//       (result.ptr(2), u.ptr(1), flip(u.stagger(1)[0]), 1.0f);
+//   CudaCheckError();
+
+//   if (u.grid().dim() > 1) {
+//     Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
+//         (result.ptr(2), u.ptr(0), flip(u.stagger(0)[1]), -1.0f);
+//     CudaCheckError();
+//   }
+
+//   // v2 = d3u1 - d1u3
+//   if (u.grid().dim() > 2) {
+//     Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
+//         (result.ptr(1), u.ptr(0), flip(u.stagger(0)[2]), 1.0f);
+//     CudaCheckError();
+//   }
+
+//     Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>
+//         (result.ptr(1), u.ptr(2), flip(u.stagger(2)[0]), -1.0f);
+//     CudaCheckError();
+
+//   // v1 = d2u3 - d3u2
+//   if (u.grid().dim() > 1) {
+//     Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>
+//         (result.ptr(0), u.ptr(2), flip(u.stagger(2)[1]), 1.0f);
+//     CudaCheckError();
+//   }
+
+//   if (u.grid().dim() > 2) {
+//     Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>
+//         (result.ptr(0), u.ptr(1), flip(u.stagger(1)[2]), -1.0f);
+//     CudaCheckError();
+//   }
+// }
 
 void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u, Scalar q) {
   auto& grid = u.grid();

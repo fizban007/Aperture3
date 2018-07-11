@@ -262,15 +262,15 @@ FieldSolver_FFE::update_field_substep(vfield_t &E_out, vfield_t &B_out, vfield_t
 
   // Compute the curl of E_in and set it to m_tmp
   m_tmp.set_field_type(FieldType::B);
-  curl(m_tmp, E_in);
+  curl_add(B_out, E_in, dt);
   // m_tmp2 is now equal to curl E_in
-  field_add(B_out, m_tmp, dt);
+  // field_add(B_out, m_tmp, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
-  timer::stamp();
-  ffe_edotb(m_sf, E_in, m_tmp, 1.0f);
-  cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("First edotb", "ms");
+  // timer::stamp();
+  // ffe_edotb(m_sf, E_in, m_tmp, 1.0f);
+  // cudaDeviceSynchronize();
+  // timer::show_duration_since_stamp("First edotb", "ms");
 
   // m_tmp.initialize();
   // Compute the curl of B_in and set it to m_tmp
