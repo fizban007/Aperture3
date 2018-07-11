@@ -1,4 +1,3 @@
-#include "data/particles.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
 #include "cuda/constant_mem_func.h"

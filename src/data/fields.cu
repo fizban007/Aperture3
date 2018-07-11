@@ -13,7 +13,7 @@ template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
 void interp_to_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
                       cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
-                      FieldType type) {
+                      FieldType type, Scalar q = 1.0) {
     // Declare cache array in shared memory
   __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
       [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
@@ -37,18 +37,18 @@ void interp_to_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   __syncthreads();
 
   if (type == FieldType::E) {
-    (*(Scalar*)((char*)v1.ptr + globalOffset)) += 0.5f * (s_u1[c3][c2][c1] + s_u1[c3][c2][c1 - 1]);
-    (*(Scalar*)((char*)v2.ptr + globalOffset)) += 0.5f * (s_u2[c3][c2][c1] + s_u2[c3][c2 - 1][c1]);
-    (*(Scalar*)((char*)v3.ptr + globalOffset)) += 0.5f * (s_u3[c3][c2][c1] + s_u3[c3 - 1][c2][c1]);
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) += q * 0.5f * (s_u1[c3][c2][c1] + s_u1[c3][c2][c1 - 1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) += q * 0.5f * (s_u2[c3][c2][c1] + s_u2[c3][c2 - 1][c1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) += q * 0.5f * (s_u3[c3][c2][c1] + s_u3[c3 - 1][c2][c1]);
   } else {
     (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
-        0.25f * (s_u1[c3][c2][c1] + s_u1[c3 - 1][c2][c1] +
+        q * 0.25f * (s_u1[c3][c2][c1] + s_u1[c3 - 1][c2][c1] +
                  s_u1[c3][c2 - 1][c1] + s_u1[c3 - 1][c2 - 1][c1]);
     (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
-        0.25f * (s_u2[c3][c2][c1] + s_u2[c3 - 1][c2][c1] +
+        q * 0.25f * (s_u2[c3][c2][c1] + s_u2[c3 - 1][c2][c1] +
                  s_u2[c3][c2][c1 - 1] + s_u2[c3 - 1][c2][c1 - 1]);
     (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
-        0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 - 1] +
+        q * 0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 - 1] +
                  s_u3[c3][c2 - 1][c1] + s_u3[c3][c2 - 1][c1 - 1]);
   }
 }
@@ -57,7 +57,7 @@ template <int Order, int DIM1, int DIM2, int DIM3>
 __global__
 void interp_from_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
                         cudaPitchedPtr u1, cudaPitchedPtr u2, cudaPitchedPtr u3,
-                        FieldType type) {
+                        FieldType type, Scalar q = 1.0) {
     // Declare cache array in shared memory
   __shared__ Scalar s_u1[DIM3 + 2*Pad<Order>::val]
       [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
@@ -81,18 +81,18 @@ void interp_from_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   __syncthreads();
 
   if (type == FieldType::E) {
-    (*(Scalar*)((char*)v1.ptr + globalOffset)) += 0.5f * (s_u1[c3][c2][c1 + 1] + s_u1[c3][c2][c1]);
-    (*(Scalar*)((char*)v2.ptr + globalOffset)) += 0.5f * (s_u2[c3][c2 + 1][c1] + s_u2[c3][c2][c1]);
-    (*(Scalar*)((char*)v3.ptr + globalOffset)) += 0.5f * (s_u3[c3 + 1][c2][c1] + s_u3[c3][c2][c1]);
+    (*(Scalar*)((char*)v1.ptr + globalOffset)) += q * 0.5f * (s_u1[c3][c2][c1 + 1] + s_u1[c3][c2][c1]);
+    (*(Scalar*)((char*)v2.ptr + globalOffset)) += q * 0.5f * (s_u2[c3][c2 + 1][c1] + s_u2[c3][c2][c1]);
+    (*(Scalar*)((char*)v3.ptr + globalOffset)) += q * 0.5f * (s_u3[c3 + 1][c2][c1] + s_u3[c3][c2][c1]);
   } else {
     (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
-        0.25f * (s_u1[c3][c2][c1] + s_u1[c3 + 1][c2][c1] +
+        q * 0.25f * (s_u1[c3][c2][c1] + s_u1[c3 + 1][c2][c1] +
                  s_u1[c3][c2 + 1][c1] + s_u1[c3 + 1][c2 + 1][c1]);
     (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
-        0.25f * (s_u2[c3][c2][c1] + s_u2[c3 + 1][c2][c1] +
+        q * 0.25f * (s_u2[c3][c2][c1] + s_u2[c3 + 1][c2][c1] +
                  s_u2[c3][c2][c1 + 1] + s_u2[c3 + 1][c2][c1 + 1]);
     (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
-        0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 + 1] +
+        q * 0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 + 1] +
                  s_u3[c3][c2 + 1][c1] + s_u3[c3][c2 + 1][c1 + 1]);
   }
 }
@@ -572,7 +572,7 @@ VectorField<T>::interpolate_from_center(self_type &result) {
 
 template <typename T>
 void
-VectorField<T>::interpolate_from_center_add(self_type &result) {
+VectorField<T>::interpolate_from_center_add(self_type &result, Scalar q) {
   auto& mesh = m_grid->mesh();
 
   dim3 blockSize(16, 8, 8);
@@ -581,7 +581,8 @@ VectorField<T>::interpolate_from_center_add(self_type &result) {
 
   Kernels::interp_from_center<2, 16, 8, 8><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
-       m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(), m_type);
+       m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
+       m_type, q);
   CudaCheckError();
 }
 
