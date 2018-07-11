@@ -172,7 +172,7 @@ class VectorField : public FieldBase {
 
   // Interpolate the field from cell center to the stagger position according to
   // m_stagger, and add the result to @result
-  void interpolate_from_center_add(self_type& result);
+  void interpolate_from_center_add(self_type& result, Scalar q = 1.0);
 
   // void recenter(self_type& output) const;
 

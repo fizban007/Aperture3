@@ -24,11 +24,14 @@ class FieldSolver_FFE : public FieldSolver
   void ffe_j(VectorField<Scalar>& result, const ScalarField<Scalar>& tmp_f,
              const VectorField<Scalar>& E, const VectorField<Scalar>& B,
              Scalar q = 1.0);
+  void ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
+              const VectorField<Scalar>& E, const VectorField<Scalar>& B,
+              Scalar dt);
 
   sfield_t m_sf;
-  vfield_t m_tmp, m_tmp2;
-  vfield_t m_e1, m_e2, m_e3, m_e4;
-  vfield_t m_b1, m_b2, m_b3, m_b4;
+  vfield_t m_tmp;
+  // vfield_t m_e1, m_e2, m_e3, m_e4;
+  // vfield_t m_b1, m_b2, m_b3, m_b4;
   // vfield_t m_j1, m_j2, m_j3, m_j4;
 }; // ----- end of class FieldSolver_FFE -----
 

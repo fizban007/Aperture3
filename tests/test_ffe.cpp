@@ -57,8 +57,8 @@ class FFETests {
 TEST_CASE_METHOD(FFETests, "Taking FFE substep", "[FFE]") {
   init_u();
 
-  timer::stamp();
+  timer::stamp("FFE");
   solver.update_field_substep(E_out, B_out, J_out, E, B, 0.01);
   cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("FFE substep", "ms");
+  timer::show_duration_since_stamp("FFE substep", "ms", "FFE");
 }
