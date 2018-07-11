@@ -16,25 +16,25 @@ namespace Kernels {
 
 template <int Order>
 HD_INLINE
-Scalar deriv(Scalar f[], Scalar delta);
+Scalar deriv(Scalar f[], Scalar inv_delta);
   
 template <>
 HD_INLINE
-Scalar deriv<2>(Scalar f[], Scalar delta) {
-  return (f[1] - f[0]) / delta;
+Scalar deriv<2>(Scalar f[], Scalar inv_delta) {
+  return (f[1] - f[0]) * inv_delta;
 }
 
 template <>
 HD_INLINE
-Scalar deriv<4>(Scalar f[], Scalar delta) {
-  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) / delta;
+Scalar deriv<4>(Scalar f[], Scalar inv_delta) {
+  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) * inv_delta;
 }
 
 template <>
 HD_INLINE
-Scalar deriv<6>(Scalar f[], Scalar delta) {
+Scalar deriv<6>(Scalar f[], Scalar inv_delta) {
   // TODO: Add support for 6th order differentiation
-  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) / delta;
+  return ((f[2] - f[1]) * 1.125f - (f[3] - f[0]) * 0.041666667f) * inv_delta;
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -45,7 +45,7 @@ Scalar d1(Scalar array[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
 #pragma unroll
   for (int i = 0; i < Order; i++)
     val[i] = array[c3][c2][c1 - Pad<Order>::val + i];
-  return deriv<Order>(val, dev_mesh.delta[0]);
+  return deriv<Order>(val, dev_mesh.inv_delta[0]);
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -56,7 +56,7 @@ Scalar d2(Scalar array[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
 #pragma unroll
   for (int i = 0; i < Order; i++)
     val[i] = array[c3][c2 - Pad<Order>::val + i][c1];
-  return deriv<Order>(val, dev_mesh.delta[1]);
+  return deriv<Order>(val, dev_mesh.inv_delta[1]);
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -67,27 +67,27 @@ Scalar d3(Scalar array[][DIM2 + Pad<Order>::val*2][DIM1 + Pad<Order>::val*2],
 #pragma unroll
   for (int i = 0; i < Order; i++)
     val[i] = array[c3 - Pad<Order>::val + i][c2][c1];
-  return deriv<Order>(val, dev_mesh.delta[2]);
+  return deriv<Order>(val, dev_mesh.inv_delta[2]);
 }
 
 template <int Order, int DIM1>
 __device__ __forceinline__
-Scalar dx(Scalar array[][DIM1], int c1, int c2, Scalar delta) {
+Scalar dx(Scalar array[][DIM1], int c1, int c2, Scalar inv_delta) {
   Scalar val[Order];
 #pragma unroll
   for (int i = 0; i < Order; i++)
     val[i] = array[c2][c1 - Pad<Order>::val + i];
-  return deriv<Order>(val, delta);
+  return deriv<Order>(val, inv_delta);
 }
 
 template <int Order, int DIM1>
 __device__ __forceinline__
-Scalar dy(Scalar array[][DIM1], int c1, int c2, Scalar delta) {
+Scalar dy(Scalar array[][DIM1], int c1, int c2, Scalar inv_delta) {
   Scalar val[Order];
 #pragma unroll
   for (int i = 0; i < Order; i++)
     val[i] = array[c2 - Pad<Order>::val + i][c1];
-  return deriv<Order>(val, delta);
+  return deriv<Order>(val, inv_delta);
 }
 
 template <int Order, int DIM1, int DIM2>
@@ -119,7 +119,7 @@ void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   // row_df[i] += (s_f[threadIdx.y][si + stagger] -
   //               s_f[threadIdx.y][si + stagger - 1]) * q /
   //              dev_mesh.delta[0];
-  row_df[i] += q * dx<Order>(s_f, si + stagger, threadIdx.y, dev_mesh.delta[0]);
+  row_df[i] += q * dx<Order>(s_f, si + stagger, threadIdx.y, dev_mesh.inv_delta[0]);
 }
 
 template <int Order, int DIM1, int DIM2>
@@ -161,7 +161,7 @@ void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
     // row_df[i] += (s_f[sj + stagger][threadIdx.x] -
     //               s_f[sj + stagger - 1][threadIdx.x]) * q /
     //              dev_mesh.delta[1];
-    row_df[i] += q * dy<Order>(s_f, threadIdx.x, sj + stagger, dev_mesh.delta[1]);
+    row_df[i] += q * dy<Order>(s_f, threadIdx.x, sj + stagger, dev_mesh.inv_delta[1]);
   }
 }
 
@@ -201,7 +201,7 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
     // row_df[i] += (s_f[sj + stagger][threadIdx.x] -
     //               s_f[sj + stagger - 1][threadIdx.x]) * q /
     //              dev_mesh.delta[2];
-    row_df[i] += q * dy<Order>(s_f, threadIdx.x, sj + stagger, dev_mesh.delta[2]);
+    row_df[i] += q * dy<Order>(s_f, threadIdx.x, sj + stagger, dev_mesh.inv_delta[2]);
   }
 }
 

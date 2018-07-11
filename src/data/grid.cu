@@ -47,6 +47,7 @@ Grid::init(const SimParams& params) {
     m_mesh.lower[i] = params.lower[i];
     m_mesh.dims[i] = params.N[i] + 2 * params.guard[i];
     m_mesh.delta[i] = params.size[i] / params.N[i];
+    m_mesh.inv_delta[i] = 1.0 / m_mesh.delta[i];
     m_mesh.tileSize[i] = params.tile_size[i];
   }
   m_mesh.dimension = m_mesh.dim();
