@@ -20,6 +20,7 @@ struct Quadmesh {
 
   Scalar delta[3];  //!< Grid spacing on each direction (spacing in coordinate
                     //!< space)
+  Scalar inv_delta[3];
   Scalar lower[3];  //!< Lower limit of the grid on each direction
   Scalar sizes[3];  //!< Size of the grid in coordinate space
 
@@ -38,6 +39,7 @@ struct Quadmesh {
       lower[i] = 0.0;
       sizes[i] = 0.0;
       tileSize[i] = 1;
+      inv_delta[i] = 1.0;
     }
     dimension = 1;
 #endif  // __CUDACC__
@@ -55,6 +57,7 @@ struct Quadmesh {
     for (int i = 0; i < 3; i++) {
       guard[i] = 0;
       delta[i] = 1.0;
+      inv_delta[i] = 1.0;
       lower[i] = 0.0;
       sizes[i] = delta[i] * dims[i];
       tileSize[i] = 1;
@@ -70,6 +73,7 @@ struct Quadmesh {
       dims[i] = m.dims[i];
       guard[i] = m.guard[i];
       delta[i] = m.delta[i];
+      inv_delta[i] = m.inv_delta[i];
       lower[i] = m.lower[i];
       sizes[i] = m.sizes[i];
       tileSize[i] = m.tileSize[i];

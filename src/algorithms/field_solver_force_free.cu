@@ -179,30 +179,30 @@ void compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out, cudaPitchedPtr e
 
   // Reuse EcrossB1, 2, 3 to compute B\dot(curl B)
   EcrossB1 = vecB1 * 0.5f * ((s_b3[c3][c2][c1] - s_b3[c3][c2 - 1][c1] +
-                              s_b3[c3][c2][c1 - 1] - s_b3[c3][c2 - 1][c1 - 1]) / dev_mesh.delta[1] -
+                              s_b3[c3][c2][c1 - 1] - s_b3[c3][c2 - 1][c1 - 1]) * dev_mesh.inv_delta[1] -
                              (s_b2[c3][c2][c1] - s_b2[c3 - 1][c2][c1] +
-                              s_b2[c3][c2][c1 - 1] - s_b2[c3 - 1][c2][c1 - 1]) / dev_mesh.delta[2]);
+                              s_b2[c3][c2][c1 - 1] - s_b2[c3 - 1][c2][c1 - 1]) * dev_mesh.inv_delta[2]);
   EcrossB2 = vecB2 * 0.5f * ((s_b1[c3][c2][c1] - s_b1[c3 - 1][c2][c1] +
-                              s_b1[c3][c2 - 1][c1] - s_b1[c3 - 1][c2 - 1][c1]) / dev_mesh.delta[2] -
+                              s_b1[c3][c2 - 1][c1] - s_b1[c3 - 1][c2 - 1][c1]) * dev_mesh.inv_delta[2] -
                              (s_b3[c3][c2][c1] - s_b3[c3][c2][c1 - 1] +
-                              s_b3[c3][c2 - 1][c1] - s_b3[c3][c2 - 1][c1 - 1]) / dev_mesh.delta[0]);
+                              s_b3[c3][c2 - 1][c1] - s_b3[c3][c2 - 1][c1 - 1]) * dev_mesh.inv_delta[0]);
   EcrossB3 = vecB3 * 0.5f * ((s_b2[c3][c2][c1] - s_b2[c3][c2][c1 - 1] +
-                              s_b2[c3 - 1][c2][c1] - s_b2[c3 - 1][c2][c1 - 1]) / dev_mesh.delta[0] -
+                              s_b2[c3 - 1][c2][c1] - s_b2[c3 - 1][c2][c1 - 1]) * dev_mesh.inv_delta[0] -
                              (s_b1[c3][c2][c1] - s_b1[c3][c2 - 1][c1] +
-                              s_b1[c3 - 1][c2][c1] - s_b1[c3 - 1][c2 - 1][c1]) / dev_mesh.delta[1]);
+                              s_b1[c3 - 1][c2][c1] - s_b1[c3 - 1][c2 - 1][c1]) * dev_mesh.inv_delta[1]);
   // Now use EcrossB1, 2, 3 to compute E\dot(curl E)
   EcrossB1 -= vecE1 * 0.25f * ((s_e3[c3][c2 + 1][c1] - s_e3[c3][c2 - 1][c1] +
-                                s_e3[c3 - 1][c2 + 1][c1] - s_e3[c3 - 1][c2 - 1][c1]) / dev_mesh.delta[1] -
+                                s_e3[c3 - 1][c2 + 1][c1] - s_e3[c3 - 1][c2 - 1][c1]) * dev_mesh.inv_delta[1] -
                                (s_e2[c3 + 1][c2][c1] - s_e2[c3 - 1][c2][c1] +
-                                s_e2[c3 + 1][c2 - 1][c1] - s_e2[c3 - 1][c2 - 1][c1]) / dev_mesh.delta[2]);
+                                s_e2[c3 + 1][c2 - 1][c1] - s_e2[c3 - 1][c2 - 1][c1]) * dev_mesh.inv_delta[2]);
   EcrossB2 -= vecE2 * 0.25f * ((s_e1[c3 + 1][c2][c1] - s_e1[c3 - 1][c2][c1] +
-                                s_e1[c3 + 1][c2][c1 - 1] - s_e1[c3 - 1][c2][c1 - 1]) / dev_mesh.delta[2] -
+                                s_e1[c3 + 1][c2][c1 - 1] - s_e1[c3 - 1][c2][c1 - 1]) * dev_mesh.inv_delta[2] -
                                (s_e3[c3][c2][c1 + 1] - s_e3[c3][c2][c1 - 1] +
-                                s_e3[c3 - 1][c2][c1 + 1] - s_e3[c3 - 1][c2][c1 - 1]) / dev_mesh.delta[0]);
+                                s_e3[c3 - 1][c2][c1 + 1] - s_e3[c3 - 1][c2][c1 - 1]) * dev_mesh.inv_delta[0]);
   EcrossB3 -= vecE3 * 0.25f * ((s_e2[c3][c2][c1 + 1] - s_e2[c3][c2][c1 - 1] +
-                                s_e2[c3][c2 - 1][c1 + 1] - s_e2[c3][c2 - 1][c1 - 1]) / dev_mesh.delta[0] -
+                                s_e2[c3][c2 - 1][c1 + 1] - s_e2[c3][c2 - 1][c1 - 1]) * dev_mesh.inv_delta[0] -
                                (s_e1[c3][c2 + 1][c1] - s_e1[c3][c2 - 1][c1] +
-                                s_e1[c3][c2 + 1][c1 - 1] - s_e1[c3][c2 - 1][c1 - 1]) / dev_mesh.delta[1]);
+                                s_e1[c3][c2 + 1][c1 - 1] - s_e1[c3][c2 - 1][c1 - 1]) * dev_mesh.inv_delta[1]);
   EcrossB1 = EcrossB1 + EcrossB2 + EcrossB3;
 
   // Compute the first term of the FFE current
@@ -211,12 +211,12 @@ void compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out, cudaPitchedPtr e
   (*(Scalar*)((char*)j3.ptr + globalOffset)) += EcrossB1 * vecB3 * inv_B_sqr;
 
   // Now use EcrossB1 to compute curl B
-  EcrossB1 = (s_b3[c3][c2][c1] - s_b3[c3][c2 - 1][c1]) / dev_mesh.delta[1] -
-             (s_b2[c3][c2][c1] - s_b2[c3 - 1][c2][c1]) / dev_mesh.delta[2];
-  EcrossB2 = (s_b1[c3][c2][c1] - s_b1[c3 - 1][c2][c1]) / dev_mesh.delta[2] -
-             (s_b3[c3][c2][c1] - s_b3[c3][c2][c1 - 1]) / dev_mesh.delta[0];
-  EcrossB3 = (s_b2[c3][c2][c1] - s_b2[c3][c2][c1 - 1]) / dev_mesh.delta[0] -
-             (s_b1[c3][c2][c1] - s_b1[c3][c2 - 1][c1]) / dev_mesh.delta[1];
+  EcrossB1 = (s_b3[c3][c2][c1] - s_b3[c3][c2 - 1][c1]) * dev_mesh.inv_delta[1] -
+             (s_b2[c3][c2][c1] - s_b2[c3 - 1][c2][c1]) * dev_mesh.inv_delta[2];
+  EcrossB2 = (s_b1[c3][c2][c1] - s_b1[c3 - 1][c2][c1]) * dev_mesh.inv_delta[2] -
+             (s_b3[c3][c2][c1] - s_b3[c3][c2][c1 - 1]) * dev_mesh.inv_delta[0];
+  EcrossB3 = (s_b2[c3][c2][c1] - s_b2[c3][c2][c1 - 1]) * dev_mesh.inv_delta[0] -
+             (s_b1[c3][c2][c1] - s_b1[c3][c2 - 1][c1]) * dev_mesh.inv_delta[1];
 
   // Compute the update of E, sans J
   (*(Scalar*)((char*)e1out.ptr + globalOffset)) += dt * EcrossB1;
@@ -261,38 +261,14 @@ FieldSolver_FFE::update_field_substep(vfield_t &E_out, vfield_t &B_out, vfield_t
   m_sf.initialize();
 
   // Compute the curl of E_in and set it to m_tmp
-  m_tmp.set_field_type(FieldType::B);
   curl_add(B_out, E_in, dt);
   // m_tmp2 is now equal to curl E_in
   // field_add(B_out, m_tmp, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
-  // timer::stamp();
-  // ffe_edotb(m_sf, E_in, m_tmp, 1.0f);
-  // cudaDeviceSynchronize();
-  // timer::show_duration_since_stamp("First edotb", "ms");
-
-  // m_tmp.initialize();
-  // Compute the curl of B_in and set it to m_tmp
-  // timer::stamp();
-  // m_tmp.set_field_type(FieldType::E);
-  // curl(m_tmp, B_in);
-  // // m_tmp is now equal to curl B_in
-  // field_add(E_out, m_tmp, dt);
-  // cudaDeviceSynchronize();
-  // timer::show_duration_since_stamp("Second curl and add", "ms");
-  // timer::stamp();
-  // ffe_edotb(m_sf, m_tmp, B_in, -1.0f);
-  // cudaDeviceSynchronize();
-  // timer::show_duration_since_stamp("Second edotb", "ms");
-
-  // // Now compute FFE current at the cell center
-  // timer::stamp();
-  // ffe_j(m_tmp, m_sf, E_in, B_in);
-  // cudaDeviceSynchronize();
-  // timer::show_duration_since_stamp("Final compute J", "ms");
 
   // Compute both dE and J together
+  m_tmp.set_field_type(FieldType::E);
   timer::stamp();
   ffe_dE(E_out, m_tmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
