@@ -67,34 +67,34 @@ void interp_from_center(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
       [DIM2 + 2*Pad<Order>::val][DIM1 + 2*Pad<Order>::val];
 
   // Load indices
-  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  // int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
   int c1 = threadIdx.x + Pad<Order>::val,
       c2 = threadIdx.y + Pad<Order>::val,
       c3 = threadIdx.z + Pad<Order>::val;
-  size_t globalOffset =  + (dev_mesh.guard[2] + t3 * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize
-                         + (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) * u1.pitch
-                         + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
+  size_t globalOffset =  + (dev_mesh.guard[2] + blockIdx.z * DIM3 + c3 - Pad<Order>::val) * u1.pitch * u1.ysize
+                         + (dev_mesh.guard[1] + blockIdx.y * DIM2 + c2 - Pad<Order>::val) * u1.pitch
+                         + (dev_mesh.guard[0] + blockIdx.x * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
   // Load shared memory
   init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
                                        globalOffset, c1, c2, c3);
   __syncthreads();
 
-  if (type == FieldType::E) {
-    (*(Scalar*)((char*)v1.ptr + globalOffset)) += q * 0.5f * (s_u1[c3][c2][c1 + 1] + s_u1[c3][c2][c1]);
-    (*(Scalar*)((char*)v2.ptr + globalOffset)) += q * 0.5f * (s_u2[c3][c2 + 1][c1] + s_u2[c3][c2][c1]);
-    (*(Scalar*)((char*)v3.ptr + globalOffset)) += q * 0.5f * (s_u3[c3 + 1][c2][c1] + s_u3[c3][c2][c1]);
-  } else {
-    (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
-        q * 0.25f * (s_u1[c3][c2][c1] + s_u1[c3 + 1][c2][c1] +
-                 s_u1[c3][c2 + 1][c1] + s_u1[c3 + 1][c2 + 1][c1]);
-    (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
-        q * 0.25f * (s_u2[c3][c2][c1] + s_u2[c3 + 1][c2][c1] +
-                 s_u2[c3][c2][c1 + 1] + s_u2[c3 + 1][c2][c1 + 1]);
-    (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
-        q * 0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 + 1] +
-                 s_u3[c3][c2 + 1][c1] + s_u3[c3][c2 + 1][c1 + 1]);
-  }
+  // if (type == FieldType::E) {
+  (*(Scalar*)((char*)v1.ptr + globalOffset)) += q * 0.5f * (s_u1[c3][c2][c1 + 1] + s_u1[c3][c2][c1]);
+  (*(Scalar*)((char*)v2.ptr + globalOffset)) += q * 0.5f * (s_u2[c3][c2 + 1][c1] + s_u2[c3][c2][c1]);
+  (*(Scalar*)((char*)v3.ptr + globalOffset)) += q * 0.5f * (s_u3[c3 + 1][c2][c1] + s_u3[c3][c2][c1]);
+  // } else {
+  //   (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+  //       q * 0.25f * (s_u1[c3][c2][c1] + s_u1[c3 + 1][c2][c1] +
+  //                s_u1[c3][c2 + 1][c1] + s_u1[c3 + 1][c2 + 1][c1]);
+  //   (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+  //       q * 0.25f * (s_u2[c3][c2][c1] + s_u2[c3 + 1][c2][c1] +
+  //                s_u2[c3][c2][c1 + 1] + s_u2[c3 + 1][c2][c1 + 1]);
+  //   (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+  //       q * 0.25f * (s_u3[c3][c2][c1] + s_u3[c3][c2][c1 + 1] +
+  //                s_u3[c3][c2 + 1][c1] + s_u3[c3][c2 + 1][c1 + 1]);
+  // }
 }
 
 }
@@ -560,11 +560,11 @@ VectorField<T>::interpolate_from_center(self_type &result) {
   result.initialize();
   auto& mesh = m_grid->mesh();
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
+  dim3 blockSize(32, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 4);
 
-  Kernels::interp_from_center<2, 16, 8, 8><<<gridSize, blockSize>>>
+  Kernels::interp_from_center<2, 32, 8, 4><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
        m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(), m_type);
   CudaCheckError();
@@ -575,11 +575,11 @@ void
 VectorField<T>::interpolate_from_center_add(self_type &result, Scalar q) {
   auto& mesh = m_grid->mesh();
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
+  dim3 blockSize(32, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+                mesh.reduced_dim(2) / 4);
 
-  Kernels::interp_from_center<2, 16, 8, 8><<<gridSize, blockSize>>>
+  Kernels::interp_from_center<2, 32, 8, 4><<<gridSize, blockSize>>>
       (result.ptr(0), result.ptr(1), result.ptr(2),
        m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
        m_type, q);
