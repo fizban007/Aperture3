@@ -325,11 +325,11 @@ FieldSolver_FFE::ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 8, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+  dim3 blockSize(32, 4, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 4,
                 mesh.reduced_dim(2) / 4);
 
-  Kernels::compute_FFE_dE<16, 8, 4><<<gridSize, blockSize>>>
+  Kernels::compute_FFE_dE<32, 4, 4><<<gridSize, blockSize>>>
       (Eout.ptr(0), Eout.ptr(1), Eout.ptr(2),
        J.ptr(0), J.ptr(1), J.ptr(2),
        E.ptr(0), E.ptr(1), E.ptr(2),
