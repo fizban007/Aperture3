@@ -36,7 +36,7 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // m_pusher->set_interp_order(env.conf().interpolation_order);
 
   // Inverse Compton module
-  m_inverse_compton = std::unique_ptr<InverseCompton>(new InverseCompton(m_env));
+  // m_inverse_compton = std::unique_ptr<InverseCompton>(new InverseCompton(m_env));
 
   // TODO: figure out a way to set algorithm
   // if (m_env.conf().algorithm_ptc_push == "Vay")
@@ -83,10 +83,10 @@ PICSim::step(Aperture::SimData &data, uint32_t step) {
   double dt = m_env.params().delta_t;
   // Particle push, move, and photon move are all handled here
   m_pusher->push(data, dt);
-  m_inverse_compton->convert_pairs(data.particles, data.photons);
+  // m_inverse_compton->convert_pairs(data.particles, data.photons);
   m_depositer->deposit(data, dt);
   m_field_solver->update_fields(data, dt);
-  m_inverse_compton->emit_photons(data.photons, data.particles);
+  // m_inverse_compton->emit_photons(data.photons, data.particles);
   // data.photons.emit_photons(data.particles[0], data.particles[1], data.E.grid().mesh());
   // data.photons.move(data.E.grid(), dt);
   // data.photons.convert_pairs(data.particles[0], data.particles[1]);

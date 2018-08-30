@@ -23,7 +23,7 @@ set(AperCuda_src
   # "algorithms/ptc_pusher_beadonwire.cu"
   "algorithms/current_deposit_Esirkepov.cu" "algorithms/finite_diff.cu"
   "algorithms/field_solver_force_free.cu"
-  "radiation/inverse_compton.cu"
+  # "radiation/inverse_compton.cu"
   "pic_sim.cpp"
   # "algorithms/current_deposit_Esirkepov_cpu.cpp"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
