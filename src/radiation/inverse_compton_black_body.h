@@ -17,7 +17,7 @@ class InverseComptonBB
   HOST_DEVICE InverseComptonBB(Scalar kT, Scalar n0 = 1.0f);
   HOST_DEVICE ~InverseComptonBB();
 
-  HOST_DEVICE Scalar draw_photon_energy(Scalar gamma, Scalar p, Scalar x);
+  HOST_DEVICE Scalar draw_photon_energy(Scalar u, Scalar gamma, Scalar p, Scalar x);
   HOST_DEVICE Scalar draw_photon_freepath(Scalar Eph);
 
  private:
