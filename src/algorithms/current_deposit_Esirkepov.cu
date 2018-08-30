@@ -22,7 +22,7 @@ HD_INLINE Scalar interp(Scalar rel_pos, int ptc_cell, int target_cell) {
 }
 
 __global__
-void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc,
+void compute_delta_rho_1d(Scalar** rho, Scalar** delta_rho, particle_data ptc,
                        Grid::const_mesh_ptrs mp, uint32_t num) {
   for (uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < num;
@@ -51,7 +51,7 @@ void compute_delta_rho(Scalar** rho, Scalar** delta_rho, particle_data ptc,
 
       if (!check_bit(flag, ParticleFlag::ignore_current)) {
         s0 = interp(x_p, c_p, delta_c);
-        atomicAdd(&delta_rho[0][delta_c], q * w * (s0 - s1) * mp.A[delta_c]
+        atomicAdd(&delta_rho[sp][delta_c], q * w * (s0 - s1) * mp.A[delta_c]
                   * dev_mesh.delta[0] / dev_params.delta_t);
       }
       atomicAdd(&rho[sp][delta_c], q * w * s1 * mp.A[delta_c]);
@@ -87,9 +87,11 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   // Scalar** rho_ptrs = data.rho_ptrs;
   Scalar** j_ptrs = data.J.array_ptrs();
 
-  Kernels::compute_delta_rho<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), grid.get_mesh_ptrs(), part.number());
-  CudaCheckError();
-  cudaDeviceSynchronize();
+  if (m_env.grid().dim() == 1) {
+    Kernels::compute_delta_rho_1d<<<512, 512>>>(rho_ptrs, j_ptrs, part.data(), grid.get_mesh_ptrs(), part.number());
+    CudaCheckError();
+    cudaDeviceSynchronize();
+  }
 
   // TODO::Handle periodic boundary by copying over the deposited quantities
 
@@ -99,18 +101,18 @@ void CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
   cudaFree(rho_ptrs);
 
   // communication on the just deposited Rho
-  // if (m_comm_rho != nullptr) {
-  //   for (Index_t i = 0; i < part.size(); i++) {
-  //     m_comm_rho(data.Rho[i]);
-  //   }
-  // }
-  // Now we have delta Q in every cell, add them up along all directions
+  if (m_comm_rho != nullptr) {
+    for (Index_t i = 0; i < data.num_species; i++) {
+      m_comm_rho(data.Rho[i]);
+    }
+  }
 
+  // Now we have delta Q in every cell, add them up along all directions
   scan_current(data.J);
   // Call communication on just scanned J
-  // if (m_comm_J != nullptr) {
-  //   m_comm_J(data.J);
-  // }
+  if (m_comm_J != nullptr) {
+    m_comm_J(data.J);
+  }
 
   // TODO::periodic boundary issues
 }
