@@ -1,7 +1,11 @@
 #include "algorithms/field_solver_default.h"
 #include "data/detail/multi_array_utils.hpp"
+#include "algorithms/finite_diff.h"
+#include "algorithms/field_solver_helper.cuh"
+#include "data/fields_utils.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/constant_mem.h"
+#include "utils/timer.h"
 // #include "sim_environment.h"
 
 namespace Aperture {
@@ -11,7 +15,7 @@ namespace Kernels {
 // TODO: work out the cuda kernels for the 3D finite difference
 
 __global__
-void update_field(Scalar* E, const Scalar* J, const Scalar* J_b) {
+void update_field_1d(Scalar* E, const Scalar* J, const Scalar* J_b) {
   auto dt = dev_params.delta_t;
   for (int i = dev_params.guard[0] - 1 + blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_params.guard[0] + dev_params.N[0];
@@ -33,18 +37,29 @@ FieldSolver_Default::~FieldSolver_Default() {}
 void
 FieldSolver_Default::update_fields(vfield_t &E, vfield_t &B, const vfield_t &J,
                                    double dt, double time) {
-  // Logger::print_info("Updating fields");
+  Logger::print_info("Updating fields");
   auto &grid = E.grid();
   auto &mesh = grid.mesh();
   // Explicit update
   if (grid.dim() == 1) {
-    Kernels::update_field<<<512, 512>>>(E.data(0).data(), J.data(0).data(),
-                                        m_background_j.data(0).data());
+    Kernels::update_field_1d<<<512, 512>>>(E.data(0).data(), J.data(0).data(),
+                                           m_background_j.data(0).data());
     CudaCheckError();
+  } else if (grid.dim() == 3) {
+    // Compute the curl of E and add it to B
+    curl_add(B, E, dt);
+    cudaDeviceSynchronize();
+
+    // Compute the curl of B and add it to E
+    curl_add(E, B, dt);
+    cudaDeviceSynchronize();
   }
 
   if (m_comm_callback_vfield != nullptr) {
     m_comm_callback_vfield(E);
+    if (grid.dim() > 1) {
+      m_comm_callback_vfield(B);
+    }
   }
 }
 
@@ -52,9 +67,6 @@ void
 FieldSolver_Default::update_fields(Aperture::SimData &data, double dt,
                                     double time) {
   update_fields(data.E, data.B, data.J, dt, time);
-  // Kernels::map_array_binary_op<<<256, 256>>>
-  //     (data.E.ptr(0), data.E.ptr(1), data.E.grid().extent(), detail::Op_PlusAssign<Scalar>());
-  // CudaCheckError();
 }
 
 void
