@@ -34,7 +34,7 @@ struct SimParamsBase {
   // simulation parameters
   int         interpolation_order = 1;
   int         current_smoothing   = 0;
-  // bool        data_compress       = true;
+  bool        data_compress       = true;
   LogLevel    log_lvl             = LogLevel::debug;
   size_t      max_steps           = 1000;
   size_t      data_interval       = 100;
@@ -42,10 +42,10 @@ struct SimParamsBase {
   bool        create_pairs        = false;
   bool        trace_photons       = false;
   float       gamma_thr           = 20.0;
-  bool          annih_on          = false;
-  int           annih_thr         = 1000;
-  float         annih_fraction    = 0.01;
-  float         track_percent     = 0.2;
+  bool        annih_on            = false;
+  int         annih_thr           = 1000;
+  float       annih_fraction      = 0.01;
+  float       track_percent       = 0.2;
 
   // These parameters are for radiative transfer
   float       spectral_alpha      = 2.0;  // Slope of the soft photon spectrum
@@ -66,6 +66,7 @@ struct SimParamsBase {
   float   lower[3]                = { 0.0 };
   float   size[3]                 = { 0.0 };
   int     tile_size[3]            = { 1 };
+  int     grid_dim                = 1;
 };
 
 struct SimParams : public SimParamsBase
