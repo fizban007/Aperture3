@@ -260,10 +260,8 @@ FieldSolver_FFE::update_field_substep(vfield_t &E_out, vfield_t &B_out, vfield_t
   timer::stamp();
   m_sf.initialize();
 
-  // Compute the curl of E_in and set it to m_tmp
+  // Compute the curl of E_in and add it to B_out
   curl_add(B_out, E_in, dt);
-  // m_tmp2 is now equal to curl E_in
-  // field_add(B_out, m_tmp, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
 
