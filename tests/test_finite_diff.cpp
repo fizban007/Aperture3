@@ -80,7 +80,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like E", "[FiniteDiff]") {
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
   Logger::print_info("Curl took {}ms, overall bandwidth is {}GB/s", time,
-                     mesh.size()*sizeof(Scalar)*12.0*1.0e-6/time);
+                     mesh.size()*sizeof(Scalar)*6.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
   v.sync_to_host();
   for (int k = 0; k < mesh.dims[2]; k+=4) {
@@ -133,7 +133,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like B", "[FiniteDiff]") {
   cudaDeviceSynchronize();
   auto time = timer::get_duration_since_stamp("ms") / (float)N;
   Logger::print_info("Curl took {}ms, overall bandwidth is {}GB/s", time,
-                     mesh.size()*sizeof(Scalar)*12.0*1.0e-6/time);
+                     mesh.size()*sizeof(Scalar)*6.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
   v.sync_to_host();
   for (int k = 0; k < mesh.dims[2]; k+=4) {
