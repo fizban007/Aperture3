@@ -8,7 +8,6 @@
 #include "particle_pusher.h"
 #include "sim_data.h"
 #include "sim_environment.h"
-#include "radiation/inverse_compton.h"
 
 namespace Aperture {
 
