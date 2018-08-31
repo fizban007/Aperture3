@@ -10,6 +10,7 @@ set(Aperture_src
   "utils/logger.cpp" "utils/timer.cpp"
   "utils/hdf_exporter.cpp"
   "commandline_args.cpp" "config_file.cpp"
+  "sim_environment.cpp" "pic_sim.cpp"
   )
 add_library(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
@@ -18,13 +19,13 @@ set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu" "data/photons.cu"
   "data/fields_utils.cu"
   "algorithms/field_solver_default.cu"
-  "sim_environment.cu" "sim_data.cu"
+  # "sim_environment.cu"
+  "sim_data.cu"
   "cuda/constant_mem.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
   "algorithms/current_deposit_Esirkepov.cu" "algorithms/finite_diff.cu"
   "algorithms/field_solver_force_free.cu"
-  "radiation/inverse_compton.cu"
-  "pic_sim.cpp"
+  # "radiation/inverse_compton.cu"
   # "algorithms/current_deposit_Esirkepov_cpu.cpp"
   # "commandline_args.cpp" "config_file.cpp" "sim_data.cpp" "sim_environment.cpp" "pic_sim.cpp" "domain_communicator.cpp"
   # "pic_sim.cpp" "boundary_conditions.cpp"

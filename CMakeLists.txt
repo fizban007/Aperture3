@@ -61,7 +61,7 @@ set(FADBAD_INCLUDE_DIR deps/FADBAD++)
 set(CUB_INCLUDE_DIR deps/cub)
 # set(INTEGRATE_INCLUDE_DIR deps/integrate/src)
 
-include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} ${CUB_INCLUDE_DIR} ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} include)
+include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} ${CUB_INCLUDE_DIR} ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} include src)
   # ${CATCH_INCLUDE_DIR} ${INTEGRATE_INCLUDE_DIR}
 
 # enable_language(C++ CUDA)
@@ -107,7 +107,7 @@ if (build_tests)
 endif()
 
 # This is to get all header files recognized by QtCreator
-file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp")
+file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp" "src/*.h" "src/*/*.h" "src/*.hpp" "src/*/*.hpp")
 add_custom_target(myIncludes SOURCES ${headers})
 
 # find_package(Cuda REQUIRED)
