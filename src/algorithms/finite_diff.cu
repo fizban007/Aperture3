@@ -99,8 +99,8 @@ void deriv_x(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
   int si = threadIdx.x + Pad<Order>::val;
   size_t globalOffset = ((blockIdx.z + dev_mesh.guard[2]) * f.ysize +
-                      (threadIdx.y + blockIdx.y * blockDim.y +
-                       dev_mesh.guard[1])) * f.pitch;
+                         (threadIdx.y + blockIdx.y * blockDim.y +
+                          dev_mesh.guard[1])) * f.pitch;
 
   // Read data into shared memory
   Scalar* row = (Scalar*)((char*)f.ptr + globalOffset);
@@ -130,7 +130,7 @@ void deriv_y(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   // Load indices
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
   long offset = ((DIM2 * blockIdx.y) +
-                   (blockIdx.z + dev_mesh.guard[2]) * f.ysize) * f.pitch;
+                 (blockIdx.z + dev_mesh.guard[2]) * f.ysize) * f.pitch;
 
   // Read data into shared memory
   for (int j = threadIdx.y; j < DIM2; j += blockDim.y) {
@@ -174,7 +174,7 @@ void deriv_z(cudaPitchedPtr df, cudaPitchedPtr f, int stagger, Scalar q) {
   int i = threadIdx.x + blockIdx.x * blockDim.x + dev_mesh.guard[0];
   int dz = f.ysize * f.pitch;
   long offset = (blockIdx.z + dev_mesh.guard[1]) * f.pitch +
-               (DIM3 * blockIdx.y) * dz;
+                (DIM3 * blockIdx.y) * dz;
                
   // Read data into shared memory
   for (int j = threadIdx.y; j < DIM3; j += blockDim.y) {
@@ -228,7 +228,7 @@ void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
                          (dev_mesh.guard[0] + blockIdx.x * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
   init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
-                                       globalOffset, c1, c2, c3);
+                                              globalOffset, c1, c2, c3);
   __syncthreads();
 
   // Do the actual computation here
@@ -246,9 +246,6 @@ void compute_curl(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   (*(Scalar*)((char*)v3.ptr + globalOffset)) =
       d1<Order, DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
       d2<Order, DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3);
-  //     }
-  //   }
-  // }
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -274,14 +271,14 @@ void compute_curl_add(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
                          (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
   init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
-                                       globalOffset, c1, c2, c3);
+                                              globalOffset, c1, c2, c3);
   __syncthreads();
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
       q * (d2<Order, DIM1, DIM2, DIM3>(s_u3, c1, c2 + flip(s3[1]), c3) -
-       d3<Order, DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2])));
+           d3<Order, DIM1, DIM2, DIM3>(s_u2, c1, c2, c3 + flip(s2[2])));
 
   // (Curl u)_2 = d3u1 - d1u3
   (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
@@ -292,9 +289,6 @@ void compute_curl_add(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
   (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
       q * (d1<Order, DIM1, DIM2, DIM3>(s_u2, c1 + flip(s2[0]), c2, c3) -
            d2<Order, DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3));
-  //     }
-  //   }
-  // }
 }
 
 template <int Order, int DIM1, int DIM2, int DIM3>
@@ -320,7 +314,7 @@ void compute_div(cudaPitchedPtr v, cudaPitchedPtr u1,
                          + (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) * sizeof(Scalar);
 
   init_shared_memory<Order, DIM1, DIM2, DIM3>(s_u1, s_u2, s_u3, u1, u2, u3,
-                                       globalOffset, c1, c2, c3);
+                                              globalOffset, c1, c2, c3);
   __syncthreads();
 
   // Do the actual computation here
