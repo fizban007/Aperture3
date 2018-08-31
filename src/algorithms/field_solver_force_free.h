@@ -28,8 +28,8 @@ class FieldSolver_FFE : public FieldSolver
               const VectorField<Scalar>& E, const VectorField<Scalar>& B,
               Scalar dt);
 
-  sfield_t m_sf;
-  vfield_t m_tmp;
+  // sfield_t m_sf;
+  vfield_t m_Etmp, m_Btmp;
   // vfield_t m_e1, m_e2, m_e3, m_e4;
   // vfield_t m_b1, m_b2, m_b3, m_b4;
   // vfield_t m_j1, m_j2, m_j3, m_j4;
