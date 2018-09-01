@@ -227,7 +227,7 @@ void compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out, cudaPitchedPtr e
 }
 
 FieldSolver_FFE::FieldSolver_FFE(const Grid& g) :
-    m_sf(g), m_tmp(g)
+    m_Etmp(g), m_Btmp(g)
     // , m_tmp2(g),
     // m_e1(g), m_e2(g), m_e3(g), m_e4(g),
     // m_b1(g), m_b2(g), m_b3(g), m_b4(g)
@@ -257,25 +257,23 @@ FieldSolver_FFE::update_field_substep(vfield_t &E_out, vfield_t &B_out, vfield_t
   // Initialize all tmp fields to zero on the device
   // m_tmp.initialize();
   // m_tmp2.initialize();
-  timer::stamp();
-  m_sf.initialize();
+  m_Etmp.initialize();
+  m_Etmp.set_field_type(FieldType::E);
 
+  timer::stamp();
   // Compute the curl of E_in and add it to B_out
   curl_add(B_out, E_in, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
 
-  // Compute both dE and J together
-  m_tmp.set_field_type(FieldType::E);
+  // Compute both dE and J together, put the result of J into Etmp
   timer::stamp();
-  ffe_dE(E_out, m_tmp, E_in, B_in, dt);
+  ffe_dE(E_out, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Computing FFE J", "ms");
-  // interpolate J back to staggered position
+  // interpolate J back to staggered position, multiply by dt, and add to E_out
   timer::stamp();
-  m_tmp.interpolate_from_center_add(E_out, dt);
-  // Add J to E_out, conclude the substep update
-  // field_add(E_out, J_out, dt);
+  m_Etmp.interpolate_from_center_add(E_out, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Interpolate and add", "ms");
 

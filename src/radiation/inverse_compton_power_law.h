@@ -7,8 +7,6 @@
 #include "data/typedefs.h"
 #include "cuda/cuda_control.h"
 
-// class curandState;
-
 namespace Aperture {
 
 template <typename RandFunc>

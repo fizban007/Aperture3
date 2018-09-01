@@ -8,11 +8,13 @@
 
 namespace Aperture {
 
+class Environment;
+
 class ParticlePusher_Geodesic : public ParticlePusher {
  public:
   typedef ParticlePusher_Geodesic self_type;
 
-  ParticlePusher_Geodesic();
+  ParticlePusher_Geodesic(const Environment& env);
   virtual ~ParticlePusher_Geodesic();
 
   virtual void push(SimData& data, double dt);

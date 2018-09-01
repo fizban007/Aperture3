@@ -16,22 +16,27 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // Initialize modules
   // m_comm = std::make_unique<DomainCommunicator>(env);
 
-  // TODO: select current deposition method according to config
+  // Select current deposition method according to config
   m_depositer = std::unique_ptr<CurrentDepositer_Esirkepov>(new CurrentDepositer_Esirkepov(m_env));
   // m_depositer->set_periodic(env.conf().boundary_periodic[0]);
   // m_depositer->set_interp_order(env.conf().interpolation_order);
 
-  // TODO: select field solver according to config
-  // m_field_solver = std::make_unique<FieldSolver_Integral>(m_env.local_grid(),
-  //                                                         m_env.local_grid_dual());
-  m_field_solver = std::unique_ptr<FieldSolver_Default>(new FieldSolver_Default(m_env.local_grid()));
-
+  // Select field solver according to config
+  if (m_env.params().algorithm_field_update == "ffe") {
+    m_field_solver = std::unique_ptr<FieldSolver_FFE>(new FieldSolver_FFE(m_env.local_grid()));
+  } else {
+    // Fall back to default field solver
+    m_field_solver = std::unique_ptr<FieldSolver_Default>(new FieldSolver_Default(m_env.local_grid()));
+  }
   // TODO: select particle mover type according to config
   // int interp_order = m_env.conf().interpolation_order;
 
-  // Implement particle pusher
-  // m_pusher = std::make_unique<ParticlePusher_Geodesic>();
-  // m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(new ParticlePusher_BeadOnWire(m_env));
+  // Select particle pusher according to config
+  if (m_env.params().algorithm_ptc_move == "beadonwire") {
+    m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(new ParticlePusher_BeadOnWire(m_env));
+  } else {
+    m_pusher = std::unique_ptr<ParticlePusher_Geodesic>(new ParticlePusher_Geodesic(m_env));
+  }
   // m_pusher->set_periodic(env.conf().boundary_periodic[0]);
   // m_pusher->set_interp_order(env.conf().interpolation_order);
 

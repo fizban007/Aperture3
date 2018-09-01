@@ -5,6 +5,7 @@
 #include <fmt/ostream.h>
 #include "utils/logger.h"
 #include "algorithms/functions.h"
+#include "sim_environment.h"
 #ifdef __AVX2__
 #include <immintrin.h>
 #include <xmmintrin.h>
@@ -51,7 +52,7 @@ double gamma(double beta_phi, double p) {
   return std::sqrt(1.0 + p*p + b2);
 }
 
-ParticlePusher_Geodesic::ParticlePusher_Geodesic() {}
+ParticlePusher_Geodesic::ParticlePusher_Geodesic(const Environment& env) {}
 
 ParticlePusher_Geodesic::~ParticlePusher_Geodesic() {}
 
