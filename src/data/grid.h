@@ -25,7 +25,7 @@ class Grid {
   Grid(int N1, int N2 = 1, int N3 = 1);
   Grid(const Grid& g);
   Grid(Grid&& g);
-  ~Grid();
+  virtual ~Grid();
 
   void init(const SimParams& params);
 
@@ -41,34 +41,11 @@ class Grid {
   Extent extent() const { return m_mesh.extent(); }
   unsigned int dim() const { return m_mesh.dim(); }
 
-  Scalar* D1() { return m_D1.data(); }
-  Scalar* D2() { return m_D2.data(); }
-  Scalar* D3() { return m_D3.data(); }
-  Scalar* alpha_grr() { return m_alpha_grr.data(); }
-  Scalar* A() { return m_A.data(); }
-  Scalar* a2() { return m_a2.data(); }
-  Scalar* angle() { return m_angle.data(); }
-
-  struct mesh_ptrs {
-    Scalar *D1, *D2, *D3;
-    Scalar *A, *alpha_grr, *angle;
-    Scalar *a2;
-  };
-  struct const_mesh_ptrs {
-    const Scalar *D1, *D2, *D3;
-    const Scalar *A, *alpha_grr, *angle;
-    const Scalar *a2;
-  };
-  const_mesh_ptrs get_mesh_ptrs() const;
-
- private:
+ protected:
   // void allocate_arrays();
   Quadmesh m_mesh;
-
-  MultiArray<Scalar> m_D1, m_D2, m_D3;
-  MultiArray<Scalar> m_A, m_alpha_grr, m_angle;
-  MultiArray<Scalar> m_a2;
 };
+
 }
 
 // #include "data/detail/grid_impl.hpp"
