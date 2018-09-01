@@ -80,9 +80,10 @@ struct SimParams : public SimParamsBase
   std::array<std::string, 3> grid_config;
   std::array<std::string, 3> data_grid_config;
 
-  std::string algorithm_ptc_move = "mapping";
+  // std::string algorithm_ptc_move = "mapping";
+  std::string algorithm_ptc_move = "beadonwire";
   std::string algorithm_ptc_push = "Vay";
-  std::string algorithm_field_update = "integral";
+  std::string algorithm_field_update = "default";
   std::string algorithm_current_deposit = "Esirkepov";
   std::string initial_condition = "empty";
 
