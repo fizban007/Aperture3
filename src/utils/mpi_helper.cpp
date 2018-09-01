@@ -1,9 +1,10 @@
 #include "utils/mpi_helper.h"
 #include <stddef.h>
-#include <boost/fusion/include/size.hpp>
+// #include <boost/fusion/include/size.hpp>
+#include "visit_struct/visit_struct.hpp"
 #include "data/particle_data.h"
 #include "data/vec3.h"
-#include "utils/mpi_comm.h"
+// #include "utils/mpi_comm.h"
 
 #define BUFSIZE 1024
 
@@ -13,11 +14,32 @@ MPI_Datatype MPI_VEC3_FLOAT;
 MPI_Datatype MPI_VEC3_DOUBLE;
 MPI_Datatype MPI_VEC3_INT;
 MPI_Datatype MPI_VEC3_CHAR;
-MPI_Datatype MPI_PARTICLES;
-MPI_Datatype MPI_PHOTONS;
+MPI_Datatype MPI_PARTICLE;
+MPI_Datatype MPI_PHOTON;
 
 namespace MPI_Helper {
 
+struct def_mpi_struct {
+  int n_, offset_;
+  int* blocklengths_;
+  MPI_Datatype* types_;
+  MPI_Aint* offsets_;
+
+  def_mpi_struct(int n, int offset, int blocklengths[],
+                 MPI_Datatype types[], MPI_Aint offsets[]) :
+      n_(n), offset_(offset), blocklengths_(&blocklengths[0]),
+      types_(&types[0]), offsets_(&offsets[0]) {}
+
+  template <typename T>
+  void operator()(const char* name, T& x) {
+    blocklengths_[n_] = 1;
+    types_[n_] = get_mpi_datatype(
+        typename std::remove_reference<decltype(x)>::type());
+    offsets_[n_] = offset_;
+    n_ += 1;
+    offset_ += sizeof(typename std::remove_reference<decltype(x)>::type);
+  }
+};
 ////////////////////////////////////////////////////////////////////////////////
 ///  Specialize the MPI built-in data types
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,12 +132,12 @@ MPI_Datatype get_mpi_datatype(const Vec3<char>& x) {
 
 template <>
 MPI_Datatype get_mpi_datatype(const single_particle_t& x) {
-  return MPI_PARTICLES;
+  return MPI_PARTICLE;
 }
 
 template <>
 MPI_Datatype get_mpi_datatype(const single_photon_t& x) {
-  return MPI_PHOTONS;
+  return MPI_PHOTON;
 }
 
 template <typename Type>
@@ -137,23 +159,16 @@ void register_vec3_type(const Type& t, MPI_Datatype* type) {
 
 template <typename ParticleType>
 void register_particle_type(const ParticleType& p_def, MPI_Datatype* type) {
-  constexpr int n_entries =
-      boost::fusion::result_of::size<ParticleType>::type::value;
+  constexpr int n_entries = visit_struct::field_count<ParticleType>();
+      // boost::fusion::result_of::size<ParticleType>::type::value;
   int blocklengths[n_entries];
   MPI_Datatype types[n_entries];
   MPI_Aint offsets[n_entries];
 
   int n = 0;
   int offset = 0;
-  boost::fusion::for_each(
-      p_def, [&n, &offset, &blocklengths, &types, &offsets](auto& x) {
-        blocklengths[n] = 1;
-        types[n] = get_mpi_datatype(
-            typename std::remove_reference<decltype(x)>::type());
-        offsets[n] = offset;
-        n += 1;
-        offset += sizeof(typename std::remove_reference<decltype(x)>::type);
-      });
+  ParticleType p;
+  visit_struct::for_each(p, def_mpi_struct{n, offset, blocklengths, types, offsets});
 
   MPI_Type_create_struct(n_entries, blocklengths, offsets, types, type);
   MPI_Type_commit(type);
@@ -164,8 +179,8 @@ void register_types() {
   register_vec3_type(double(), &MPI_VEC3_DOUBLE);
   register_vec3_type(int(), &MPI_VEC3_INT);
   register_vec3_type(char(), &MPI_VEC3_CHAR);
-  register_particle_type(single_particle_t(), &MPI_PARTICLES);
-  register_particle_type(single_photon_t(), &MPI_PHOTONS);
+  register_particle_type(single_particle_t(), &MPI_PARTICLE);
+  register_particle_type(single_photon_t(), &MPI_PHOTON);
 }
 
 void free_types() {
@@ -173,8 +188,8 @@ void free_types() {
   MPI_Type_free(&MPI_VEC3_DOUBLE);
   MPI_Type_free(&MPI_VEC3_INT);
   MPI_Type_free(&MPI_VEC3_CHAR);
-  MPI_Type_free(&MPI_PARTICLES);
-  MPI_Type_free(&MPI_PHOTONS);
+  MPI_Type_free(&MPI_PARTICLE);
+  MPI_Type_free(&MPI_PHOTON);
 }
 
 void handle_mpi_error(int error_code, int rank) {
@@ -187,15 +202,15 @@ void handle_mpi_error(int error_code, int rank) {
   }
 }
 
-void handle_mpi_error(int error_code, const MPICommBase& comm) {
-  if (error_code != MPI_SUCCESS) {
-    char error_string[BUFSIZE];
-    int length_of_error_string;
+// void handle_mpi_error(int error_code, const MPICommBase& comm) {
+//   if (error_code != MPI_SUCCESS) {
+//     char error_string[BUFSIZE];
+//     int length_of_error_string;
 
-    MPI_Error_string(error_code, error_string, &length_of_error_string);
-    fprintf(stderr, "%s rank %3d: %s\n", comm.name().c_str(), comm.rank(), error_string);
-  }
-}
+//     MPI_Error_string(error_code, error_string, &length_of_error_string);
+//     fprintf(stderr, "%s rank %3d: %s\n", comm.name().c_str(), comm.rank(), error_string);
+//   }
+// }
 
 std::vector<MPI_Request> null_requests(int size) {
   std::vector<MPI_Request> requests( size );

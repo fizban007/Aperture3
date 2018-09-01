@@ -16,7 +16,7 @@ namespace Aperture {
   struct particle_array_type;
 }
 
-// Here we define particle types through heavy macro magic. The macro
+// Here we define particle types through some macro magic. The macro
 // DEF_PARTICLE_STRUCT takes in a name, and a sequence of triples, each one
 // defines an entry in the particle struct. The macro defines two structs at the
 // same time: `particle_data` and `single_particle_t`. For example, the following
@@ -54,6 +54,16 @@ DEF_PARTICLE_STRUCT(particle,
                     (Aperture::Scalar, p1, 0.0)
                     (Aperture::Scalar, p2, 0.0)
                     (Aperture::Scalar, p3, 0.0)
+                    (Aperture::Scalar, weight, 0.0)
+                    (uint32_t, cell, MAX_CELL)
+                    (uint32_t, tile, MAX_TILE)
+                    (uint32_t, flag, 0)
+                    );
+
+DEF_PARTICLE_STRUCT(particle1d,
+                    (Aperture::Pos_t, x1, 0.0)
+                    (Aperture::Pos_t, dx1, 0.0)
+                    (Aperture::Scalar, p1, 0.0)
                     (Aperture::Scalar, weight, 0.0)
                     (uint32_t, cell, MAX_CELL)
                     (uint32_t, tile, MAX_TILE)
