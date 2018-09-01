@@ -73,7 +73,7 @@ void move_ptc(particle_data ptc, Grid::const_mesh_ptrs mp, double dt, uint32_t n
     int delta_c = floor(new_x1);
     c += delta_c;
 
-    ptc.dx1[i] = dx;
+    // ptc.dx1[i] = dx;
     ptc.cell[i] = c;
     ptc.x1[i] = new_x1 - (Pos_t)delta_c;
   }
@@ -149,7 +149,7 @@ void push_and_move(particle_data ptc, const Scalar* E, Grid::const_mesh_ptrs mp,
     int delta_c = floor(new_x1);
     c += delta_c;
 
-    ptc.dx1[i] = dx;
+    // ptc.dx1[i] = dx;
     ptc.cell[i] = c;
     ptc.x1[i] = new_x1 - (Pos_t)delta_c;
   }
@@ -201,8 +201,8 @@ ParticlePusher_BeadOnWire::lorentz_push(Particles& particles, const VectorField<
   auto& grid = E.grid();
   if (E.grid().dim() == 1) {
     // Kernels::lorentz_push<<<512, 512>>>(ptc, E.ptr(0), grid.get_mesh_ptrs(), dt, particles.number());
-    Kernels::push_and_move<<<512, 512>>>(ptc, E.ptr(0), grid.get_mesh_ptrs(), dt, particles.number());
-    CudaCheckError();
+    // Kernels::push_and_move<<<512, 512>>>(ptc, E.ptr(0), grid.get_mesh_ptrs(), dt, particles.number());
+    // CudaCheckError();
   }
 }
 
@@ -215,12 +215,12 @@ ParticlePusher_BeadOnWire::handle_boundary(SimData &data) {
       ptc.clear_guard_cells();
     }
   }
-  // auto& photon = data.photons;
-  // if (photon.number() > 0) {
-  //   if (m_params.periodic_boundary[0] == false) {
-  //     photon.clear_guard_cells();
-  //   }
-  // }
+  auto& photon = data.photons;
+  if (photon.number() > 0) {
+    if (m_params.periodic_boundary[0] == false) {
+      photon.clear_guard_cells();
+    }
+  }
 
 }
 

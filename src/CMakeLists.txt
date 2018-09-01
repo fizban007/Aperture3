@@ -7,8 +7,8 @@ add_definitions(-DCUDA_ENABLED)
 # endif()
 
 set(Aperture_src
-  "utils/logger.cpp" "utils/timer.cpp"
-  "utils/hdf_exporter.cpp"
+  "utils/logger.cpp" "utils/timer.cpp" "utils/hdf_exporter.cpp"
+  "utils/mpi_helper.cpp"
   "commandline_args.cpp" "config_file.cpp"
   "sim_environment.cpp" "pic_sim.cpp"
   )
@@ -19,6 +19,7 @@ set(AperCuda_src
   "data/multi_array.cu" "data/particles.cu" "data/grid.cu" "data/fields.cu" "data/photons.cu"
   "data/fields_utils.cu"
   "algorithms/field_solver_default.cu"
+  "algorithms/ptc_pusher_beadonwire.cu"
   # "sim_environment.cu"
   "sim_data.cu"
   "cuda/constant_mem.cu"
