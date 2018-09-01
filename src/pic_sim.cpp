@@ -1,6 +1,6 @@
 #include "pic_sim.h"
-#include "algorithms/field_solver_default.h"
-// #include "algorithms/ptc_pusher_beadonwire.h"
+#include "field_solvers.h"
+#include "ptc_pushers.h"
 #include "algorithms/current_deposit_Esirkepov.h"
 // #include "domain_communicator.h"
 #include <functional>
