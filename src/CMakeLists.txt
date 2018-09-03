@@ -26,6 +26,7 @@ set(AperCuda_src
   # "sim_environment.cu"
   "sim_data.cu"
   "cuda/constant_mem.cu" "cuda/kernels.cu"
+  "radiation/radiation_transfer.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
   # "algorithms/current_deposit_Esirkepov.cu"
   "algorithms/finite_diff.cu" "algorithms/field_solver_force_free.cu"
