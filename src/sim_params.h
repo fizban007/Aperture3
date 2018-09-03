@@ -87,6 +87,7 @@ struct SimParams : public SimParamsBase
   std::string algorithm_current_deposit = "Esirkepov";
   std::string initial_condition = "empty";
 
+  int random_seed               = 4321;
 };
 
 
