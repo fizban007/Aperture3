@@ -1,10 +1,12 @@
 #ifndef _PARTICLE_DATA_IMPL_H_
 #define _PARTICLE_DATA_IMPL_H_
 
+#include <cstdlib>
+#include "data/particle_data.h"
 #include "utils/for_each_arg.hpp"
 
 namespace Aperture {
-
+ 
 struct read_at_idx
 {
   size_t idx_;
@@ -19,22 +21,27 @@ struct read_at_idx
 
 single_particle_t particle_data::operator[](size_t idx) const {
   single_particle_t part;
-  // typedef boost::fusion::vector<single_particle_t&, const particle_data&> seq;
-  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(part, *this)),
-  //                         read_at_idx(idx) );
   for_each_arg(*this, part, read_at_idx(idx));
   return part;
 }
 
 single_photon_t photon_data::operator[](size_t idx) const {
   single_photon_t part;
-  // typedef boost::fusion::vector<single_photon_t&, const photon_data&> seq;
-  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(part, *this)),
-  //                         read_at_idx(idx) );
   for_each_arg(*this, part, read_at_idx(idx));
   return part;
 }
 
+single_particle1d_t particle1d_data::operator[](size_t idx) const {
+  single_particle1d_t part;
+  for_each_arg(*this, part, read_at_idx(idx));
+  return part;
+}
+
+single_photon1d_t photon1d_data::operator[](size_t idx) const {
+  single_photon1d_t part;
+  for_each_arg(*this, part, read_at_idx(idx));
+  return part;
+}
 }
 
 

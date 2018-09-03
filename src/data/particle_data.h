@@ -9,7 +9,6 @@
 #include "data/detail/macro_trickery.h"
 #include <cinttypes>
 #include <type_traits>
-#include <cinttypes>
 
 namespace Aperture {
   template <typename SingleType>
