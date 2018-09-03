@@ -1,5 +1,5 @@
-#ifndef _PHOTONS_H_
-#define _PHOTONS_H_
+#ifndef _PHOTONS_1D_H_
+#define _PHOTONS_1D_H_
 
 #include <cstdlib>
 #include <vector>
@@ -11,25 +11,25 @@
 
 namespace Aperture {
 
-class Environment;
+class SimParams;
 
-class Photons : public ParticleBase<single_photon_t>
+class Photons_1D : public ParticleBase<single_photon1d_t>
 {
  public:
-  typedef ParticleBase<single_photon_t> BaseClass;
-  Photons();
-  Photons(std::size_t max_num);
-  Photons(const Environment& env);
-  Photons(const Photons& other);
-  Photons(Photons&& other);
-  virtual ~Photons();
+  typedef ParticleBase<single_photon1d_t> BaseClass;
+  Photons_1D();
+  Photons_1D(std::size_t max_num);
+  Photons_1D(const SimParams& params);
+  Photons_1D(const Photons_1D& other);
+  Photons_1D(Photons_1D&& other);
+  virtual ~Photons_1D();
 
   using BaseClass::put;
   using BaseClass::append;
-  void put(std::size_t pos, const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
+  void put(std::size_t pos, Pos_t x1, Scalar p1,
            Scalar path_left, int cell, Scalar weight = 1.0, uint32_t flag = 0);
-  void append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
-              Scalar path_left, int cell, Scalar weight = 1.0, uint32_t flag = 0);
+  void append(Pos_t x1, Scalar p1, Scalar path_left,
+              int cell, Scalar weight = 1.0, uint32_t flag = 0);
 
   // void convert_pairs(Particles& electrons, Particles& positrons);
   // void emit_photons(Particles& electrons, Particles& positrons, const Quadmesh& mesh);
@@ -47,6 +47,6 @@ class Photons : public ParticleBase<single_photon_t>
 
 }
 
-// #include "types/detail/photons_impl.hpp"
 
-#endif  // _PHOTONS_H_
+
+#endif  // _PHOTONS_1D_H_

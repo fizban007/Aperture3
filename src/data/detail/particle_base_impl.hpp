@@ -1,13 +1,13 @@
 #ifndef _PARTICLE_BASE_IMPL_H_
 #define _PARTICLE_BASE_IMPL_H_
 
-#include "boost/container/vector.hpp"
-#include "boost/fusion/include/for_each.hpp"
-#include "boost/fusion/include/size.hpp"
+// #include "boost/container/vector.hpp"
+// #include "boost/fusion/include/for_each.hpp"
+// #include "boost/fusion/include/size.hpp"
 // #include "boost/fusion/include/zip_view.hpp"
-#include "boost/mpl/range_c.hpp"
-#include "boost/mpl/integral_c.hpp"
-#include "data/detail/particle_data_impl.hpp"
+// #include "boost/mpl/range_c.hpp"
+// #include "boost/mpl/integral_c.hpp"
+// #include "data/detail/particle_data_impl.hpp"
 #include "data/particle_base.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
@@ -15,6 +15,7 @@
 #include "utils/for_each_arg.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/kernels.h"
 
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
@@ -33,36 +34,6 @@
 // #include "types/particles.h"
 
 namespace Aperture {
-
-namespace Kernels {
-
-__global__
-void compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-       i < num;
-       i += blockDim.x * gridDim.x) {
-    // tile[i] = cell[i] / dev_mesh.tileSize[0];
-    if (i < num)
-      tile[i] = dev_mesh.tile_id(cell[i]);
-  }
-}
-
-__global__
-void erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-       i < num;
-       i += blockDim.x * gridDim.x) {
-    // if (i == 0) printf("num is %d\n", num);
-    if (i < num) {
-      auto c = cell[i];
-      if (!dev_mesh.is_in_bulk(c))
-      // if (c < dev_mesh.guard[0] || c >= dev_mesh.dims[0] - dev_mesh.guard[0])
-        cell[i] = MAX_CELL;
-    }
-  }
-}
-
-}
 
 // These are helper functors for for_each loops
 
@@ -326,17 +297,14 @@ ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::compute_tile_num() {
-  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, m_number);
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
-  CudaCheckError();
+  compute_tile(m_data.tile, m_data.cell, m_number);
 }
 
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::sort_by_tile() {
   // First compute the tile number according to current cell id
-  Kernels::compute_tile<<<256, 256>>>(m_data.tile, m_data.cell, this->m_number);
+  compute_tile(m_data.tile, m_data.cell, m_number);
 
   // Generate particle index array
   auto ptr_tile = thrust::device_pointer_cast(m_data.tile);
@@ -713,10 +681,7 @@ ParticleBase<ParticleClass>::sync_to_host() {
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::clear_guard_cells() {
-  Kernels::erase_ptc_in_guard_cells<<<512,512>>>(m_data.cell, m_number);
-  // Wait for GPU to finish
-  cudaDeviceSynchronize();
-  CudaCheckError();
+  erase_ptc_in_guard_cells(m_data.cell, m_number);
 
   // for (Index_t i = 0; i < m_number; i++) {
   //   if (!grid.mesh().is_in_bulk(m_data.cell[i])) {
