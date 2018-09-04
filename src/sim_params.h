@@ -20,8 +20,8 @@ struct SimParamsBase {
   double        delta_t           = 0.01;
   double        q_e               = 1.0;
   int           ptc_per_cell      = 1;
-  unsigned long max_ptc_number    = 100;
-  unsigned long max_photon_number = 100;
+  unsigned long max_ptc_number    = 100000;
+  unsigned long max_photon_number = 100000;
   double        ion_mass          = 1.0;
   int           num_species       = 3;
 
