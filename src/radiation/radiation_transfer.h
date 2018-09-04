@@ -21,6 +21,9 @@ class RadiationTransfer
   const Environment& m_env;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
+  uint32_t* m_numPerBlock;
+  uint32_t* m_cumNumPerBlock;
+  uint32_t* m_posInBlock;
 }; // ----- end of class RadiationTransfer -----
 
 
