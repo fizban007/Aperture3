@@ -17,6 +17,7 @@ class Photons : public ParticleBase<single_photon_t>
 {
  public:
   typedef ParticleBase<single_photon_t> BaseClass;
+  typedef photon_data DataClass;
   Photons();
   Photons(std::size_t max_num);
   Photons(const Environment& env);

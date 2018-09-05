@@ -17,6 +17,7 @@ class Particles_1D : public ParticleBase<single_particle1d_t>
 {
  public:
   typedef ParticleBase<single_particle1d_t> BaseClass;
+  typedef particle1d_data DataClass;
   Particles_1D();
   Particles_1D(std::size_t max_num);
   Particles_1D(const SimParams& env);

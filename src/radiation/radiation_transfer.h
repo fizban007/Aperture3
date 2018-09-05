@@ -2,6 +2,7 @@
 #define _RADIATION_TRANSFER_H_
 
 #include "data/typedefs.h"
+#include "data/array.h"
 
 namespace Aperture {
 
@@ -21,9 +22,9 @@ class RadiationTransfer
   const Environment& m_env;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
-  uint32_t* m_numPerBlock;
-  uint32_t* m_cumNumPerBlock;
-  uint32_t* m_posInBlock;
+  Array<int> m_numPerBlock;
+  Array<int> m_cumNumPerBlock;
+  Array<int> m_posInBlock;
 }; // ----- end of class RadiationTransfer -----
 
 

@@ -124,6 +124,16 @@ InverseComptonPL<RandFunc>::~InverseComptonPL() {}
 
 template <typename RandFunc>
 HOST_DEVICE
+bool
+InverseComptonPL<RandFunc>::emit_photon(Scalar gamma) {
+  float u = m_rng();
+  // TODO: Finish photon emission rate
+  float rate = (gamma * m_emin < 0.1 ? 0.1 : 0.01);
+  return (u < rate);
+}
+
+template <typename RandFunc>
+HOST_DEVICE
 Scalar
 InverseComptonPL<RandFunc>::draw_photon_energy(Scalar gamma, Scalar p) {
   Scalar e1p = draw_photon_e1p(gamma);
