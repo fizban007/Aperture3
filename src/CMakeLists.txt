@@ -17,7 +17,7 @@ add_library(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
 
 set(AperCuda_src
-  "data/multi_array.cu" "data/fields.cu" "data/photons.cu"
+  "data/array.cu" "data/multi_array.cu" "data/fields.cu" "data/photons.cu"
   "data/particles.cu" "data/particles_1d.cu"
   "data/photons.cu" "data/photons_1d.cu"
   "data/fields_utils.cu"
