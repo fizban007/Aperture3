@@ -19,11 +19,11 @@
 #define CudaSafeCall( err ) __cudaSafeCall( err, __FILE__, __LINE__ )  //!< Wrapper to allow display of file and line number
 #define CudaCheckError() __cudaCheckError( __FILE__, __LINE__ ) //!< Wrapper to allow display of file and line number
 #define EPS 1.0e-10                                             //!< Smallest floating point difference to be tolerated when checking a floating number against zero
- 
+
 #include <stdio.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-///  Checks last kernel launch error. 
+///  Checks last kernel launch error.
 ////////////////////////////////////////////////////////////////////////////////
 inline void __cudaCheckError( const char *file, const int line )
 {
@@ -35,7 +35,7 @@ inline void __cudaCheckError( const char *file, const int line )
                 file, line, cudaGetErrorString( err ) );
         exit( -1 );
     }
-     
+
     // More careful checking. However, this will affect performance.
     // Comment away if needed.
 #ifndef NDEBUG
@@ -49,7 +49,7 @@ inline void __cudaCheckError( const char *file, const int line )
 #endif
 
 #endif
-      
+
     return;
 }
 
@@ -69,10 +69,10 @@ inline void __cudaSafeCall( cudaError err, const char *file, const int line )
         throw(cudaGetErrorString(err));
     }
 #endif
-     
+
     return;
 }
 
-#endif   // ----- #ifndef __CUDAUTILITY_INC  ----- 
+#endif   // ----- #ifndef __CUDAUTILITY_INC  -----
 
 //vim:syntax=cuda.doxygen
