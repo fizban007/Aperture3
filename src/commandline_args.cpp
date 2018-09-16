@@ -9,9 +9,8 @@ namespace Aperture {
 
 CommandArgs::CommandArgs() {
   SimParams defaults;
-  // m_options = std::make_unique<cxxopts::Options>("aperture", "Aperture PIC code");
+  
   m_options = std::unique_ptr<cxxopts::Options>(new cxxopts::Options("aperture", "Aperture PIC code"));
-  // m_options = new cxxopts::Options("aperture", "Aperture PIC code");
 
   m_options->add_options()
       ("help", "Prints this help message.")
@@ -32,9 +31,7 @@ CommandArgs::CommandArgs() {
        "The number of processes in z direction.", cxxopts::value<int>()->default_value("1"));
 }
 
-CommandArgs::~CommandArgs() {
-  // delete m_options;
-}
+CommandArgs::~CommandArgs() {}
 
 void
 CommandArgs::read_args(int argc, char* argv[], SimParams& params) {

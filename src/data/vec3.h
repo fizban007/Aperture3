@@ -196,10 +196,10 @@ struct Extent : public Vec3<int> {
 
   HD_INLINE int size() const { return x * y * z; }
 
-  template <typename T>
-  cudaExtent cuda_ext(const T& t) const {
-    return make_cudaExtent(x*sizeof(T), y, z);
-  }
+  // template <typename T>
+  // cudaExtent cuda_ext(const T& t) const {
+  //   return make_cudaExtent(x*sizeof(T), y, z);
+  // }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

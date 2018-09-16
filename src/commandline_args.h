@@ -14,7 +14,7 @@ class Options;
 
 namespace Aperture {
 
-class SimParams;
+struct SimParams;
 
 namespace exceptions {
 
