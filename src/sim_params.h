@@ -48,6 +48,8 @@ struct SimParamsBase {
   float       track_percent       = 0.2;
 
   // These parameters are for radiative transfer
+  float       E_cutoff            = 10.0;
+  float       E_ph                = 4.0;
   float       spectral_alpha      = 2.0;  // Slope of the soft photon spectrum
   float       e_s                 = 0.2;  // separation between two regimes of pair creation
   float       e_min               = 1.0e-3;  // minimum energy of the background photons

@@ -21,7 +21,7 @@ class Particles : public ParticleBase<single_particle_t>
   typedef particle_data DataClass;
   Particles();
   Particles(std::size_t max_num);
-  Particles(const SimParams& env);
+  Particles(const SimParams& params);
   Particles(const Particles& other);
   Particles(Particles&& other);
   virtual ~Particles();

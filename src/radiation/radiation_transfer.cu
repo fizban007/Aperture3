@@ -9,6 +9,7 @@
 #include "cuda/cudarng.h"
 #include "sim_environment.h"
 #include "radiation/inverse_compton_power_law.h"
+#include "radiation/inverse_compton_dummy.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <curand_kernel.h>
@@ -25,14 +26,16 @@ void init_rand_states(curandState* states, int seed) {
   curand_init(seed, id, 0, &states[id]);
 }
 
-template <typename PtcData>
+template <typename PtcData, typename RadModel>
 __global__
 void count_photon_produced(PtcData ptc, size_t number, int* ph_count,
                            int* phPos, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   CudaRng rng(&states[id]);
-  auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha, dev_params.e_s,
-                                          dev_params.e_min, dev_params.photon_path, rng);
+  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha, dev_params.e_s,
+  //                                         dev_params.e_min, dev_params.photon_path, rng);
+  RadModel rad_model(dev_params, rng);
+  // auto inv_comp = make_inverse_compton_dummy(10.0, )
   __shared__ int photonProduced;
   if (threadIdx.x == 0) photonProduced = 0;
 
@@ -46,7 +49,7 @@ void count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // TODO: Compute gamma
     Scalar p = ptc.p1[tid];
     Scalar gamma = sqrt(1.0 + p*p);
-    if (inv_comp.emit_photon(gamma)) {
+    if (rad_model.emit_photon(gamma)) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
     }
   }
@@ -59,15 +62,15 @@ void count_photon_produced(PtcData ptc, size_t number, int* ph_count,
   }
 }
 
-template <typename PtcData, typename PhotonData>
+template <typename PtcData, typename PhotonData, typename RadModel>
 __global__
 void produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_num,
                       int* phPos, int* ph_count, int* ph_cum, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   CudaRng rng(&states[id]);
-  auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha, dev_params.e_s,
-                                          dev_params.e_min, dev_params.photon_path, rng);
-
+  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha, dev_params.e_s,
+  //                                         dev_params.e_min, dev_params.photon_path, rng);
+  RadModel rad_model(dev_params, rng);
   for (uint32_t tid = id; tid < ptc_num; tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
     if (pos_in_block > -1) {
@@ -76,8 +79,8 @@ void produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_
       // TODO: Compute gamma
       Scalar p = ptc.p1[tid];
       Scalar gamma = sqrt(1.0 + p*p);
-      Scalar Eph = inv_comp.draw_photon_energy(gamma, p);
-      Scalar path = inv_comp.draw_photon_freepath(Eph);
+      Scalar Eph = rad_model.draw_photon_energy(gamma, p);
+      Scalar path = rad_model.draw_photon_freepath(Eph);
 
       // Add the new photon
       int offset = ph_num + start_pos + pos_in_block;
@@ -166,12 +169,14 @@ void produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc, size_t ptc_nu
 
 }
 
-template <typename PtcClass, typename PhotonClass>
-RadiationTransfer<PtcClass, PhotonClass>::RadiationTransfer(const Environment& env) :
+template <typename PtcClass, typename PhotonClass, typename RadModel>
+RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(const Environment& env) :
     m_env(env), d_rand_states(nullptr), m_threadsPerBlock(512),
     m_blocksPerGrid(512), m_numPerBlock(m_blocksPerGrid),
     m_cumNumPerBlock(m_blocksPerGrid),
     m_posInBlock(env.params().max_ptc_number) {
+  Logger::print_info("{} hello\n", 100);
+
   int seed = m_env.params().random_seed;
 
   CudaSafeCall(cudaMalloc(&d_rand_states, m_threadsPerBlock * m_blocksPerGrid *
@@ -186,19 +191,19 @@ RadiationTransfer<PtcClass, PhotonClass>::RadiationTransfer(const Environment& e
   // CudaSafeCall(cudaMalloc(&m_posInBlock, m_env.params().max_ptc_number));
 }
 
-template <typename PtcClass, typename PhotonClass>
-RadiationTransfer<PtcClass, PhotonClass>::~RadiationTransfer() {
+template <typename PtcClass, typename PhotonClass, typename RadModel>
+RadiationTransfer<PtcClass, PhotonClass, RadModel>::~RadiationTransfer() {
   cudaFree(d_rand_states);
 }
 
-template <typename PtcClass, typename PhotonClass>
+template <typename PtcClass, typename PhotonClass, typename RadModel>
 void
-RadiationTransfer<PtcClass, PhotonClass>::emit_photons(PhotonClass& photons, PtcClass& ptc) {
+RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(PhotonClass& photons, PtcClass& ptc) {
   m_posInBlock.assign_dev(0, ptc.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
 
-  Kernels::count_photon_produced<typename PtcClass::DataClass>
+  Kernels::count_photon_produced<typename PtcClass::DataClass, RadModel>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>
       (ptc.data(), ptc.number(), m_numPerBlock.data_d(),
        m_posInBlock.data_d(), (curandState*)d_rand_states);
@@ -218,7 +223,7 @@ RadiationTransfer<PtcClass, PhotonClass>::emit_photons(PhotonClass& photons, Ptc
   Logger::print_info("{} photons are produced!", new_photons);
 
   Kernels::produce_photons<typename PtcClass::DataClass,
-      typename PhotonClass::DataClass>
+      typename PhotonClass::DataClass, RadModel>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>
       (ptc.data(), ptc.number(), photons.data(), photons.number(),
        m_posInBlock.data_d(), m_numPerBlock.data_d(),
@@ -229,9 +234,9 @@ RadiationTransfer<PtcClass, PhotonClass>::emit_photons(PhotonClass& photons, Ptc
   Logger::print_info("There are {} photons in the pool", photons.number());
 }
 
-template <typename PtcClass, typename PhotonClass>
+template <typename PtcClass, typename PhotonClass, typename RadModel>
 void
-RadiationTransfer<PtcClass, PhotonClass>::produce_pairs(PtcClass& ptc, PhotonClass& photons) {
+RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(PtcClass& ptc, PhotonClass& photons) {
   m_posInBlock.assign_dev(0, ptc.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
@@ -272,7 +277,7 @@ RadiationTransfer<PtcClass, PhotonClass>::produce_pairs(PtcClass& ptc, PhotonCla
 //  Explicit instantiations
 ////////////////////////////////////////////////////////////////////////////////
 
-template class RadiationTransfer<Particles_1D, Photons_1D>;
-template class RadiationTransfer<Particles, Photons>;
+template class RadiationTransfer<Particles_1D, Photons_1D, InverseComptonDummy<Kernels::CudaRng>>;
+template class RadiationTransfer<Particles, Photons, InverseComptonDummy<Kernels::CudaRng>>;
 
 }
