@@ -11,7 +11,7 @@
 
 namespace Aperture {
 
-class SimParams;
+struct SimParams;
 
 class Photons_1D : public ParticleBase<single_photon1d_t>
 {

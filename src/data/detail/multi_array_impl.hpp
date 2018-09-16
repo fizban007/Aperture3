@@ -13,6 +13,11 @@
 namespace Aperture {
 
 template <typename T>
+inline cudaExtent cuda_ext(const Extent& ext, const T& t) {
+  return make_cudaExtent(ext.x*sizeof(T), ext.y, ext.z);
+}
+
+template <typename T>
 MultiArray<T>::MultiArray()
     : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
       _data_h(nullptr), _size(0) {
@@ -30,7 +35,7 @@ MultiArray<T>::MultiArray(int width, int height, int depth, int deviceId)
   _size = _extent.size();
   // Logger::print_info("extent has {}, {}, {}", _extent.width(),
   //                    _extent.height(), _extent.depth());
-  auto ext = _extent.cuda_ext(T{});
+  auto ext = cuda_ext(_extent, T{});
   // Logger::print_info("now cuda extent has {}, {}, {}", ext.width,
   //                    ext.height, ext.depth);
   find_dim();
@@ -77,7 +82,7 @@ MultiArray<T>::alloc_mem(const Extent& ext, int deviceId) {
     free_mem();
   _devId = deviceId;
   CudaSafeCall(cudaSetDevice(_devId));
-  auto extent = ext.cuda_ext(T{});
+  auto extent = cuda_ext(ext, T{});
   // Logger::print_info("extent has {}, {}, {}", extent.width,
   //                    extent.height, extent.depth);
   CudaSafeCall(cudaMalloc3D(&_data_d, extent));
@@ -110,7 +115,7 @@ MultiArray<T>::copyFrom(const self_type& other) {
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = _extent.cuda_ext(T{});
+  myParms.extent = cuda_ext(_extent, T{});
   myParms.kind = cudaMemcpyDeviceToDevice;
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
@@ -206,7 +211,7 @@ MultiArray<T>::sync_to_device(int devId) {
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = _extent.cuda_ext(T{});
+  myParms.extent = cuda_ext(_extent, T{});
   myParms.kind = cudaMemcpyHostToDevice;
   // Logger::print_info("before copy to device, extent has {}, {}, {}", myParms.extent.width,
   //                    myParms.extent.height, myParms.extent.depth);
@@ -231,7 +236,7 @@ MultiArray<T>::sync_to_host() {
   myParms.dstPtr = make_cudaPitchedPtr((void*)_data_h, _extent.x*sizeof(T),
                                        _extent.x, _extent.y);
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = _extent.cuda_ext(T{});
+  myParms.extent = cuda_ext(_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
   // Logger::print_info("before copy to host, extent has {}, {}, {}", myParms.extent.width,
   //                    myParms.extent.height, myParms.extent.depth);
