@@ -17,6 +17,10 @@ Photons::Photons(const Environment& env)
     : ParticleBase<single_photon_t>(env.params().max_photon_number) {
 }
 
+Photons::Photons(const SimParams& params)
+    : ParticleBase<single_photon_t>(params.max_photon_number) {
+}
+
 Photons::~Photons() {}
 
 }

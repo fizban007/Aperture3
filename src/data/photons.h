@@ -12,6 +12,7 @@
 namespace Aperture {
 
 class Environment;
+struct SimParams;
 
 class Photons : public ParticleBase<single_photon_t>
 {
@@ -21,6 +22,7 @@ class Photons : public ParticleBase<single_photon_t>
   Photons();
   Photons(std::size_t max_num);
   Photons(const Environment& env);
+  Photons(const SimParams& params);
   Photons(const Photons& other);
   Photons(Photons&& other);
   virtual ~Photons();

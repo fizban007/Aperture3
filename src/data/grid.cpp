@@ -52,7 +52,8 @@ Grid::init(const SimParams& params) {
   }
   m_mesh.dimension = m_mesh.dim();
 
-  if (m_mesh.dims[0] * m_mesh.dims[1] * m_mesh.dims[2] >= MAX_CELL - 1) {
+  if ((uint32_t)m_mesh.dims[0] * (uint32_t)m_mesh.dims[1]
+      * (uint32_t)m_mesh.dims[2] >= MAX_CELL - 1) {
     std::cout << "Grid dimensions too large!" << std::endl;
     abort();
   }

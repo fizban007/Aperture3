@@ -8,7 +8,7 @@ namespace Aperture {
 
 class Environment;
 
-template <typename PtcClass, typename PhotonClass>
+template <typename PtcClass, typename PhotonClass, typename RadModel>
 class RadiationTransfer
 {
  public:
