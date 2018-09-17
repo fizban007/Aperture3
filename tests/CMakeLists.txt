@@ -13,7 +13,7 @@ set(test_fd_src
   "test.cpp" "test_finite_diff.cpp")
 add_executable(test_fd ${test_fd_src})
 target_link_libraries(test_fd
-  PUBLIC AperCuda
+  # PUBLIC AperCuda
   PUBLIC Aperture)
 add_dependencies(check test_fd)
 
@@ -22,10 +22,11 @@ set(tests_src
   # "test_particles.cpp"
   "test_finite_diff.cpp" "test_ffe.cpp"
   "test_IC_PL.cpp"
+  "test_pair_creation.cpp"
   )
 add_executable(tests ${tests_src})
 target_link_libraries(tests
-  PUBLIC AperCuda
+  # PUBLIC AperCuda
   PUBLIC Aperture)
 
 add_custom_target(run_tests
@@ -41,7 +42,7 @@ set(test_cuda_src
 add_cuda_executable(test_cuda)
 set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
 target_link_libraries(test_cuda
-  PUBLIC AperCuda
+  # PUBLIC AperCuda
   PUBLIC Aperture)
 add_custom_target(run_cuda_tests
   COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
@@ -51,4 +52,4 @@ add_dependencies(check run_cuda_tests)
 # endif()
 
 add_executable(test_parse "test_parse.cpp")
-target_link_libraries(test_parse Aperture AperCuda)
+target_link_libraries(test_parse Aperture)

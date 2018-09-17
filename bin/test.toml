@@ -43,6 +43,12 @@ track_percent = 0.1
 # Data output directory
 data_dir = "/home/alex/storage/Data/1DpicCuda/"
 
+# Cutoff energy for pair creation
+E_cutoff = 11.0
+
+# Energy for created photons
+E_ph = 10.0
+
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
 # dimension, just set N to 1 and guard to 0 on that dimension.

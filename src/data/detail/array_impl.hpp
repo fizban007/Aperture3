@@ -105,8 +105,9 @@ template <typename T>
 void
 Array<T>::assign_dev(const data_type& value, size_t num) {
   if (num > m_length) num = m_length;
-  thrust::device_ptr<T> ptr = thrust::device_pointer_cast(m_data_h);
+  thrust::device_ptr<T> ptr = thrust::device_pointer_cast(m_data_d);
   thrust::fill_n(ptr, num, value);
+  CudaCheckError();
 }
 
 /// Set the whole array to a single initial value on the host

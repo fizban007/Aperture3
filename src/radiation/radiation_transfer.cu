@@ -46,7 +46,6 @@ void count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // Skip empty particles
     if (cell == MAX_CELL) continue;
 
-    // TODO: Compute gamma
     Scalar p = ptc.p1[tid];
     Scalar gamma = sqrt(1.0 + p*p);
     if (rad_model.emit_photon(gamma)) {
@@ -111,6 +110,7 @@ void count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
   __syncthreads();
 
   for (uint32_t tid = id; tid < number; tid += blockDim.x * gridDim.x) {
+    // if (tid >= number) continue;
     uint32_t cell = photons.cell[tid];
     // Skip empty photons
     if (cell == MAX_CELL) continue;
@@ -175,8 +175,6 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(const Envi
     m_blocksPerGrid(512), m_numPerBlock(m_blocksPerGrid),
     m_cumNumPerBlock(m_blocksPerGrid),
     m_posInBlock(env.params().max_ptc_number) {
-  Logger::print_info("{} hello\n", 100);
-
   int seed = m_env.params().random_seed;
 
   CudaSafeCall(cudaMalloc(&d_rand_states, m_threadsPerBlock * m_blocksPerGrid *
@@ -193,7 +191,7 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(const Envi
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
 RadiationTransfer<PtcClass, PhotonClass, RadModel>::~RadiationTransfer() {
-  cudaFree(d_rand_states);
+  cudaFree((curandState*)d_rand_states);
 }
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
@@ -202,6 +200,9 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(PhotonClass& ph
   m_posInBlock.assign_dev(0, ptc.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
+
+  cudaDeviceSynchronize();
+  Logger::print_debug("Initialize finished");
 
   Kernels::count_photon_produced<typename PtcClass::DataClass, RadModel>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>
@@ -212,10 +213,14 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(PhotonClass& ph
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
 
+  cudaDeviceSynchronize();
+  Logger::print_debug("Count finished");
   // Scan the number of photons produced per block. The last one will be the
   // total
   thrust::exclusive_scan(ptrNumPerBlock, ptrNumPerBlock + m_blocksPerGrid,
                          ptrCumNum);
+  CudaCheckError();
+  Logger::print_debug("Scan finished");
   m_cumNumPerBlock.sync_to_host();
   m_numPerBlock.sync_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1]

@@ -84,6 +84,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                            .value_or(defaults.rad_energy_bins);
   params.data_dir = config->get_as<std::string>("data_dir")
                     .value_or(defaults.data_dir);
+  params.E_cutoff = config->get_as<double>("E_cutoff")
+                    .value_or(defaults.E_cutoff);
+  params.E_ph = config->get_as<double>("E_ph")
+                    .value_or(defaults.E_ph);
   auto periodic_boundary = config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
     int n = periodic_boundary->size();
