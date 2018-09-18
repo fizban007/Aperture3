@@ -51,43 +51,45 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   SimParams defaults;
 
   params.delta_t = config->get_as<double>("delta_t")
-                   .value_or(defaults.delta_t);
+      .value_or(defaults.delta_t);
   params.max_ptc_number = config->get_as<unsigned long>("max_ptc_number")
-                          .value_or(defaults.max_ptc_number);
+      .value_or(defaults.max_ptc_number);
   params.max_photon_number = config->get_as<unsigned long>("max_photon_number")
-                             .value_or(defaults.max_photon_number);
+      .value_or(defaults.max_photon_number);
   params.ion_mass = config->get_as<double>("ion_mass")
-                   .value_or(defaults.ion_mass);
+      .value_or(defaults.ion_mass);
   params.q_e = config->get_as<double>("q_e")
-               .value_or(defaults.q_e);
+      .value_or(defaults.q_e);
   params.num_species = config->get_as<int>("num_species")
-               .value_or(defaults.num_species);
+      .value_or(defaults.num_species);
   params.create_pairs = config->get_as<bool>("create_pairs")
-                        .value_or(defaults.create_pairs);
+      .value_or(defaults.create_pairs);
   params.trace_photons = config->get_as<bool>("trace_photons")
-                        .value_or(defaults.trace_photons);
+      .value_or(defaults.trace_photons);
   params.track_percent = config->get_as<double>("track_percent")
-                         .value_or(defaults.track_percent);
+      .value_or(defaults.track_percent);
   params.gamma_thr = config->get_as<double>("gamma_thr")
-                         .value_or(defaults.gamma_thr);
+      .value_or(defaults.gamma_thr);
   params.spectral_alpha = config->get_as<double>("spectral_alpha")
-                         .value_or(defaults.spectral_alpha);
+      .value_or(defaults.spectral_alpha);
   params.e_s = config->get_as<double>("e_s")
-                         .value_or(defaults.e_s);
+      .value_or(defaults.e_s);
   params.e_min = config->get_as<double>("e_min")
-                 .value_or(defaults.e_min);
+      .value_or(defaults.e_min);
   params.photon_path = config->get_as<double>("photon_path")
-                       .value_or(defaults.photon_path);
+      .value_or(defaults.photon_path);
   params.ic_path = config->get_as<double>("ic_path")
-                       .value_or(defaults.ic_path);
+      .value_or(defaults.ic_path);
   params.rad_energy_bins = config->get_as<int>("rad_energy_bins")
-                           .value_or(defaults.rad_energy_bins);
+      .value_or(defaults.rad_energy_bins);
   params.data_dir = config->get_as<std::string>("data_dir")
-                    .value_or(defaults.data_dir);
+      .value_or(defaults.data_dir);
   params.E_cutoff = config->get_as<double>("E_cutoff")
-                    .value_or(defaults.E_cutoff);
+      .value_or(defaults.E_cutoff);
   params.E_ph = config->get_as<double>("E_ph")
-                    .value_or(defaults.E_ph);
+      .value_or(defaults.E_ph);
+  params.E_ph_min = config->get_as<double>("E_ph_min")
+      .value_or(defaults.E_ph_min);
   auto periodic_boundary = config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
     int n = periodic_boundary->size();
