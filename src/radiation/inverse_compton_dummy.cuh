@@ -34,8 +34,8 @@ InverseComptonDummy<RandFunc>::draw_photon_freepath(Scalar Eph) {
 }
 
 template <typename RandFunc>
-InverseComptonDummy<RandFunc> make_inverse_compton_Dummy(Scalar cutoff, Scalar Eph, Scalar lph, RandFunc& rng) {
-  InverseComptonDummy<RandFunc> result(cutoff, Eph, lph, rng);
+InverseComptonDummy<RandFunc> make_inverse_compton_Dummy(const SimParamsBase& params, RandFunc& rng) {
+  InverseComptonDummy<RandFunc> result(params, rng);
   return result;
 }
 

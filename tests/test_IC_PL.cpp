@@ -20,6 +20,6 @@ struct Rng
 TEST_CASE("Simple rng generation", "[inverse_compton]") {
   Rng rng;
 
-  auto IC = make_inverse_compton_PL(1.2, 0.2, 1.0e-5, 10.0, rng);
+  auto IC = make_inverse_compton_PL1D(SimParams{}, rng);
   IC.draw_photon_energy(1000.0, 999.0);
 }

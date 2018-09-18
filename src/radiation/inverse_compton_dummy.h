@@ -27,7 +27,7 @@ class InverseComptonDummy
 }; // ----- end of class InverseComptonDummy -----
 
 template <typename RandFunc>
-HOST_DEVICE InverseComptonDummy<RandFunc> make_inverse_compton_dummy(Scalar cutoff, Scalar Eph, Scalar lph, RandFunc& rng);
+HOST_DEVICE InverseComptonDummy<RandFunc> make_inverse_compton_dummy(const SimParamsBase& params, RandFunc& rng);
 
 }
 
