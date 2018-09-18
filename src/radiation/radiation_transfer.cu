@@ -79,19 +79,23 @@ void produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_
       Scalar p = ptc.p1[tid];
       Scalar gamma = sqrt(1.0 + p*p);
       Scalar Eph = rad_model.draw_photon_energy(gamma, p);
-      Scalar path = rad_model.draw_photon_freepath(Eph);
+      gamma = (gamma - std::abs(Eph));
+      p = sqrt(gamma*gamma - 1);
+      ptc.p1[tid] = p;
+
+      // If photon energy is too low, do not track it, but still
+      // subtract its energy as done above
+      if (Eph < dev_params.E_ph_min)
+        continue;
 
       // Add the new photon
+      Scalar path = rad_model.draw_photon_freepath(Eph);
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
       photons.p1[offset] = Eph;
       photons.weight[offset] = ptc.weight[tid];
       photons.path_left[offset] = path;
       photons.cell[offset] = ptc.cell[tid];
-
-      gamma = (gamma - std::abs(Eph));
-      p = sqrt(gamma*gamma - 1);
-      ptc.p1[tid] = p;
     }
   }
 }
@@ -133,9 +137,9 @@ __global__
 void produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc, size_t ptc_num, 
                       int* pair_pos, int* pair_count, int* pair_cum, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  CudaRng rng(&states[id]);
-  auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha, dev_params.e_s,
-                                          dev_params.e_min, dev_params.photon_path, rng);
+  // CudaRng rng(&states[id]);
+  // auto inv_comp = make_inverse_compton_PL1D(dev_params, dev_params.photon_path, rng);
+  // RadModel rad_model(dev_params, rng);
 
   for (uint32_t tid = id; tid < ptc_num; tid += blockDim.x * gridDim.x) {
     int pos_in_block = pair_pos[tid] - 1;
@@ -284,5 +288,7 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(PtcClass& ptc,
 
 template class RadiationTransfer<Particles_1D, Photons_1D, InverseComptonDummy<Kernels::CudaRng>>;
 template class RadiationTransfer<Particles, Photons, InverseComptonDummy<Kernels::CudaRng>>;
+template class RadiationTransfer<Particles_1D, Photons_1D, InverseComptonPL1D<Kernels::CudaRng>>;
+template class RadiationTransfer<Particles, Photons, InverseComptonPL1D<Kernels::CudaRng>>;
 
 }
