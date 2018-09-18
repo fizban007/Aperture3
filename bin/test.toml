@@ -49,6 +49,9 @@ E_cutoff = 11.0
 # Energy for created photons
 E_ph = 10.0
 
+# Minimum energy for photons to track
+E_ph_min = 5.0
+
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
 # dimension, just set N to 1 and guard to 0 on that dimension.
