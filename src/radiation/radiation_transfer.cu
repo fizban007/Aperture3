@@ -50,7 +50,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     if (cell == MAX_CELL) continue;
 
     Scalar p = ptc.p1[tid];
-    Scalar gamma = sqrt(1.0 + p * p);
+    Scalar gamma = sqrt(1.0f + p * p);
     if (rad_model.emit_photon(gamma)) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
     }
@@ -85,7 +85,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
       // TODO: Compute gamma
       Scalar p = ptc.p1[tid];
-      Scalar gamma = sqrt(1.0 + p * p);
+      Scalar gamma = sqrt(1.0f + p * p);
       Scalar Eph = rad_model.draw_photon_energy(gamma, p);
       gamma = (gamma - std::abs(Eph));
       p = sgn(p) * sqrt(gamma * gamma - 1);
