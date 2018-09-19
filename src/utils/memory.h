@@ -22,9 +22,11 @@ struct alloc_cuda_managed {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
     void* p;
-    cudaMallocManaged(&p, N_*sizeof(x_type));
-    cudaMemAdvise(p, N_*sizeof(x_type), cudaMemAdviseSetPreferredLocation, 0);
-    x = reinterpret_cast<typename std::remove_reference<decltype(x)>::type>(p);
+    cudaMallocManaged(&p, N_ * sizeof(x_type));
+    cudaMemAdvise(p, N_ * sizeof(x_type),
+                  cudaMemAdviseSetPreferredLocation, 0);
+    x = reinterpret_cast<
+        typename std::remove_reference<decltype(x)>::type>(p);
   }
 
   template <typename T>
@@ -62,6 +64,6 @@ free_struct_of_arrays(StructOfArrays& data) {
   visit_struct::for_each(data, free_cuda());
 }
 
-}
+}  // namespace Aperture
 
 #endif  // _UTILS_MEMORY_H_

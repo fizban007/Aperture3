@@ -1,5 +1,5 @@
-#ifndef  _TYPEDEFS_H_
-#define  _TYPEDEFS_H_
+#ifndef _TYPEDEFS_H_
+#define _TYPEDEFS_H_
 
 #include <bitset>
 #include <cstddef>
@@ -10,8 +10,8 @@ namespace Aperture {
 typedef float Scalar;
 
 /// A simple way to track staggering of field components. Note that when
-/// initializing it, one can use Stagger_t("011"). The rightmost digit is for x
-/// direction, while leftmost digit for z
+/// initializing it, one can use Stagger_t("011"). The rightmost digit
+/// is for x direction, while leftmost digit for z
 // typedef std::bitset<3> Stagger_t;
 // typedef char Stagger_t;
 
@@ -25,6 +25,6 @@ typedef std::size_t Index_t;
 // typedef Eigen::Matrix<Scalar, 3, 1> Vector3;
 // typedef Eigen::Matrix<Scalar, 4, 1> Vector4;
 
-}
+}  // namespace Aperture
 
-#endif   // _TYPEDEFS_H_
+#endif  // _TYPEDEFS_H_

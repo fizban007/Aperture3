@@ -3,12 +3,12 @@
 
 // #include <hdf5.h>
 // #include <H5Cpp.h>
-#include <string>
-#include <vector>
+#include "data/domain_info.h"
 #include "data/fields.h"
 #include "data/particles.h"
 #include "data/photons.h"
-#include "data/domain_info.h"
+#include <string>
+#include <vector>
 
 namespace Aperture {
 
@@ -31,20 +31,23 @@ struct ptcdata {
   std::vector<float> data_p;
 };
 
-class DataExporterParallel
-{
+class DataExporterParallel {
  public:
   DataExporterParallel();
-  DataExporterParallel(const DomainInfo& info, const std::string& dir, const std::string& prefix);
+  DataExporterParallel(const DomainInfo& info, const std::string& dir,
+                       const std::string& prefix);
 
   ~DataExporterParallel();
 
   void WriteOutput(int timestep, float time);
 
-  void AddArray(const std::string& name, float* data, int* dims, int ndims);
-  void AddArray(const std::string& name, double* data, int* dims, int ndims);
+  void AddArray(const std::string& name, float* data, int* dims,
+                int ndims);
+  void AddArray(const std::string& name, double* data, int* dims,
+                int ndims);
   template <typename T>
-  void AddArray(const std::string& name, VectorField<T>& field, int component);
+  void AddArray(const std::string& name, VectorField<T>& field,
+                int component);
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 
@@ -59,10 +62,11 @@ class DataExporterParallel
   void writeConfig(const ConfigFile& config, const CommandArgs& args);
 
  private:
-  std::string outputDirectory;  //!< Sets the directory of all the data files
-  std::string subDirectory;     //!< Sets the directory of current rank
+  std::string
+      outputDirectory;  //!< Sets the directory of all the data files
+  std::string subDirectory;  //!< Sets the directory of current rank
   std::string subName;
-  std::string filePrefix;       //!< Sets the common prefix of the data files
+  std::string filePrefix;  //!< Sets the common prefix of the data files
 
   std::vector<dataset<float>> dbFloat;
   std::vector<dataset<double>> dbDouble;
@@ -71,10 +75,8 @@ class DataExporterParallel
   std::vector<ptcdata<Photons>> dbPhotonData;
 
   Grid grid;
-}; // ----- end of class DataExporter -----
+};  // ----- end of class DataExporter -----
 
-
-}
-
+}  // namespace Aperture
 
 #endif  // _HDF_EXPORTER_H_

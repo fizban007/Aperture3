@@ -1,8 +1,8 @@
 #ifndef _PTC_PUSHER_BEADONWIRE_H_
 #define _PTC_PUSHER_BEADONWIRE_H_
 
-#include "data/typedefs.h"
 #include "data/grid.h"
+#include "data/typedefs.h"
 #include "particle_pusher.h"
 #include <array>
 
@@ -26,9 +26,10 @@ class ParticlePusher_BeadOnWire : public ParticlePusher {
   void handle_boundary(SimData& data);
   // void set_interp_order(int order);
 
-  void extra_force(Particles& particles, Index_t idx, double x, const Grid& grid,
-                   double dt);
-  // virtual void print() { std::cout << "This is particle pusher" << std::endl; }
+  void extra_force(Particles& particles, Index_t idx, double x,
+                   const Grid& grid, double dt);
+  // virtual void print() { std::cout << "This is particle pusher" <<
+  // std::endl; }
 
  private:
   const SimParams& m_params;
@@ -36,7 +37,8 @@ class ParticlePusher_BeadOnWire : public ParticlePusher {
   // Interpolator m_interp;
   // bool m_radiation;
 
-};  // ----- end of class ParticlePusher_Geodesic : public ParticlePusher -----
+};  // ----- end of class ParticlePusher_Geodesic : public
+    // ParticlePusher -----
 
 }  // namespace Aperture
 

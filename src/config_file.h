@@ -1,9 +1,9 @@
 #ifndef _CONFIG_FILE_H_
 #define _CONFIG_FILE_H_
 
+#include "sim_params.h"
 #include <stdexcept>
 #include <string>
-#include "sim_params.h"
 
 namespace Aperture {
 
@@ -31,7 +31,7 @@ class empty_entry : public std::exception {
       : m_message("Empty entry " + entry + " in config file") {}
 };
 
-}
+}  // namespace exceptions
 
 class ConfigFile {
  public:
@@ -41,7 +41,8 @@ class ConfigFile {
 
   // const nlohmann::json& data() const { return m_data; }
   // const SimParams& data() const { return m_data; }
-  // const std::vector<std::string>& grid_conf() const { return m_grid_conf; }
+  // const std::vector<std::string>& grid_conf() const { return
+  // m_grid_conf; }
 
   void parse_file(const std::string& filename, SimParams& params);
 
@@ -55,6 +56,6 @@ class ConfigFile {
   // std::vector<std::string> m_data_grid_conf;
 };  // ----- end of class config_file -----
 
-}
+}  // namespace Aperture
 
 #endif  // _CONFIG_FILE_H_

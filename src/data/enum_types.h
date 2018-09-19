@@ -9,7 +9,11 @@ namespace Aperture {
 
 enum class FieldType : char { E, B };
 
-enum class FieldNormalization : unsigned char { coord, physical, volume };
+enum class FieldNormalization : unsigned char {
+  coord,
+  physical,
+  volume
+};
 
 enum class ParticleType : unsigned char { electron = 0, positron, ion };
 
@@ -28,8 +32,8 @@ enum class BoundaryPos : char {
 
 enum class ParticleBCType {
   // inject,    ///< Inject particles at the boundary
-  outflow,   ///< Allow particles to outflow and decouple from the fields
-  reflect,   ///< Particles reflect from the boundary
+  outflow,  ///< Allow particles to outflow and decouple from the fields
+  reflect,  ///< Particles reflect from the boundary
   periodic,  ///< Set to this if periodic boundary condition is true
   nothing    ///< Do nothing special to the particles at the boundary
 };           // ----- end of enum ParticleBCType -----
@@ -47,8 +51,9 @@ enum class FieldBCType {
   nothing
 };  // ----- end of enum FieldBCType -----
 
-// Use util functions check_bit, set_bit, bit_or, clear_bit, and toggle_bit to
-// interact with particle and photon flags. These are defined from lower bits.
+// Use util functions check_bit, set_bit, bit_or, clear_bit, and
+// toggle_bit to interact with particle and photon flags. These are
+// defined from lower bits.
 enum class ParticleFlag : uint32_t {
   tracked = 1,
   ignore_force,
@@ -70,20 +75,20 @@ struct BCType {
 
 enum class FieldInterpolationFlag { contravariant, covariant };
 
-/// There are three processor states. Primary means the process participates in
-/// the Cartesian domain decomposition; Replica means the process is a slave to
-/// a primary process and only provides computing power to process the
-/// particles; Idle means the process does not participate in the computation at
-/// all.
-enum class ProcessState : int {
-  primary = 0, replica, idle
-};
+/// There are three processor states. Primary means the process
+/// participates in the Cartesian domain decomposition; Replica means
+/// the process is a slave to a primary process and only provides
+/// computing power to process the particles; Idle means the process
+/// does not participate in the computation at all.
+enum class ProcessState : int { primary = 0, replica, idle };
 
-// ensemble adjustment code that indicates how a process behaves during the dynamic adjustment during one of the shrinking and expanding phases
-enum class EnsAdjustCode: int {
-  stay = 0, // stay in the ensemble, whether shrinking or expanding
-  move, // leave a shrinking ensemble or join an expanding one
-  idle, // does not participate in the current phase
+// ensemble adjustment code that indicates how a process behaves during
+// the dynamic adjustment during one of the shrinking and expanding
+// phases
+enum class EnsAdjustCode : int {
+  stay = 0,  // stay in the ensemble, whether shrinking or expanding
+  move,      // leave a shrinking ensemble or join an expanding one
+  idle,      // does not participate in the current phase
 };
 
 ////// Magic numbers start here
@@ -91,10 +96,8 @@ enum : unsigned char { CENTER_ZONE = 13 };
 
 enum class ForceAlgorithm : char { Boris, Vay };
 
-enum class LogLevel : char {
-  info, detail, debug
-};
+enum class LogLevel : char { info, detail, debug };
 
-}
+}  // namespace Aperture
 
 #endif  // _ENUM_TYPES_H_

@@ -15,13 +15,15 @@ struct DomainInfo {
   int rank = 0;
   std::array<bool, 6> is_boundary = {false, false, false,
                                      false, false, false};
-  std::array<bool, 3> is_periodic = {false, false,
-                                     false};  ///< Marks whether the domain is
-                                              ///  periodic in each direction
+  std::array<bool, 3> is_periodic = {
+      false, false, false};  ///< Marks whether the domain is
+                             ///  periodic in each direction
   std::array<int, 3>
-      cart_neighbor_right;  ///< Ranks of the right neighbors in each direction
+      cart_neighbor_right;  ///< Ranks of the right neighbors in each
+                            ///< direction
   std::array<int, 3>
-      cart_neighbor_left;  ///< Ranks of the left neighbors in each direction
+      cart_neighbor_left;  ///< Ranks of the left neighbors in each
+                           ///< direction
   std::array<int, 3> cart_dims;
   Index cart_pos;
 

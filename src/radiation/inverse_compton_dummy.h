@@ -1,17 +1,17 @@
 #ifndef _INVERSE_COMPTON_DUMMY_H_
 #define _INVERSE_COMPTON_DUMMY_H_
 
-#include "data/typedefs.h"
 #include "cuda/cuda_control.h"
+#include "data/typedefs.h"
 #include "sim_params.h"
 
 namespace Aperture {
 
 template <typename RandFunc>
-class InverseComptonDummy
-{
+class InverseComptonDummy {
  public:
-  HOST_DEVICE InverseComptonDummy(const SimParamsBase& params, RandFunc& rng);
+  HOST_DEVICE InverseComptonDummy(const SimParamsBase& params,
+                                  RandFunc& rng);
   HOST_DEVICE virtual ~InverseComptonDummy();
 
   // Determine whether a high energy photon should be emitted
@@ -24,12 +24,12 @@ class InverseComptonDummy
  private:
   Scalar m_cutoff, m_Eph, m_lph;
   RandFunc& m_rng;
-}; // ----- end of class InverseComptonDummy -----
+};  // ----- end of class InverseComptonDummy -----
 
 template <typename RandFunc>
-HOST_DEVICE InverseComptonDummy<RandFunc> make_inverse_compton_dummy(const SimParamsBase& params, RandFunc& rng);
-
-}
+HOST_DEVICE InverseComptonDummy<RandFunc> make_inverse_compton_dummy(
+    const SimParamsBase& params, RandFunc& rng);
+}  // namespace Aperture
 
 #include "radiation/inverse_compton_dummy.cuh"
 

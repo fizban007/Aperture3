@@ -6,10 +6,12 @@
 
 namespace Aperture {
 
-
 template <typename Metric>
 void
-DataExporter::AddMesh_t::operator()(const Metric& g, const char* meshName, int dim, const Grid& grid, DataExporter &exporter) {
+DataExporter::AddMesh_t::operator()(const Metric& g,
+                                    const char* meshName, int dim,
+                                    const Grid& grid,
+                                    DataExporter& exporter) {
   bool linearMesh = Metric::isLinear;
   // If a coord system is axisymmetric then we swap y and z axis
   bool swapZY = Metric::swapZY;
@@ -41,9 +43,10 @@ DataExporter::AddMesh_t::operator()(const Metric& g, const char* meshName, int d
     for (int i = 0; i < dim; i++) {
       for (int j = 0; j < grid.mesh().size(); ++j) {
         Index idx(j, grid.mesh().extent());
-        Vec3<Scalar> pos(grid.mesh().pos(0, idx.x, 1),
-                         (grid.dim() > 1 ? grid.mesh().pos(1, idx.y, 1) : 0.0),
-                         (grid.dim() > 2 ? grid.mesh().pos(2, idx.z, 1) : 0.0));
+        Vec3<Scalar> pos(
+            grid.mesh().pos(0, idx.x, 1),
+            (grid.dim() > 1 ? grid.mesh().pos(1, idx.y, 1) : 0.0),
+            (grid.dim() > 2 ? grid.mesh().pos(2, idx.z, 1) : 0.0));
 
         g.PosToCartesian(pos);
         if (swapZY) {
@@ -60,7 +63,8 @@ DataExporter::AddMesh_t::operator()(const Metric& g, const char* meshName, int d
 
   if (!boost::filesystem::exists(rootPath)) {
     boost::filesystem::create_directories(rootPath, returnedError);
-    if (returnedError) std::cerr << "Error creating directory!" << std::endl;
+    if (returnedError)
+      std::cerr << "Error creating directory!" << std::endl;
   }
   char filename[50];
   sprintf(filename, "%sgrid_config", exporter.outputDirectory.c_str());
@@ -76,6 +80,6 @@ DataExporter::AddMesh_t::operator()(const Metric& g, const char* meshName, int d
   exporter.quadMeshes.push_back(std::move(tempMesh));
 }
 
-}
+}  // namespace Aperture
 
 #endif  // _DATA_EXPORTER_IMPL_H_

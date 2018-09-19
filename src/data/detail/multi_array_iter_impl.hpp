@@ -14,8 +14,10 @@ class MultiArray<T>::const_nonconst_iterator {
   typedef const_nonconst_iterator<isConst> self_type;
   typedef Index index_type;
   typedef T data_type;
-  typedef typename std::conditional<isConst, const T*, T*>::type ptr_type;
-  typedef typename std::conditional<isConst, const T&, T&>::type ref_type;
+  typedef
+      typename std::conditional<isConst, const T*, T*>::type ptr_type;
+  typedef
+      typename std::conditional<isConst, const T&, T&>::type ref_type;
   typedef typename std::conditional<isConst, const array_type&,
                                     array_type&>::type arr_ref_type;
   typedef typename std::conditional<isConst, const array_type*,
@@ -101,7 +103,7 @@ class MultiArray<T>::const_nonconst_iterator {
 
   /// Index operator, returns regular or const reference
   /// depending on whether the iterator is const
-  ref_type operator()(const Index& idx) const{
+  ref_type operator()(const Index& idx) const {
     return operator()(idx.x, idx.y, idx.z);
   }
 
@@ -114,15 +116,15 @@ class MultiArray<T>::const_nonconst_iterator {
   /// Returns a const reference to the array of this iterator.
   const array_type& array() const { return _array; }
 
-  /// Returns a const reference to the position that this iterator points to.
+  /// Returns a const reference to the position that this iterator
+  /// points to.
   const index_type& pos() const { return _pos; }
 
  private:
-  arr_ref_type _array;                ///< A reference to the underlying array
-  index_type _pos;                    ///< Position that this iterator points to
-};  // ----- end of class const_nonconst_iterator
+  arr_ref_type _array;  ///< A reference to the underlying array
+  index_type _pos;      ///< Position that this iterator points to
+};                      // ----- end of class const_nonconst_iterator
 
-
-}
+}  // namespace Aperture
 
 #endif  // _MULTI_ARRAY_ITER_IMPL_H_

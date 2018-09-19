@@ -1,8 +1,8 @@
 #ifndef _MPI_HELPER_H_
 #define _MPI_HELPER_H_
 
-#include <vector>
 #include <mpi.h>
+#include <vector>
 
 namespace Aperture {
 
@@ -30,7 +30,7 @@ void handle_mpi_error(int error_code, int rank);
 
 std::vector<MPI_Request> null_requests(int size);
 
-}
-}
+}  // namespace MPI_Helper
+}  // namespace Aperture
 
 #endif  // _MPI_HELPER_H_

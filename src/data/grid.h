@@ -17,8 +17,8 @@
 
 namespace Aperture {
 
-// Currently the class Grid is simply a thin wrapper around Quadmesh with some
-// cached grid quantities
+// Currently the class Grid is simply a thin wrapper around Quadmesh
+// with some cached grid quantities
 class Grid {
  public:
   Grid();
@@ -46,7 +46,7 @@ class Grid {
   Quadmesh m_mesh;
 };
 
-}
+}  // namespace Aperture
 
 // #include "data/detail/grid_impl.hpp"
 

@@ -3,13 +3,13 @@
 
 // #include <hdf5.h>
 // #include <H5Cpp.h>
-#include <string>
-#include <vector>
 #include "data/fields.h"
+#include "data/grid.h"
 #include "data/particles.h"
 #include "data/photons.h"
-#include "data/grid.h"
 #include "sim_params.h"
+#include <string>
+#include <vector>
 
 namespace Aperture {
 
@@ -41,20 +41,23 @@ struct ptcdata<Photons> {
   std::vector<float> data_l;
 };
 
-class DataExporter
-{
+class DataExporter {
  public:
   // DataExporter();
-  DataExporter(const Grid& g, const std::string& dir, const std::string& prefix);
+  DataExporter(const Grid& g, const std::string& dir,
+               const std::string& prefix);
 
   ~DataExporter();
 
   void WriteOutput(int timestep, float time);
 
-  void AddArray(const std::string& name, float* data, int* dims, int ndims);
-  void AddArray(const std::string& name, double* data, int* dims, int ndims);
+  void AddArray(const std::string& name, float* data, int* dims,
+                int ndims);
+  void AddArray(const std::string& name, double* data, int* dims,
+                int ndims);
   template <typename T>
-  void AddArray(const std::string& name, VectorField<T>& field, int component);
+  void AddArray(const std::string& name, VectorField<T>& field,
+                int component);
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 
@@ -71,10 +74,11 @@ class DataExporter
   bool checkDirectories();
 
  private:
-  std::string outputDirectory;  //!< Sets the directory of all the data files
-  std::string subDirectory;     //!< Sets the directory of current rank
+  std::string
+      outputDirectory;  //!< Sets the directory of all the data files
+  std::string subDirectory;  //!< Sets the directory of current rank
   std::string subName;
-  std::string filePrefix;       //!< Sets the common prefix of the data files
+  std::string filePrefix;  //!< Sets the common prefix of the data files
 
   std::vector<dataset<float>> dbFloat;
   std::vector<dataset<double>> dbDouble;
@@ -83,10 +87,8 @@ class DataExporter
   std::vector<ptcdata<Photons>> dbPhotonData;
 
   const Grid& grid;
-}; // ----- end of class DataExporter -----
+};  // ----- end of class DataExporter -----
 
-
-}
-
+}  // namespace Aperture
 
 #endif  // _HDF_EXPORTER_H_

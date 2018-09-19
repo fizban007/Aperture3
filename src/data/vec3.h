@@ -4,9 +4,9 @@
 #include <cmath>
 #include <iostream>
 // #include <mpi.h>
-#include "data/typedefs.h"
 #include "cuda/cuda_control.h"
 #include "cuda_runtime.h"
+#include "data/typedefs.h"
 
 namespace Aperture {
 
@@ -18,7 +18,9 @@ struct Vec3 {
   typedef Vec3<T> self_type;
 
   HOST_DEVICE Vec3()
-      : x(static_cast<T>(0)), y(static_cast<T>(0)), z(static_cast<T>(0)) {}
+      : x(static_cast<T>(0)),
+        y(static_cast<T>(0)),
+        z(static_cast<T>(0)) {}
   HOST_DEVICE Vec3(T xi, T yi, T zi) : x(xi), y(yi), z(zi) {}
   template <typename U>
   HOST_DEVICE Vec3(const Vec3<U>& other) {
@@ -154,24 +156,22 @@ struct Vec3 {
                    x * other.y - y * other.x);
   }
 
-  HD_INLINE T length() const {
-    return sqrt(this -> dot(*this));
-  }
+  HD_INLINE T length() const { return sqrt(this->dot(*this)); }
 
   HD_INLINE self_type& normalize() {
-    double l = this -> length();
-    if (l > 1.0e-13)
-      *this /= l;
+    double l = this->length();
+    if (l > 1.0e-13) *this /= l;
     return *this;
   }
 
   HD_INLINE self_type normalize(T l) {
-    this -> normalize();
+    this->normalize();
     (*this) *= l;
     return *this;
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const self_type& vec) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const self_type& vec) {
     os << "( " << vec.x << ", " << vec.y << ", " << vec.z << " )";
     return os;
   }
@@ -223,14 +223,15 @@ struct Index : public Vec3<int> {
 };
 
 template <typename T>
-HOST_DEVICE Vec3<T> operator* (const T& t, const Vec3<T>& v) {
+HOST_DEVICE Vec3<T> operator*(const T& t, const Vec3<T>& v) {
   Vec3<T> result(v);
   result *= t;
   return result;
 }
 
 template <typename T>
-HOST_DEVICE T abs(const Vec3<T>& v) {
+HOST_DEVICE T
+abs(const Vec3<T>& v) {
   // return v.length();
   return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
@@ -247,6 +248,6 @@ HOST_DEVICE T abs(const Vec3<T>& v) {
 //   return result;
 // }
 
-}
+}  // namespace Aperture
 
 #endif  // _VEC3_H_

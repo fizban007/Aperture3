@@ -1,10 +1,10 @@
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
-#include <string>
+#include "data/enum_types.h"
 #include <cstdio>
 #include <fmt/ostream.h>
-#include "data/enum_types.h"
+#include <string>
 
 namespace Aperture {
 
@@ -107,10 +107,8 @@ class Logger {
       fmt::print("\n");
     }
   }
-
-
 };
 
-}
+}  // namespace Aperture
 
 #endif  // _LOGGER_H_

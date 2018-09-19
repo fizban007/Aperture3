@@ -1,13 +1,13 @@
 #ifndef _FIELDS_H_
 #define _FIELDS_H_
 
-#include <array>
-#include "data/typedefs.h"
-#include "data/multi_array.h"
-#include "data/grid.h"
-#include "data/enum_types.h"
-#include "data/stagger.h"
 #include "constant_defs.h"
+#include "data/enum_types.h"
+#include "data/grid.h"
+#include "data/multi_array.h"
+#include "data/stagger.h"
+#include "data/typedefs.h"
+#include <array>
 // #include "initial_conditions/initial_condition.h"
 
 namespace Aperture {
@@ -22,7 +22,8 @@ class FieldBase {
 
   /// Main constructor, initializes the grid according to a given \ref
   /// grid object.
-  FieldBase(const Grid &grid) : m_grid(&grid), m_grid_size(grid.size()) {}
+  FieldBase(const Grid &grid)
+      : m_grid(&grid), m_grid_size(grid.size()) {}
 
   /// Destructor. No need to destruct anything since we didn't
   /// allocate dynamic memory. However it is useful to declare this as
@@ -30,15 +31,13 @@ class FieldBase {
   virtual ~FieldBase() {}
 
   // Accessor methods for everything
-  const Grid &grid() const {
-    return *m_grid;
-  }
+  const Grid &grid() const { return *m_grid; }
   int grid_size() const { return m_grid_size; }
   Extent extent() const { return m_grid->extent(); }
 
  protected:
-  const Grid *m_grid;  ///< Grid that this field is defined on
-  int m_grid_size = 0;     //!< Cache the grid size for easier retrieval
+  const Grid *m_grid;   ///< Grid that this field is defined on
+  int m_grid_size = 0;  //!< Cache the grid size for easier retrieval
 
   void check_grid_extent(const Extent &ext1, const Extent &ext2) const;
 };  // ----- end of class field_base -----
@@ -80,7 +79,8 @@ class ScalarField : public FieldBase {
   self_type &subtractBy(const ScalarField<T> &field);
 
   // template <int Order>
-  T interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos, int order = 1) const;
+  T interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,
+                int order = 1) const;
 
   // Index operator
   data_type &operator()(int x, int y = 0, int z = 0) {
@@ -89,29 +89,23 @@ class ScalarField : public FieldBase {
   const data_type &operator()(int x, int y = 0, int z = 0) const {
     return m_array(x, y, z);
   }
-  data_type &operator()(const Index& idx) {
+  data_type &operator()(const Index &idx) {
     return m_array(idx.x, idx.y, idx.z);
   }
-  const data_type &operator()(const Index& idx) const {
+  const data_type &operator()(const Index &idx) const {
     return m_array(idx.x, idx.y, idx.z);
   }
 
   // Accessor methods
   array_type &data() { return m_array; }
   const array_type &data() const { return m_array; }
-  cudaPitchedPtr& ptr() { return m_array.data_d(); }
+  cudaPitchedPtr &ptr() { return m_array.data_d(); }
   cudaPitchedPtr ptr() const { return m_array.data_d(); }
   Stagger stagger() const { return m_stagger; }
 
-  void set_stagger(Stagger stagger) {
-    m_stagger = stagger;
-  }
-  void sync_to_device() {
-    m_array.sync_to_device();
-  }
-  void sync_to_host() {
-    m_array.sync_to_host();
-  }
+  void set_stagger(Stagger stagger) { m_stagger = stagger; }
+  void sync_to_device() { m_array.sync_to_device(); }
+  void sync_to_host() { m_array.sync_to_host(); }
 
  private:
   array_type m_array;
@@ -163,16 +157,17 @@ class VectorField : public FieldBase {
   Vec3<T> interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,
                       int order = 1) const;
 
-  // Interpolate the field to cell center and store the result to @result
-  void interpolate_to_center(self_type& result);
+  // Interpolate the field to cell center and store the result to
+  // @result
+  void interpolate_to_center(self_type &result);
 
-  // Interpolate the field from cell center to the stagger position according to
-  // m_stagger, and store the result to @result
-  void interpolate_from_center(self_type& result);
+  // Interpolate the field from cell center to the stagger position
+  // according to m_stagger, and store the result to @result
+  void interpolate_from_center(self_type &result);
 
-  // Interpolate the field from cell center to the stagger position according to
-  // m_stagger, and add the result to @result
-  void interpolate_from_center_add(self_type& result, Scalar q = 1.0);
+  // Interpolate the field from cell center to the stagger position
+  // according to m_stagger, and add the result to @result
+  void interpolate_from_center_add(self_type &result, Scalar q = 1.0);
 
   // void recenter(self_type& output) const;
 
@@ -185,13 +180,14 @@ class VectorField : public FieldBase {
   data_type &operator()(int n, int x, int y = 0, int z = 0) {
     return m_array[n](x, y, z);
   }
-  const data_type &operator()(int n, int x, int y = 0, int z = 0) const {
+  const data_type &operator()(int n, int x, int y = 0,
+                              int z = 0) const {
     return m_array[n](x, y, z);
   }
-  data_type &operator()(int n, const Index& idx) {
+  data_type &operator()(int n, const Index &idx) {
     return m_array[n](idx.x, idx.y, idx.z);
   }
-  const data_type &operator()(int n, const Index& idx) const {
+  const data_type &operator()(int n, const Index &idx) const {
     return m_array[n](idx.x, idx.y, idx.z);
   }
 
@@ -204,15 +200,15 @@ class VectorField : public FieldBase {
   cudaPitchedPtr ptr(int n) { return m_array[n].data_d(); }
   const cudaPitchedPtr ptr(int n) const { return m_array[n].data_d(); }
   data_type **array_ptrs() { return m_ptrs; }
-  const data_type * const* array_ptrs() const { return m_ptrs; }
+  const data_type *const *array_ptrs() const { return m_ptrs; }
   Stagger stagger(int n) const { return m_stagger[n]; }
-  const std::array<Stagger, VECTOR_DIM>& stagger() const { return m_stagger; }
+  const std::array<Stagger, VECTOR_DIM> &stagger() const {
+    return m_stagger;
+  }
   std::array<Stagger, VECTOR_DIM> stagger_dual() const;
 
-  void set_stagger(int n, Stagger stagger) {
-    m_stagger[n] = stagger;
-  }
-  void set_stagger(const std::array<Stagger, VECTOR_DIM>& stagger) {
+  void set_stagger(int n, Stagger stagger) { m_stagger[n] = stagger; }
+  void set_stagger(const std::array<Stagger, VECTOR_DIM> &stagger) {
     m_stagger = stagger;
   }
   void set_field_type(FieldType type);
@@ -227,15 +223,15 @@ class VectorField : public FieldBase {
   std::array<array_type, VECTOR_DIM> m_array;
   std::array<Stagger, VECTOR_DIM> m_stagger;
   FieldType m_type;
-  // Keep a cached array of pointers to the actual device pointers, convenient
-  // for the kernels
-  data_type** m_ptrs;
+  // Keep a cached array of pointers to the actual device pointers,
+  // convenient for the kernels
+  data_type **m_ptrs;
 
   // Default normalization is coord FieldNormalization
   // m_normalization = FieldNormalization::coord;
 };  // ----- end of class vector_field -----
 
-}
+}  // namespace Aperture
 
 #include "data/detail/fields_impl.hpp"
 

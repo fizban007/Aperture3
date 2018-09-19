@@ -11,12 +11,13 @@ template <typename T>
 class ScalarField;
 
 /// Compute v = v + q * u, where q is a constant
-void field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u, Scalar q);
+void field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u,
+               Scalar q);
 
 /// Compute v = v + q * u, where q is a scalar field
 void field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u,
                const ScalarField<Scalar>& q);
 
-}
+}  // namespace Aperture
 
 #endif  // _FIELDS_UTILS_H_

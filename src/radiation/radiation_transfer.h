@@ -1,16 +1,15 @@
 #ifndef _RADIATION_TRANSFER_H_
 #define _RADIATION_TRANSFER_H_
 
-#include "data/typedefs.h"
 #include "data/array.h"
+#include "data/typedefs.h"
 
 namespace Aperture {
 
 class Environment;
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
-class RadiationTransfer
-{
+class RadiationTransfer {
  public:
   RadiationTransfer(const Environment& env);
   virtual ~RadiationTransfer();
@@ -25,10 +24,8 @@ class RadiationTransfer
   Array<int> m_numPerBlock;
   Array<int> m_cumNumPerBlock;
   Array<int> m_posInBlock;
-}; // ----- end of class RadiationTransfer -----
+};  // ----- end of class RadiationTransfer -----
 
-
-
-}
+}  // namespace Aperture
 
 #endif  // _RADIATION_TRANSFER_H_

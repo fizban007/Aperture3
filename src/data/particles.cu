@@ -1,5 +1,5 @@
-#include "data/particles.h"
 #include "data/detail/particle_base_impl.hpp"
+#include "data/particles.h"
 // #include "sim_environment.h"
 #include "sim_params.h"
 
@@ -16,8 +16,8 @@ Particles::Particles(std::size_t max_num)
 
 // Particles::Particles(const Environment& env, ParticleType type)
 Particles::Particles(const SimParams& params)
-    : ParticleBase<single_particle_t>((std::size_t)params.max_ptc_number) {
-}
+    : ParticleBase<single_particle_t>(
+          (std::size_t)params.max_ptc_number) {}
 
 Particles::Particles(const Particles& other)
     : ParticleBase<single_particle_t>(other) {}
@@ -28,10 +28,13 @@ Particles::Particles(Particles&& other)
 Particles::~Particles() {}
 
 void
-Particles::put(std::size_t pos, const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
-           int cell, ParticleType type, Scalar weight, uint32_t flag) {
+Particles::put(std::size_t pos, const Vec3<Pos_t>& x,
+               const Vec3<Scalar>& p, int cell, ParticleType type,
+               Scalar weight, uint32_t flag) {
   if (pos >= m_numMax)
-    throw std::runtime_error("Trying to insert particle beyond the end of the array. Resize it first!");
+    throw std::runtime_error(
+        "Trying to insert particle beyond the end of the array. Resize "
+        "it first!");
 
   m_data.x1[pos] = x[0];
   m_data.x2[pos] = x[1];
@@ -47,7 +50,7 @@ Particles::put(std::size_t pos, const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
 
 void
 Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
-              ParticleType type, Scalar weight, uint32_t flag) {
+                  ParticleType type, Scalar weight, uint32_t flag) {
   put(m_number, x, p, cell, type, weight, flag);
 }
 
@@ -57,4 +60,4 @@ Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
 //     partition_and_sort(m_partition, grid, 8);
 // }
 
-}
+}  // namespace Aperture

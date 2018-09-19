@@ -1,8 +1,8 @@
 #ifndef _CURRENT_DEPOSITER_H_
 #define _CURRENT_DEPOSITER_H_
 
-#include "sim_data.h"
 #include "data/callbacks.h"
+#include "sim_data.h"
 
 namespace Aperture {
 

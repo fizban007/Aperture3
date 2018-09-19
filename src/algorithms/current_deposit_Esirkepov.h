@@ -22,9 +22,9 @@ class CurrentDepositer_Esirkepov : public CurrentDepositer {
 
  private:
   void compute_delta_rho(vfield& J, sfield& Rho, const Particles& part,
-                       double dt);
+                         double dt);
   void compute_delta_rho(sfield& J, sfield& Rho, const Particles& part,
-                       double dt);
+                         double dt);
 
   void scan_current(vfield& J);
   void scan_current(sfield& J);
@@ -32,7 +32,8 @@ class CurrentDepositer_Esirkepov : public CurrentDepositer {
   const Environment& m_env;
   // int m_deposit_order = 3;
   // int m_deriv_order;
-};  // ----- end of class current_depositer_Esirkepov : public current_depositer
+};  // ----- end of class current_depositer_Esirkepov : public
+    // current_depositer
 
 }  // namespace Aperture
 

@@ -1,5 +1,5 @@
-#include "data/particles_1d.h"
 #include "data/detail/particle_base_impl.hpp"
+#include "data/particles_1d.h"
 #include "sim_params.h"
 
 namespace Aperture {
@@ -13,8 +13,8 @@ Particles_1D::Particles_1D(std::size_t max_num)
     : ParticleBase<single_particle1d_t>(max_num) {}
 
 Particles_1D::Particles_1D(const SimParams& params)
-    : ParticleBase<single_particle1d_t>((std::size_t)params.max_ptc_number) {
-}
+    : ParticleBase<single_particle1d_t>(
+          (std::size_t)params.max_ptc_number) {}
 
 Particles_1D::Particles_1D(const Particles_1D& other)
     : ParticleBase<single_particle1d_t>(other) {}
@@ -28,7 +28,9 @@ void
 Particles_1D::put(std::size_t pos, Pos_t x1, Scalar p1, int cell,
                   ParticleType type, Scalar weight, uint32_t flag) {
   if (pos >= m_numMax)
-    throw std::runtime_error("Trying to insert particle beyond the end of the array. Resize it first!");
+    throw std::runtime_error(
+        "Trying to insert particle beyond the end of the array. Resize "
+        "it first!");
 
   m_data.x1[pos] = x1;
   m_data.p1[pos] = p1;
@@ -39,9 +41,9 @@ Particles_1D::put(std::size_t pos, Pos_t x1, Scalar p1, int cell,
 }
 
 void
-Particles_1D::append(Pos_t x, Scalar p, int cell,
-                     ParticleType type, Scalar weight, uint32_t flag) {
+Particles_1D::append(Pos_t x, Scalar p, int cell, ParticleType type,
+                     Scalar weight, uint32_t flag) {
   put(m_number, x, p, cell, type, weight, flag);
 }
 
-}
+}  // namespace Aperture

@@ -1,9 +1,8 @@
 #ifndef _CONSTANT_MEM_H_
 #define _CONSTANT_MEM_H_
 
-#include "sim_params.h"
 #include "data/quadmesh.h"
-
+#include "sim_params.h"
 
 namespace Aperture {
 
@@ -18,6 +17,6 @@ extern __device__ __constant__ float dev_charges[8];
 // represent species
 extern __device__ __constant__ float dev_masses[8];
 
-}
+}  // namespace Aperture
 
 #endif  // _CONSTANT_MEM_H_
