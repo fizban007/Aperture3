@@ -8,11 +8,11 @@
 
 namespace Aperture {
 
-////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 ///  This is the standard simulation parameters class. This class will
 ///  be maintained in the environment class and be passed around as
 ///  reference to determine how the simulation will unfold.
-////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 struct SimParamsBase {
   // std::string metric = "Cartesian";
 
@@ -46,6 +46,7 @@ struct SimParamsBase {
   int annih_thr = 1000;
   float annih_fraction = 0.01;
   float track_percent = 0.2;
+  float constE = 1.0;
 
   // These parameters are for radiative transfer
   float E_cutoff = 10.0;

@@ -38,6 +38,9 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   if (m_env.params().algorithm_ptc_move == "beadonwire") {
     m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(
         new ParticlePusher_BeadOnWire(m_env));
+  } else if (m_env.params().algorithm_ptc_move == "constE") {
+    m_pusher = std::unique_ptr<ParticlePusher_ConstE>(
+        new ParticlePusher_ConstE(m_env));
   } else {
     m_pusher = std::unique_ptr<ParticlePusher_Geodesic>(
         new ParticlePusher_Geodesic(m_env));
