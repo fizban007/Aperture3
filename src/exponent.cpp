@@ -29,6 +29,7 @@ main(int argc, char *argv[]) {
                     InverseComptonPL1D<Kernels::CudaRng>> rad(env);
 
   // Initialize seed particle(s)
+  Logger::print_debug("Initializing particles");
   int N = 1;
   for (int i = 0; i < N; i++) {
     data.particles.append({env.gen_rand(), 0.0, 0.0}, {0.0, 0.0, 0.0}, 10, ParticleType::electron);
@@ -36,6 +37,7 @@ main(int argc, char *argv[]) {
   data.particles.sync_to_device();
 
   // Main simulation loop
+  Logger::print_debug("Starting simulation loop");
   Scalar dt = env.params().delta_t;
   for (uint32_t step = 0; step < env.params().max_steps; step++) {
     Logger::print_info("At timestep {}", step);
@@ -45,6 +47,14 @@ main(int argc, char *argv[]) {
     rad.emit_photons(data.photons, data.particles);
     sim.ptc_pusher().push(data, dt);
     rad.produce_pairs(data.particles, data.photons);
+    if (step % 100) {
+      data.particles.sort_by_cell();
+      data.photons.sort_by_cell();
+    }
+    // data.particles.sync_to_host();
+    Logger::print_info("p1 is {}", data.particles.data().p1[0]);
+    // data.photons.sync_to_host();
+    Logger::print_info("lph is {}", data.photons.data().path_left[0]);
   }
   
   return 0;

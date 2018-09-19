@@ -90,6 +90,7 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.E_ph = config->get_as<double>("E_ph").value_or(defaults.E_ph);
   params.E_ph_min =
       config->get_as<double>("E_ph_min").value_or(defaults.E_ph_min);
+  params.constE = config->get_as<double>("constE").value_or(defaults.constE);
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
@@ -125,6 +126,11 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   if (tile_size) {
     for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i];
   }
+
+  // Simulation configuration
+  auto sim_table = config->get_table("Simulation");
+  params.algorithm_ptc_move = sim_table->get_as<std::string>
+      ("algorithm_ptc_move").value_or(defaults.algorithm_ptc_move);
 
   compute_derived_quantities(params);
 }

@@ -163,13 +163,13 @@ HOST_DEVICE Scalar
 InverseComptonPL1D<RandFunc>::draw_photon_freepath(Scalar Eph) {
   Scalar rate;
   if (Eph * m_emin < 2.0) {
-    rate = std::pow(Eph * m_emin / 2.0, m_alpha);
+    rate = std::pow(std::abs(Eph) * m_emin / 2.0, m_alpha);
   } else {
     // rate = std::pow(Eph * e_min / 2.0, -1.0);
-    rate = 2.0 / (Eph * m_emin);
+    rate = 2.0 / (std::abs(Eph) * m_emin);
   }
 
-  return -m_mfp * std::log(1.0f - m_rng()) / rate;
+  return -m_mfp * std::log(m_rng()) / rate;
 }
 
 template <typename RandFunc>

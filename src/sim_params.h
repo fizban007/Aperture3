@@ -58,6 +58,7 @@ struct SimParamsBase {
   float photon_path = 1.0;
   float ic_path = 1.0;
   int rad_energy_bins = 256;
+  float lph_cutoff = 1.0e4;
 
   // Domain decomposition parameters
   int dim_x = 1;
