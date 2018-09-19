@@ -54,10 +54,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.delta_t =
       config->get_as<double>("delta_t").value_or(defaults.delta_t);
   params.max_ptc_number =
-      config->get_as<unsigned long>("max_ptc_number")
+      config->get_as<uint64_t>("max_ptc_number")
           .value_or(defaults.max_ptc_number);
   params.max_photon_number =
-      config->get_as<unsigned long>("max_photon_number")
+      config->get_as<uint64_t>("max_photon_number")
           .value_or(defaults.max_photon_number);
   params.ion_mass =
       config->get_as<double>("ion_mass").value_or(defaults.ion_mass);
@@ -131,6 +131,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   auto sim_table = config->get_table("Simulation");
   params.algorithm_ptc_move = sim_table->get_as<std::string>
       ("algorithm_ptc_move").value_or(defaults.algorithm_ptc_move);
+  params.random_seed = config->get_as<int>
+      ("random_seed").value_or(defaults.random_seed);
 
   compute_derived_quantities(params);
 }
