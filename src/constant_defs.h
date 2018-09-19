@@ -1,8 +1,8 @@
-#ifndef  _CONSTANTS_H_
-#define  _CONSTANTS_H_
+#ifndef _CONSTANTS_H_
+#define _CONSTANTS_H_
 
-#include <math.h>
 #include <limits>
+#include <math.h>
 
 #define VECTOR_DIM 3
 #define CONST_PI 3.14159265358979323846
@@ -25,5 +25,4 @@
 #define TAG_ID_MASK 0x0000FFFF
 #define MAX_TRACKED 1000000
 
-
-#endif   // _CONSTANTS_H_
+#endif  // _CONSTANTS_H_

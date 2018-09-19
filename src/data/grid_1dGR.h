@@ -5,8 +5,7 @@
 
 namespace Aperture {
 
-class Grid_1dGR : public Grid
-{
+class Grid_1dGR : public Grid {
  public:
   Grid_1dGR();
   Grid_1dGR(int N);
@@ -25,12 +24,12 @@ class Grid_1dGR : public Grid
   struct mesh_ptrs {
     Scalar *D1, *D2, *D3;
     Scalar *A, *alpha_grr, *angle;
-    Scalar *a2;
+    Scalar* a2;
   };
   struct const_mesh_ptrs {
     const Scalar *D1, *D2, *D3;
     const Scalar *A, *alpha_grr, *angle;
-    const Scalar *a2;
+    const Scalar* a2;
   };
   const_mesh_ptrs get_mesh_ptrs() const;
 
@@ -38,9 +37,8 @@ class Grid_1dGR : public Grid
   MultiArray<Scalar> m_D1, m_D2, m_D3;
   MultiArray<Scalar> m_A, m_alpha_grr, m_angle;
   MultiArray<Scalar> m_a2;
-}; // ----- end of class Grid_1dGR : public Grid -----
+};  // ----- end of class Grid_1dGR : public Grid -----
 
-
-}
+}  // namespace Aperture
 
 #endif  // _GRID_1DGR_H_

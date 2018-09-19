@@ -5,17 +5,21 @@
 
 namespace Aperture {
 
-/// Vectorized type as 4d vector, better alignment properties than 3d vector
+/// Vectorized type as 4d vector, better alignment properties than 3d
+/// vector
 template <typename T>
-struct Vec4
-{
+struct Vec4 {
   T x, y, z, w;
 
   typedef Vec4<T> self_type;
 
   HOST_DEVICE Vec4()
-      : x(static_cast<T>(0)), y(static_cast<T>(0)), z(static_cast<T>(0)), w(static_cast<T>(0)) {}
-  HOST_DEVICE Vec4(T xi, T yi, T zi, T wi = static_cast<T>(0)) : x(xi), y(yi), z(zi), w(wi) {}
+      : x(static_cast<T>(0)),
+        y(static_cast<T>(0)),
+        z(static_cast<T>(0)),
+        w(static_cast<T>(0)) {}
+  HOST_DEVICE Vec4(T xi, T yi, T zi, T wi = static_cast<T>(0))
+      : x(xi), y(yi), z(zi), w(wi) {}
   HOST_DEVICE Vec4(const Vec3<T>& other) {
     x = other.x;
     y = other.y;
@@ -68,11 +72,13 @@ struct Vec4
   }
 
   HD_INLINE bool operator==(const self_type& other) const {
-    return (x == other.x && y == other.y && z == other.z && w == other.w);
+    return (x == other.x && y == other.y && z == other.z &&
+            w == other.w);
   }
 
   HD_INLINE bool operator!=(const self_type& other) const {
-    return (x != other.x || y != other.y || z != other.z || w != other.w);
+    return (x != other.x || y != other.y || z != other.z ||
+            w != other.w);
   }
 
   HD_INLINE self_type& operator+=(const self_type& other) {
@@ -157,18 +163,18 @@ struct Vec4
     return {x / n, y / n, z / n, w / n};
   }
 
-  HD_INLINE Vec3<T> vec3() const {
-    return {x, y, z};
-  }
+  HD_INLINE Vec3<T> vec3() const { return {x, y, z}; }
 
-  friend std::ostream& operator<<(std::ostream& os, const self_type& vec) {
-    os << "( " << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << " )";
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const self_type& vec) {
+    os << "( " << vec.x << ", " << vec.y << ", " << vec.z << ", "
+       << vec.w << " )";
     return os;
   }
 };
 
 template <typename T>
-Vec4<T> operator* (const T& t, const Vec4<T>& v) {
+Vec4<T> operator*(const T& t, const Vec4<T>& v) {
   Vec4<T> result(v);
   result *= t;
   return result;
@@ -186,6 +192,6 @@ Vec4<T> operator* (const T& t, const Vec4<T>& v) {
 //   return result;
 // }
 
-}
+}  // namespace Aperture
 
 #endif  // _VEC4_H_

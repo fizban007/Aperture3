@@ -1,5 +1,5 @@
-#include "sim_data.h"
 #include "cuda/cudaUtility.h"
+#include "sim_data.h"
 
 namespace Aperture {
 
@@ -9,13 +9,14 @@ namespace Aperture {
 //   initialize(env);
 // }
 
-SimData::SimData(const Environment& e, int deviceId) :
-    env(e), E(env.local_grid()),
-    B(env.local_grid()),
-    J(env.local_grid()),
-    particles(env.params()),
-    photons(env),
-    devId(deviceId) {
+SimData::SimData(const Environment& e, int deviceId)
+    : env(e),
+      E(env.local_grid()),
+      B(env.local_grid()),
+      J(env.local_grid()),
+      particles(env.params()),
+      photons(env),
+      devId(deviceId) {
   // initialize(env);
   num_species = env.params().num_species;
   E.initialize();
@@ -24,7 +25,8 @@ SimData::SimData(const Environment& e, int deviceId) :
 
   CudaSafeCall(cudaSetDevice(devId));
   // Initialize the pointer array that contains the device pointers
-  CudaSafeCall(cudaMallocManaged(&rho_ptrs, num_species*sizeof(Scalar*)));
+  CudaSafeCall(
+      cudaMallocManaged(&rho_ptrs, num_species * sizeof(Scalar*)));
 
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
@@ -33,7 +35,8 @@ SimData::SimData(const Environment& e, int deviceId) :
     Rho_avg.emplace_back(env.local_grid());
     J_s.emplace_back(env.local_grid());
     J_avg.emplace_back(env.local_grid());
-    // particles.emplace_back(env.params(), static_cast<ParticleType>(i));
+    // particles.emplace_back(env.params(),
+    // static_cast<ParticleType>(i));
   }
 
   // particles.sync_to_device(0);
@@ -52,5 +55,4 @@ SimData::~SimData() {
 void
 SimData::initialize(const Environment& env) {}
 
-
-}
+}  // namespace Aperture

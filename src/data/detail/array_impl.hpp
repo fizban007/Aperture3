@@ -1,14 +1,14 @@
 #ifndef _ARRAY_IMPL_H_
 #define _ARRAY_IMPL_H_
 
-#include "data/array.h"
-#include "utils/memory.h"
-#include "utils/logger.h"
 #include "cuda/cudaUtility.h"
 #include "cuda_runtime.h"
+#include "data/array.h"
+#include "utils/logger.h"
+#include "utils/memory.h"
 #include <algorithm>
-#include <thrust/fill.h>
 #include <thrust/device_ptr.h>
+#include <thrust/fill.h>
 
 namespace Aperture {
 
@@ -44,11 +44,10 @@ Array<T>::~Array() {
 template <typename T>
 void
 Array<T>::alloc_mem(size_t N, int deviceId) {
-  if (m_data_d != nullptr || m_data_h != nullptr)
-    free_mem();
+  if (m_data_d != nullptr || m_data_h != nullptr) free_mem();
   m_devId = deviceId;
   CudaSafeCall(cudaSetDevice(m_devId));
-  CudaSafeCall(cudaMalloc(&m_data_d, N*sizeof(T)));
+  CudaSafeCall(cudaMalloc(&m_data_d, N * sizeof(T)));
   m_data_h = new T[N];
   m_length = N;
 }
@@ -100,7 +99,8 @@ Array<T>::assign(const data_type& value, size_t num) {
   std::fill_n(m_data_h, num, value);
 }
 
-/// Set part of the array to a single initial value through device kernel
+/// Set part of the array to a single initial value through device
+/// kernel
 template <typename T>
 void
 Array<T>::assign_dev(const data_type& value, size_t num) {
@@ -132,7 +132,6 @@ Array<T>::resize(int length, int deviceId) {
   alloc_mem(length, deviceId);
 }
 
-}
-
+}  // namespace Aperture
 
 #endif  // _ARRAY_IMPL_H_

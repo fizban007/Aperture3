@@ -20,9 +20,8 @@ struct CudaRng {
   curandState* m_state;
 };
 
+}  // namespace Kernels
 
-}
-
-}
+}  // namespace Aperture
 
 #endif  // _CUDARNG_H_

@@ -1,26 +1,28 @@
-#ifndef  _MULTI_ARRAY_IMPL_H_
-#define  _MULTI_ARRAY_IMPL_H_
+#ifndef _MULTI_ARRAY_IMPL_H_
+#define _MULTI_ARRAY_IMPL_H_
 
-#include "data/multi_array.h"
-#include "utils/memory.h"
-#include "utils/logger.h"
 #include "cuda/cudaUtility.h"
 #include "cuda_runtime.h"
+#include "data/detail/multi_array_utils.hpp"
+#include "data/multi_array.h"
 #include "thrust/copy.h"
 #include "thrust/device_ptr.h"
-#include "data/detail/multi_array_utils.hpp"
+#include "utils/logger.h"
+#include "utils/memory.h"
 
 namespace Aperture {
 
 template <typename T>
-inline cudaExtent cuda_ext(const Extent& ext, const T& t) {
-  return make_cudaExtent(ext.x*sizeof(T), ext.y, ext.z);
+inline cudaExtent
+cuda_ext(const Extent& ext, const T& t) {
+  return make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 }
 
 template <typename T>
 MultiArray<T>::MultiArray()
     : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
-      _data_h(nullptr), _size(0) {
+      _data_h(nullptr),
+      _size(0) {
   _extent.width() = 0;
   _extent.height() = 1;
   _extent.depth() = 1;
@@ -28,7 +30,8 @@ MultiArray<T>::MultiArray()
 }
 
 template <typename T>
-MultiArray<T>::MultiArray(int width, int height, int depth, int deviceId)
+MultiArray<T>::MultiArray(int width, int height, int depth,
+                          int deviceId)
     : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
       _data_h(nullptr),
       _extent{width, height, depth} {
@@ -44,15 +47,19 @@ MultiArray<T>::MultiArray(int width, int height, int depth, int deviceId)
 
 template <typename T>
 MultiArray<T>::MultiArray(const Extent& extent, int deviceId)
-    : MultiArray(extent.width(), extent.height(), extent.depth(), deviceId) {}
+    : MultiArray(extent.width(), extent.height(), extent.depth(),
+                 deviceId) {}
 
 template <typename T>
 MultiArray<T>::MultiArray(const self_type& other)
     : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
       _data_h(nullptr),
-      _extent(other._extent), _size(other._size), _dim(other._dim) {
+      _extent(other._extent),
+      _size(other._size),
+      _dim(other._dim) {
   // _data = new T[_size];
-  // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T), 64));
+  // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T),
+  // 64));
   alloc_mem(_extent, other._devId);
   copyFrom(other);
 }
@@ -78,8 +85,7 @@ MultiArray<T>::~MultiArray() {
 template <typename T>
 void
 MultiArray<T>::alloc_mem(const Extent& ext, int deviceId) {
-  if (_data_d.ptr != nullptr || _data_h != nullptr)
-    free_mem();
+  if (_data_d.ptr != nullptr || _data_h != nullptr) free_mem();
   _devId = deviceId;
   CudaSafeCall(cudaSetDevice(_devId));
   auto extent = cuda_ext(ext, T{});
@@ -127,7 +133,7 @@ MultiArray<T>::copyFrom(const self_type& other) {
 
 template <typename T>
 void
-MultiArray<T>::assign(const data_type &value) {
+MultiArray<T>::assign(const data_type& value) {
   std::fill_n(_data_h, _size, value);
 }
 
@@ -137,8 +143,8 @@ MultiArray<T>::assign_dev(const data_type& value) {
   CudaSafeCall(cudaSetDevice(_devId));
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
-  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>
-      (_data_d, _extent, detail::Op_AssignConst<T>(value));
+  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
+      _data_d, _extent, detail::Op_AssignConst<T>(value));
   CudaCheckError();
 }
 
@@ -204,16 +210,18 @@ template <typename T>
 void
 MultiArray<T>::sync_to_device(int devId) {
   CudaSafeCall(cudaSetDevice(devId));
-  // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T), devId));
+  // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T),
+  // devId));
   cudaMemcpy3DParms myParms = {0};
-  myParms.srcPtr = make_cudaPitchedPtr((void*)_data_h, _extent.x*sizeof(T),
-                                       _extent.x, _extent.y);
+  myParms.srcPtr = make_cudaPitchedPtr(
+      (void*)_data_h, _extent.x * sizeof(T), _extent.x, _extent.y);
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(_extent, T{});
   myParms.kind = cudaMemcpyHostToDevice;
-  // Logger::print_info("before copy to device, extent has {}, {}, {}", myParms.extent.width,
+  // Logger::print_info("before copy to device, extent has {}, {}, {}",
+  // myParms.extent.width,
   //                    myParms.extent.height, myParms.extent.depth);
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
@@ -229,23 +237,26 @@ template <typename T>
 void
 MultiArray<T>::sync_to_host() {
   CudaSafeCall(cudaSetDevice(_devId));
-  // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T), cudaCpuDeviceId));
+  // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T),
+  // cudaCpuDeviceId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  myParms.dstPtr = make_cudaPitchedPtr((void*)_data_h, _extent.x*sizeof(T),
-                                       _extent.x, _extent.y);
+  myParms.dstPtr = make_cudaPitchedPtr(
+      (void*)_data_h, _extent.x * sizeof(T), _extent.x, _extent.y);
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
-  // Logger::print_info("before copy to host, extent has {}, {}, {}", myParms.extent.width,
+  // Logger::print_info("before copy to host, extent has {}, {}, {}",
+  // myParms.extent.width,
   //                    myParms.extent.height, myParms.extent.depth);
-  // Logger::print_info("host pitchedptr has has {}, {}, {}", myParms.dstPtr.pitch,
+  // Logger::print_info("host pitchedptr has has {}, {}, {}",
+  // myParms.dstPtr.pitch,
   //                    myParms.dstPtr.xsize, myParms.dstPtr.ysize);
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
 
-}
+}  // namespace Aperture
 
-#endif   // _MULTI_ARRAY_IMPL_H_
+#endif  // _MULTI_ARRAY_IMPL_H_

@@ -1,12 +1,12 @@
 #ifndef _SIM_ENVIRONMENT_H_
 #define _SIM_ENVIRONMENT_H_
 
-#include <memory>
-#include <string>
-#include <random>
 #include "commandline_args.h"
-#include "sim_params.h"
 #include "config_file.h"
+#include "sim_params.h"
+#include <memory>
+#include <random>
+#include <string>
 // #include "data/domain_info.h"
 #include "data/grid.h"
 #include "utils/hdf_exporter.h"
@@ -24,8 +24,8 @@ namespace Aperture {
 // class DomainCommunicator;
 
 ////////////////////////////////////////////////////////////////////////////////
-///  Class of the simulation environment. This class holds the basic information
-///  that is useful for many other modules.
+///  Class of the simulation environment. This class holds the basic
+///  information that is useful for many other modules.
 ////////////////////////////////////////////////////////////////////////////////
 class Environment {
  public:
@@ -38,10 +38,10 @@ class Environment {
   Environment& operator=(Environment const&) = delete;
 
   // void set_initial_condition(SimData& data);
-  // void set_initial_condition(SimData& data, const Index& start, const Extent& extent);
-  // void setup_domain(int num_nodes);
-  // void setup_domain(int dimx, int dimy, int dimz = 1);
-  // void setup_local_grid(Grid& local_grid, const Grid& super_grid,
+  // void set_initial_condition(SimData& data, const Index& start, const
+  // Extent& extent); void setup_domain(int num_nodes); void
+  // setup_domain(int dimx, int dimy, int dimz = 1); void
+  // setup_local_grid(Grid& local_grid, const Grid& super_grid,
   //                       const DomainInfo& info);
 
   // void set_initial_condition(InitialCondition* ic);
@@ -71,10 +71,13 @@ class Environment {
 
   DataExporter& exporter() { return *m_exporter; }
   // const MPICommWorld& world() const { return m_comm->world(); }
-  // const MPICommCartesian& cartesian() const { return m_comm->cartesian(); }
-  // const DomainInfo& domain_info() const { return m_domain_info; }
-  // // const BoundaryConditions& boundary_conditions() const { return m_bc; }
-  // // const InitialCondition& initial_condition() const { return *m_ic; }
+  // const MPICommCartesian& cartesian() const { return
+  // m_comm->cartesian(); } const DomainInfo& domain_info() const {
+  // return m_domain_info; }
+  // // const BoundaryConditions& boundary_conditions() const { return
+  // m_bc; }
+  // // const InitialCondition& initial_condition() const { return
+  // *m_ic; }
   void check_dev_mesh(Quadmesh& mesh);
   void check_dev_params(SimParams& params);
 

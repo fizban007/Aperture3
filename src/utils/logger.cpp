@@ -7,8 +7,8 @@ LogLevel Logger::m_level = LogLevel::info;
 std::string Logger::m_log_file = "";
 std::FILE* Logger::m_file = nullptr;
 
-
-void Logger::init(int rank, LogLevel level, std::string log_file) {
+void
+Logger::init(int rank, LogLevel level, std::string log_file) {
   m_rank = rank;
   m_level = level;
   m_log_file = log_file;
@@ -30,4 +30,4 @@ Logger::open_log_file() {
   return true;
 }
 
-}
+}  // namespace Aperture

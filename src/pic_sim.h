@@ -1,13 +1,13 @@
 #ifndef _PIC_SIM_H_
 #define _PIC_SIM_H_
 
-#include <stddef.h>
-#include <memory>
 #include "current_depositer.h"
 #include "field_solver.h"
 #include "particle_pusher.h"
 #include "sim_data.h"
 #include "sim_environment.h"
+#include <memory>
+#include <stddef.h>
 
 namespace Aperture {
 
@@ -18,7 +18,8 @@ class PICSim {
   PICSim(Environment& env);
   virtual ~PICSim();
 
-  void loop(SimData& data, uint32_t steps = 100000, uint32_t data_interval = 100);
+  void loop(SimData& data, uint32_t steps = 100000,
+            uint32_t data_interval = 100);
 
   void step(SimData& data, uint32_t step);
 
@@ -35,6 +36,6 @@ class PICSim {
   // std::unique_ptr<InverseCompton> m_inverse_compton;
   // std::unique_ptr<DomainCommunicator> m_comm;
 };  // ----- end of class PICSim -----
-}
+}  // namespace Aperture
 
 #endif  // _PIC_SIM_H_

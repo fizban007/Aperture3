@@ -4,17 +4,17 @@
 // #include "data/photons.h"
 // #include "data/particles.h"
 // #include "data/fields.h"
-#include "data/typedefs.h"
 #include "cuda/cuda_control.h"
+#include "data/typedefs.h"
 #include "sim_params.h"
 
 namespace Aperture {
 
 template <typename RandFunc>
-class InverseComptonPL1D
-{
+class InverseComptonPL1D {
  public:
-  HOST_DEVICE InverseComptonPL1D(const SimParamsBase& params, RandFunc& rng);
+  HOST_DEVICE InverseComptonPL1D(const SimParamsBase& params,
+                                 RandFunc& rng);
   HOST_DEVICE ~InverseComptonPL1D();
 
   // Determine whether a high energy photon should be emitted
@@ -38,13 +38,12 @@ class InverseComptonPL1D
   HOST_DEVICE Scalar draw_photon_u1p(Scalar e1p, Scalar gamma);
   // void* d_rand_states;
   // int m_threadsPerBlock, m_blocksPerGrid;
-}; // ----- end of class InverseComptonPL1D -----
-
+};  // ----- end of class InverseComptonPL1D -----
 
 template <typename RandFunc>
-HOST_DEVICE InverseComptonPL1D<RandFunc> make_inverse_compton_PL1D(const SimParamsBase& params, RandFunc& rng);
-
-}
+HOST_DEVICE InverseComptonPL1D<RandFunc> make_inverse_compton_PL1D(
+    const SimParamsBase& params, RandFunc& rng);
+}  // namespace Aperture
 
 #include "radiation/inverse_compton_power_law.cuh"
 

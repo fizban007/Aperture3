@@ -49,7 +49,8 @@ class MPICommBase {
              MPI_Request& request) const;
 
   ////////////////////////////////////////////////////////////////////////////////
-  ///  Various recv methods, have to be used with send in a matching form
+  ///  Various recv methods, have to be used with send in a matching
+  ///  form
   ////////////////////////////////////////////////////////////////////////////////
   template <typename T>
   void recv(int source_rank, int tag, T* values, int n,
@@ -69,9 +70,8 @@ class MPICommBase {
              MPI_Request& request) const;
 
   // returns the count of elements received.
-  // somehow, MPI_Get_count doesn't take the first parameter as const. It's
-  // better to
-  // use const MPIDatatypedStatus
+  // somehow, MPI_Get_count doesn't take the first parameter as const.
+  // It's better to use const MPIDatatypedStatus
   void get_recv_count(MPI_Status& status, MPI_Datatype datatype,
                       int& count) const;
 
@@ -92,19 +92,18 @@ class MPICommBase {
   ////////////////////////////////////////////////////////////////////////////////
   ///  Gather methods
   ////////////////////////////////////////////////////////////////////////////////
-  // recvcount refers to counts of recved data from one single process, rather
-  // than the total
-  // counts from all processes.
+  // recvcount refers to counts of recved data from one single process,
+  // rather than the total counts from all processes.
   template <typename T>
-  void gather(const T* send_buf, int sendcount, T* recv_buf, int recvcount,
-              int root) const;
+  void gather(const T* send_buf, int sendcount, T* recv_buf,
+              int recvcount, int root) const;
 
   template <typename T>
   void all_gather(const T* send_buf, int sendcount, T* recv_buf,
                   int recvcount) const;
 
-  // this version is mostly used by non-root processes becuase in this case
-  // recv_buf and recvcount are not significant
+  // this version is mostly used by non-root processes becuase in this
+  // case recv_buf and recvcount are not significant
   template <typename T>
   void gather(const T* send_buf, int sendcount, int root) const;
 
@@ -116,8 +115,8 @@ class MPICommBase {
   void gatherv(const T* send_buf, int sendcount, T* recv_buf,
                int* recvcounts, int* displs, int root) const;
 
-  // this version is mostly used by non-root processes becuase in this case
-  // recv_buf and recvcount are not significant
+  // this version is mostly used by non-root processes becuase in this
+  // case recv_buf and recvcount are not significant
   template <typename T>
   void gatherv(const T* send_buf, int sendcount, int root) const;
 
@@ -155,8 +154,8 @@ class MPICommBase {
   inline MPI_Group group() const {
     // NOTE to use MPI_GROUP_EMPTY rather than MPI_GROUP_NULL
     MPI_Group grp = MPI_GROUP_EMPTY;
-    // NOTE calling MPI_Comm_group on MPI_COMM_NULL is invalid, hence this
-    // branch.
+    // NOTE calling MPI_Comm_group on MPI_COMM_NULL is invalid, hence
+    // this branch.
     if (!is_null()) MPI_Comm_group(_comm, &grp);
     return grp;
   }
@@ -201,7 +200,9 @@ class MPICommCartesian : public MPICommBase {
   ////////////////////////////////////////////////////////////////////////////////
   ///  Accessors
   ////////////////////////////////////////////////////////////////////////////////
-  inline MPI_Comm comm_row(int direction) const { return _rows[direction]; }
+  inline MPI_Comm comm_row(int direction) const {
+    return _rows[direction];
+  }
 
   inline int ndims() const { return _ndims; }
   inline int dim(int direction) const { return _dims[direction]; }
@@ -211,7 +212,9 @@ class MPICommCartesian : public MPICommBase {
   inline int neighbor_left(int direction) const {
     return _neighbor_left[direction];
   }
-  inline int neighbor_corner(int id) const { return _neighbor_corner[id]; }
+  inline int neighbor_corner(int id) const {
+    return _neighbor_corner[id];
+  }
   inline int coord(int direction) const { return _coords[direction]; }
 };  // ----- end of class mpi_cartesian -----
 
@@ -226,23 +229,26 @@ class MPIComm {
   MPIComm(int* argc, char*** argv);
   ~MPIComm();
 
-  // Deploying processes for creating communicators. The functions return all
-  // process ranks of the resulting communicator that includes the calling
-  // process
-  // NOTE that RVO is used in implementation
+  // Deploying processes for creating communicators. The functions
+  // return all process ranks of the resulting communicator that
+  // includes the calling process NOTE that RVO is used in
+  // implementation
   std::vector<int> get_cartesian_members(int cart_size);
 
   inline const MPICommWorld& world() const { return *_world; }
   inline MPICommWorld& world() { return *_world; }
-  inline const MPICommCartesian& cartesian() const { return *_cartesian; }
+  inline const MPICommCartesian& cartesian() const {
+    return *_cartesian;
+  }
   inline MPICommCartesian& cartesian() { return *_cartesian; }
 
   inline int world_root() const { return _world_root; }
-  inline bool is_world_root() const { return _world->rank() == _world_root; }
-
+  inline bool is_world_root() const {
+    return _world->rank() == _world_root;
+  }
 };
 
-}
+}  // namespace Aperture
 
 // #include "utils/mpi_comm_impl.hpp"
 

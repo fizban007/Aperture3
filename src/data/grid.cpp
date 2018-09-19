@@ -9,22 +9,15 @@
 
 namespace Aperture {
 
-Grid::Grid() :
-    Grid(1, 1, 1) {}
+Grid::Grid() : Grid(1, 1, 1) {}
 
 Grid::~Grid() {}
 
-Grid::Grid(int N1, int N2, int N3)
-    : m_mesh(N1, N2, N3) {}
+Grid::Grid(int N1, int N2, int N3) : m_mesh(N1, N2, N3) {}
 
+Grid::Grid(const Grid& g) { m_mesh = g.m_mesh; }
 
-Grid::Grid(const Grid& g) {
-  m_mesh = g.m_mesh;
-}
-
-Grid::Grid(Grid&& g) {
-  m_mesh = g.m_mesh;
-}
+Grid::Grid(Grid&& g) { m_mesh = g.m_mesh; }
 
 Grid&
 Grid::operator=(const Grid& g) {
@@ -52,12 +45,12 @@ Grid::init(const SimParams& params) {
   }
   m_mesh.dimension = m_mesh.dim();
 
-  if ((uint32_t)m_mesh.dims[0] * (uint32_t)m_mesh.dims[1]
-      * (uint32_t)m_mesh.dims[2] >= MAX_CELL - 1) {
+  if ((uint32_t)m_mesh.dims[0] * (uint32_t)m_mesh.dims[1] *
+          (uint32_t)m_mesh.dims[2] >=
+      MAX_CELL - 1) {
     std::cout << "Grid dimensions too large!" << std::endl;
     abort();
   }
-
 }
 
-}
+}  // namespace Aperture

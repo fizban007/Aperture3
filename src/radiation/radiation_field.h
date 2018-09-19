@@ -1,16 +1,15 @@
 #ifndef _RADIATION_FIELD_H_
 #define _RADIATION_FIELD_H_
 
-#include "data/typedefs.h"
 #include "data/multi_array.h"
+#include "data/typedefs.h"
 
 namespace Aperture {
 
 class Environment;
 
 // This is tailored to handle radiation field in 1D
-class RadiationField
-{
+class RadiationField {
  public:
   RadiationField(const Environment& env);
   virtual ~RadiationField();
@@ -22,13 +21,11 @@ class RadiationField
   Scalar* ptr() { return m_data.data(); }
   const Scalar* ptr() { return m_data.data(); }
 
-
  private:
   const Environment& m_env;
   MultiArray<Scalar> m_data;
-}; // ----- end of class RadiationField -----
+};  // ----- end of class RadiationField -----
 
-
-}
+}  // namespace Aperture
 
 #endif  // _RADIATION_FIELD_H_

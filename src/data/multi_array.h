@@ -2,9 +2,9 @@
 #define _MULTIARRAY_H_
 
 #include "data/vec3.h"
-#include <type_traits>
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 
 #include "cuda_runtime.h"
 
@@ -40,7 +40,8 @@ class MultiArray {
 
   /// Main constructor, initializes with given width, height, and
   /// depth of the array. Allocate memory in the initialization.
-  explicit MultiArray(int width, int height = 1, int depth = 1, int deviceId = 0);
+  explicit MultiArray(int width, int height = 1, int depth = 1,
+                      int deviceId = 0);
 
   /// Alternative main constructor, takes in an @ref Extent object and
   /// initializes an array of the corresponding extent.
@@ -75,13 +76,15 @@ class MultiArray {
 
   /// Vector indexing operator, read only
   const data_type& operator()(int x, int y = 0, int z = 0) const {
-    int idx = x + y * _extent.width() + z * _extent.width() * _extent.height();
+    int idx = x + y * _extent.width() +
+              z * _extent.width() * _extent.height();
     return _data_h[idx];
   }
 
   /// Vector indexing operator, read and write
   data_type& operator()(int x, int y = 0, int z = 0) {
-    int idx = x + y * _extent.width() + z * _extent.width() * _extent.height();
+    int idx = x + y * _extent.width() +
+              z * _extent.width() * _extent.height();
     return _data_h[idx];
   }
 
@@ -91,7 +94,8 @@ class MultiArray {
     return _data_h[idx];
   }
 
-  /// Vector indexing operator using an @ref Index object, read and write
+  /// Vector indexing operator using an @ref Index object, read and
+  /// write
   data_type& operator()(const Index& index) {
     int idx = index.index(_extent);
     return _data_h[idx];
@@ -102,15 +106,16 @@ class MultiArray {
 
   /// Set the whole array to a single initial value
   void assign(const data_type& value);
-    // std::cout << "Assigning value " << value << " for size " << _size <<
-    // std::endl;
-    // std::fill_n(_data, _size, value);
+  // std::cout << "Assigning value " << value << " for size " << _size
+  // << std::endl; std::fill_n(_data, _size, value);
   // }
-  /// Set the whole array to a single initial value through device kernel
+  /// Set the whole array to a single initial value through device
+  /// kernel
   void assign_dev(const data_type& value);
 
   /// Resize the array.
-  void resize(int width, int height = 1, int depth = 1, int deviceId = 0);
+  void resize(int width, int height = 1, int depth = 1,
+              int deviceId = 0);
 
   /// Resize the array according to an \ref Extent object.
   void resize(Extent extent, int deviceId = 0);
@@ -183,7 +188,7 @@ class MultiArray {
   void find_dim();
 
   cudaPitchedPtr _data_d;  ///< Pointer to the data stored on the GPU
-  ptr_type _data_h;  ///< Pointer to the data stored on the host
+  ptr_type _data_h;        ///< Pointer to the data stored on the host
 
   Extent _extent;  ///< Extent of the array in all dimensions
   int _size;       ///< Total size of the array
@@ -192,8 +197,7 @@ class MultiArray {
 
 };  // ----- end of class multi_array -----
 
-
-}
+}  // namespace Aperture
 
 // #include "data/detail/multi_array_impl.hpp"
 // #include "data/detail/multi_array_utils.hpp"

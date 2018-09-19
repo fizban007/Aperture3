@@ -1,9 +1,9 @@
-#include <fstream>
-#include <boost/filesystem.hpp>
 #include "utils/silo_file.h"
 #include "data/grid.h"
-#include "metrics.h"
 #include "fmt/format.h"
+#include "metrics.h"
+#include <boost/filesystem.hpp>
+#include <fstream>
 
 using namespace Aperture;
 
@@ -25,7 +25,7 @@ silo_file::~silo_file() {
 }
 
 void
-silo_file::open_file(const std::string &filename) {
+silo_file::open_file(const std::string& filename) {
   // Don't double open
   if (m_open) close();
   m_filename = filename;
@@ -52,7 +52,8 @@ silo_file::open_file(const std::string &filename) {
       std::getline(fs, m_grid_conf[i]);
     }
   } else {
-    fmt::print(stderr, "Open grid config file error, skipping the grid config");
+    fmt::print(stderr,
+               "Open grid config file error, skipping the grid config");
   }
   fs.close();
 
@@ -67,64 +68,71 @@ silo_file::open_file(const std::string &filename) {
   }
 
   m_isMultimesh = false;
-  // Check if directory rank0 or directory group0 exists. If it exists then we
-  // use multimesh, otherwise we use normal method
+  // Check if directory rank0 or directory group0 exists. If it exists
+  // then we use multimesh, otherwise we use normal method
   boost::filesystem::path rankPath = parent_dir / "rank0";
   boost::filesystem::path groupPath = parent_dir / "group0";
-  if (boost::filesystem::exists(rankPath) || boost::filesystem::exists(groupPath)) {
+  if (boost::filesystem::exists(rankPath) ||
+      boost::filesystem::exists(groupPath)) {
     m_isMultimesh = true;
   }
 
   if (m_isMultimesh) {
     // TODO: Finish this part!!!
-    m_multiMesh = DBGetMultimesh(m_dbfile, m_dbToc -> multimesh_names[0]);
+    m_multiMesh = DBGetMultimesh(m_dbfile, m_dbToc->multimesh_names[0]);
     // number of ranks in the file
-    m_numRanks = m_multiMesh -> nblocks;
+    m_numRanks = m_multiMesh->nblocks;
     m_pos.resize(m_numRanks);
 
     // Read in the quad meshes and determine the geometry of the ranks
     // TODO: Tune this to be compatible with groups
     for (int i = 0; i < m_numRanks; i++) {
-        std::string subName(m_multiMesh -> meshnames[i]);
-        std::size_t found = subName.find_last_of(":");
-        std::string subFile = m_parent_dir + "/" + subName.substr(0, found);
-        std::string meshName = subName.substr(found + 1);
+      std::string subName(m_multiMesh->meshnames[i]);
+      std::size_t found = subName.find_last_of(":");
+      std::string subFile =
+          m_parent_dir + "/" + subName.substr(0, found);
+      std::string meshName = subName.substr(found + 1);
 
-        DBfile* dbSubFile = DBOpen(subFile.c_str(), DB_HDF5, DB_READ);
-        m_dbQuadmeshes.push_back(DBGetQuadmesh(dbSubFile, meshName.c_str()));
-        // std::cout << "(" << dbQuadMeshes.back() -> base_index[0] << ", "
-        //           << dbQuadMeshes.back() -> base_index[1] << ", "
-        //           << dbQuadMeshes.back() -> base_index[2] << ")" << std::endl;
+      DBfile* dbSubFile = DBOpen(subFile.c_str(), DB_HDF5, DB_READ);
+      m_dbQuadmeshes.push_back(
+          DBGetQuadmesh(dbSubFile, meshName.c_str()));
+      // std::cout << "(" << dbQuadMeshes.back() -> base_index[0] << ",
+      // "
+      //           << dbQuadMeshes.back() -> base_index[1] << ", "
+      //           << dbQuadMeshes.back() -> base_index[2] << ")" <<
+      //           std::endl;
 
-        // domain size is the number of domains in each direction
-        m_domainDecomp[0] =
-            std::max(m_dbQuadmeshes.back()->base_index[0] + 1, m_domainDecomp[0]);
-        m_domainDecomp[1] =
-            std::max(m_dbQuadmeshes.back()->base_index[1] + 1, m_domainDecomp[1]);
-        m_domainDecomp[2] =
-            std::max(m_dbQuadmeshes.back()->base_index[2] + 1, m_domainDecomp[2]);
-        m_pos[i].x = m_dbQuadmeshes[i]->base_index[0];
-        m_pos[i].y = m_dbQuadmeshes[i]->base_index[1];
-        m_pos[i].z = m_dbQuadmeshes[i]->base_index[2];
-        DBClose(dbSubFile);
+      // domain size is the number of domains in each direction
+      m_domainDecomp[0] = std::max(
+          m_dbQuadmeshes.back()->base_index[0] + 1, m_domainDecomp[0]);
+      m_domainDecomp[1] = std::max(
+          m_dbQuadmeshes.back()->base_index[1] + 1, m_domainDecomp[1]);
+      m_domainDecomp[2] = std::max(
+          m_dbQuadmeshes.back()->base_index[2] + 1, m_domainDecomp[2]);
+      m_pos[i].x = m_dbQuadmeshes[i]->base_index[0];
+      m_pos[i].y = m_dbQuadmeshes[i]->base_index[1];
+      m_pos[i].z = m_dbQuadmeshes[i]->base_index[2];
+      DBClose(dbSubFile);
+    }
+    for (int i = 0; i < 3; i++) {
+      // The ghost zone in the output file is guard cell - 1
+      m_guard[i] = m_dbQuadmeshes.back()->min_index[i] + 1;
+      if (m_dbQuadmeshes.back()->size_index[i] > 0) {
+        m_domainSize[i] =
+            m_dbQuadmeshes.back()->size_index[i] - 2 * m_guard[i];
+        m_dims[i] =
+            m_domainSize[i] * m_domainDecomp[i] + 2 * m_guard[i];
+      } else {
+        m_domainSize[i] = 1;
+        m_dims[i] = 1;
       }
-      for (int i = 0; i < 3; i++) {
-        // The ghost zone in the output file is guard cell - 1
-        m_guard[i] = m_dbQuadmeshes.back()->min_index[i] + 1;
-        if (m_dbQuadmeshes.back()->size_index[i] > 0) {
-          m_domainSize[i] = m_dbQuadmeshes.back()->size_index[i] - 2 * m_guard[i];
-          m_dims[i] = m_domainSize[i] * m_domainDecomp[i] + 2 * m_guard[i];
-        } else {
-          m_domainSize[i] = 1;
-          m_dims[i] = 1;
-        }
     }
   } else {
     m_numRanks = 1;
     m_pos.resize(1);
     m_dbQuadmeshes.push_back(DBGetQuadmesh(m_dbfile, "quadmesh"));
     for (int i = 0; i < 3; i++) {
-      if (m_dbQuadmeshes[0] -> size_index[i] > 0) {
+      if (m_dbQuadmeshes[0]->size_index[i] > 0) {
         m_dims[i] = m_dbQuadmeshes.back()->size_index[i];
         m_guard[i] = m_dbQuadmeshes.back()->min_index[i] + 1;
       } else {
@@ -166,12 +174,12 @@ silo_file::show_content() {
   }
 
   fmt::print("Normal variables:\n");
-  for (int i = 0; i < m_dbToc -> nvar; i++) {
-    fmt::print("{}\n", m_dbToc -> var_names[i]);
+  for (int i = 0; i < m_dbToc->nvar; i++) {
+    fmt::print("{}\n", m_dbToc->var_names[i]);
   }
   fmt::print("Multi-variables:\n");
-  for (int i = 0; i < m_dbToc -> nmultivar; i++) {
-    fmt::print("{}\n", m_dbToc -> multivar_names[i]);
+  for (int i = 0; i < m_dbToc->nmultivar; i++) {
+    fmt::print("{}\n", m_dbToc->multivar_names[i]);
   }
 }
 
@@ -191,10 +199,12 @@ silo_file::get_domain_size(int sizes[3]) const {
 }
 
 MultiArray<float>
-silo_file::get_quad_var(const std::string &varname) const {
+silo_file::get_quad_var(const std::string& varname) const {
   MultiArray<float> result;
   if (m_numRanks != 1 || m_isMultimesh) {
-    fmt::print(stderr, "We have multimesh instead of quadmesh, use get_multi_var instead!\n");
+    fmt::print(stderr,
+               "We have multimesh instead of quadmesh, use "
+               "get_multi_var instead!\n");
     return result;
   }
 
@@ -204,7 +214,8 @@ silo_file::get_quad_var(const std::string &varname) const {
   if (quadVar == NULL)
     std::cout << "error in get_quad_var unranked" << std::endl;
 
-  // int dims[3] = {m_domainSize[0] + 2 * m_guard[0], m_domainSize[1] + 2 * m_guard[1],
+  // int dims[3] = {m_domainSize[0] + 2 * m_guard[0], m_domainSize[1] +
+  // 2 * m_guard[1],
   //                m_domainSize[2] + 2 * m_guard[2]};
   // if (_domainSize[2] == 1) dims[2] = 1;
   // if (_domainSize[1] == 1) dims[1] = 1;
@@ -218,8 +229,7 @@ silo_file::get_quad_var(const std::string &varname) const {
         // float** ptr = (float**)quadVar->vals;
         // array->values[idx] = ptr[0][idx];
         if (quadVar->datatype == DB_DOUBLE) {
-          result[idx] =
-              (float)(((double**)quadVar->vals)[0][idx]);
+          result[idx] = (float)(((double**)quadVar->vals)[0][idx]);
         } else if (quadVar->datatype == DB_FLOAT) {
           result[idx] = ((float**)quadVar->vals)[0][idx];
         }
@@ -231,7 +241,7 @@ silo_file::get_quad_var(const std::string &varname) const {
 }
 
 MultiArray<float>
-silo_file::get_quad_var(const std::string &varname, int rank) const {
+silo_file::get_quad_var(const std::string& varname, int rank) const {
   MultiArray<float> result;
   if (rank < 0 || rank > m_numRanks) {
     fmt::print(stderr, "Unavailable rank!");
@@ -244,14 +254,16 @@ silo_file::get_quad_var(const std::string &varname, int rank) const {
   std::string subFile = m_parent_dir + "/" + subName.substr(0, found);
 
   DBfile* dbSubFile = DBOpen(subFile.c_str(), DB_HDF5, DB_READ);
-  // _dbQuadMeshes.push_back(DBGetQuadmesh(dbSubFile, meshName.c_str()));
+  // _dbQuadMeshes.push_back(DBGetQuadmesh(dbSubFile,
+  // meshName.c_str()));
   quadVar = DBGetQuadvar(dbSubFile, varname.c_str());
   if (quadVar == NULL)
     std::cout << "error in get_quad_var ranked" << std::endl;
 
   DBClose(dbSubFile);
 
-  int dims[3] = {m_domainSize[0] + 2 * m_guard[0], m_domainSize[1] + 2 * m_guard[1],
+  int dims[3] = {m_domainSize[0] + 2 * m_guard[0],
+                 m_domainSize[1] + 2 * m_guard[1],
                  m_domainSize[2] + 2 * m_guard[2]};
   if (m_domainSize[2] == 1) dims[2] = 1;
   if (m_domainSize[1] == 1) dims[1] = 1;
@@ -271,7 +283,7 @@ silo_file::get_quad_var(const std::string &varname, int rank) const {
 }
 
 MultiArray<float>
-silo_file::get_multi_var(const std::string &varname) const {
+silo_file::get_multi_var(const std::string& varname) const {
   MultiArray<float> result;
   if (!m_isMultimesh) {
     return get_quad_var(varname);
@@ -305,21 +317,22 @@ silo_file::get_multi_var(const std::string &varname) const {
   if (sizes[2] > 1) sizes[2] += m_guard[2] * 2;
 
   for (int n = 0; n < m_numRanks; n++) {
-    // std::cout << "(" << _meshPos[n].x << ", " << _meshPos[n].y << ", " <<
-    // _meshPos[n].z << ")" << std::endl;
+    // std::cout << "(" << _meshPos[n].x << ", " << _meshPos[n].y << ",
+    // " << _meshPos[n].z << ")" << std::endl;
     for (int k = 0; k < sizes[2]; k++) {
       for (int j = 0; j < sizes[1]; j++) {
         for (int i = 0; i < sizes[0]; i++) {
           int idx_sub = i + j * sizes[0] + k * sizes[0] * sizes[1];
-          int idx_arr =
-              i + m_pos[n].x * m_domainSize[0] +
-              (j + m_pos[n].y * m_domainSize[1]) * m_dims[0] +
-              (k + m_pos[n].z * m_domainSize[2]) * m_dims[0] * m_dims[1];
+          int idx_arr = i + m_pos[n].x * m_domainSize[0] +
+                        (j + m_pos[n].y * m_domainSize[1]) * m_dims[0] +
+                        (k + m_pos[n].z * m_domainSize[2]) * m_dims[0] *
+                            m_dims[1];
           if (dbQuadVars[n]->datatype == DB_DOUBLE) {
             result[idx_arr] =
                 (float)(((double**)dbQuadVars[n]->vals)[0][idx_sub]);
           } else if (dbQuadVars[n]->datatype == DB_FLOAT) {
-            result[idx_arr] = ((float**)dbQuadVars[n]->vals)[0][idx_sub];
+            result[idx_arr] =
+                ((float**)dbQuadVars[n]->vals)[0][idx_sub];
           }
         }
       }
@@ -347,14 +360,14 @@ silo_file::get_multi_mesh(int comp) const {
       for (int j = 0; j < sizes[1]; j++) {
         for (int i = 0; i < sizes[0]; i++) {
           int idx_sub = i + j * sizes[0] + k * sizes[0] * sizes[1];
-          int idx_arr =
-              i + m_pos[n].x * m_domainSize[0] +
-              (j + m_pos[n].y * m_domainSize[1]) * m_dims[0] +
-              (k + m_pos[n].z * m_domainSize[2]) * m_dims[0] * m_dims[1];
-          if (m_dbQuadmeshes[n] -> datatype == DB_FLOAT) {
+          int idx_arr = i + m_pos[n].x * m_domainSize[0] +
+                        (j + m_pos[n].y * m_domainSize[1]) * m_dims[0] +
+                        (k + m_pos[n].z * m_domainSize[2]) * m_dims[0] *
+                            m_dims[1];
+          if (m_dbQuadmeshes[n]->datatype == DB_FLOAT) {
             result[idx_arr] =
                 ((float**)m_dbQuadmeshes[n]->coords)[comp][idx_sub];
-          } else if (m_dbQuadmeshes[n] -> datatype == DB_DOUBLE) {
+          } else if (m_dbQuadmeshes[n]->datatype == DB_DOUBLE) {
             result[idx_arr] =
                 ((double**)m_dbQuadmeshes[n]->coords)[comp][idx_sub];
           }
@@ -392,7 +405,7 @@ silo_file::get_coord_array(int dir) const {
 }
 
 MultiArray<float>
-silo_file::get_raw_array(const std::string &varname) const {
+silo_file::get_raw_array(const std::string& varname) const {
   MultiArray<float> result;
 
   // First query whether the variable is present in the database
@@ -420,7 +433,7 @@ silo_file::get_raw_array(const std::string &varname) const {
 }
 
 bool
-silo_file::find_var(const std::string &varname) const {
+silo_file::find_var(const std::string& varname) const {
   if (DBInqVarExists(m_dbfile, varname.c_str()) != 0)
     return true;
   else

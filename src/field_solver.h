@@ -18,17 +18,19 @@ class FieldSolver {
   FieldSolver() {}
   virtual ~FieldSolver() {}
 
-  virtual void update_fields(SimData& data, double dt, double time = 0.0) = 0;
+  virtual void update_fields(SimData& data, double dt,
+                             double time = 0.0) = 0;
 
   virtual void set_background_j(const vfield_t& j) = 0;
 
-  // virtual void compute_E_update(vfield_t& E, const vfield_t& B, const vfield_t& J,
-  // double dt) = 0;
-  // virtual void compute_B_update(vfield_t& B, const vfield_t& E, double dt) = 0;
+  // virtual void compute_E_update(vfield_t& E, const vfield_t& B, const
+  // vfield_t& J, double dt) = 0; virtual void
+  // compute_B_update(vfield_t& B, const vfield_t& E, double dt) = 0;
 
   // virtual void compute_flux(const vfield_t& f, sfield_t& flux) = 0;
 
-  // void set_boundary_condition(const BoundaryConditions& bc) { m_bc = &bc; }
+  // void set_boundary_condition(const BoundaryConditions& bc) { m_bc =
+  // &bc; }
 
   void register_comm_callback(const vfield_comm_callback& callback) {
     m_comm_callback_vfield = callback;

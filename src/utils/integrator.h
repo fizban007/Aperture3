@@ -1,11 +1,11 @@
 #ifndef _INTEGRATOR_H_
 #define _INTEGRATOR_H_
 
-#include <string>
+#include "algorithms/runge_kutta.h"
 #include "data/grid.h"
 #include "data/vec3.h"
 #include "utils/silo_file.h"
-#include "algorithms/runge_kutta.h"
+#include <string>
 
 namespace Aperture {
 
@@ -19,17 +19,16 @@ struct field_func {
 
   field_func(const VectorField<float>& Efield,
              const VectorField<float>& Bfield,
-             const VectorField<float>& Jfield,
-             const Metric& metric, const std::string& comp)
+             const VectorField<float>& Jfield, const Metric& metric,
+             const std::string& comp)
       : E(Efield), B(Bfield), J(Jfield), g(metric), component(comp) {}
 
-  void operator() (const Vec3<double>& pos, Vec3<double>& v,
-                   double& dydh) const;
+  void operator()(const Vec3<double>& pos, Vec3<double>& v,
+                  double& dydh) const;
 };
 
 template <typename Metric>
-class field_integrator
-{
+class field_integrator {
  public:
   field_integrator();
   ~field_integrator() {}
@@ -38,11 +37,15 @@ class field_integrator
   void load_file(const silo_file& file);
 
   template <typename Float_t>
-  void integrate_line(const std::string& quantity, const Vec3<double>& start_pos, double step_size,
-                      std::vector<Vec3<double> >& points, std::vector<Float_t>& values);
+  void integrate_line(const std::string& quantity,
+                      const Vec3<double>& start_pos, double step_size,
+                      std::vector<Vec3<double>>& points,
+                      std::vector<Float_t>& values);
 
   template <typename Float_t>
-  void integrate_across_flux(const std::string& quantity, int num_samples, std::vector<Float_t>& values);
+  void integrate_across_flux(const std::string& quantity,
+                             int num_samples,
+                             std::vector<Float_t>& values);
 
   double sample(const std::string& quantity, const Vec3<double>& pos);
 
@@ -50,9 +53,9 @@ class field_integrator
   Grid m_grid;
   VectorField<float> m_E, m_B, m_J;
   // RungeKutta<double, double> m_rk;
-}; // ----- end of class field_integrator -----
+};  // ----- end of class field_integrator -----
 
-}
+}  // namespace Aperture
 
 #include "utils/integrator_impl.hpp"
 

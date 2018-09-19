@@ -21,22 +21,21 @@ struct SimData {
   VectorField<Scalar> E;
   VectorField<Scalar> B;
   VectorField<Scalar> J;
-  std::vector<ScalarField<Scalar> > Rho;
-  std::vector<ScalarField<Scalar> > Rho_avg;
-  std::vector<ScalarField<Scalar> > J_s;
-  std::vector<ScalarField<Scalar> > J_avg;
+  std::vector<ScalarField<Scalar>> Rho;
+  std::vector<ScalarField<Scalar>> Rho_avg;
+  std::vector<ScalarField<Scalar>> J_s;
+  std::vector<ScalarField<Scalar>> J_avg;
 
   Particles particles;
   Photons photons;
   int num_species;
   double time = 0.0;
-  // Keep an array of pointers for all the device pointers, convenient for
-  // kernels
+  // Keep an array of pointers for all the device pointers, convenient
+  // for kernels
   Scalar** rho_ptrs;
   int devId;
 };
 
-
-}
+}  // namespace Aperture
 
 #endif  // _SIM_DATA_H_

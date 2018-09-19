@@ -22,8 +22,8 @@ MPICommBase::~MPICommBase() {}
 
 void
 MPICommBase::print_rank() const {
-  std::cout << "Rank of this processor is " << _rank << " out of " << _size
-            << std::endl;
+  std::cout << "Rank of this processor is " << _rank << " out of "
+            << _size << std::endl;
 }
 
 void
@@ -33,10 +33,12 @@ MPICommBase::barrier() const {
 
 template <typename T>
 void
-MPICommBase::send(int dest_rank, int tag, const T* values, int n) const {
+MPICommBase::send(int dest_rank, int tag, const T* values,
+                  int n) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*values);
 
-  int error_code = MPI_Send((void*)values, n, type, dest_rank, tag, _comm);
+  int error_code =
+      MPI_Send((void*)values, n, type, dest_rank, tag, _comm);
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
@@ -45,7 +47,8 @@ void
 MPICommBase::send(int dest_rank, int tag, const T& value) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(value);
 
-  int error_code = MPI_Send((void*)&value, 1, type, dest_rank, tag, _comm);
+  int error_code =
+      MPI_Send((void*)&value, 1, type, dest_rank, tag, _comm);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -53,8 +56,8 @@ MPICommBase::send(int dest_rank, int tag, const T& value) const {
 // void MPICommBase::send(int dest_rank, int tag) const {
 //   char byte = 0;
 
-//   int error_code = MPI_Send((void*)&byte, 0, MPI_BYTE, dest_rank, tag,
-//   _comm);
+//   int error_code = MPI_Send((void*)&byte, 0, MPI_BYTE, dest_rank,
+//   tag, _comm);
 
 //   MPI_Helper::handle_mpi_error(error_code, _rank);
 // }
@@ -65,8 +68,8 @@ MPICommBase::Isend(int dest_rank, int tag, const T* values, int n,
                    MPI_Request& request) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*values);
 
-  int error_code =
-      MPI_Isend((void*)values, n, type, dest_rank, tag, _comm, &request);
+  int error_code = MPI_Isend((void*)values, n, type, dest_rank, tag,
+                             _comm, &request);
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
@@ -76,8 +79,8 @@ MPICommBase::recv(int source_rank, int tag, T* values, int n,
                   MPI_Status& status) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*values);
 
-  int error_code =
-      MPI_Recv((void*)values, n, type, source_rank, tag, _comm, &status);
+  int error_code = MPI_Recv((void*)values, n, type, source_rank, tag,
+                            _comm, &status);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -87,8 +90,8 @@ void
 MPICommBase::recv(int source_rank, int tag, T* values, int n) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*values);
 
-  int error_code = MPI_Recv((void*)values, n, type, source_rank, tag, _comm,
-                            MPI_STATUS_IGNORE);
+  int error_code = MPI_Recv((void*)values, n, type, source_rank, tag,
+                            _comm, MPI_STATUS_IGNORE);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -98,8 +101,8 @@ void
 MPICommBase::recv(int source_rank, int tag, T& value) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(value);
 
-  int error_code = MPI_Recv((void*)&value, 1, type, source_rank, tag, _comm,
-                            MPI_STATUS_IGNORE);
+  int error_code = MPI_Recv((void*)&value, 1, type, source_rank, tag,
+                            _comm, MPI_STATUS_IGNORE);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -107,8 +110,8 @@ MPICommBase::recv(int source_rank, int tag, T& value) const {
 // template <typename T>
 // void MPICommBase::recv(int source_rank, int tag) {
 //   char byte = 0;
-//   int error_code = MPI_Recv((void*)&byte, 0, MPI_BYTE, source_rank, tag,
-//   _comm,
+//   int error_code = MPI_Recv((void*)&byte, 0, MPI_BYTE, source_rank,
+//   tag, _comm,
 //                             MPI_STATUS_IGNORE);
 
 //   MPI_Helper::handle_mpi_error(error_code, _rank);
@@ -120,8 +123,8 @@ MPICommBase::Irecv(int source_rank, int tag, T* values, int n,
                    MPI_Request& request) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*values);
 
-  int error_code =
-      MPI_Irecv((void*)values, n, type, source_rank, tag, _comm, &request);
+  int error_code = MPI_Irecv((void*)values, n, type, source_rank, tag,
+                             _comm, &request);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -136,26 +139,27 @@ MPICommBase::get_recv_count(MPI_Status& status, MPI_Datatype datatype,
 
 template <typename T>
 void
-MPICommBase::send_recv(int source_rank, const T* src_values, int dest_rank,
-                       T* dest_values, int tag, int n) const {
+MPICommBase::send_recv(int source_rank, const T* src_values,
+                       int dest_rank, T* dest_values, int tag,
+                       int n) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*src_values);
 
-  int error_code = MPI_Sendrecv((void*)src_values, n, type, dest_rank, tag,
-                                (void*)dest_values, n, type, source_rank, tag,
-                                _comm, MPI_STATUS_IGNORE);
+  int error_code = MPI_Sendrecv(
+      (void*)src_values, n, type, dest_rank, tag, (void*)dest_values, n,
+      type, source_rank, tag, _comm, MPI_STATUS_IGNORE);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 template <typename T>
 void
-MPICommBase::send_recv(int source_rank, const T& src_value, int dest_rank,
-                       T& dest_value, int tag) const {
+MPICommBase::send_recv(int source_rank, const T& src_value,
+                       int dest_rank, T& dest_value, int tag) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(src_value);
 
-  int error_code = MPI_Sendrecv((void*)&src_value, 1, type, dest_rank, tag,
-                                (void*)&dest_value, 1, type, source_rank, tag,
-                                _comm, MPI_STATUS_IGNORE);
+  int error_code = MPI_Sendrecv(
+      (void*)&src_value, 1, type, dest_rank, tag, (void*)&dest_value, 1,
+      type, source_rank, tag, _comm, MPI_STATUS_IGNORE);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -166,9 +170,9 @@ MPICommBase::send_recv(int source_rank, int dest_rank, int tag) const {
   char send_buf = 0;
   char recv_buf = 0;
 
-  int error_code = MPI_Sendrecv((void*)&send_buf, 1, MPI_BYTE, dest_rank, tag,
-                                (void*)&recv_buf, 1, MPI_BYTE, source_rank, tag,
-                                _comm, MPI_STATUS_IGNORE);
+  int error_code = MPI_Sendrecv(
+      (void*)&send_buf, 1, MPI_BYTE, dest_rank, tag, (void*)&recv_buf,
+      1, MPI_BYTE, source_rank, tag, _comm, MPI_STATUS_IGNORE);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -179,8 +183,9 @@ MPICommBase::gather(const T* send_buf, int sendcount, T* recv_buf,
                     int recvcount, int root) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
 
-  int error_code = MPI_Gather((void*)send_buf, sendcount, type, (void*)recv_buf,
-                              recvcount, type, root, _comm);
+  int error_code =
+      MPI_Gather((void*)send_buf, sendcount, type, (void*)recv_buf,
+                 recvcount, type, root, _comm);
   // MPI_Status status[3];
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
@@ -192,8 +197,9 @@ MPICommBase::all_gather(const T* send_buf, int sendcount, T* recv_buf,
                         int recvcount) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
 
-  int error_code = MPI_Allgather((void*)send_buf, sendcount, type,
-                                 (void*)recv_buf, recvcount, type, _comm);
+  int error_code =
+      MPI_Allgather((void*)send_buf, sendcount, type, (void*)recv_buf,
+                    recvcount, type, _comm);
   // MPI_Status status[3];
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
@@ -213,7 +219,8 @@ MPICommBase::gather(const T* send_buf, int sendcount, int root) const {
 
 template <typename T>
 void
-MPICommBase::gather_inplace(T* recv_buf, int recvcount, int root) const {
+MPICommBase::gather_inplace(T* recv_buf, int recvcount,
+                            int root) const {
   // inplace gather ignores sendcount and senddatatype
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*recv_buf);
 
@@ -230,21 +237,21 @@ MPICommBase::gatherv(const T* send_buf, int sendcount, T* recv_buf,
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
 
   int error_code =
-      MPI_Gatherv((void*)send_buf, sendcount, type, (void*)recv_buf, recvcounts,
-                  displs, type, root, _comm);
+      MPI_Gatherv((void*)send_buf, sendcount, type, (void*)recv_buf,
+                  recvcounts, displs, type, root, _comm);
 
   MPI_Helper::handle_mpi_error(error_code, *this);
 }
 
-// this version is mostly used by non-root processes becuase in this case
-// recv_buf and recvcount are not significant
+// this version is mostly used by non-root processes becuase in this
+// case recv_buf and recvcount are not significant
 template <typename T>
 void
 MPICommBase::gatherv(const T* send_buf, int sendcount, int root) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
 
-  int error_code = MPI_Gatherv((void*)send_buf, sendcount, type, NULL, NULL,
-                               NULL, MPI_INT, root, _comm);
+  int error_code = MPI_Gatherv((void*)send_buf, sendcount, type, NULL,
+                               NULL, NULL, MPI_INT, root, _comm);
 
   MPI_Helper::handle_mpi_error(error_code, *this);
 }
@@ -252,21 +259,23 @@ MPICommBase::gatherv(const T* send_buf, int sendcount, int root) const {
 // this version is called by root in an in-place manner
 template <typename T>
 void
-MPICommBase::gatherv_inplace(T* recv_buf, int* recvcounts,
-                             int* displs, int root) const {
+MPICommBase::gatherv_inplace(T* recv_buf, int* recvcounts, int* displs,
+                             int root) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*recv_buf);
 
-  int error_code = MPI_Gatherv(MPI_IN_PLACE, 0, MPI_INT, (void*)recv_buf,
-                               recvcounts, displs, type, root, _comm);
+  int error_code =
+      MPI_Gatherv(MPI_IN_PLACE, 0, MPI_INT, (void*)recv_buf, recvcounts,
+                  displs, type, root, _comm);
 
   MPI_Helper::handle_mpi_error(error_code, *this);
 }
 
 void
-MPICommBase::waitall(int length_of_array, MPI_Request* array_of_requests,
+MPICommBase::waitall(int length_of_array,
+                     MPI_Request* array_of_requests,
                      MPI_Status* array_of_statuses) const {
-  int error_code =
-      MPI_Waitall(length_of_array, array_of_requests, array_of_statuses);
+  int error_code = MPI_Waitall(length_of_array, array_of_requests,
+                               array_of_statuses);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -354,8 +363,8 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
     _neighbor_right[i] = 0;
     cart_size *= _dims[i];
   }
-  // Logger::print(1, "Cartesian topology created with cart_size =", cart_size,
-  // "and total size =", _size);
+  // Logger::print(1, "Cartesian topology created with cart_size =",
+  // cart_size, "and total size =", _size);
 
   int world_size = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -365,7 +374,8 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
         "Size of the Cartesian grid exceeds the size of world!");
   }
 
-  //---------- Pick some primary nodes to form the Cartesian group ------------
+  //---------- Pick some primary nodes to form the Cartesian group
+  //------------
   MPI_Group grp_cart;
   MPI_Group grp_world;
   MPI_Comm_group(MPI_COMM_WORLD, &grp_world);
@@ -392,11 +402,12 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
       MPI_Cart_create(comm_tmp, _ndims, _dims, is_periodic, 1, &_comm);
   MPI_Helper::handle_mpi_error(error_code, *this);
 
-  MPI_Comm_rank(_comm, &_rank);  // need to do this after MPI_Cart_create if reorder is true
+  MPI_Comm_rank(_comm, &_rank);  // need to do this after
+                                 // MPI_Cart_create if reorder is true
   MPI_Comm_size(_comm, &_size);
 
-  MPI_Comm_free(&comm_tmp);  // comm_tmp is a different communicator than _comm,
-                             // and is no longer needed
+  MPI_Comm_free(&comm_tmp);  // comm_tmp is a different communicator
+                             // than _comm, and is no longer needed
 
   MPI_Cart_coords(_comm, _rank, _ndims, _coords);
 
@@ -410,8 +421,10 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
       coords_right[j] = _coords[j] + (i == j);
       coords_left[j] = _coords[j] - (i == j);
     }
-    // Logger::print_debug_all("On rank {}, right neighbor in dir {} is {}, {}", _rank, i, coords_right[0], coords_right[1]);
-    // Logger::print_debug_all("On rank {}, left neighbor in dir {} is {}, {}", _rank, i, coords_left[0], coords_left[1]);
+    // Logger::print_debug_all("On rank {}, right neighbor in dir {} is
+    // {}, {}", _rank, i, coords_right[0], coords_right[1]);
+    // Logger::print_debug_all("On rank {}, left neighbor in dir {} is
+    // {}, {}", _rank, i, coords_left[0], coords_left[1]);
     if (coords_right[i] >= _dims[i]) {
       if (periodic[i]) {
         coords_right[i] = 0;
@@ -434,8 +447,10 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
     }
     delete[] coords_right;
     delete[] coords_left;
-    // Logger::print_debug_all("On rank {}, right neighbor in dir {} is ({})", _rank, i, _neighbor_right[i]);
-    // Logger::print_debug_all("On rank {}, left neighbor in dir {} is ({})", _rank, i, _neighbor_left[i]);
+    // Logger::print_debug_all("On rank {}, right neighbor in dir {} is
+    // ({})", _rank, i, _neighbor_right[i]); Logger::print_debug_all("On
+    // rank {}, left neighbor in dir {} is ({})", _rank, i,
+    // _neighbor_left[i]);
   }
 
   // Compute the world coordinate of corner neighbors
@@ -477,7 +492,8 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
   //    MPI_Cart_sub(_comm, remain_dims1, &_col);
   //    MPI_Cart_sub(_comm, remain_dims2, &_row);
   Logger::print_detail(
-      "Cartesian topology created with cart_size = {} and total size = {}",
+      "Cartesian topology created with cart_size = {} and total size = "
+      "{}",
       cart_size, _size);
 
   delete[] is_periodic;
@@ -487,7 +503,8 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
 
 void
 MPICommCartesian::printCoord() const {
-  // std::cout << "Rank of this processor is " << _rank << " out of " << _size
+  // std::cout << "Rank of this processor is " << _rank << " out of " <<
+  // _size
   //           << std::endl;
   std::cout << "Coord of this processor is at (";
   for (int i = 0; i < _ndims; i++) {
@@ -497,7 +514,8 @@ MPICommCartesian::printCoord() const {
   std::cout << ")" << std::endl;
 
   // MPI_Cart_coords(comm_, rank_, ndims_, coords);
-  // std::cout << "This processor is at Cartesian coordinate (" << _coords[0]
+  // std::cout << "This processor is at Cartesian coordinate (" <<
+  // _coords[0]
   //           << ", " << _coords[1] << ")" << std::endl;
   // std::cout << "my right neighbor in direction 0 has rank "
   //           << _neighbor_right[0] << std::endl;
@@ -508,18 +526,18 @@ MPICommCartesian::printCoord() const {
 
 template <typename T>
 void
-MPICommCartesian::scan(const T* send_buf, T* result_buf, int num, int scan_dir,
-                       bool exclusive) const {
+MPICommCartesian::scan(const T* send_buf, T* result_buf, int num,
+                       int scan_dir, bool exclusive) const {
   MPI_Datatype type = MPI_Helper::get_mpi_datatype(*send_buf);
   MPI_Comm group = _rows[scan_dir];
 
   int error_code;
   if (!exclusive)
-    error_code =
-        MPI_Scan((void*)send_buf, (void*)result_buf, num, type, MPI_SUM, group);
+    error_code = MPI_Scan((void*)send_buf, (void*)result_buf, num, type,
+                          MPI_SUM, group);
   else
-    error_code = MPI_Exscan((void*)send_buf, (void*)result_buf, num, type,
-                            MPI_SUM, group);
+    error_code = MPI_Exscan((void*)send_buf, (void*)result_buf, num,
+                            type, MPI_SUM, group);
 
   MPI_Helper::handle_mpi_error(error_code, _rank);
 }
@@ -564,7 +582,8 @@ MPIComm::get_cartesian_members(int cart_size) {
     // simply use first few members in result in creating cartesian
     for (int i = 0; i < cart_size; ++i) cart_members[i] = i;
 
-    // communicate to all processes by sending nothing to non-primary members
+    // communicate to all processes by sending nothing to non-primary
+    // members
     auto requests = MPI_Helper::null_requests(_world->size());
     for (int i = 0; i < _world->size(); ++i) {
       if (_world_root == i) continue;
@@ -574,7 +593,8 @@ MPIComm::get_cartesian_members(int cart_size) {
     }
     // MPI_Helper::waitall( requests.size(), requests.data(),
     // MPI_STATUSES_IGNORE );
-    _world->waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
+    _world->waitall(requests.size(), requests.data(),
+                    MPI_STATUSES_IGNORE);
 
     if (_world_root < cart_size) result = cart_members;
 

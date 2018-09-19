@@ -1,9 +1,9 @@
 #ifndef _ARRAY_H_
 #define _ARRAY_H_
 
-#include <type_traits>
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 
 #include "cuda_runtime.h"
 
@@ -61,13 +61,15 @@ class Array {
   /// Set the whole array to a single initial value on the host
   void assign(const data_type& value);
 
-  /// Set the whole array to a single initial value through device kernel
+  /// Set the whole array to a single initial value through device
+  /// kernel
   void assign_dev(const data_type& value);
 
   /// Set part of the array to a single initial value on the host
   void assign(const data_type& value, size_t num);
 
-  /// Set part of the array to a single initial value through device kernel
+  /// Set part of the array to a single initial value through device
+  /// kernel
   void assign_dev(const data_type& value, size_t num);
 
   /// Resize the array.
@@ -88,6 +90,6 @@ class Array {
   int m_devId = 0;
 };
 
-}
+}  // namespace Aperture
 
 #endif  // _ARRAY_H_

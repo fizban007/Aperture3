@@ -1,8 +1,8 @@
 #ifndef _CONSTANT_MEM_FUNC_H_
 #define _CONSTANT_MEM_FUNC_H_
 
-#include "sim_params.h"
 #include "data/quadmesh.h"
+#include "sim_params.h"
 
 namespace Aperture {
 
@@ -16,7 +16,6 @@ void get_dev_mesh(Quadmesh& mesh);
 void get_dev_charges(float charges[]);
 void get_dev_masses(float masses[]);
 
-
-}
+}  // namespace Aperture
 
 #endif  // _CONSTANT_MEM_FUNC_H_

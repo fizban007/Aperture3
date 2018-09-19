@@ -5,9 +5,9 @@
 #include <utility>
 // #include "cuda/cuda_control.h"
 #include "data/fields.h"
+#include "data/stagger.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
-#include "data/stagger.h"
 // #include "boost/fusion/container/vector.hpp"
 
 #ifndef __CUDACC__
@@ -69,7 +69,7 @@ struct interp_piecewise_cubic {
     }
   }
 };
-}
+}  // namespace detail
 
 // template <int Order>
 class Interpolator {
@@ -79,9 +79,9 @@ class Interpolator {
 
   template <typename FloatT>
   double interp_cell(FloatT pos, int p_cell, int target_cell,
-                               int stagger = 0) const {
-    FloatT x =
-        ((double)target_cell + (stagger == 0 ? 0.5 : 1.0)) - (pos + (double)p_cell);
+                     int stagger = 0) const {
+    FloatT x = ((double)target_cell + (stagger == 0 ? 0.5 : 1.0)) -
+               (pos + (double)p_cell);
     switch (m_order) {
       case 0:
         return m_interp_0(x);
@@ -98,9 +98,9 @@ class Interpolator {
 
   template <typename FloatT>
   Vec3<Scalar> interp_cell(const Vec3<FloatT>& pos,
-                                     const Vec3<int>& p_cell,
-                                     const Vec3<int>& target_cell,
-                                      Stagger stagger = Stagger(0b000)) const {
+                           const Vec3<int>& p_cell,
+                           const Vec3<int>& target_cell,
+                           Stagger stagger = Stagger(0b000)) const {
     return Vec3<Scalar>(
         interp_cell(pos[0], p_cell[0], target_cell[0], stagger[0]),
         interp_cell(pos[1], p_cell[1], target_cell[1], stagger[1]),
@@ -108,10 +108,9 @@ class Interpolator {
   }
 
   template <typename FloatT>
-  Scalar interp_weight(const Vec3<FloatT>& pos,
-                                 const Vec3<int>& p_cell,
-                                 const Vec3<int>& target_cell,
-                                 Stagger stagger = Stagger(0b000)) const {
+  Scalar interp_weight(const Vec3<FloatT>& pos, const Vec3<int>& p_cell,
+                       const Vec3<int>& target_cell,
+                       Stagger stagger = Stagger(0b000)) const {
     return interp_cell(pos[0], p_cell[0], target_cell[0], stagger[0]) *
            interp_cell(pos[1], p_cell[1], target_cell[1], stagger[1]) *
            interp_cell(pos[2], p_cell[2], target_cell[2], stagger[2]);
@@ -154,6 +153,6 @@ class Interpolator {
   detail::interp_piecewise_cubic m_interp_3;
   int m_order;
 };  // ----- end of class interpolator -----
-}
+}  // namespace Aperture
 
 #endif  // _INTERPOLATION_H_

@@ -1,14 +1,13 @@
 #ifndef _PARTICLE_DATA_IMPL_H_
 #define _PARTICLE_DATA_IMPL_H_
 
-#include <cstdlib>
 #include "data/particle_data.h"
 #include "utils/for_each_arg.hpp"
+#include <cstdlib>
 
 namespace Aperture {
- 
-struct read_at_idx
-{
+
+struct read_at_idx {
   size_t idx_;
   HOST_DEVICE read_at_idx(size_t idx) : idx_(idx) {}
 
@@ -42,7 +41,6 @@ single_photon1d_t photon1d_data::operator[](size_t idx) const {
   for_each_arg(*this, part, read_at_idx(idx));
   return part;
 }
-}
-
+}  // namespace Aperture
 
 #endif  // _PARTICLE_DATA_IMPL_H_

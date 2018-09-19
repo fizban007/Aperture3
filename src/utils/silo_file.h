@@ -1,18 +1,17 @@
 #ifndef _SILO_FILE_H_
 #define _SILO_FILE_H_
 
+#include "data/fields.h"
+#include "data/multi_array.h"
+#include "data/vec3.h"
+#include <array>
 #include <silo.h>
 #include <string>
 #include <vector>
-#include <array>
-#include "data/vec3.h"
-#include "data/multi_array.h"
-#include "data/fields.h"
 
 namespace Aperture {
 
-class silo_file
-{
+class silo_file {
  public:
   silo_file();
   ~silo_file();
@@ -27,8 +26,10 @@ class silo_file
 
   MultiArray<float> get_multi_var(const std::string& varname) const;
   MultiArray<float> get_multi_mesh(int comp) const;
-  MultiArray<float> get_quad_var(const std::string& varname, int group, int rank) const;
-  MultiArray<float> get_quad_var(const std::string& varname, int rank) const;
+  MultiArray<float> get_quad_var(const std::string& varname, int group,
+                                 int rank) const;
+  MultiArray<float> get_quad_var(const std::string& varname,
+                                 int rank) const;
   MultiArray<float> get_quad_var(const std::string& varname) const;
   MultiArray<float> get_coord_array(int dir) const;
   MultiArray<float> get_raw_array(const std::string& varname) const;
@@ -36,7 +37,9 @@ class silo_file
   bool find_var(const std::string& varname) const;
   bool is_multimesh() const { return m_isMultimesh; }
   bool is_open() const { return m_open; }
-  const std::array<std::string, 3>& grid_conf() const { return m_grid_conf; }
+  const std::array<std::string, 3>& grid_conf() const {
+    return m_grid_conf;
+  }
   const std::string& filename() const { return m_filename; }
 
  private:
@@ -53,13 +56,13 @@ class silo_file
   std::string m_parent_dir;
 
   std::vector<Index> m_pos;
-  int m_dims[3];         //!< Dimension of the total grid
-  int m_numRanks;        //!< total number of ranks in the output
-  int m_domainDecomp[3];   //!< number of domains in each direction
-  int m_domainSize[3];   //!< size of each domain in each direction
-  int m_guard[3];   //!< number of guard cells in each direction
-}; // ----- end of class silo_file -----
+  int m_dims[3];          //!< Dimension of the total grid
+  int m_numRanks;         //!< total number of ranks in the output
+  int m_domainDecomp[3];  //!< number of domains in each direction
+  int m_domainSize[3];    //!< size of each domain in each direction
+  int m_guard[3];         //!< number of guard cells in each direction
+};                        // ----- end of class silo_file -----
 
-}
+}  // namespace Aperture
 
 #endif  // _SILO_FILE_H_

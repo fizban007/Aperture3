@@ -15,4 +15,4 @@ template class MultiArray<float>;
 template class MultiArray<double>;
 template class MultiArray<long double>;
 
-}
+}  // namespace Aperture

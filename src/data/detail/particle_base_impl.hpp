@@ -8,29 +8,29 @@
 // #include "boost/mpl/range_c.hpp"
 // #include "boost/mpl/integral_c.hpp"
 // #include "data/detail/particle_data_impl.hpp"
-#include "data/particle_base.h"
-#include "utils/memory.h"
-#include "utils/timer.h"
-#include "utils/logger.h"
-#include "utils/for_each_arg.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
+#include "data/particle_base.h"
+#include "utils/for_each_arg.hpp"
+#include "utils/logger.h"
+#include "utils/memory.h"
+#include "utils/timer.h"
 
-#include <thrust/device_ptr.h>
-#include <thrust/sort.h>
-#include <thrust/copy.h>
-#include <thrust/gather.h>
 #include <thrust/binary_search.h>
+#include <thrust/copy.h>
+#include <thrust/device_ptr.h>
+#include <thrust/gather.h>
 #include <thrust/iterator/counting_iterator.h>
+#include <thrust/sort.h>
 
-#include <algorithm>
-#include <numeric>
-#include <string>
-#include <cstring>
-#include <stdexcept>
-#include <type_traits>
 #include "visit_struct/visit_struct.hpp"
+#include <algorithm>
+#include <cstring>
+#include <numeric>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
 // #include "types/particles.h"
 
 namespace Aperture {
@@ -39,7 +39,9 @@ namespace Aperture {
 
 struct set_nullptr {
   template <typename T>
-  HD_INLINE void operator()(const char* name, T& x) const { x = nullptr; }
+  HD_INLINE void operator()(const char* name, T& x) const {
+    x = nullptr;
+  }
 };
 
 struct assign_at_idx {
@@ -55,13 +57,12 @@ struct assign_at_idx {
 struct fill_pos_amount {
   size_t pos_, amount_;
 
-  fill_pos_amount(size_t pos, size_t amount) :
-      pos_(pos), amount_(amount) {}
+  fill_pos_amount(size_t pos, size_t amount)
+      : pos_(pos), amount_(amount) {}
 
   template <typename T, typename U>
   void operator()(T& t, U& u) const {
-    std::fill_n(t + pos_, amount_,
-                u);
+    std::fill_n(t + pos_, amount_, u);
   }
 };
 
@@ -69,8 +70,7 @@ struct sync_dev {
   int devId_;
   size_t size_;
 
-  sync_dev(int devId, size_t size) :
-      devId_(devId), size_(size) {}
+  sync_dev(int devId, size_t size) : devId_(devId), size_(size) {}
 
   template <typename T>
   void operator()(const char* name, T& x) const {
@@ -81,14 +81,12 @@ struct sync_dev {
 
 struct copy_to_dest {
   size_t num_, src_pos_, dest_pos_;
-  copy_to_dest(size_t num, size_t src_pos, size_t dest_pos) :
-      num_(num), src_pos_(src_pos), dest_pos_(dest_pos) {}
+  copy_to_dest(size_t num, size_t src_pos, size_t dest_pos)
+      : num_(num), src_pos_(src_pos), dest_pos_(dest_pos) {}
 
   template <typename T, typename U>
   void operator()(T& t, U& u) const {
-    std::copy(u + src_pos_,
-              u + src_pos_ + num_,
-              t + dest_pos_);
+    std::copy(u + src_pos_, u + src_pos_ + num_, t + dest_pos_);
   }
 };
 
@@ -101,20 +99,24 @@ struct rearrange_array {
   void* tmp_ptr_;
   std::string skip_;
 
-  rearrange_array(Index_t* index, size_t N, void* tmp_ptr, const std::string& skip) :
-      index_(index), N_(N), tmp_ptr_(tmp_ptr), skip_(skip) {}
+  rearrange_array(Index_t* index, size_t N, void* tmp_ptr,
+                  const std::string& skip)
+      : index_(index), N_(N), tmp_ptr_(tmp_ptr), skip_(skip) {}
 
   template <typename T, typename U>
   void operator()(const char* name, T& x, U& u) const {
     auto ptr_index = thrust::device_pointer_cast(index_);
-    // auto name = boost::fusion::extension::struct_member_name<ArrayType, i>::call();
+    // auto name =
+    // boost::fusion::extension::struct_member_name<ArrayType,
+    // i>::call();
     if (std::strcmp(name, skip_.c_str()) == 0) return;
 
     // printf("%d, %s\n", T::value, name);
     // auto x = boost::fusion::at_c<T::value>(array_);
     // auto x = visit_struct::get<T::value>(array_);
     auto x_ptr = thrust::device_pointer_cast(x);
-    auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<U*>(tmp_ptr_));
+    auto tmp_ptr =
+        thrust::device_pointer_cast(reinterpret_cast<U*>(tmp_ptr_));
     thrust::gather(ptr_index, ptr_index + N_, x_ptr, tmp_ptr);
     thrust::copy_n(tmp_ptr, N_, x_ptr);
     CudaCheckError();
@@ -123,7 +125,10 @@ struct rearrange_array {
 
 template <typename ParticleClass>
 ParticleBase<ParticleClass>::ParticleBase()
-    : m_numMax(0), m_number(0), m_tmp_data_ptr(nullptr), m_index(nullptr) {
+    : m_numMax(0),
+      m_number(0),
+      m_tmp_data_ptr(nullptr),
+      m_index(nullptr) {
   // boost::fusion::for_each(m_data, set_nullptr());
   visit_struct::for_each(m_data, set_nullptr{});
 }
@@ -135,7 +140,7 @@ ParticleBase<ParticleClass>::ParticleBase(std::size_t max_num)
   alloc_mem(max_num);
   auto alloc = alloc_cuda_managed(max_num);
   alloc(m_index);
-  cudaMallocManaged(&m_tmp_data_ptr, max_num*sizeof(double));
+  cudaMallocManaged(&m_tmp_data_ptr, max_num * sizeof(double));
   // m_index.resize(max_num, 0);
   // m_index_bak.resize(max_num, 0);
   initialize();
@@ -152,7 +157,7 @@ ParticleBase<ParticleClass>::ParticleBase(
   alloc_mem(n);
   auto alloc = alloc_cuda_managed(n);
   alloc(m_index);
-  cudaMallocManaged(&m_tmp_data_ptr, n*sizeof(double));
+  cudaMallocManaged(&m_tmp_data_ptr, n * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(n);
   // m_index_bak.resize(n);
@@ -160,7 +165,8 @@ ParticleBase<ParticleClass>::ParticleBase(
 }
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::ParticleBase(ParticleBase<ParticleClass>&& other) {
+ParticleBase<ParticleClass>::ParticleBase(
+    ParticleBase<ParticleClass>&& other) {
   m_numMax = other.m_numMax;
   m_number = other.m_number;
   // m_sorted = other.m_sorted;
@@ -169,7 +175,7 @@ ParticleBase<ParticleClass>::ParticleBase(ParticleBase<ParticleClass>&& other) {
   m_data = other.m_data;
   auto alloc = alloc_cuda_managed(m_numMax);
   alloc(m_index);
-  cudaMallocManaged(&m_tmp_data_ptr, m_numMax*sizeof(double));
+  cudaMallocManaged(&m_tmp_data_ptr, m_numMax * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(other.m_numMax);
   // m_index_bak.resize(other.m_numMax);
@@ -217,7 +223,7 @@ ParticleBase<ParticleClass>::resize(std::size_t max_num) {
   free_cuda()(m_tmp_data_ptr);
   auto alloc = alloc_cuda_managed(max_num);
   alloc(m_index);
-  cudaMallocManaged(&m_tmp_data_ptr, max_num*sizeof(double));
+  cudaMallocManaged(&m_tmp_data_ptr, max_num * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
 
   // m_index.resize(max_num, 0);
@@ -227,12 +233,14 @@ ParticleBase<ParticleClass>::resize(std::size_t max_num) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::erase(std::size_t pos, std::size_t amount) {
+ParticleBase<ParticleClass>::erase(std::size_t pos,
+                                   std::size_t amount) {
   if (pos + amount > m_numMax) amount = m_numMax - pos;
-  std::cout << "Erasing from " << pos << " for " << amount << " number of particles" << std::endl;
+  std::cout << "Erasing from " << pos << " for " << amount
+            << " number of particles" << std::endl;
 
-  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  // boost::fusion::for_each(
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&>
+  // seq; boost::fusion::for_each(
   //     boost::fusion::zip_view<seq>(seq(m_data, ParticleClass())),
   //     fill_pos_amount(pos, amount));
   auto ptc = ParticleClass{};
@@ -241,14 +249,18 @@ ParticleBase<ParticleClass>::erase(std::size_t pos, std::size_t amount) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::put(Index_t pos, const ParticleClass& part) {
+ParticleBase<ParticleClass>::put(Index_t pos,
+                                 const ParticleClass& part) {
   if (pos >= m_numMax)
     throw std::runtime_error(
-        "Trying to insert particle beyond the end of the array. Resize it "
+        "Trying to insert particle beyond the end of the array. Resize "
+        "it "
         "first!");
 
-  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&>
+  // seq;
+  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data,
+  // part)),
   //                         assign_at_idx(pos) );
   for_each_arg(m_data, part, assign_at_idx(pos));
   if (pos >= m_number) m_number = pos + 1;
@@ -260,11 +272,14 @@ ParticleBase<ParticleClass>::swap(Index_t pos, ParticleClass& part) {
   ParticleClass p_tmp = m_data[pos];
   if (pos >= m_numMax)
     throw std::runtime_error(
-        "Trying to swap particle beyond the end of the array. Resize it "
+        "Trying to swap particle beyond the end of the array. Resize "
+        "it "
         "first!");
 
-  // typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data, part)),
+  // typedef boost::fusion::vector<array_type&, const ParticleClass&>
+  // seq;
+  // boost::fusion::for_each(boost::fusion::zip_view<seq>(seq(m_data,
+  // part)),
   //                         assign_at_idx(pos) );
   for_each_arg(m_data, part, assign_at_idx(pos));
   part = p_tmp;
@@ -280,16 +295,17 @@ ParticleBase<ParticleClass>::append(const ParticleClass& part) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::copy_from(const ParticleBase<ParticleClass>& other,
-                                       std::size_t num, std::size_t src_pos,
-                                       std::size_t dest_pos) {
+ParticleBase<ParticleClass>::copy_from(
+    const ParticleBase<ParticleClass>& other, std::size_t num,
+    std::size_t src_pos, std::size_t dest_pos) {
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_numMax) num = m_numMax - dest_pos;
   // typedef boost::fusion::vector<array_type&, const array_type&> seq;
   // boost::fusion::for_each(
   //     boost::fusion::zip_view<seq>(seq(m_data, other.m_data)),
   //     copy_to_dest(num, src_pos, dest_pos));
-  for_each_arg(m_data, other.m_data, copy_to_dest(num, src_pos, dest_pos));
+  for_each_arg(m_data, other.m_data,
+               copy_to_dest(num, src_pos, dest_pos));
   // Adjust the new number of particles in the array
   if (dest_pos + num > m_number) m_number = dest_pos + num;
 }
@@ -320,7 +336,10 @@ ParticleBase<ParticleClass>::sort_by_tile() {
 
   // Update the new number of particles
   const int padding = 100;
-  m_number = thrust::upper_bound(ptr_tile, ptr_tile + m_number + padding, MAX_TILE - 1) - ptr_tile;
+  m_number =
+      thrust::upper_bound(ptr_tile, ptr_tile + m_number + padding,
+                          MAX_TILE - 1) -
+      ptr_tile;
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
@@ -343,7 +362,10 @@ ParticleBase<ParticleClass>::sort_by_cell() {
 
   // Update the new number of particles
   const int padding = 100;
-  m_number = thrust::upper_bound(ptr_cell, ptr_cell + m_number + padding, MAX_CELL - 1) - ptr_cell;
+  m_number =
+      thrust::upper_bound(ptr_cell, ptr_cell + m_number + padding,
+                          MAX_CELL - 1) -
+      ptr_cell;
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
@@ -357,13 +379,19 @@ ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
   const uint32_t padding = 100;
   auto ptc = ParticleClass();
   // boost::fusion::for_each(boost::mpl::range_c<
-  //                         unsigned, 0, visit_struct::field_count<ParticleClass>()>(),
-  //                         rearrange_array<array_type>(m_data, m_index,
-  //                                                     std::min(m_numMax, m_number + padding),
-  //                                                     m_tmp_data_ptr, skip));
-  for_each_arg_with_name(m_data, ptc,
-                         rearrange_array{m_index, std::min(m_numMax, m_number + padding),
-                               m_tmp_data_ptr, skip});
+  //                         unsigned, 0,
+  //                         visit_struct::field_count<ParticleClass>()>(),
+  //                         rearrange_array<array_type>(m_data,
+  //                         m_index,
+  //                                                     std::min(m_numMax,
+  //                                                     m_number +
+  //                                                     padding),
+  //                                                     m_tmp_data_ptr,
+  //                                                     skip));
+  for_each_arg_with_name(
+      m_data, ptc,
+      rearrange_array{m_index, std::min(m_numMax, m_number + padding),
+                      m_tmp_data_ptr, skip});
 }
 
 template <typename ParticleClass>
@@ -377,7 +405,8 @@ ParticleBase<ParticleClass>::sync_to_device(int deviceId) {
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::sync_to_host() {
-  // boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
+  // boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId,
+  // m_number));
   visit_struct::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
   cudaDeviceSynchronize();
 }
@@ -413,8 +442,10 @@ ParticleBase<ParticleClass>::sync_to_host() {
 // template <typename T>
 // void
 // ParticleBase<ParticleClass>::rearrange_single_array(T* array,
-//                                                     std::vector<Index_t>& index,
-//                                                     std::size_t num) {
+//                                                     std::vector<Index_t>&
+//                                                     index,
+//                                                     std::size_t num)
+//                                                     {
 //   // std::cout << "In rearrange!" << std::endl;
 //   T tmp, tmp_swap;
 //   if (num == 0) num = index.size();
@@ -445,19 +476,22 @@ ParticleBase<ParticleClass>::sync_to_host() {
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::rearrange_arrays(std::vector<Index_t>& index,
+// ParticleBase<ParticleClass>::rearrange_arrays(std::vector<Index_t>&
+// index,
 //                                               std::size_t num) {
 //   // typedef boost::fusion::vector<array_type&> seq;
 //   boost::fusion::for_each(m_data, [this, &index, num](const auto x) {
 //     // at_c<0>(x)[pos] = at_c<1>(x);
-//     std::copy(index.begin(), index.begin() + num, this -> m_index_bak.begin());
-//     this->rearrange_single_array(x, this->m_index_bak, num);
+//     std::copy(index.begin(), index.begin() + num, this ->
+//     m_index_bak.begin()); this->rearrange_single_array(x,
+//     this->m_index_bak, num);
 //   });
 // }
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::rearrange_copy(std::vector<Index_t>& index,
+// ParticleBase<ParticleClass>::rearrange_copy(std::vector<Index_t>&
+// index,
 //                                             std::size_t num) {
 //   boost::fusion::for_each(m_data, [this, &index, num](const auto x) {
 //       // at_c<0>(x)[pos] = at_c<1>(x);
@@ -468,20 +502,23 @@ ParticleBase<ParticleClass>::sync_to_host() {
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::partition(std::vector<Index_t>& partitions,
+// ParticleBase<ParticleClass>::partition(std::vector<Index_t>&
+// partitions,
 //                                        const Grid& grid) {
 //   // timer::stamp();
 //   // TODO: This process is tediously slow. How to optimize?
 
 //   // std::cout << "In partition!" << std::endl;
-//   // unsigned int zone_num = 27 + grid.size(); // FIXME: Magic numbers!
-//   unsigned int zone_num = 27u;  // FIXME: Magic numbers!
-//   if (partitions.size() != zone_num + 2) partitions.resize(zone_num + 2);
+//   // unsigned int zone_num = 27 + grid.size(); // FIXME: Magic
+//   numbers! unsigned int zone_num = 27u;  // FIXME: Magic numbers! if
+//   (partitions.size() != zone_num + 2) partitions.resize(zone_num +
+//   2);
 
 //   std::fill(partitions.begin(), partitions.end(), 0);
 //   std::iota(m_index.begin(), m_index.end(), 0);
 
-//   std::cout << "Partitions has size " << partitions.size() << std::endl;
+//   std::cout << "Partitions has size " << partitions.size() <<
+//   std::endl;
 //   // std::cout << "Array has size " << m_number << std::endl;
 //   for (Index_t i = 0; i < m_number; i++) {
 //     unsigned int zone_idx = 0;
@@ -503,7 +540,8 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //   // for (auto n : m_index) { std::cout << n << " "; }
 //   // std::cout << std::endl;
 
-//   // Scan the array, now the array contains the starting index of each
+//   // Scan the array, now the array contains the starting index of
+//   each
 //   // zone in the main particle array
 //   for (unsigned int i = 1; i < zone_num + 2; i++) {
 //     partitions[i] += partitions[i - 1];
@@ -523,7 +561,8 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //     //   zone_idx += grid.size();
 //     m_index[i] += partitions[zone_idx];
 //   }
-//   // std::copy(m_index.begin(), m_index.begin() + m_number, m_index_bak.begin());
+//   // std::copy(m_index.begin(), m_index.begin() + m_number,
+//   m_index_bak.begin());
 //   // for (auto n : m_index) { std::cout << n << " "; }
 //   // std::cout << std::endl;
 
@@ -539,8 +578,9 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //   // std::cout << std::endl;
 //   // partitions[zone_num] is where the empty zone starts. This should
 //   // be equal to the number of particles in the array now
-//   // FIXME: There could be wrap around error due to large number of particles
-//   if (partitions[zone_num] != m_number) this->set_num(partitions[zone_num]);
+//   // FIXME: There could be wrap around error due to large number of
+//   particles if (partitions[zone_num] != m_number)
+//   this->set_num(partitions[zone_num]);
 
 //   // std::cout << "Finished partition!" << std::endl;
 // }
@@ -550,11 +590,12 @@ ParticleBase<ParticleClass>::sync_to_host() {
 // ParticleBase<ParticleClass>::partition_and_sort(
 //     std::vector<Index_t>& partitions, const Aperture::Grid& grid,
 //     int tile_size) {
-//   // Make sure the tile size divides the reduced dimension in every direction
-//   for (int i = 0; i < 3; i++) {
+//   // Make sure the tile size divides the reduced dimension in every
+//   direction for (int i = 0; i < 3; i++) {
 //     if (grid.mesh().dims[i] > 1 &&
 //         grid.mesh().reduced_dim(i) % tile_size != 0) {
-//       std::cerr << "Tile size does not divide the dimension in direction " << i
+//       std::cerr << "Tile size does not divide the dimension in
+//       direction " << i
 //                 << std::endl;
 //       return;
 //     }
@@ -569,14 +610,16 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //     total_num_tiles *= num_tiles[i];
 //   }
 
-//   // unsigned int zone_num = 27 + grid.size(); // FIXME: Magic numbers!
-//   unsigned int zone_num = 27u + total_num_tiles;  // FIXME: Magic numbers!
-//   if (partitions.size() != zone_num + 2) partitions.resize(zone_num + 2);
+//   // unsigned int zone_num = 27 + grid.size(); // FIXME: Magic
+//   numbers! unsigned int zone_num = 27u + total_num_tiles;  // FIXME:
+//   Magic numbers! if (partitions.size() != zone_num + 2)
+//   partitions.resize(zone_num + 2);
 
 //   std::fill(partitions.begin(), partitions.end(), 0);
 //   std::iota(m_index.begin(), m_index.end(), 0);
 
-//   std::cout << "Partitions has size " << partitions.size() << std::endl;
+//   std::cout << "Partitions has size " << partitions.size() <<
+//   std::endl;
 //   // std::cout << "Array has size " << m_number << std::endl;
 //   for (Index_t i = 0; i < m_number; i++) {
 //     unsigned int zone_idx = 0;
@@ -597,7 +640,8 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //     partitions[zone_idx + 1] += 1;
 //   }
 
-//   // Scan the array, now the array contains the starting index of each
+//   // Scan the array, now the array contains the starting index of
+//   each
 //   // zone in the main particle array
 //   for (unsigned int i = 1; i < zone_num + 2; i++) {
 //     partitions[i] += partitions[i - 1];
@@ -619,7 +663,8 @@ ParticleBase<ParticleClass>::sync_to_host() {
 //     m_index[i] += partitions[zone_idx];
 //   }
 
-//   // std::copy(m_index.begin(), m_index.begin() + m_number, m_index_bak.begin());
+//   // std::copy(m_index.begin(), m_index.begin() + m_number,
+//   m_index_bak.begin());
 //   // Rearrange the particles to reflect the partition
 //   // timer::show_duration_since_stamp("partition", "ms");
 //   rearrange_arrays(m_index, m_number);
@@ -628,27 +673,33 @@ ParticleBase<ParticleClass>::sync_to_host() {
 
 //   // partitions[zone_num] is where the empty zone starts. This should
 //   // be equal to the number of particles in the array now
-//   // FIXME: There could be wrap around error due to large number of particles
-//   if (partitions[zone_num] != m_number) this->set_num(partitions[zone_num]);
+//   // FIXME: There could be wrap around error due to large number of
+//   particles if (partitions[zone_num] != m_number)
+//   this->set_num(partitions[zone_num]);
 // }
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::copy_from(const std::vector<ParticleClass>& buffer,
-//                                        std::size_t num, std::size_t src_pos,
-//                                        std::size_t dest_pos) {
+// ParticleBase<ParticleClass>::copy_from(const
+// std::vector<ParticleClass>& buffer,
+//                                        std::size_t num, std::size_t
+//                                        src_pos, std::size_t dest_pos)
+//                                        {
 //   // Adjust the number so that we don't over fill
 //   if (dest_pos > m_numMax)
-//     throw std::runtime_error("Destination position larger than buffer size!");
+//     throw std::runtime_error("Destination position larger than buffer
+//     size!");
 //   if (dest_pos + num > m_numMax) num = m_numMax - dest_pos;
-//   typedef boost::fusion::vector<array_type&, const ParticleClass&> seq;
-//   for (Index_t i = 0; i < num; i++) {
+//   typedef boost::fusion::vector<array_type&, const ParticleClass&>
+//   seq; for (Index_t i = 0; i < num; i++) {
 //     boost::fusion::for_each(
-//         boost::fusion::zip_view<seq>(seq(m_data, buffer[src_pos + i])),
-//         [this, num, dest_pos, i](const auto& x) {
-//           // std::copy(at_c<1>(x) + src_pos, at_c<1>(x) + src_pos + num,
+//         boost::fusion::zip_view<seq>(seq(m_data, buffer[src_pos +
+//         i])), [this, num, dest_pos, i](const auto& x) {
+//           // std::copy(at_c<1>(x) + src_pos, at_c<1>(x) + src_pos +
+//           num,
 //           // at_c<0>(x) + dest_pos);
-//           boost::fusion::at_c<0>(x)[dest_pos + i] = boost::fusion::at_c<1>(x);
+//           boost::fusion::at_c<0>(x)[dest_pos + i] =
+//           boost::fusion::at_c<1>(x);
 //         });
 //   }
 //   // Adjust the new number of particles in the array
@@ -657,23 +708,27 @@ ParticleBase<ParticleClass>::sync_to_host() {
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::copy_to_buffer(std::vector<ParticleClass>& buffer,
+// ParticleBase<ParticleClass>::copy_to_buffer(std::vector<ParticleClass>&
+// buffer,
 //                                             std::size_t num,
 //                                             std::size_t src_pos,
 //                                             std::size_t dest_pos) {
 //   // check if we overflow
 //   if (dest_pos > buffer.size())
-//     throw std::runtime_error("Destination position larger than buffer size!");
+//     throw std::runtime_error("Destination position larger than buffer
+//     size!");
 //   if (dest_pos + num > buffer.size()) num = buffer.size() - dest_pos;
 
-//   typedef boost::fusion::vector<ParticleClass&, const array_type&> seq;
-//   for (Index_t i = 0; i < num; i++) {
+//   typedef boost::fusion::vector<ParticleClass&, const array_type&>
+//   seq; for (Index_t i = 0; i < num; i++) {
 //     boost::fusion::for_each(
-//         boost::fusion::zip_view<seq>(seq(buffer[dest_pos + i], m_data)),
-//         [this, num, src_pos, i](const auto& x) {
-//           // std::copy(at_c<1>(x) + src_pos, at_c<1>(x) + src_pos + num,
+//         boost::fusion::zip_view<seq>(seq(buffer[dest_pos + i],
+//         m_data)), [this, num, src_pos, i](const auto& x) {
+//           // std::copy(at_c<1>(x) + src_pos, at_c<1>(x) + src_pos +
+//           num,
 //           // at_c<0>(x) + dest_pos);
-//           boost::fusion::at_c<0>(x) = boost::fusion::at_c<1>(x)[src_pos + i];
+//           boost::fusion::at_c<0>(x) =
+//           boost::fusion::at_c<1>(x)[src_pos + i];
 //         });
 //   }
 // }
@@ -689,6 +744,6 @@ ParticleBase<ParticleClass>::clear_guard_cells() {
   //   }
   // }
 }
-}
+}  // namespace Aperture
 
 #endif  // _PARTICLE_BASE_IMPL_H_

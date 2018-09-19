@@ -8,8 +8,9 @@ using namespace Aperture;
 
 DataExporter::DataExporter() { SetDefault(); }
 
-DataExporter::DataExporter(const std::string& dir, const std::string& prefix,
-                             bool compress, int rank, int size) {
+DataExporter::DataExporter(const std::string& dir,
+                           const std::string& prefix, bool compress,
+                           int rank, int size) {
   SetDefault();
   numRanks = size;
   myRank = rank;
@@ -19,7 +20,8 @@ DataExporter::DataExporter(const std::string& dir, const std::string& prefix,
 
   boost::filesystem::create_directories(rootPath, returnedError);
 
-  if (returnedError) std::cerr << "Error reading directory!" << std::endl;
+  if (returnedError)
+    std::cerr << "Error reading directory!" << std::endl;
 
   outputDirectory = dir;
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
@@ -40,7 +42,8 @@ DataExporter::DataExporter(const std::string& dir, const std::string& prefix,
 
   boost::filesystem::create_directories(subPath, returnedError);
 
-  if (returnedError) std::cerr << "Error creating sub-directory!" << std::endl;
+  if (returnedError)
+    std::cerr << "Error creating sub-directory!" << std::endl;
 
   filePrefix = prefix;
   useCompression = compress;
@@ -90,7 +93,8 @@ DataExporter::SetDefault() {
 }
 
 void
-DataExporter::AddField(const char* name, const float* data, const char* mesh) {
+DataExporter::AddField(const char* name, const float* data,
+                       const char* mesh) {
   silo_quadVariable<float> tempVar;
 
   tempVar.meshName = mesh;
@@ -107,7 +111,7 @@ DataExporter::AddField(const char* name, const float* data, const char* mesh) {
 
 void
 DataExporter::AddField(const char* name, const double* data,
-                        const char* mesh) {
+                       const char* mesh) {
   silo_quadVariable<double> tempVar;
 
   tempVar.meshName = mesh;
@@ -123,7 +127,8 @@ DataExporter::AddField(const char* name, const double* data,
 }
 
 void
-DataExporter::AddArray(const char* name, float* data, int* dims, int ndims) {
+DataExporter::AddArray(const char* name, float* data, int* dims,
+                       int ndims) {
   silo_dbArray tempArray;
 
   tempArray.varName = name;
@@ -147,7 +152,7 @@ DataExporter::AddVariable(const char* name, float* data) {
 
 void
 DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
-                           bool displayGuard) {
+                          bool displayGuard) {
   DBfile* dbfile = nullptr;
 
   char filenameMaster[50];
@@ -159,14 +164,15 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
 
   if (!boost::filesystem::exists(rootPath)) {
     boost::filesystem::create_directories(rootPath, returnedError);
-    if (returnedError) std::cerr << "Error creating directory!" << std::endl;
+    if (returnedError)
+      std::cerr << "Error creating directory!" << std::endl;
   }
 
   // This is the main file if there are multiple ranks
   sprintf(filenameMaster, "%s%s%05d.silo", outputDirectory.c_str(),
           filePrefix.c_str(), timeStep);
-  sprintf(filename, "%s%s%05d.d", subDirectory.c_str(), filePrefix.c_str(),
-          timeStep);
+  sprintf(filename, "%s%s%05d.d", subDirectory.c_str(),
+          filePrefix.c_str(), timeStep);
 
   DBoptlist* optlist = DBMakeOptlist(8);
   DBAddOption(optlist, DBOPT_TIME, &time);
@@ -175,7 +181,8 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
     DBAddOption(optlist, DBOPT_LO_OFFSET, (void*)lowOffset);
     DBAddOption(optlist, DBOPT_HI_OFFSET, (void*)hiOffset);
   }
-  // int pos[3] = { domain -> pos().x, domain -> pos().y, domain -> pos().z };
+  // int pos[3] = { domain -> pos().x, domain -> pos().y, domain ->
+  // pos().z };
   int pos_c[3] = {pos.x, pos.y, pos.z};
   DBAddOption(optlist, DBOPT_BASEINDEX, pos_c);
 
@@ -186,15 +193,15 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
   // char* defs[] = {"{Er, Ez}"};
   // int type[] = {DB_VARTYPE_VECTOR};
 
-  dbfile = DBCreate(filename, DB_CLOBBER, DB_LOCAL, "Output of PIC simulation",
-                    DB_HDF5);
+  dbfile = DBCreate(filename, DB_CLOBBER, DB_LOCAL,
+                    "Output of PIC simulation", DB_HDF5);
   // for (quadMesh mesh : quadMeshes) {
   for (int i = 0; i < (int)quadMeshes.size(); i++) {
     auto& mesh = quadMeshes[i];
     if (mesh.linear)
       DBPutQuadmesh(dbfile, mesh.meshName.c_str(), NULL, mesh.gridArray,
-                    mesh.sizeOfDims.data(), mesh.numDim, DB_FLOAT, DB_COLLINEAR,
-                    optlist);
+                    mesh.sizeOfDims.data(), mesh.numDim, DB_FLOAT,
+                    DB_COLLINEAR, optlist);
     else
       DBPutQuadmesh(dbfile, mesh.meshName.c_str(), NULL, mesh.gridArray,
                     mesh.sizeOfDims.data(), mesh.numDim, DB_FLOAT,
@@ -205,16 +212,18 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
   // for (quadVariable var : quadVars)
   for (int i = 0; i < (int)quadVarsF.size(); i++) {
     auto& var = quadVarsF[i];
-    DBPutQuadvar1(dbfile, var.quadName.c_str(), var.meshName.c_str(), var.data,
-                  var.mesh->sizeOfDims.data(), var.mesh->numDim, NULL, 0,
-                  DB_FLOAT, DB_NODECENT, NULL);
+    DBPutQuadvar1(dbfile, var.quadName.c_str(), var.meshName.c_str(),
+                  var.data, var.mesh->sizeOfDims.data(),
+                  var.mesh->numDim, NULL, 0, DB_FLOAT, DB_NODECENT,
+                  NULL);
   }
 
   for (int i = 0; i < (int)quadVarsD.size(); i++) {
     auto& var = quadVarsD[i];
-    DBPutQuadvar1(dbfile, var.quadName.c_str(), var.meshName.c_str(), var.data,
-                  var.mesh->sizeOfDims.data(), var.mesh->numDim, NULL, 0,
-                  DB_DOUBLE, DB_NODECENT, NULL);
+    DBPutQuadvar1(dbfile, var.quadName.c_str(), var.meshName.c_str(),
+                  var.data, var.mesh->sizeOfDims.data(),
+                  var.mesh->numDim, NULL, 0, DB_DOUBLE, DB_NODECENT,
+                  NULL);
   }
 
   // for (dbVariable var : dbVars)
@@ -235,8 +244,8 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
 
     for (int i = 0; i < (int)dbArrays.size(); i++) {
       auto& var = dbArrays[i];
-      DBWrite(dbfileMaster, var.varName.c_str(), var.data, var.dims.data(),
-              var.ndims, DB_FLOAT);
+      DBWrite(dbfileMaster, var.varName.c_str(), var.data,
+              var.dims.data(), var.ndims, DB_FLOAT);
     }
 
     for (unsigned int i = 0; i < quadMeshes.size(); i++) {
@@ -253,8 +262,9 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
         // std::cout << name << std::endl;
       }
 
-      DBPutMultimesh(dbfileMaster, quadMeshes[i].meshName.c_str(), numRanks,
-                     meshnames.data(), meshtypes.data(), NULL);
+      DBPutMultimesh(dbfileMaster, quadMeshes[i].meshName.c_str(),
+                     numRanks, meshnames.data(), meshtypes.data(),
+                     NULL);
 
       for (int j = 0; j < numRanks; j++) {
         delete[] meshnames[j];
@@ -273,8 +283,8 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
         vartypes.push_back(DB_QUADVAR);
       }
 
-      DBPutMultivar(dbfileMaster, quadVarsF[i].quadName.c_str(), numRanks,
-                    varnames.data(), vartypes.data(), NULL);
+      DBPutMultivar(dbfileMaster, quadVarsF[i].quadName.c_str(),
+                    numRanks, varnames.data(), vartypes.data(), NULL);
 
       for (int j = 0; j < numRanks; j++) {
         delete[] varnames[j];
@@ -293,8 +303,8 @@ DataExporter::WriteOutput(int timeStep, float time, const Index& pos,
         vartypes.push_back(DB_QUADVAR);
       }
 
-      DBPutMultivar(dbfileMaster, quadVarsD[i].quadName.c_str(), numRanks,
-                    varnames.data(), vartypes.data(), NULL);
+      DBPutMultivar(dbfileMaster, quadVarsD[i].quadName.c_str(),
+                    numRanks, varnames.data(), vartypes.data(), NULL);
 
       for (int j = 0; j < numRanks; j++) {
         delete[] varnames[j];
@@ -312,7 +322,8 @@ DataExporter::CopyConfig(const std::string& file) {
 
   if (!boost::filesystem::exists(rootPath)) {
     boost::filesystem::create_directories(rootPath, returnedError);
-    if (returnedError) std::cerr << "Error creating directory!" << std::endl;
+    if (returnedError)
+      std::cerr << "Error creating directory!" << std::endl;
   }
 
   boost::filesystem::path file_path(file.c_str());
@@ -320,7 +331,8 @@ DataExporter::CopyConfig(const std::string& file) {
       (outputDirectory + file_path.filename().string()).c_str());
 
   boost::filesystem::copy_file(file_path, target_path, returnedError);
-  if (returnedError) std::cerr << "Error copying config file!" << std::endl;
+  if (returnedError)
+    std::cerr << "Error copying config file!" << std::endl;
 }
 
 void
@@ -331,14 +343,17 @@ DataExporter::CopyMain() {
 
   if (!boost::filesystem::exists(rootPath)) {
     boost::filesystem::create_directories(rootPath, returnedError);
-    if (returnedError) std::cerr << "Error creating directory!" << std::endl;
+    if (returnedError)
+      std::cerr << "Error creating directory!" << std::endl;
   }
 
   std::string mainfile = "../src/main.cpp";
 
   boost::filesystem::path file_path(mainfile.c_str());
-  boost::filesystem::path target_path((outputDirectory + "main.cpp").c_str());
+  boost::filesystem::path target_path(
+      (outputDirectory + "main.cpp").c_str());
 
   boost::filesystem::copy_file(file_path, target_path, returnedError);
-  if (returnedError) std::cerr << "Error copying main.cpp!" << std::endl;
+  if (returnedError)
+    std::cerr << "Error copying main.cpp!" << std::endl;
 }
