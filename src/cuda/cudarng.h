@@ -1,6 +1,7 @@
 #ifndef _CUDARNG_H_
 #define _CUDARNG_H_
 
+#include "cuda/cuda_control.h"
 #include <curand_kernel.h>
 
 namespace Aperture {

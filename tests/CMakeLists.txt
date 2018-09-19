@@ -18,7 +18,8 @@ target_link_libraries(test_fd
 add_dependencies(check test_fd)
 
 set(tests_src
-  "test.cpp" "test_AD.cpp" "test_config.cpp" "test_env.cpp" "test_stagger.cpp"
+  "test.cpp" "test_AD.cpp" "test_config.cpp" "test_env.cpp"
+  "test_stagger.cpp"
   # "test_particles.cpp"
   "test_finite_diff.cpp" "test_ffe.cpp"
   "test_IC_PL.cpp"
@@ -38,6 +39,7 @@ add_dependencies(check run_tests)
 # if(CUDA_FOUND)
 set(test_cuda_src
   "test.cu" "test_multiarray.cu")
+  # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
 add_cuda_executable(test_cuda)
 set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)

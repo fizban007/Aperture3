@@ -8,7 +8,6 @@
 #include "utils/util_functions.h"
 #include <array>
 #include <cmath>
-#include <fmt/ostream.h>
 
 namespace Aperture {
 
@@ -107,7 +106,7 @@ move_photon(photon_data photon, Grid::const_mesh_ptrs mp, double dt,
 
     photon.cell[i] = c;
     photon.x1[i] = new_x1 - (Pos_t)delta_c;
-    photon.path_left[i] -= dx;
+    photon.path_left[i] -= std::abs(dx);
   }
 }
 

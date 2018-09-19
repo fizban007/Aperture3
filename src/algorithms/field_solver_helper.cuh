@@ -1,6 +1,8 @@
 #ifndef _FIELD_SOLVER_HELPER_H_
 #define _FIELD_SOLVER_HELPER_H_
 
+#include "data/typedefs.h"
+
 namespace Aperture {
 
 namespace Kernels {
