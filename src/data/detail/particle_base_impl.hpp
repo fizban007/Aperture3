@@ -310,40 +310,40 @@ ParticleBase<ParticleClass>::copy_from(
   if (dest_pos + num > m_number) m_number = dest_pos + num;
 }
 
-template <typename ParticleClass>
-void
-ParticleBase<ParticleClass>::compute_tile_num() {
-  compute_tile(m_data.tile, m_data.cell, m_number);
-}
+// template <typename ParticleClass>
+// void
+// ParticleBase<ParticleClass>::compute_tile_num() {
+//   compute_tile(m_data.tile, m_data.cell, m_number);
+// }
 
-template <typename ParticleClass>
-void
-ParticleBase<ParticleClass>::sort_by_tile() {
-  // First compute the tile number according to current cell id
-  compute_tile(m_data.tile, m_data.cell, m_number);
+// template <typename ParticleClass>
+// void
+// ParticleBase<ParticleClass>::sort_by_tile() {
+//   // First compute the tile number according to current cell id
+//   compute_tile(m_data.tile, m_data.cell, m_number);
 
-  // Generate particle index array
-  auto ptr_tile = thrust::device_pointer_cast(m_data.tile);
-  auto ptr_idx = thrust::device_pointer_cast(m_index);
-  thrust::counting_iterator<Index_t> iter(0);
-  thrust::copy_n(iter, this->m_number, ptr_idx);
+//   // Generate particle index array
+//   auto ptr_tile = thrust::device_pointer_cast(m_data.tile);
+//   auto ptr_idx = thrust::device_pointer_cast(m_index);
+//   thrust::counting_iterator<Index_t> iter(0);
+//   thrust::copy_n(iter, this->m_number, ptr_idx);
 
-  // Sort the index array by key
-  thrust::sort_by_key(ptr_tile, ptr_tile + this->m_number, ptr_idx);
+//   // Sort the index array by key
+//   thrust::sort_by_key(ptr_tile, ptr_tile + this->m_number, ptr_idx);
 
-  // Move the rest of particle array using the new index
-  rearrange_arrays("tile");
+//   // Move the rest of particle array using the new index
+//   rearrange_arrays("tile");
 
-  // Update the new number of particles
-  const int padding = 100;
-  m_number =
-      thrust::upper_bound(ptr_tile, ptr_tile + m_number + padding,
-                          MAX_TILE - 1) -
-      ptr_tile;
+//   // Update the new number of particles
+//   const int padding = 100;
+//   m_number =
+//       thrust::upper_bound(ptr_tile, ptr_tile + m_number + padding,
+//                           MAX_TILE - 1) -
+//       ptr_tile;
 
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
-}
+//   // Wait for GPU to finish before accessing on host
+//   cudaDeviceSynchronize();
+// }
 
 template <typename ParticleClass>
 void

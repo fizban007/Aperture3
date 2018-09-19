@@ -74,11 +74,11 @@ class ParticleBase {
   void append(const ParticleClass& part);
   void swap(Index_t pos, ParticleClass& part);
 
-  void compute_tile_num();
-  void sort_by_tile();
+  // void compute_tile_num();
+  // void sort_by_tile();
   void sort_by_cell();
   void rearrange_arrays(const std::string& skip);
-  void move_tile();
+  // void move_tile();
   // After rearrange, the index array will all be -1
   // void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
   // void rearrange_arrays(std::vector<Index_t>& index, std::size_t num
