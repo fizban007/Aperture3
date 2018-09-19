@@ -20,6 +20,7 @@ set(Aperture_src
   "algorithms/field_solver_default.cu"
   "algorithms/ptc_pusher_constE.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
+  # "algorithms/ptc_pusher_geodesic.cpp"
   "sim_data.cu"
   "cuda/constant_mem.cu" "cuda/kernels.cu"
   "radiation/radiation_transfer.cu"
@@ -89,6 +90,9 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 
 # add_executable(aperture "main.cpp")
 # target_link_libraries(aperture Aperture AperCuda)
+
+add_executable(exponent "exponent.cpp")
+target_link_libraries(exponent Aperture)
 
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)

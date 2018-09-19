@@ -24,6 +24,8 @@ class PICSim {
   void step(SimData& data, uint32_t step);
 
   FieldSolver& field_solver() { return *m_field_solver; }
+  ParticlePusher& ptc_pusher() { return *m_pusher; }
+  CurrentDepositer& current_depositer() { return *m_depositer; }
   // InverseCompton& inverse_compton() { return *m_inverse_compton; }
 
  private:
