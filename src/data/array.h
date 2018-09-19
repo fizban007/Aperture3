@@ -32,13 +32,13 @@ class Array {
   self_type& operator=(self_type&& other);
 
   /// Linearized indexing operator, read only
-  const data_type& operator[](int idx) const {
+  const data_type& operator[](size_t idx) const {
     assert(idx >= 0 && idx < m_length);
     return m_data_h[idx];
   }
 
   /// Linearized indexing operator, read and write
-  data_type& operator[](int idx) {
+  data_type& operator[](size_t idx) {
     assert(idx >= 0 && idx < m_length);
     return m_data_h[idx];
   }
@@ -73,7 +73,7 @@ class Array {
   void assign_dev(const data_type& value, size_t num);
 
   /// Resize the array.
-  void resize(int length, int deviceId = 0);
+  void resize(size_t length, int deviceId = 0);
 
   size_t length() const { return m_length; }
   ptr_type data() { return m_data_h; }

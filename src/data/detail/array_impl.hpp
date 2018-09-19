@@ -127,7 +127,7 @@ Array<T>::assign_dev(const data_type& value) {
 /// Resize the array.
 template <typename T>
 void
-Array<T>::resize(int length, int deviceId) {
+Array<T>::resize(size_t length, int deviceId) {
   free_mem();
   alloc_mem(length, deviceId);
 }
