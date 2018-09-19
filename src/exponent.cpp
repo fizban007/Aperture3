@@ -47,14 +47,14 @@ main(int argc, char *argv[]) {
     rad.emit_photons(data.photons, data.particles);
     sim.ptc_pusher().push(data, dt);
     rad.produce_pairs(data.particles, data.photons);
-    if (step % 100) {
+    if (step % 40) {
       data.particles.sort_by_cell();
       data.photons.sort_by_cell();
     }
     // data.particles.sync_to_host();
-    Logger::print_info("p1 is {}", data.particles.data().p1[0]);
+    // Logger::print_info("p1 is {}", data.particles.data().p1[0]);
     // data.photons.sync_to_host();
-    Logger::print_info("lph is {}", data.photons.data().path_left[0]);
+    // Logger::print_info("lph is {}", data.photons.data().path_left[0]);
   }
   
   return 0;
