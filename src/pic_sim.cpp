@@ -17,8 +17,8 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // std::make_unique<DomainCommunicator>(env);
 
   // Select current deposition method according to config
-  m_depositer = std::unique_ptr<CurrentDepositer_Esirkepov>(
-      new CurrentDepositer_Esirkepov(m_env));
+  // m_depositer = std::unique_ptr<CurrentDepositer_Esirkepov>(
+  //     new CurrentDepositer_Esirkepov(m_env));
   // m_depositer->set_periodic(env.conf().boundary_periodic[0]);
   // m_depositer->set_interp_order(env.conf().interpolation_order);
 
@@ -35,16 +35,18 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   // int interp_order = m_env.conf().interpolation_order;
 
   // Select particle pusher according to config
-  if (m_env.params().algorithm_ptc_move == "beadonwire") {
-    m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(
-        new ParticlePusher_BeadOnWire(m_env));
-  } else if (m_env.params().algorithm_ptc_move == "constE") {
+  // if (m_env.params().algorithm_ptc_move == "beadonwire") {
+  //   m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(
+  //       new ParticlePusher_BeadOnWire(m_env));
+  // } else
+  if (m_env.params().algorithm_ptc_move == "constE") {
     m_pusher = std::unique_ptr<ParticlePusher_ConstE>(
         new ParticlePusher_ConstE(m_env));
-  } else {
-    m_pusher = std::unique_ptr<ParticlePusher_Geodesic>(
-        new ParticlePusher_Geodesic(m_env));
   }
+  // } else {
+  //   m_pusher = std::unique_ptr<ParticlePusher_Geodesic>(
+  //       new ParticlePusher_Geodesic(m_env));
+  // }
   // m_pusher->set_periodic(env.conf().boundary_periodic[0]);
   // m_pusher->set_interp_order(env.conf().interpolation_order);
 
