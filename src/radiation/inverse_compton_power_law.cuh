@@ -1,4 +1,5 @@
 #include "utils/util_functions.h"
+#include "utils/logger.h"
 // #include "cuda/cudaUtility.h"
 // #include "cuda/constant_mem.h"
 
@@ -134,7 +135,10 @@ InverseComptonPL1D<RandFunc>::InverseComptonPL1D(
       m_es(params.e_s),
       m_emin(params.e_min),
       m_mfp(params.photon_path),
-      m_rng(rng) {}
+      m_icrate(params.delta_t / params.ic_path),
+      m_rng(rng) {
+  // Logger::print_info("Characteristic ic rate is {}", m_icrate);
+}
 
 template <typename RandFunc>
 HOST_DEVICE InverseComptonPL1D<RandFunc>::~InverseComptonPL1D() {}
@@ -145,7 +149,7 @@ InverseComptonPL1D<RandFunc>::emit_photon(Scalar gamma) {
   float u = m_rng();
   // TODO: Finish photon emission rate
   float e_p = gamma * m_emin;
-  float rate = (e_p < 0.1f ? 0.1f : 0.1f * std::log(2.0f * e_p + 2.5183f) / e_p);
+  float rate = (e_p < 0.1f ? m_icrate : m_icrate * std::log(2.0f * e_p + 2.5183f) / e_p);
   return (u < rate);
 }
 

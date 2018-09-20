@@ -252,7 +252,7 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   m_numPerBlock.sync_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1] +
                     m_numPerBlock[m_blocksPerGrid - 1];
-  Logger::print_info("{} photons are produced!", new_photons);
+  // Logger::print_info("{} photons are produced!", new_photons);
 
   Kernels::produce_photons<typename PtcClass::DataClass,
                            typename PhotonClass::DataClass, RadModel>
@@ -263,8 +263,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   CudaCheckError();
 
   photons.set_num(photons.number() + new_photons);
-  Logger::print_info("There are {} photons in the pool",
-                     photons.number());
+  // Logger::print_info("There are {} photons in the pool",
+  //                    photons.number());
 }
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
@@ -292,8 +292,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(
   m_numPerBlock.sync_to_host();
   int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
                    m_numPerBlock[m_blocksPerGrid - 1]);
-  Logger::print_info("{} electron-positron pairs are produced!",
-                     new_pairs);
+  // Logger::print_info("{} electron-positron pairs are produced!",
+  //                    new_pairs);
 
   Kernels::produce_pairs<typename PtcClass::DataClass,
                          typename PhotonClass::DataClass>
@@ -304,8 +304,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(
   CudaCheckError();
 
   ptc.set_num(ptc.number() + new_pairs * 2);
-  Logger::print_info("There are {} particles in the pool",
-                     ptc.number());
+  // Logger::print_info("There are {} particles in the pool",
+  //                    ptc.number());
 }
 
 ////////////////////////////////////////////////////////////////////////
