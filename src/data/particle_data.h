@@ -48,23 +48,25 @@ struct particle_array_type;
 // single particle.
 
 DEF_PARTICLE_STRUCT(particle,
-                    (Aperture::Pos_t, x1,
-                     0.0)(Aperture::Pos_t, x2,
-                          0.0)(Aperture::Pos_t, x3,
-                               0.0)(Aperture::Scalar, p1,
-                                    0.0)(Aperture::Scalar, p2, 0.0)(
-                        Aperture::Scalar, p3,
-                        0.0)(Aperture::Scalar, weight,
-                             0.0)(uint32_t, cell, MAX_CELL)(
-                        uint32_t, tile, MAX_TILE)(uint32_t, flag, 0));
+                    (Aperture::Pos_t, x1, 0.0)
+                    (Aperture::Pos_t, x2, 0.0)
+                    (Aperture::Pos_t, x3, 0.0)
+                    (Aperture::Scalar, p1, 0.0)
+                    (Aperture::Scalar, p2, 0.0)
+                    (Aperture::Scalar, p3, 0.0)
+                    (Aperture::Scalar, weight, 0.0)
+                    (uint32_t, cell, MAX_CELL)
+                    (uint32_t, tile, MAX_TILE)
+                    (uint32_t, flag, 0));
 
 DEF_PARTICLE_STRUCT(particle1d,
-                    (Aperture::Pos_t, x1,
-                     0.0)(Aperture::Pos_t, dx1,
-                          0.0)(Aperture::Scalar, p1,
-                               0.0)(Aperture::Scalar, weight,
-                                    0.0)(uint32_t, cell, MAX_CELL)(
-                        uint32_t, tile, MAX_TILE)(uint32_t, flag, 0));
+                    (Aperture::Pos_t, x1, 0.0)
+                    (Aperture::Pos_t, dx1, 0.0)
+                    (Aperture::Scalar, p1, 0.0)
+                    (Aperture::Scalar, weight, 0.0)
+                    (uint32_t, cell, MAX_CELL)
+                    (uint32_t, tile, MAX_TILE)
+                    (uint32_t, flag, 0));
 
 // We use a 32-bit integer to give every particle a "flag". The highest
 // 3 bits are used to represent the particle species (able to represent
@@ -72,24 +74,26 @@ DEF_PARTICLE_STRUCT(particle1d,
 // pre-defined `ParticleFlag`s in the `enum_types.h` header.
 
 DEF_PARTICLE_STRUCT(photon,
-                    (Aperture::Pos_t, x1,
-                     0.0)(Aperture::Pos_t, x2,
-                          0.0)(Aperture::Pos_t, x3,
-                               0.0)(Aperture::Scalar, p1,
-                                    0.0)(Aperture::Scalar, p2, 0.0)(
-                        Aperture::Scalar, p3,
-                        0.0)(Aperture::Scalar, weight,
-                             0.0)(Aperture::Scalar, path_left,
-                                  0.0)(uint32_t, cell, MAX_CELL)(
-                        uint32_t, tile, MAX_TILE)(uint32_t, flag, 0));
+                    (Aperture::Pos_t, x1, 0.0)
+                    (Aperture::Pos_t, x2, 0.0)
+                    (Aperture::Pos_t, x3, 0.0)
+                    (Aperture::Scalar, p1, 0.0)
+                    (Aperture::Scalar, p2, 0.0)
+                    (Aperture::Scalar, p3, 0.0)
+                    (Aperture::Scalar, weight, 0.0)
+                    (Aperture::Scalar, path_left, 0.0)
+                    (uint32_t, cell, MAX_CELL)
+                    (uint32_t, tile, MAX_TILE)
+                    (uint32_t, flag, 0));
 
 DEF_PARTICLE_STRUCT(photon1d,
-                    (Aperture::Pos_t, x1,
-                     0.0)(Aperture::Pos_t, dx1,
-                          0.0)(Aperture::Scalar, p1,
-                               0.0)(Aperture::Scalar, weight,
-                                    0.0)(Aperture::Scalar, path_left,
-                                         0.0)(uint32_t, cell, MAX_CELL)(
-                        uint32_t, tile, MAX_TILE)(uint32_t, flag, 0));
+                    (Aperture::Pos_t, x1, 0.0)
+                    (Aperture::Pos_t, dx1, 0.0)
+                    (Aperture::Scalar, p1, 0.0)
+                    (Aperture::Scalar, weight, 0.0)
+                    (Aperture::Scalar, path_left, 0.0)
+                    (uint32_t, cell, MAX_CELL)
+                    (uint32_t, tile, MAX_TILE)
+                    (uint32_t, flag, 0));
 
 #endif  // _PARTICLE_DATA_H_
