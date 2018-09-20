@@ -3,7 +3,7 @@
 
 #include "data/enum_types.h"
 #include <cstdio>
-#include <fmt/ostream.h>
+#include <fmt/core.h>
 #include <string>
 
 namespace Aperture {
@@ -70,9 +70,12 @@ class Logger {
 
   template <typename... Args>
   static void log_info(const char* str, Args&&... args) {
-    if (m_file == nullptr)
-      if (!open_log_file()) return;
     if (m_rank == 0) {
+      if (m_file == nullptr)
+        if (!open_log_file()) {
+          fmt::print("File can't be opened!");
+          return; 
+        }
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
@@ -80,9 +83,9 @@ class Logger {
 
   template <typename... Args>
   static void log_detail(const char* str, Args&&... args) {
-    if (m_file == nullptr)
-      if (!open_log_file()) return;
     if (m_rank == 0 && m_level > LogLevel::info) {
+      if (m_file == nullptr)
+        if (!open_log_file()) return;
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
@@ -90,9 +93,9 @@ class Logger {
 
   template <typename... Args>
   static void log_debug(const std::string& str, Args&&... args) {
-    if (m_file == nullptr)
-      if (!open_log_file()) return;
     if (m_rank == 0 && m_level > LogLevel::detail) {
+      if (m_file == nullptr)
+        if (!open_log_file()) return;
       fmt::print(m_file, "Debug: " + str, std::forward<Args>(args)...);
       fmt::print("\n");
     }
