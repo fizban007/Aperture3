@@ -96,6 +96,9 @@ class ParticleBase {
   // partitions, const Grid& grid, int tile_size);
   void clear_guard_cells();
 
+  void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
+                        std::vector<uint32_t>& nums);
+
   void sync_to_device(int deviceId = 0);
   void sync_to_host();
 

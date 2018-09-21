@@ -22,7 +22,7 @@ lorentz_push(particle_data ptc, Scalar E, Scalar dt, uint32_t num) {
       auto p1 = ptc.p1[i];
       int sp = get_ptc_type(ptc.flag[i]);
 
-      p1 += dev_charges[sp] * E * dt / dev_masses[sp];
+      p1 += dev_charges[sp] * dev_params.constE * dt / dev_masses[sp];
       ptc.p1[i] = p1;
     }
   }
@@ -42,7 +42,7 @@ move_photons(photon_data photons, Scalar dt, uint32_t num) {
 
 ParticlePusher_ConstE::ParticlePusher_ConstE(const Environment& env) {
   m_E = env.params().constE;
-  Logger::print_debug("E field is {}", m_E);
+  // Logger::print_debug("E field is {}", m_E);
 }
 
 ParticlePusher_ConstE::~ParticlePusher_ConstE() {}
