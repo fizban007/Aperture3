@@ -20,8 +20,8 @@ struct SimParamsBase {
   double delta_t = 0.01;
   double q_e = 1.0;
   int ptc_per_cell = 1;
-  unsigned long max_ptc_number = 100000;
-  unsigned long max_photon_number = 100000;
+  uint64_t max_ptc_number = 100000;
+  uint64_t max_photon_number = 100000;
   double ion_mass = 1.0;
   int num_species = 3;
 
@@ -58,6 +58,7 @@ struct SimParamsBase {
   float photon_path = 1.0;
   float ic_path = 1.0;
   int rad_energy_bins = 256;
+  float lph_cutoff = 1.0e4;
 
   // Domain decomposition parameters
   int dim_x = 1;
@@ -80,8 +81,8 @@ struct SimParams : public SimParamsBase {
   std::string log_file = data_dir + "output.log";
   std::string conf_file = "sim.toml";
 
-  std::array<std::string, 3> grid_config;
-  std::array<std::string, 3> data_grid_config;
+  // std::array<std::string, 3> grid_config;
+  // std::array<std::string, 3> data_grid_config;
 
   // std::string algorithm_ptc_move = "mapping";
   std::string algorithm_ptc_move = "beadonwire";

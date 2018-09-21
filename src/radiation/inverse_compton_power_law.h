@@ -25,7 +25,7 @@ class InverseComptonPL1D {
   HOST_DEVICE Scalar draw_photon_freepath(Scalar Eph);
 
  private:
-  Scalar m_alpha, m_es, m_emin, m_mfp;
+  Scalar m_alpha, m_es, m_emin, m_mfp, m_icrate;
   RandFunc& m_rng;
 
   HOST_DEVICE Scalar compute_A1(Scalar er);

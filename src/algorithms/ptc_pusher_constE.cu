@@ -42,6 +42,7 @@ move_photons(photon_data photons, Scalar dt, uint32_t num) {
 
 ParticlePusher_ConstE::ParticlePusher_ConstE(const Environment& env) {
   m_E = env.params().constE;
+  Logger::print_debug("E field is {}", m_E);
 }
 
 ParticlePusher_ConstE::~ParticlePusher_ConstE() {}
