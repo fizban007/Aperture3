@@ -1,13 +1,6 @@
 #ifndef _PARTICLE_BASE_IMPL_H_
 #define _PARTICLE_BASE_IMPL_H_
 
-// #include "boost/container/vector.hpp"
-// #include "boost/fusion/include/for_each.hpp"
-// #include "boost/fusion/include/size.hpp"
-// #include "boost/fusion/include/zip_view.hpp"
-// #include "boost/mpl/range_c.hpp"
-// #include "boost/mpl/integral_c.hpp"
-// #include "data/detail/particle_data_impl.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
@@ -744,6 +737,23 @@ ParticleBase<ParticleClass>::clear_guard_cells() {
   //   }
   // }
 }
+
+template <typename ParticleClass>
+void
+ParticleBase<ParticleClass>::compute_spectrum(int num_bins, std::vector<Scalar> &energies, std::vector<uint32_t> &nums) {
+  energies.resize(num_bins, 0.0);
+  nums.resize(num_bins, 0);
+
+  // TODO: Compute energies
+
+  // TODO: Find max energy
+
+  // TODO: Partition the energy bin up to max energy times a factor
+
+  // TODO: Do a histogram
+}
+
+
 }  // namespace Aperture
 
 #endif  // _PARTICLE_BASE_IMPL_H_
