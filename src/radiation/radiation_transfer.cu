@@ -50,7 +50,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     if (cell == MAX_CELL) continue;
 
     Scalar p = ptc.p1[tid];
-    Scalar gamma = sqrt(1.0 + p * p);
+    Scalar gamma = sqrt(1.0f + p * p);
     if (rad_model.emit_photon(gamma)) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
     }
@@ -85,18 +85,20 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
       // TODO: Compute gamma
       Scalar p = ptc.p1[tid];
-      Scalar gamma = sqrt(1.0 + p * p);
+      Scalar gamma = sqrt(1.0f + p * p);
       Scalar Eph = rad_model.draw_photon_energy(gamma, p);
       gamma = (gamma - std::abs(Eph));
-      p = sqrt(gamma * gamma - 1);
+      p = sgn(p) * sqrt(gamma * gamma - 1);
       ptc.p1[tid] = p;
 
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
-      if (Eph < dev_params.E_ph_min) continue;
+      if (std::abs(Eph) < dev_params.E_ph_min) continue;
 
       // Add the new photon
       Scalar path = rad_model.draw_photon_freepath(Eph);
+      if (path > dev_params.lph_cutoff) continue;
+      // printf("Eph is %f, path is %f\n", Eph, path);
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
       photons.p1[offset] = Eph;
@@ -152,10 +154,10 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
   // auto inv_comp = make_inverse_compton_PL1D(dev_params,
   // dev_params.photon_path, rng); RadModel rad_model(dev_params, rng);
 
-  for (uint32_t tid = id; tid < ptc_num;
+  for (uint32_t tid = id; tid < ph_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = pair_pos[tid] - 1;
-    if (pos_in_block > -1) {
+    if (pos_in_block > -1 && photons.cell[tid] != MAX_CELL) {
       int start_pos = pair_cum[blockIdx.x] * 2;
 
       // Split the photon energy evenly between the pairs
@@ -227,7 +229,7 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   m_cumNumPerBlock.assign_dev(0);
 
   cudaDeviceSynchronize();
-  Logger::print_debug("Initialize finished");
+  // Logger::print_debug("Initialize finished");
 
   Kernels::count_photon_produced<typename PtcClass::DataClass, RadModel>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
@@ -239,18 +241,18 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
 
   cudaDeviceSynchronize();
-  Logger::print_debug("Count finished");
+  // Logger::print_debug("Count finished");
   // Scan the number of photons produced per block. The last one will be
   // the total
   thrust::exclusive_scan(ptrNumPerBlock,
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
   CudaCheckError();
-  Logger::print_debug("Scan finished");
+  // Logger::print_debug("Scan finished");
   m_cumNumPerBlock.sync_to_host();
   m_numPerBlock.sync_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1] +
                     m_numPerBlock[m_blocksPerGrid - 1];
-  Logger::print_info("{} photons are produced!", new_photons);
+  // Logger::print_info("{} photons are produced!", new_photons);
 
   Kernels::produce_photons<typename PtcClass::DataClass,
                            typename PhotonClass::DataClass, RadModel>
@@ -261,8 +263,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   CudaCheckError();
 
   photons.set_num(photons.number() + new_photons);
-  Logger::print_info("There are {} photons in the pool",
-                     photons.number());
+  // Logger::print_info("There are {} photons in the pool",
+  //                    photons.number());
 }
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
@@ -290,8 +292,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(
   m_numPerBlock.sync_to_host();
   int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
                    m_numPerBlock[m_blocksPerGrid - 1]);
-  Logger::print_info("{} electron-positron pairs are produced!",
-                     new_pairs);
+  // Logger::print_info("{} electron-positron pairs are produced!",
+  //                    new_pairs);
 
   Kernels::produce_pairs<typename PtcClass::DataClass,
                          typename PhotonClass::DataClass>
@@ -302,8 +304,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(
   CudaCheckError();
 
   ptc.set_num(ptc.number() + new_pairs * 2);
-  Logger::print_info("There are {} particles in the pool",
-                     ptc.number());
+  // Logger::print_info("There are {} particles in the pool",
+  //                    ptc.number());
 }
 
 ////////////////////////////////////////////////////////////////////////
