@@ -45,6 +45,7 @@ class Particles : public ParticleBase<single_particle_t> {
   void append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
               ParticleType type, Scalar weight = 1.0,
               uint32_t flag = 0);
+  void compute_energies();
   // void put(std::size_t pos, const single_particle_t& part);
   // void swap(Index_t pos, single_particle_t& part);
 

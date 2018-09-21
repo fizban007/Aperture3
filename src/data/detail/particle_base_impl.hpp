@@ -16,6 +16,7 @@
 #include <thrust/gather.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/sort.h>
+#include <thrust/extrema.h>
 
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
@@ -741,16 +742,30 @@ ParticleBase<ParticleClass>::clear_guard_cells() {
 template <typename ParticleClass>
 void
 ParticleBase<ParticleClass>::compute_spectrum(int num_bins, std::vector<Scalar> &energies, std::vector<uint32_t> &nums) {
+  // Assume the particle energies have been computed
   energies.resize(num_bins, 0.0);
   nums.resize(num_bins, 0);
 
-  // TODO: Compute energies
+  // Find maximum energy in the array now
+  thrust::device_ptr<Scalar> E_ptr = thrust::device_pointer_cast(m_data.E);
+  Scalar E_max = *thrust::max_element(E_ptr, E_ptr + m_number);
 
-  // TODO: Find max energy
+  // Partition the energy bin up to max energy times a factor
+  Scalar dlogE = std::log(E_max) / (Scalar)num_bins;
+  for (int i = 0; i < num_bins; i++) {
+    energies[i] = std::exp((0.5f + i) * dlogE);
+  }
 
-  // TODO: Partition the energy bin up to max energy times a factor
+  // Do a histogram
+  uint32_t* d_energies;
+  cudaMalloc(&d_energies, num_bins * sizeof(uint32_t));
 
-  // TODO: Do a histogram
+  compute_energy_histogram(d_energies, m_data.E, m_number, num_bins, E_max);
+
+  // Copy the resulting histogram to output
+  cudaMemcpy(nums.data(), d_energies, num_bins * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+  cudaFree(d_energies);
 }
 
 

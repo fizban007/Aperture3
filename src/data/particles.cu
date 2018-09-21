@@ -4,7 +4,24 @@
 #include "sim_params.h"
 
 namespace Aperture {
-// using boost::fusion::at_c;
+
+namespace Kernels {
+
+__global__ void
+compute_ptc_energies(const Scalar* p1, const Scalar* p2,
+                     const Scalar* p3, Scalar* E, size_t num) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    if (i < num) {
+      Scalar p1p = p1[i];
+      Scalar p2p = p2[i];
+      Scalar p3p = p3[i];
+      E[i] = std::sqrt(1.0f + p1p * p1p + p2p * p2p + p3p * p3p);
+    }
+  }
+}
+
+}
 
 template class ParticleBase<single_particle_t>;
 template class ParticleBase<single_photon_t>;
@@ -54,6 +71,14 @@ Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
   put(m_number, x, p, cell, type, weight, flag);
 }
 
+void
+Particles::compute_energies() {
+  Kernels::compute_ptc_energies<<<512, 512>>>
+      (m_data.p1, m_data.p2, m_data.p3, m_data.E, m_number);
+  // Wait for GPU to finish
+  cudaDeviceSynchronize();
+  CudaCheckError();
+}
 // void
 // Particles::sort(const Grid& grid) {
 //   if (m_number > 0)

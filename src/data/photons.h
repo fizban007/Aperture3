@@ -39,6 +39,7 @@ class Photons : public ParticleBase<single_photon_t> {
   // void emit_photons(Particles& electrons, Particles& positrons, const
   // Quadmesh& mesh); void move(const Grid& grid, double dt);
   void sort(const Grid& grid);
+  void compute_energies();
 
   void track(Index_t pos) {
     m_data.flag[pos] |= (int)ParticleFlag::tracked;
