@@ -7,6 +7,9 @@
 #include "cuda/constant_mem_func.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
+#include <highfive/H5File.hpp>
+#include <highfive/H5DataSet.hpp>
+#include <highfive/H5DataSpace.hpp>
 #include <fmt/core.h>
 #include <iostream>
 #include <vector>
@@ -14,6 +17,7 @@
 #include <fstream>
 
 using namespace Aperture;
+using namespace HighFive;
 
 template <typename Rad>
 double
@@ -48,6 +52,15 @@ measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad, double E) {
   }
   data.particles.sync_to_device();
 
+  // output particle spectra
+  std::vector<std::vector<uint32_t>> spectra;
+  std::vector<std::vector<Scalar>> energybins;
+  File spec_file(fmt::format("spec_emin{:.1e}E{:.0f}lic{:.1f}",
+                                       env.params().e_min, env.params().constE,
+                                       env.params().ic_path),
+                 File::ReadWrite | File::Create | File::Truncate);
+  int n_bins = 256;
+
   // Main simulation loop
   Logger::print_debug("Starting simulation loop");
   size_t num_start = 0, num_end = 0;
@@ -67,9 +80,15 @@ measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad, double E) {
                          data.particles.number(),
                          data.photons.number());
       Logger::print_info("p1 is at {}", data.particles.data().p1[0]);
+      // TODO: Output particle spectrum here
+      std::vector<uint32_t> sp;
+      std::vector<Scalar> energies;
+      data.particles.compute_energies();
+      data.particles.compute_spectrum(n_bins, energies, sp);
+      // Logger::print_info("{}",energies[128]);
+      spectra.push_back(sp);
+      energybins.push_back(energies);
     }
-
-    // TODO: Output particle spectrum here
 
     if (data.particles.number() > 20000 && num_start == 0) {
       num_start = data.particles.number();
@@ -83,6 +102,13 @@ measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad, double E) {
       break;
     }
   }
+
+  // write spectra to hdf5 file
+  DataSet specset = spec_file.createDataSet<uint32_t>("Spectra", DataSpace::From(spectra));
+  specset.write(spectra);
+  DataSet Eset = spec_file.createDataSet<Scalar>("Ebins", DataSpace::From(energybins));
+  Eset.write(energybins);
+  
   double s = (std::log((double)num_end) - std::log((double)num_start))
       / (time_end - time_start);
   Logger::print_info("At the end, exponent s = {}", s);
@@ -109,7 +135,7 @@ main(int argc, char *argv[]) {
   std::vector<double> Es;
   // = {50.0, 1.0e2, 5.0e2, 1.0e3, 5.0e3, 1.0e4, 5.0e4,
   //                           1.0e5, 5.0e5, 1.0e6, 5.0e6, 1.0e7};
-  for (double E = 0.001 / env.params().e_min; E < 100.0 / env.params().e_min; E *= 2.0) {
+  for (double E = 0.01 / env.params().e_min; E < 0.1 / env.params().e_min; E *= 2.0) {
     Es.push_back(E);
   }
   std::vector<double> ss(Es.size(), 0.0);

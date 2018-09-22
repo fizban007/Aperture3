@@ -13,9 +13,11 @@
 #include <thrust/binary_search.h>
 #include <thrust/copy.h>
 #include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
 #include <thrust/gather.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/sort.h>
+#include <thrust/fill.h>
 #include <thrust/extrema.h>
 
 #include "visit_struct/visit_struct.hpp"
@@ -749,16 +751,22 @@ ParticleBase<ParticleClass>::compute_spectrum(int num_bins, std::vector<Scalar> 
   // Find maximum energy in the array now
   thrust::device_ptr<Scalar> E_ptr = thrust::device_pointer_cast(m_data.E);
   Scalar E_max = *thrust::max_element(E_ptr, E_ptr + m_number);
+  // Logger::print_info("Maximum energy is {}", E_max);
 
   // Partition the energy bin up to max energy times a factor
   Scalar dlogE = std::log(E_max) / (Scalar)num_bins;
   for (int i = 0; i < num_bins; i++) {
-    energies[i] = std::exp((0.5f + i) * dlogE);
+    energies[i] = std::exp((0.5f + (Scalar)i) * dlogE);
+    // Logger::print_info("{}", energies[i]);
   }
 
   // Do a histogram
   uint32_t* d_energies;
   cudaMalloc(&d_energies, num_bins * sizeof(uint32_t));
+  thrust::device_ptr<uint32_t> ptr_energies =
+      thrust::device_pointer_cast(d_energies);
+  thrust::fill_n(ptr_energies, num_bins, 0);
+  cudaDeviceSynchronize();
 
   compute_energy_histogram(d_energies, m_data.E, m_number, num_bins, E_max);
 
