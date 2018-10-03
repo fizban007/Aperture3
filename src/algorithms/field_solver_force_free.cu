@@ -342,10 +342,10 @@ FieldSolver_FFE::ffe_edotb(ScalarField<Scalar>& result,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+  dim3 blockSize(8, 8, 8);
+  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
                 mesh.reduced_dim(2) / 8);
-  Kernels::compute_FFE_EdotB<16, 8, 8><<<gridSize, blockSize>>>(
+  Kernels::compute_FFE_EdotB<8, 8, 8><<<gridSize, blockSize>>>(
       result.ptr(), E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
       B.ptr(2), q);
   CudaCheckError();
@@ -359,11 +359,11 @@ FieldSolver_FFE::ffe_j(VectorField<Scalar>& result,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 8, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+  dim3 blockSize(8, 8, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 8, mesh.reduced_dim(1) / 8,
                 mesh.reduced_dim(2) / 4);
 
-  Kernels::compute_FFE_J<16, 8, 4><<<gridSize, blockSize>>>(
+  Kernels::compute_FFE_J<8, 8, 4><<<gridSize, blockSize>>>(
       result.ptr(0), result.ptr(1), result.ptr(2), E.ptr(0), E.ptr(1),
       E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2), tmp_f.ptr(), q);
   CudaCheckError();
@@ -377,11 +377,11 @@ FieldSolver_FFE::ffe_dE(VectorField<Scalar>& Eout,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(32, 4, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 4,
+  dim3 blockSize(16, 4, 4);
+  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 4,
                 mesh.reduced_dim(2) / 4);
 
-  Kernels::compute_FFE_dE<32, 4, 4><<<gridSize, blockSize>>>(
+  Kernels::compute_FFE_dE<16, 4, 4><<<gridSize, blockSize>>>(
       Eout.ptr(0), Eout.ptr(1), Eout.ptr(2), J.ptr(0), J.ptr(1),
       J.ptr(2), E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
       B.ptr(2), dt);
