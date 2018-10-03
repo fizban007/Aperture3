@@ -149,7 +149,8 @@ InverseComptonPL1D<RandFunc>::emit_photon(Scalar gamma) {
   float u = m_rng();
   // TODO: Finish photon emission rate
   float e_p = gamma * m_emin;
-  float rate = (e_p < 0.1f ? m_icrate : m_icrate * std::log(2.0f * e_p + 2.5183f) / e_p);
+  float rate = (e_p < 0.1f ? m_icrate : m_icrate * std::log(2.0f * e_p + 0.90517f) / e_p);
+  // float rate = (e_p < 0.1f ? m_icrate : m_icrate * 0.1f / e_p);
   return (u < rate);
 }
 

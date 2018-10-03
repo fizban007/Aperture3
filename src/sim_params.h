@@ -2,6 +2,7 @@
 #define _SIM_PARAMS_H_
 
 #include "data/enum_types.h"
+#include "data/typedefs.h"
 #include "data/quadmesh.h"
 #include <array>
 #include <string>
@@ -17,16 +18,16 @@ struct SimParamsBase {
   // std::string metric = "Cartesian";
 
   // physical parameters
-  double delta_t = 0.01;
-  double q_e = 1.0;
+  Scalar delta_t = 0.01;
+  Scalar q_e = 1.0;
   int ptc_per_cell = 1;
   uint64_t max_ptc_number = 100000;
   uint64_t max_photon_number = 100000;
-  double ion_mass = 1.0;
+  Scalar ion_mass = 1.0;
   int num_species = 3;
 
   bool gravity_on = false;
-  double gravity = 0.0;
+  Scalar gravity = 0.0;
 
   // std::array<std::string, 6> boundary_conditions;
   bool periodic_boundary[3] = {false};
