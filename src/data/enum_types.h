@@ -60,6 +60,7 @@ enum class ParticleFlag : uint32_t {
   ignore_current,
   ignore_EM,
   ignore_radiation,
+  primary,
   secondary,
   existed
 };
