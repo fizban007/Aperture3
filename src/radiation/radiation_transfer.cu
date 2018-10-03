@@ -99,6 +99,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // Add the new photon
       Scalar path = rad_model.draw_photon_freepath(Eph);
       if (path > dev_params.lph_cutoff) continue;
+      // if (true) continue;
       // printf("Eph is %f, path is %f\n", Eph, path);
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
@@ -176,9 +177,9 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.cell[offset] = photons.cell[tid];
       ptc.cell[offset + 1] = photons.cell[tid];
       ptc.flag[offset] = set_ptc_type_flag(
-          (uint32_t)ParticleFlag::secondary, ParticleType::electron);
+          bit_or(ParticleFlag::secondary), ParticleType::electron);
       ptc.flag[offset + 1] = set_ptc_type_flag(
-          (uint32_t)ParticleFlag::secondary, ParticleType::positron);
+          bit_or(ParticleFlag::secondary), ParticleType::positron);
 
       // Set this photon to be empty
       photons.cell[tid] = MAX_CELL;

@@ -1,9 +1,6 @@
 #ifndef _INVERSE_COMPTON_PL_H_
 #define _INVERSE_COMPTON_PL_H_
 
-// #include "data/photons.h"
-// #include "data/particles.h"
-// #include "data/fields.h"
 #include "cuda/cuda_control.h"
 #include "data/typedefs.h"
 #include "sim_params.h"
