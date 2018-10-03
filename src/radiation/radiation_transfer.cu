@@ -8,6 +8,7 @@
 #include "data/photons_1d.h"
 #include "radiation/inverse_compton_dummy.h"
 #include "radiation/inverse_compton_power_law.h"
+#include "radiation/inverse_compton_black_body.h"
 #include "radiation/radiation_transfer.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -320,5 +321,8 @@ template class RadiationTransfer<Particles_1D, Photons_1D,
                                  InverseComptonPL1D<Kernels::CudaRng>>;
 template class RadiationTransfer<Particles, Photons,
                                  InverseComptonPL1D<Kernels::CudaRng>>;
+template class RadiationTransfer<Particles, Photons,
+                                 InverseComptonBB<Kernels::CudaRng>>;
+
 
 }  // namespace Aperture
