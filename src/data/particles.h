@@ -46,6 +46,10 @@ class Particles : public ParticleBase<single_particle_t> {
               ParticleType type, Scalar weight = 1.0,
               uint32_t flag = 0);
   void compute_energies();
+
+  using BaseClass::compute_spectrum;
+  void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
+                        std::vector<uint32_t>& nums, ParticleFlag flag);
   // void put(std::size_t pos, const single_particle_t& part);
   // void swap(Index_t pos, single_particle_t& part);
 

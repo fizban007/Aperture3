@@ -79,6 +79,44 @@ Particles::compute_energies() {
   cudaDeviceSynchronize();
   CudaCheckError();
 }
+
+void
+Particles::compute_spectrum(int num_bins, std::vector<Scalar> &energies,
+                            std::vector<uint32_t> &nums, ParticleFlag flag) {
+  // Assume the particle energies have been computed
+  energies.resize(num_bins, 0.0);
+  nums.resize(num_bins, 0);
+
+  // Find maximum energy in the array now
+  thrust::device_ptr<Scalar> E_ptr = thrust::device_pointer_cast(m_data.E);
+  Scalar E_max = *thrust::max_element(E_ptr, E_ptr + m_number);
+  // Logger::print_info("Maximum energy is {}", E_max);
+
+  // Partition the energy bin up to max energy times a factor
+  Scalar dlogE = std::log(E_max) / (Scalar)num_bins;
+  for (int i = 0; i < num_bins; i++) {
+    energies[i] = std::exp((0.5f + (Scalar)i) * dlogE);
+    // Logger::print_info("{}", energies[i]);
+  }
+
+  // Do a histogram
+  uint32_t* d_energies;
+  cudaMalloc(&d_energies, num_bins * sizeof(uint32_t));
+  thrust::device_ptr<uint32_t> ptr_energies =
+      thrust::device_pointer_cast(d_energies);
+  thrust::fill_n(ptr_energies, num_bins, 0);
+  cudaDeviceSynchronize();
+
+  compute_energy_histogram(d_energies, m_data.E, m_number, num_bins, E_max,
+                           m_data.flag, flag);
+
+  // Copy the resulting histogram to output
+  cudaMemcpy(nums.data(), d_energies, num_bins * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+  cudaFree(d_energies);
+}
+
+
 // void
 // Particles::sort(const Grid& grid) {
 //   if (m_number > 0)

@@ -1,6 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
+#include "utils/util_functions.h"
 
 namespace Aperture {
 
@@ -31,11 +32,30 @@ erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
 }
 
 __global__ void
-compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num, int num_bins, Scalar E_max) {
+compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
+                         int num_bins, Scalar E_max) {
   Scalar dlogE = std::log(E_max) / (Scalar)num_bins;
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     if (i < num) {
+      Scalar logE = std::log(E[i]);
+      int idx = (int)floorf(logE / dlogE);
+      if (idx < 0) idx = 0;
+      if (idx >= num_bins) idx = num_bins - 1;
+
+      atomicAdd(&hist[idx], 1);
+    }
+  }
+}
+__global__ void
+compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
+                         int num_bins, Scalar E_max,
+                         const uint32_t* flags, ParticleFlag flag) {
+  Scalar dlogE = std::log(E_max) / (Scalar)num_bins;
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    if (i < num) {
+      if (!check_bit(flags[i], flag)) continue;
       Scalar logE = std::log(E[i]);
       int idx = (int)floorf(logE / dlogE);
       if (idx < 0) idx = 0;
@@ -65,8 +85,21 @@ erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
 }
 
 void
-compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num, int num_bins, Scalar Emax) {
-  Kernels::compute_energy_histogram<<<512, 512>>>(hist, E, num, num_bins, Emax);
+compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
+                         int num_bins, Scalar Emax) {
+  Kernels::compute_energy_histogram<<<512, 512>>>(hist, E, num,
+                                                  num_bins, Emax);
+  // Wait for GPU to finish
+  cudaDeviceSynchronize();
+  CudaCheckError();
+}
+
+void
+compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
+                         int num_bins, Scalar Emax,
+                         const uint32_t* flags, ParticleFlag flag) {
+  Kernels::compute_energy_histogram<<<512, 512>>>(
+      hist, E, num, num_bins, Emax, flags, flag);
   // Wait for GPU to finish
   cudaDeviceSynchronize();
   CudaCheckError();
