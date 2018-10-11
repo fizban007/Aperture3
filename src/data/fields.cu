@@ -135,9 +135,9 @@ FieldBase::check_grid_extent(const Extent& ext1,
 //  Scalar Field Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
-// template <typename T>
-// ScalarField<T>::ScalarField()
-//     : FieldBase(), m_array() {}
+template <typename T>
+ScalarField<T>::ScalarField()
+    : FieldBase(), m_array() {}
 
 template <typename T>
 ScalarField<T>::ScalarField(const grid_type& grid, Stagger stagger)
@@ -337,15 +337,16 @@ ScalarField<T>::interpolate(const Vec3<int>& c,
 //  Vector Field Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
-// template <typename T>
-// VectorField<T>::VectorField()
-//     : FieldBase(), m_array() {
-//   for (int i = 0; i < VECTOR_DIM; ++i) {
-//     // Default initialize to face-centered
-//     m_stagger[i] = Stagger("000");
-//     m_stagger[i][i] = true;
-//   }
-// }
+template <typename T>
+VectorField<T>::VectorField()
+    : FieldBase(), m_array() {
+  for (int i = 0; i < VECTOR_DIM; ++i) {
+    // Default initialize to face-centered
+    m_stagger[i] = Stagger(0x000);
+    // m_stagger[i][i] = true;
+    m_stagger[i].set_bit(i, true);
+  }
+}
 
 template <typename T>
 VectorField<T>::VectorField(const grid_type& grid) : FieldBase(grid) {
@@ -356,7 +357,7 @@ VectorField<T>::VectorField(const grid_type& grid) : FieldBase(grid) {
     m_stagger[i] = Stagger();
     m_stagger[i].set_bit(i, true);
   }
-  init_array_ptrs();
+  // init_array_ptrs();
 }
 
 template <typename T>
@@ -365,7 +366,7 @@ VectorField<T>::VectorField(const self_type& field)
       m_array(field.m_array),
       m_stagger(field.m_stagger),
       m_type(field.m_type) {
-  init_array_ptrs();
+  // init_array_ptrs();
 }
 
 template <typename T>
@@ -374,12 +375,12 @@ VectorField<T>::VectorField(self_type&& field)
       m_array(std::move(field.m_array)),
       m_stagger(field.m_stagger),
       m_type(field.m_type) {
-  init_array_ptrs();
+  // init_array_ptrs();
 }
 
 template <typename T>
 VectorField<T>::~VectorField() {
-  cudaFree(m_ptrs);
+  // cudaFree(m_ptrs);
 }
 
 template <typename T>
@@ -389,9 +390,9 @@ VectorField<T>::operator=(const self_type& other) {
   this->m_grid_size = other.m_grid_size;
   m_array = other.m_array;
   m_type = other.m_type;
-  for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_ptrs[i] = m_array[i].data();
-  }
+  // for (int i = 0; i < VECTOR_DIM; ++i) {
+  //   m_ptrs[i] = m_array[i].data();
+  // }
 
   return (*this);
 }
@@ -403,9 +404,9 @@ VectorField<T>::operator=(self_type&& other) {
   this->m_grid_size = other.m_grid_size;
   m_array = std::move(other.m_array);
   m_type = other.m_type;
-  for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_ptrs[i] = m_array[i].data();
-  }
+  // for (int i = 0; i < VECTOR_DIM; ++i) {
+  //   m_ptrs[i] = m_array[i].data();
+  // }
 
   return (*this);
 }
@@ -418,15 +419,15 @@ VectorField<T>::initialize() {
   }
 }
 
-template <typename T>
-void
-VectorField<T>::init_array_ptrs() {
-  CudaSafeCall(cudaMallocManaged(&m_ptrs, VECTOR_DIM * sizeof(T*)));
+// template <typename T>
+// void
+// VectorField<T>::init_array_ptrs() {
+//   // CudaSafeCall(cudaMallocManaged(&m_ptrs, VECTOR_DIM * sizeof(T*)));
 
-  for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_ptrs[i] = m_array[i].data();
-  }
-}
+//   // for (int i = 0; i < VECTOR_DIM; ++i) {
+//   //   m_ptrs[i] = m_array[i].data();
+//   // }
+// }
 
 // template <typename T>
 // void vector_field<T>::initialize(const initial_condition& ic,
