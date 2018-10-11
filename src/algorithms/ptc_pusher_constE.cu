@@ -60,4 +60,9 @@ ParticlePusher_ConstE::push(SimData& data, double dt) {
   CudaCheckError();
 }
 
+void
+ParticlePusher_ConstE::handle_boundary(SimData& data) {
+  
+}
+
 }
