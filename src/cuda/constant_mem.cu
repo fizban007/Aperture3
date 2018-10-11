@@ -8,6 +8,7 @@ __constant__ SimParamsBase dev_params;
 __constant__ Quadmesh dev_mesh;
 __constant__ float dev_charges[8];
 __constant__ float dev_masses[8];
+__constant__ FieldData dev_bg_fields;
 
 void
 init_dev_params(const SimParams& params) {
@@ -31,6 +32,20 @@ void
 init_dev_masses(const float masses[8]) {
   CudaSafeCall(cudaMemcpyToSymbol(dev_masses, (void*)masses,
                                   sizeof(dev_masses)));
+}
+
+void
+init_dev_bg_fields(const VectorField<Scalar>& E,
+                   const VectorField<Scalar>& B) {
+  FieldData data;
+  data.E1 = E.ptr(0);
+  data.E2 = E.ptr(1);
+  data.E3 = E.ptr(2);
+  data.B1 = B.ptr(0);
+  data.B2 = B.ptr(1);
+  data.B3 = B.ptr(2);
+  CudaSafeCall(cudaMemcpyToSymbol(dev_bg_fields, (void*)&data,
+                                  sizeof(FieldData)));
 }
 
 void
