@@ -22,6 +22,7 @@ set(Aperture_src
   # "algorithms/ptc_pusher_beadonwire.cu"
   # "algorithms/ptc_pusher_geodesic.cpp"
   "sim_data.cu"
+  "ptc_updater.cu"
   "cuda/constant_mem.cu" "cuda/kernels.cu"
   "radiation/radiation_transfer.cu"
   # "algorithms/current_deposit_Esirkepov.cu"
