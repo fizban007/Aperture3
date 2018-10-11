@@ -15,7 +15,7 @@ namespace Kernels {
 // TODO: work out the cuda kernels for the 3D finite difference
 
 __global__ void
-update_field_1d(Scalar *E, const Scalar *J, const Scalar *J_b) {
+update_field_1d_simple(Scalar *E, const Scalar *J, const Scalar *J_b) {
   auto dt = dev_params.delta_t;
   for (int i = dev_params.guard[0] - 1 + blockIdx.x * blockDim.x +
                threadIdx.x;
@@ -26,6 +26,24 @@ update_field_1d(Scalar *E, const Scalar *J, const Scalar *J_b) {
       E[i] += dt * (J_b[i] - J[i]);
   }
 }
+
+__global__ void
+update_field_1d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
+                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
+                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
+                Scalar dt) {}
+
+__global__ void
+update_field_2d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
+                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
+                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
+                Scalar dt) {}
+
+__global__ void
+update_field_3d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
+                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
+                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
+                Scalar dt) {}
 
 }  // namespace Kernels
 
@@ -45,7 +63,7 @@ FieldSolver_Default::update_fields(vfield_t &E, vfield_t &B,
   auto &mesh = grid.mesh();
   // Explicit update
   if (grid.dim() == 1) {
-    Kernels::update_field_1d<<<512, 512>>>(
+    Kernels::update_field_1d_simple<<<512, 512>>>(
         E.data(0).data(), J.data(0).data(),
         m_background_j.data(0).data());
     CudaCheckError();
