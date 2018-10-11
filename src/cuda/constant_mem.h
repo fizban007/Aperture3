@@ -2,6 +2,7 @@
 #define _CONSTANT_MEM_H_
 
 #include "data/quadmesh.h"
+#include "data/field_data.h"
 #include "sim_params.h"
 
 namespace Aperture {
@@ -16,6 +17,8 @@ extern __device__ __constant__ float dev_charges[8];
 // This is the mass for each species, up to 8 because we use 3 bits to
 // represent species
 extern __device__ __constant__ float dev_masses[8];
+// This is the structure for background fields
+extern __device__ __constant__ FieldData dev_bg_fields;
 
 }  // namespace Aperture
 
