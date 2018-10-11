@@ -39,10 +39,10 @@ PICSim::PICSim(Environment& env) : m_env(env) {
   //   m_pusher = std::unique_ptr<ParticlePusher_BeadOnWire>(
   //       new ParticlePusher_BeadOnWire(m_env));
   // } else
-  if (m_env.params().algorithm_ptc_move == "constE") {
-    m_pusher = std::unique_ptr<ParticlePusher_ConstE>(
-        new ParticlePusher_ConstE(m_env));
-  }
+  // if (m_env.params().algorithm_ptc_move == "constE") {
+    // m_pusher = std::unique_ptr<ParticlePusher_ConstE>(
+        // new ParticlePusher_ConstE(m_env));
+  // }
   // } else {
   //   m_pusher = std::unique_ptr<ParticlePusher_Geodesic>(
   //       new ParticlePusher_Geodesic(m_env));
@@ -106,9 +106,11 @@ void
 PICSim::step(Aperture::SimData& data, uint32_t step) {
   double dt = m_env.params().delta_t;
   // Particle push, move, and photon move are all handled here
-  m_pusher->push(data, dt);
+  // m_pusher->push(data, dt);
   // m_inverse_compton->convert_pairs(data.particles, data.photons);
-  m_depositer->deposit(data, dt);
+  // m_depositer->deposit(data, dt);
+  m_ptc_updater->update_particles(data, dt);
+  m_ptc_updater->handle_boundary(data);
   m_field_solver->update_fields(data, dt);
   // m_inverse_compton->emit_photons(data.photons, data.particles);
   // data.photons.emit_photons(data.particles[0], data.particles[1],
@@ -123,7 +125,7 @@ PICSim::step(Aperture::SimData& data, uint32_t step) {
   // 0),
   //                    data.J(0, 1), data.J(0, 2), data.J(0, 3));
 
-  m_pusher->handle_boundary(data);
+  // m_pusher->handle_boundary(data);
   // Sort the particles every 20 timesteps to move empty slots to the
   // back
   if ((step % 20) == 0) {
