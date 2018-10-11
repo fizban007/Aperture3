@@ -9,6 +9,7 @@
 #include <string>
 // #include "data/domain_info.h"
 #include "data/grid.h"
+#include "data/fields.h"
 #include "utils/hdf_exporter.h"
 // #include "metrics.h"
 // #include "utils/data_exporter.h"
@@ -98,6 +99,8 @@ class Environment {
 
   // DomainInfo m_domain_info;
   // BoundaryConditions m_bc;
+  VectorField<Scalar> m_Ebg;
+  VectorField<Scalar> m_Bbg;
 
   // std::unique_ptr<MPIComm> m_comm;
   std::unique_ptr<DataExporter> m_exporter;

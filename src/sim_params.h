@@ -25,6 +25,7 @@ struct SimParamsBase {
   uint64_t max_photon_number = 100000;
   Scalar ion_mass = 1.0;
   int num_species = 3;
+  bool use_bg_fields = true;
 
   bool gravity_on = false;
   Scalar gravity = 0.0;

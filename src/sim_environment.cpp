@@ -65,6 +65,13 @@ Environment::setup_env(const std::string& conf_file) {
   // (void*)m_grid.mesh_ptr(), sizeof(Quadmesh)); CudaCheckError();
   init_dev_mesh(*m_grid.mesh_ptr());
 
+  // Initialize the background fields
+  if (m_params.use_bg_fields) {
+    m_Ebg = VectorField<Scalar>(m_grid);
+    m_Bbg = VectorField<Scalar>(m_grid);
+    init_dev_bg_fields(m_Ebg, m_Bbg);
+  }
+
   // Setup particle charges and masses
   float charges[8];
   float masses[8];

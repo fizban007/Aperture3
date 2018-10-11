@@ -18,7 +18,7 @@ namespace Aperture {
 class FieldBase {
  public:
   /// Default constructor, initialize an empty grid and zero grid size.
-  // FieldBase() : m_grid(nullptr), m_grid_size(0) {}
+  FieldBase() : m_grid(nullptr), m_grid_size(0) {}
 
   /// Main constructor, initializes the grid according to a given \ref
   /// grid object.
@@ -52,7 +52,7 @@ class ScalarField : public FieldBase {
   typedef ScalarField<T> self_type;
 
   // Constructors and destructor
-  // ScalarField();
+  ScalarField();
   ScalarField(const grid_type &grid, Stagger stagger = Stagger(0));
   ScalarField(const self_type &field);
   ScalarField(self_type &&field);
@@ -121,7 +121,7 @@ class VectorField : public FieldBase {
   typedef VectorField<T> self_type;
 
   /// Constructors and Destructor
-  // VectorField();
+  VectorField();
   VectorField(const grid_type &grid);
   VectorField(const self_type &field);
   VectorField(self_type &&field);
@@ -143,7 +143,7 @@ class VectorField : public FieldBase {
   void copyFrom(const self_type &field);
 
   void resize(const grid_type &grid);
-  void init_array_ptrs();
+  // void init_array_ptrs();
 
   /// Arithmetic operations
   self_type &multiplyBy(data_type value);
@@ -199,8 +199,8 @@ class VectorField : public FieldBase {
   const array_type &data(int n) const { return m_array[n]; }
   cudaPitchedPtr ptr(int n) { return m_array[n].data_d(); }
   const cudaPitchedPtr ptr(int n) const { return m_array[n].data_d(); }
-  data_type **array_ptrs() { return m_ptrs; }
-  const data_type *const *array_ptrs() const { return m_ptrs; }
+  // data_type **array_ptrs() { return m_ptrs; }
+  // const data_type *const *array_ptrs() const { return m_ptrs; }
   Stagger stagger(int n) const { return m_stagger[n]; }
   const std::array<Stagger, VECTOR_DIM> &stagger() const {
     return m_stagger;
@@ -225,7 +225,7 @@ class VectorField : public FieldBase {
   FieldType m_type;
   // Keep a cached array of pointers to the actual device pointers,
   // convenient for the kernels
-  data_type **m_ptrs;
+  // data_type **m_ptrs;
 
   // Default normalization is coord FieldNormalization
   // m_normalization = FieldNormalization::coord;
