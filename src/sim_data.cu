@@ -25,8 +25,8 @@ SimData::SimData(const Environment& e, int deviceId)
 
   CudaSafeCall(cudaSetDevice(devId));
   // Initialize the pointer array that contains the device pointers
-  CudaSafeCall(
-      cudaMallocManaged(&rho_ptrs, num_species * sizeof(Scalar*)));
+  // CudaSafeCall(
+  //     cudaMallocManaged(&rho_ptrs, num_species * sizeof(Scalar*)));
 
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());

@@ -1,0 +1,127 @@
+#ifndef _INTERPOLATION_H_
+#define _INTERPOLATION_H_
+
+#include "cuda/constant_mem.h"
+#include "cuda/cuda_control.h"
+#include "data/stagger.h"
+#include "data/typedefs.h"
+
+namespace Aperture {
+
+namespace Spline {
+
+struct nearest_grid_point {
+  enum { radius = 1, support = 1 };
+
+  HD_INLINE Scalar operator()(Scalar dx) const {
+    return (std::abs(dx) <= 0.5f ? 1.0f : 0.0f);
+  }
+};
+
+struct cloud_in_cell {
+  enum { radius = 1, support = 2 };
+
+  HD_INLINE Scalar operator()(Scalar dx) const {
+    Scalar abs_dx = std::abs(dx);
+    // return (abs_dx < 0.5 ? max(1.0 - abs_dx, 0.0) : abs_dx);
+    return max(1.0f - abs_dx, 0.0f);
+  }
+};
+
+struct triangular_shaped_cloud {
+  enum { radius = 2, support = 3 };
+
+  HD_INLINE Scalar operator()(Scalar dx) const {
+    Scalar abs_dx = std::abs(dx);
+    if (abs_dx < 0.5f) {
+      return 0.75f - dx * dx;
+    } else if (abs_dx < 1.5f) {
+      Scalar tmp = 1.5f - abs_dx;
+      return 0.5f * tmp * tmp;
+    } else {
+      return 0.0f;
+    }
+  }
+};
+
+struct piecewise_cubic {
+  enum { radius = 2, support = 4 };
+
+  HD_INLINE Scalar operator()(Scalar dx) const {
+    Scalar abs_dx = std::abs(dx);
+    if (abs_dx < 1.0f) {
+      Scalar tmp = abs_dx * abs_dx;
+      return 0.6666667f - tmp + 0.5f * tmp * abs_dx;
+    } else if (abs_dx < 2.0f) {
+      Scalar tmp = 2.0f - abs_dx;
+      return 0.1666667f * tmp * tmp * tmp;
+    } else {
+      return 0.0f;
+    }
+  }
+};
+
+template <typename Interp, typename FloatT>
+Scalar HD_INLINE
+interp_cell(const Interp& interp, FloatT rel_pos, int c, int t,
+            int stagger = 0) {
+  // The actual distance between particle and t
+  FloatT x = ((Scalar)t + (stagger == 0 ? 0.5f : 1.0f)) -
+             (rel_pos + (Scalar)c);
+  return interp(x);
+}
+
+}  // namespace Spline
+
+template <typename Interp>
+struct Interpolator3D {
+  Interp interp;
+
+  template <typename FloatT>
+  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
+                                FloatT x3, int c1, int c2, int c3,
+                                Stagger stagger) const {
+    Scalar result = 0.0f;
+    for (int k = c3 - Interp::radius;
+         k <= c3 + Interp::support - Interp::radius; k++) {
+      size_t k_offset = k * f.pitch * f.ysize;
+      for (int j = c2 - Interp::radius;
+           j <= c2 + Interp::support - Interp::radius; j++) {
+        size_t j_offset = j * f.pitch;
+        for (int i = c1 - Interp::radius;
+             i <= c1 + Interp::support - Interp::radius; i++) {
+          size_t globalOffset =
+              k_offset + j_offset + i * sizeof(Scalar);
+
+          result += (*(Scalar*)((char*)f.ptr + globalOffset)) *
+                    interp_cell(interp, x1, c1, i, stagger[0]) *
+                    interp_cell(interp, x2, c2, j, stagger[1]) *
+                    interp_cell(interp, x3, c3, k, stagger[2]);
+        }
+      }
+    }
+    return result;
+  }
+
+  template <typename FloatT>
+  HOST_DEVICE Scalar compute_weight(FloatT x1, FloatT x2, FloatT x3,
+                                    int c1, int c2, int c3, int t1,
+                                    int t2, int t3,
+                                    Stagger stagger) const {
+    return interp_cell(interp, x1, c1, t1, stagger[0]) *
+           interp_cell(interp, x2, c2, t2, stagger[1]) *
+           interp_cell(interp, x3, c3, t3, stagger[2]);
+  }
+
+  template <typename FloatT>
+  HD_INLINE Scalar interpolate(FloatT x) const {
+    return interp(x);
+  }
+
+  HD_INLINE int radius() const { return Interp::radius; }
+  HD_INLINE int support() const { return Interp::support; }
+};
+
+}  // namespace Aperture
+
+#endif  // _INTERPOLATION_H_

@@ -53,9 +53,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
 
   params.delta_t =
       config->get_as<double>("delta_t").value_or(defaults.delta_t);
-  params.max_ptc_number =
-      config->get_as<uint64_t>("max_ptc_number")
-          .value_or(defaults.max_ptc_number);
+  params.max_ptc_number = config->get_as<uint64_t>("max_ptc_number")
+                              .value_or(defaults.max_ptc_number);
   params.max_photon_number =
       config->get_as<uint64_t>("max_photon_number")
           .value_or(defaults.max_photon_number);
@@ -68,6 +67,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                             .value_or(defaults.create_pairs);
   params.trace_photons = config->get_as<bool>("trace_photons")
                              .value_or(defaults.trace_photons);
+  params.use_bg_fields = config->get_as<bool>("use_bg_fields")
+                             .value_or(defaults.use_bg_fields);
   params.track_percent = config->get_as<double>("track_percent")
                              .value_or(defaults.track_percent);
   params.gamma_thr =
@@ -90,7 +91,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.E_ph = config->get_as<double>("E_ph").value_or(defaults.E_ph);
   params.E_ph_min =
       config->get_as<double>("E_ph_min").value_or(defaults.E_ph_min);
-  params.constE = config->get_as<double>("constE").value_or(defaults.constE);
+  params.constE =
+      config->get_as<double>("constE").value_or(defaults.constE);
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
@@ -102,37 +104,42 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
 
   // Parse grid information
   auto mesh_table = config->get_table("Grid");
-  auto guard = mesh_table->get_array_of<int64_t>("guard");
-  if (guard) {
-    for (int i = 0; i < 3; i++) params.guard[i] = (*guard)[i];
-  }
+  if (mesh_table) {
+    auto guard = mesh_table->get_array_of<int64_t>("guard");
+    if (guard) {
+      for (int i = 0; i < 3; i++) params.guard[i] = (*guard)[i];
+    }
 
-  auto N = mesh_table->get_array_of<int64_t>("N");
-  if (N) {
-    for (int i = 0; i < 3; i++) params.N[i] = (*N)[i];
-  }
+    auto N = mesh_table->get_array_of<int64_t>("N");
+    if (N) {
+      for (int i = 0; i < 3; i++) params.N[i] = (*N)[i];
+    }
 
-  auto lower = mesh_table->get_array_of<double>("lower");
-  if (lower) {
-    for (int i = 0; i < 3; i++) params.lower[i] = (*lower)[i];
-  }
+    auto lower = mesh_table->get_array_of<double>("lower");
+    if (lower) {
+      for (int i = 0; i < 3; i++) params.lower[i] = (*lower)[i];
+    }
 
-  auto size = mesh_table->get_array_of<double>("size");
-  if (size) {
-    for (int i = 0; i < 3; i++) params.size[i] = (*size)[i];
-  }
+    auto size = mesh_table->get_array_of<double>("size");
+    if (size) {
+      for (int i = 0; i < 3; i++) params.size[i] = (*size)[i];
+    }
 
-  auto tile_size = mesh_table->get_array_of<double>("tile_size");
-  if (tile_size) {
-    for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i];
+    auto tile_size = mesh_table->get_array_of<double>("tile_size");
+    if (tile_size) {
+      for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i];
+    }
   }
 
   // Simulation configuration
   auto sim_table = config->get_table("Simulation");
-  params.algorithm_ptc_move = sim_table->get_as<std::string>
-      ("algorithm_ptc_move").value_or(defaults.algorithm_ptc_move);
-  params.random_seed = config->get_as<int>
-      ("random_seed").value_or(defaults.random_seed);
+  if (sim_table) {
+    params.algorithm_ptc_move =
+        sim_table->get_as<std::string>("algorithm_ptc_move")
+            .value_or(defaults.algorithm_ptc_move);
+    params.random_seed = config->get_as<int>("random_seed")
+                             .value_or(defaults.random_seed);
+  }
 
   compute_derived_quantities(params);
 }

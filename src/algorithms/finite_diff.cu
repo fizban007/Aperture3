@@ -39,6 +39,7 @@ deriv<6>(Scalar f[], Scalar inv_delta) {
          inv_delta;
 }
 
+// 3D version
 template <int Order, int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__ Scalar
 d1(Scalar array[][DIM2 + Pad<Order>::val * 2]
@@ -51,6 +52,29 @@ d1(Scalar array[][DIM2 + Pad<Order>::val * 2]
   return deriv<Order>(val, dev_mesh.inv_delta[0]);
 }
 
+// 2D version
+template <int Order, int DIM1, int DIM2>
+__device__ __forceinline__ Scalar
+d1(Scalar array[][DIM1 + Pad<Order>::val * 2], int c1, int c2) {
+  Scalar val[Order];
+#pragma unroll
+  for (int i = 0; i < Order; i++)
+    val[i] = array[c2][c1 - Pad<Order>::val + i];
+  return deriv<Order>(val, dev_mesh.inv_delta[0]);
+}
+
+// 1D version
+template <int Order, int DIM1>
+__device__ __forceinline__ Scalar
+d1(Scalar array[], int c1) {
+  Scalar val[Order];
+#pragma unroll
+  for (int i = 0; i < Order; i++)
+    val[i] = array[c1 - Pad<Order>::val + i];
+  return deriv<Order>(val, dev_mesh.inv_delta[0]);
+}
+
+// 3D version
 template <int Order, int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__ Scalar
 d2(Scalar array[][DIM2 + Pad<Order>::val * 2]
@@ -63,6 +87,18 @@ d2(Scalar array[][DIM2 + Pad<Order>::val * 2]
   return deriv<Order>(val, dev_mesh.inv_delta[1]);
 }
 
+// 2D version
+template <int Order, int DIM1, int DIM2>
+__device__ __forceinline__ Scalar
+d2(Scalar array[][DIM1 + Pad<Order>::val * 2], int c1, int c2) {
+  Scalar val[Order];
+#pragma unroll
+  for (int i = 0; i < Order; i++)
+    val[i] = array[c2 - Pad<Order>::val + i][c1];
+  return deriv<Order>(val, dev_mesh.inv_delta[1]);
+}
+
+// d3 has only 3D version
 template <int Order, int DIM1, int DIM2, int DIM3>
 __device__ __forceinline__ Scalar
 d3(Scalar array[][DIM2 + Pad<Order>::val * 2]

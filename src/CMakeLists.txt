@@ -95,6 +95,8 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 add_executable(exponent "exponent.cpp")
 target_link_libraries(exponent Aperture)
 
+add_executable(aper3d "main3d.cpp")
+target_link_libraries(aper3d Aperture)
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)
 

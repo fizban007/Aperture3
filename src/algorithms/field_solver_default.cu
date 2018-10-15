@@ -27,24 +27,6 @@ update_field_1d_simple(Scalar *E, const Scalar *J, const Scalar *J_b) {
   }
 }
 
-__global__ void
-update_field_1d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
-                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
-                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
-                Scalar dt) {}
-
-__global__ void
-update_field_2d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
-                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
-                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
-                Scalar dt) {}
-
-__global__ void
-update_field_3d(cudaPitchedPtr E1, cudaPitchedPtr E2, cudaPitchedPtr E3,
-                cudaPitchedPtr B1, cudaPitchedPtr B2, cudaPitchedPtr B3,
-                cudaPitchedPtr J1, cudaPitchedPtr J2, cudaPitchedPtr J3,
-                Scalar dt) {}
-
 }  // namespace Kernels
 
 FieldSolver_Default::FieldSolver_Default(const Grid &g)
@@ -72,8 +54,9 @@ FieldSolver_Default::update_fields(vfield_t &E, vfield_t &B,
     curl_add(B, E, dt);
     cudaDeviceSynchronize();
 
-    // Compute the curl of B and add it to E
+    // Compute the update of E
     curl_add(E, B, dt);
+    field_add(E, J, -dt);
     cudaDeviceSynchronize();
   }
 

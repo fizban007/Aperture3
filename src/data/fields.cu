@@ -342,7 +342,7 @@ VectorField<T>::VectorField()
     : FieldBase(), m_array() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // Default initialize to face-centered
-    m_stagger[i] = Stagger(0x000);
+    m_stagger[i] = Stagger(0b000);
     // m_stagger[i][i] = true;
     m_stagger[i].set_bit(i, true);
   }

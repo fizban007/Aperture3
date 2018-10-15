@@ -30,9 +30,6 @@ struct SimData {
   Photons photons;
   int num_species;
   double time = 0.0;
-  // Keep an array of pointers for all the device pointers, convenient
-  // for kernels
-  Scalar** rho_ptrs;
   int devId;
 };
 
