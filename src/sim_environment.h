@@ -64,6 +64,8 @@ class Environment {
   const Grid& grid() const { return m_grid; }
   const Grid& local_grid() const { return m_grid; }
   const Quadmesh& mesh() const { return m_grid.mesh(); }
+  VectorField<Scalar>& E_bg() { return m_Ebg; }
+  VectorField<Scalar>& B_bg() { return m_Bbg; }
 
   // const Grid& local_grid() const { return m_local_grid; }
   // const Grid& local_grid_dual() const { return m_local_grid_dual; }

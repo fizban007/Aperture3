@@ -102,8 +102,10 @@ measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad,
       spectra_ph.push_back(sp);
       ebins_ph.push_back(energies);
     }
+
     rad.emit_photons(data.photons, data.particles);
-    sim.ptc_pusher().push(data, dt);
+    // sim.ptc_pusher().push(data, dt);
+    sim.ptc_updater().update_particles(data, dt);
     rad.produce_pairs(data.particles, data.photons);
 
     if (data.particles.number() > 20000 && num_start == 0) {
@@ -166,8 +168,8 @@ main(int argc, char* argv[]) {
   std::vector<double> Es;
   // = {50.0, 1.0e2, 5.0e2, 1.0e3, 5.0e3, 1.0e4, 5.0e4,
   //                           1.0e5, 5.0e5, 1.0e6, 5.0e6, 1.0e7};
-  for (double E = 1.0 / env.params().e_min;
-       E < 1000.0 / env.params().e_min; E *= 2.0) {
+  for (double E = 0.1 / env.params().e_min;
+       E < 100.0 / env.params().e_min; E *= 2.0) {
     Es.push_back(E);
   }
   std::vector<double> ss(Es.size(), 0.0);

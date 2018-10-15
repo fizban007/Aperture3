@@ -363,7 +363,6 @@ ParticleBase<ParticleClass>::sort_by_cell() {
                           MAX_CELL - 1) -
       ptr_cell;
 
-  // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
   CudaCheckError();
 }

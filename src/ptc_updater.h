@@ -6,8 +6,14 @@ namespace Aperture {
 struct SimData;
 class Environment;
 
-class PtcUpdater
-{
+struct fields_data {
+  cudaPitchedPtr E1, E2, E3;
+  cudaPitchedPtr B1, B2, B3;
+  cudaPitchedPtr J1, J2, J3;
+  cudaPitchedPtr* Rho;
+};
+
+class PtcUpdater {
  public:
   PtcUpdater(const Environment& env);
   virtual ~PtcUpdater();
@@ -18,13 +24,11 @@ class PtcUpdater
  private:
   const Environment& m_env;
 
-  cudaPitchedPtr m_E1, m_E2, m_E3;
-  cudaPitchedPtr m_B1, m_B2, m_B3;
-  cudaPitchedPtr m_J1, m_J2, m_J3;
-  cudaPitchedPtr* m_Rho;
+  fields_data m_dev_fields;
   Extent m_extent;
-}; // ----- end of class PtcUpdater -----
+  bool m_fields_initialized;
+};  // ----- end of class PtcUpdater -----
 
-}
+}  // namespace Aperture
 
 #endif  // _PTC_UPDATER_H_

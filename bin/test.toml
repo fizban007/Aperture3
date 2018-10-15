@@ -71,3 +71,4 @@ size = [100.0, 10.0, 2.0]
 
 # Size of a tile of cells
 tile_size = [64, 1, 1]
+

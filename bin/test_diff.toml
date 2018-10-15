@@ -41,7 +41,7 @@ periodic_boundary = [true, true]
 track_percent = 0.1
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/1DpicCuda/"
+data_dir = "/home/alex/storage/Data/Aperture3/"
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -62,3 +62,10 @@ size = [1.0, 1.0, 1.0]
 
 # Size of a tile of cells
 tile_size = [8, 8, 8]
+
+[Simulation]
+# Algorithm for particle move
+algorithm_ptc_move = "constE"
+
+# Seed for random numbers
+random_seed = 4321

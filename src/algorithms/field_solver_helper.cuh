@@ -128,6 +128,86 @@ init_shared_memory(Scalar s_f[][DIM2 + Pad<Order>::val * 2]
   }
 }
 
+template <int Order, int DIM1, int DIM2>
+__device__ __forceinline__ void
+init_shared_memory_2d(Scalar s_u1[][DIM1 + Pad<Order>::val * 2],
+                      Scalar s_u2[][DIM1 + Pad<Order>::val * 2],
+                      Scalar s_u3[][DIM1 + Pad<Order>::val * 2],
+                      cudaPitchedPtr& u1, cudaPitchedPtr& u2,
+                      cudaPitchedPtr& u3, size_t globalOffset, int c1,
+                      int c2) {
+  // Load field values into shared memory
+  s_u1[c2][c1] = *(Scalar*)((char*)u1.ptr + globalOffset);
+  s_u2[c2][c1] = *(Scalar*)((char*)u2.ptr + globalOffset);
+  s_u3[c2][c1] = *(Scalar*)((char*)u3.ptr + globalOffset);
+
+  // Handle extra guard cells
+  if (c1 < 2 * Pad<Order>::val) {
+    s_u1[c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u1.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u2[c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u2.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u3[c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u3.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u1[c2][c1 + DIM1] = *(Scalar*)((char*)u1.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+    s_u2[c2][c1 + DIM1] = *(Scalar*)((char*)u2.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+    s_u3[c2][c1 + DIM1] = *(Scalar*)((char*)u3.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+  }
+  if (c2 < 2 * Pad<Order>::val) {
+    s_u1[c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset -
+                   Pad<Order>::val * u1.pitch);
+    s_u2[c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset -
+                   Pad<Order>::val * u2.pitch);
+    s_u3[c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset -
+                   Pad<Order>::val * u3.pitch);
+    s_u1[c2 + DIM2][c1] =
+        *(Scalar*)((char*)u1.ptr + globalOffset + DIM2 * u1.pitch);
+    s_u2[c2 + DIM2][c1] =
+        *(Scalar*)((char*)u2.ptr + globalOffset + DIM2 * u2.pitch);
+    s_u3[c2 + DIM2][c1] =
+        *(Scalar*)((char*)u3.ptr + globalOffset + DIM2 * u3.pitch);
+  }
+}
+
+template <int Order, int DIM1, int DIM2>
+__device__ __forceinline__ void
+init_shared_memory_1d(Scalar s_u1[], Scalar s_u2[], Scalar s_u3[],
+                      cudaPitchedPtr& u1, cudaPitchedPtr& u2,
+                      cudaPitchedPtr& u3, size_t globalOffset, int c1) {
+  // Load field values into shared memory
+  s_u1[c1] = *(Scalar*)((char*)u1.ptr + globalOffset);
+  s_u2[c1] = *(Scalar*)((char*)u2.ptr + globalOffset);
+  s_u3[c1] = *(Scalar*)((char*)u3.ptr + globalOffset);
+
+  // Handle extra guard cells
+  if (c1 < 2 * Pad<Order>::val) {
+    s_u1[c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u1.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u2[c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u2.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u3[c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)u3.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_u1[c1 + DIM1] = *(Scalar*)((char*)u1.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+    s_u2[c1 + DIM1] = *(Scalar*)((char*)u2.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+    s_u3[c1 + DIM1] = *(Scalar*)((char*)u3.ptr + globalOffset +
+                                     DIM1 * sizeof(Scalar));
+  }
+}
+
 }  // namespace Kernels
 
 }  // namespace Aperture
