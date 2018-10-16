@@ -73,6 +73,23 @@ map_array_binary_op(cudaPitchedPtr input, cudaPitchedPtr output,
 
 template <typename T, typename BinaryOp>
 __global__ void
+map_array_binary_op_2d(cudaPitchedPtr input, cudaPitchedPtr output,
+                       const Extent ext, BinaryOp op) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
+       j += blockDim.y * gridDim.y) {
+    T* row_in = (T*)((char*)input.ptr + j * input.pitch);
+    T* row_out = (T*)((char*)output.ptr + j * output.pitch);
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+         i += blockDim.x * gridDim.x) {
+      // size_t idx = i + j * ext.x + k * ext.x * ext.y;
+      // op(output[idx], input[idx]);
+      op(row_out[i], row_in[i]);
+    }
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void
 map_array_binary_op(cudaPitchedPtr a, cudaPitchedPtr b,
                     cudaPitchedPtr output, const Extent ext,
                     BinaryOp op) {
