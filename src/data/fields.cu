@@ -570,6 +570,36 @@ VectorField<T>::assign(data_type value) {
 
 template <typename T>
 void
+VectorField<T>::assign(const VectorField<T>& field, T q) {
+  this->check_grid_extent(this->m_grid->extent(),
+                          field.grid().extent());
+
+  if (field.grid().dim() == 3) {
+    dim3 gridSize(8, 8, 8);
+    dim3 blockSize(8, 8, 8);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      // detail::map_multi_array(m_array[i].begin(),
+      // field.data(i).begin(),
+      //                         this -> m_grid -> extent(),
+      //                         detail::Op_PlusAssign<T>());
+      Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_AddMultConst<T>(q));
+    }
+  } else if (field.grid().dim() == 2) {
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_AddMultConst<T>(q));
+    }
+  }
+  // return (*this);
+}
+
+template <typename T>
+void
 VectorField<T>::copyFrom(const self_type& field) {
   /// We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),

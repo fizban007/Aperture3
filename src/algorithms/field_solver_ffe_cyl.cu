@@ -409,10 +409,12 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
   // Apply Low Storage RK4 method here:
   for (int n = 0; n < 4; n++) {
     if (n > 0) {
-      m_Erk = data.E;
-      m_Brk = data.B;
-      m_Erk.multiplyBy(m_a[n] + m_b[n - 1]);
-      m_Brk.multiplyBy(m_a[n] + m_b[n - 1]);
+      // m_Erk = data.E;
+      // m_Brk = data.B;
+      // m_Erk.multiplyBy(m_a[n] + m_b[n - 1]);
+      // m_Brk.multiplyBy(m_a[n] + m_b[n - 1]);
+      m_Erk.assign(data.E, m_a[n] + m_b[n - 1]);
+      m_Brk.assign(data.B, m_a[n] + m_b[n - 1]);
     }
     update_field_substep(m_Erk, m_Brk, data.J,
                          m_Erk, m_Brk, dt);

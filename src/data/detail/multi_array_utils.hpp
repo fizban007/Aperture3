@@ -246,6 +246,16 @@ struct Op_MultConstAdd {
   }
 };
 
+template <typename T>
+struct Op_AddMultConst{
+  T _value;
+  HOST_DEVICE Op_AddMultConst(const T& value) : _value(value) {}
+
+  HD_INLINE void operator()(T& dest, const T& src) const {
+    dest = dest * _value + src;
+  }
+};
+
 }  // namespace detail
 
 // template <typename It>
