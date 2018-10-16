@@ -30,6 +30,8 @@ class FieldSolver_FFE_Cyl : public FieldSolver {
   void ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
               const VectorField<Scalar>& E,
               const VectorField<Scalar>& B, Scalar dt);
+  void ffe_reduceE(VectorField<Scalar>& E_center, const VectorField<Scalar>& E,
+                   const VectorField<Scalar>& B);
 
   // sfield_t m_sf;
   vfield_t m_Etmp, m_Btmp;

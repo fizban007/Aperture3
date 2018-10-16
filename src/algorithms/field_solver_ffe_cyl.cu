@@ -184,11 +184,11 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
 
   // Compute the second part of the current
   (*(Scalar*)((char*)j1.ptr + globalOffset)) =
-      divE * EcrossB1 * inv_B_sqr;
+      divE * EcrossB1 * inv_B_sqr * dt;
   (*(Scalar*)((char*)j2.ptr + globalOffset)) =
-      divE * EcrossB2 * inv_B_sqr;
+      divE * EcrossB2 * inv_B_sqr * dt;
   (*(Scalar*)((char*)j3.ptr + globalOffset)) =
-      divE * EcrossB3 * inv_B_sqr;
+      divE * EcrossB3 * inv_B_sqr * dt;
 
   // Reuse EcrossB1, 2, 3 to compute B\dot(curl B)
   // TODO: Add cylindrical coefficients
@@ -223,11 +223,11 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
 
   // Compute the first term of the FFE current
   (*(Scalar*)((char*)j1.ptr + globalOffset)) +=
-      EcrossB1 * vecB1 * inv_B_sqr;
+      EcrossB1 * vecB1 * inv_B_sqr * dt;
   (*(Scalar*)((char*)j2.ptr + globalOffset)) +=
-      EcrossB1 * vecB2 * inv_B_sqr;
+      EcrossB1 * vecB2 * inv_B_sqr * dt;
   (*(Scalar*)((char*)j3.ptr + globalOffset)) +=
-      EcrossB1 * vecB3 * inv_B_sqr;
+      EcrossB1 * vecB3 * inv_B_sqr * dt;
 
   // Now use EcrossB1 to compute curl B
   EcrossB1 = (s_b3[c2][c1] - s_b3[c2 - 1][c1]) * dev_mesh.inv_delta[1];
@@ -259,16 +259,14 @@ compute_curl_add_2d_cyl(cudaPitchedPtr v1, cudaPitchedPtr v2,
 
   // Load shared memory
   int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x + Pad<2>::val,
-      c2 = threadIdx.y + Pad<2>::val;
+  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
   size_t globalOffset =
-      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) *
-          u1.pitch +
+      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) * u1.pitch +
       (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) *
           sizeof(Scalar);
 
   init_shared_memory_2d<2, DIM1, DIM2>(s_u1, s_u2, s_u3, u1, u2, u3,
-                                        globalOffset, c1, c2);
+                                       globalOffset, c1, c2);
   __syncthreads();
 
   // Do the actual computation here
@@ -296,6 +294,72 @@ compute_curl_add_2d_cyl(cudaPitchedPtr v1, cudaPitchedPtr v2,
            dev_mesh.inv_delta[0] -
        (s_u1[c2 + flip(s1[1])][c1] - s_u1[c2 - 1 + flip(s1[1])][c1]) *
            dev_mesh.inv_delta[1]);
+}
+
+template <int DIM1, int DIM2>
+__global__ void
+reduce_E(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
+         cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
+         cudaPitchedPtr ec1, cudaPitchedPtr ec2, cudaPitchedPtr ec3) {
+  // Declare cache array in shared memory
+  __shared__ Scalar
+      s_e1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_e2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_e3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_b1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_b2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_b3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+
+  // Load shared memory
+  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
+  size_t globalOffset =
+      (dev_mesh.guard[1] + blockIdx.y * DIM2 + c2 - Pad<2>::val) *
+          e1.pitch +
+      (dev_mesh.guard[0] + blockIdx.x * DIM1 + c1 - Pad<2>::val) *
+          sizeof(Scalar);
+  init_shared_memory_2d<2, DIM1, DIM2>(s_e1, s_e2, s_e3, e1, e2, e3,
+                                       globalOffset, c1, c2);
+  init_shared_memory_2d<2, DIM1, DIM2>(s_b1, s_b2, s_b3, b1, b2, b3,
+                                       globalOffset, c1, c2);
+  __syncthreads();
+
+  // Remove EdotB component
+  Scalar vecE1 = 0.5f * (s_e1[c2][c1] + s_e1[c2][c1 - 1]) +
+                 *(Scalar*)((char*)ec1.ptr + globalOffset);
+  Scalar vecE2 = 0.5f * (s_e2[c2][c1] + s_e2[c2 - 1][c1]) +
+                 *(Scalar*)((char*)ec2.ptr + globalOffset);
+  Scalar vecE3 =
+      s_e3[c2][c1] + *(Scalar*)((char*)ec3.ptr + globalOffset);
+  Scalar vecB1 = 0.5f * (s_b1[c2][c1] + s_b1[c2 - 1][c1]);
+  Scalar vecB2 = 0.5f * (s_b2[c2][c1] + s_b2[c2][c1 - 1]);
+  Scalar vecB3 = 0.25f * (s_b3[c2][c1] + s_b3[c2][c1 - 1] +
+                          s_b3[c2 - 1][c1] + s_b3[c2 - 1][c1 - 1]);
+  Scalar B_sqr = vecB1 * vecB1 + vecB2 * vecB2 + vecB3 * vecB3;
+  Scalar EdotB = vecE1 * vecB1 + vecE2 * vecB2 + vecE3 * vecB3;
+
+  if (std::abs(EdotB) > EPS) {
+    vecE1 -= EdotB * vecB1 / B_sqr;
+    vecE2 -= EdotB * vecB2 / B_sqr;
+    vecE3 -= EdotB * vecB3 / B_sqr;
+  }
+
+  // Reduce E if E is still larger than B
+  Scalar E_sqr = vecE1 * vecE1 + vecE2 * vecE2 + vecE3 * vecE3;
+  if (E_sqr > B_sqr) {
+    vecE1 *= std::sqrt(B_sqr / E_sqr);
+    vecE2 *= std::sqrt(B_sqr / E_sqr);
+    vecE3 *= std::sqrt(B_sqr / E_sqr);
+  }
+
+  __syncthreads();
+  (*(Scalar*)((char*)ec1.ptr + globalOffset)) = vecE1;
+  (*(Scalar*)((char*)ec2.ptr + globalOffset)) = vecE2;
+  (*(Scalar*)((char*)ec3.ptr + globalOffset)) = vecE3;
 }
 
 }  // namespace Kernels
@@ -353,7 +417,8 @@ FieldSolver_FFE_Cyl::update_field_substep(
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
 
-  // Compute both dE and J together, put the result of J into Etmp
+  // Compute both dE and J together, put the result of J into Etmp, and
+  // update E_out with the curl of B_in
   timer::stamp();
   ffe_dE(E_out, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
@@ -361,11 +426,14 @@ FieldSolver_FFE_Cyl::update_field_substep(
 
   // TODO: Figure out how to best handle removal of the parallel
   // delta_E, and when E larger than B
-
-  // interpolate J back to staggered position, multiply by dt, and add
-  // to E_out
   timer::stamp();
-  m_Etmp.interpolate_from_center_add(E_out, dt);
+  ffe_reduceE(m_Etmp, E_out, B_out);
+  cudaDeviceSynchronize();
+  timer::show_duration_since_stamp("Reducing FFE E", "ms");
+
+  // interpolate the result from the center to E_out
+  timer::stamp();
+  m_Etmp.interpolate_from_center(E_out);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Interpolate and add", "ms");
 }
@@ -377,9 +445,9 @@ FieldSolver_FFE_Cyl::ffe_edotb(ScalarField<Scalar>& result,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 16);
-  Kernels::compute_FFE_EdotB<16, 16><<<gridSize, blockSize>>>(
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+  Kernels::compute_FFE_EdotB<32, 16><<<gridSize, blockSize>>>(
       result.ptr(), E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
       B.ptr(2), q);
   CudaCheckError();
@@ -393,10 +461,10 @@ FieldSolver_FFE_Cyl::ffe_j(VectorField<Scalar>& result,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 16);
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
-  Kernels::compute_FFE_J<16, 16><<<gridSize, blockSize>>>(
+  Kernels::compute_FFE_J<32, 16><<<gridSize, blockSize>>>(
       result.ptr(0), result.ptr(1), result.ptr(2), E.ptr(0), E.ptr(1),
       E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2), tmp_f.ptr(), q);
   CudaCheckError();
@@ -410,13 +478,29 @@ FieldSolver_FFE_Cyl::ffe_dE(VectorField<Scalar>& Eout,
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
-  dim3 blockSize(16, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 16);
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
-  Kernels::compute_FFE_dE<16, 16><<<gridSize, blockSize>>>(
+  Kernels::compute_FFE_dE<32, 16><<<gridSize, blockSize>>>(
       Eout.ptr(0), Eout.ptr(1), Eout.ptr(2), J.ptr(0), J.ptr(1),
       J.ptr(2), E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
       B.ptr(2), dt);
+  CudaCheckError();
+}
+
+void
+FieldSolver_FFE_Cyl::ffe_reduceE(VectorField<Scalar>& E_center,
+                                 const VectorField<Scalar>& E,
+                                 const VectorField<Scalar>& B) {
+  auto& grid = E.grid();
+  auto& mesh = grid.mesh();
+
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+
+  Kernels::reduce_E<32, 16><<<gridSize, blockSize>>>(
+      E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
+      B.ptr(2), E_center.ptr(0), E_center.ptr(1), E_center.ptr(2));
   CudaCheckError();
 }
 
