@@ -130,6 +130,31 @@ init_shared_memory(Scalar s_f[][DIM2 + Pad<Order>::val * 2]
 
 template <int Order, int DIM1, int DIM2>
 __device__ __forceinline__ void
+init_shared_memory_2d(Scalar s_f[][DIM1 + Pad<Order>::val * 2],
+                      cudaPitchedPtr& f, size_t globalOffset, int c1,
+                      int c2) {
+  // Load field values into shared memory
+  s_f[c2][c1] = *(Scalar*)((char*)f.ptr + globalOffset);
+
+  // Handle extra guard cells
+  if (c1 < 2 * Pad<Order>::val) {
+    s_f[c2][c1 - Pad<Order>::val] =
+        *(Scalar*)((char*)f.ptr + globalOffset -
+                   Pad<Order>::val * sizeof(Scalar));
+    s_f[c2][c1 + DIM1] =
+        *(Scalar*)((char*)f.ptr + globalOffset + DIM1 * sizeof(Scalar));
+  }
+  if (c2 < 2 * Pad<Order>::val) {
+    s_f[c2 - Pad<Order>::val][c1] =
+        *(Scalar*)((char*)f.ptr + globalOffset -
+                   Pad<Order>::val * f.pitch);
+    s_f[c2 + DIM2][c1] =
+        *(Scalar*)((char*)f.ptr + globalOffset + DIM2 * f.pitch);
+  }
+}
+
+template <int Order, int DIM1, int DIM2>
+__device__ __forceinline__ void
 init_shared_memory_2d(Scalar s_u1[][DIM1 + Pad<Order>::val * 2],
                       Scalar s_u2[][DIM1 + Pad<Order>::val * 2],
                       Scalar s_u3[][DIM1 + Pad<Order>::val * 2],
@@ -200,11 +225,11 @@ init_shared_memory_1d(Scalar s_u1[], Scalar s_u2[], Scalar s_u3[],
         *(Scalar*)((char*)u3.ptr + globalOffset -
                    Pad<Order>::val * sizeof(Scalar));
     s_u1[c1 + DIM1] = *(Scalar*)((char*)u1.ptr + globalOffset +
-                                     DIM1 * sizeof(Scalar));
+                                 DIM1 * sizeof(Scalar));
     s_u2[c1 + DIM1] = *(Scalar*)((char*)u2.ptr + globalOffset +
-                                     DIM1 * sizeof(Scalar));
+                                 DIM1 * sizeof(Scalar));
     s_u3[c1 + DIM1] = *(Scalar*)((char*)u3.ptr + globalOffset +
-                                     DIM1 * sizeof(Scalar));
+                                 DIM1 * sizeof(Scalar));
   }
 }
 

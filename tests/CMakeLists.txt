@@ -23,7 +23,7 @@ set(tests_src
   "test_env.cpp"
   "test_stagger.cpp"
   # "test_particles.cpp"
-  "test_finite_diff.cpp" "test_ffe.cpp"
+  "test_finite_diff.cpp" "test_ffe.cpp" "test_ffe2d.cpp"
   "test_IC_PL.cpp"
   "test_pair_creation.cpp"
   )
