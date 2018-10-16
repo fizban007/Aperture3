@@ -37,7 +37,7 @@ class FieldSolver_FFE_Cyl : public FieldSolver {
   vfield_t m_Etmp, m_Etmp2;
   vfield_t m_Erk, m_Brk;
 
-  Scalar m_a[4], m_b[4];
+  Scalar m_a[4], m_b[4], m_c[4];
 };  // ----- end of class FieldSolver_FFE_Cyl -----
 
 }  // namespace Aperture

@@ -400,6 +400,10 @@ FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
   m_b[1] = 3.0f / 8.0f;
   m_b[2] = 3.0f / 8.0f;
   m_b[3] = 1.0f / 8.0f;
+  m_c[0] = 0.0f;
+  m_c[1] = 1.0f / 3.0f;
+  m_c[2] = 2.0f / 3.0f;
+  m_c[3] = 1.0f;
 }
 
 FieldSolver_FFE_Cyl::~FieldSolver_FFE_Cyl() {}
@@ -409,6 +413,7 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
                                    double time) {
   // Apply Low Storage RK4 method here:
   for (int n = 0; n < 4; n++) {
+    timer::stamp();
     if (n > 0) {
       // m_Erk = data.E;
       // m_Brk = data.B;
@@ -417,10 +422,11 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
       m_Erk.assign(data.E, m_a[n] - m_b[n - 1]);
       m_Brk.assign(data.B, m_a[n] - m_b[n - 1]);
     }
-    update_field_substep(m_Erk, m_Brk, data.J,
-                         m_Erk, m_Brk, dt);
-    data.E.addBy(m_Erk, m_b[n] * dt);
-    data.B.addBy(m_Brk, m_b[n] * dt);
+    update_field_substep(data.E, data.B, data.J,
+                         m_Erk, m_Brk, m_b[n] * dt);
+    // data.E.addBy(m_Erk, m_b[n] * dt);
+    // data.B.addBy(m_Brk, m_b[n] * dt);
+  timer::show_duration_since_stamp("FFE substep", "ms");
   }
 }
 
@@ -440,34 +446,34 @@ FieldSolver_FFE_Cyl::update_field_substep(
   // m_Etmp2.copyFrom(E_in);
   // m_Etmp2.set_field_type(FieldType::E);
 
-  timer::stamp();
+  // timer::stamp();
   // Compute the curl of E_in and add it to B_out
   curl_add_2d(B_out, E_in, dt);
-  cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("First curl and add", "ms");
+  // cudaDeviceSynchronize();
+  // timer::show_duration_since_stamp("First curl and add", "ms");
 
   // Compute both dE and J together, put the result of J into Etmp, and
   // update m_Etmp2 with the curl of B_in
-  timer::stamp();
+  // timer::stamp();
   ffe_dE(m_Etmp2, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
 
   // Interpolate m_Etmp back to J_out, removing the dt factor
   m_Etmp.interpolate_from_center(J_out, 1.0f / dt);
   cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Computing FFE J", "ms");
+  // timer::show_duration_since_stamp("Computing FFE J", "ms");
 
   // Handle removal of the parallel delta_E, and when E larger than B
-  timer::stamp();
+  // timer::stamp();
   ffe_reduceE(m_Etmp, m_Etmp2, B_out);
   cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Reducing FFE E", "ms");
+  // timer::show_duration_since_stamp("Reducing FFE E", "ms");
 
   // Interpolate the result from the center to E_out
-  timer::stamp();
+  // timer::stamp();
   m_Etmp.interpolate_from_center(E_out);
   cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Interpolate and add", "ms");
+  // timer::show_duration_since_stamp("Interpolate and add", "ms");
 }
 
 void
