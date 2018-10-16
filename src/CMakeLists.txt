@@ -26,7 +26,9 @@ set(Aperture_src
   "cuda/constant_mem.cu" "cuda/kernels.cu"
   "radiation/radiation_transfer.cu"
   # "algorithms/current_deposit_Esirkepov.cu"
-  "algorithms/finite_diff.cu" "algorithms/field_solver_force_free.cu"
+  "algorithms/finite_diff.cu"
+  "algorithms/field_solver_force_free.cu"
+  "algorithms/field_solver_ffe_cyl.cu"
   )
 # add_library(Aperture ${Aperture_src})
 add_cuda_target(Aperture ${Aperture_src})
