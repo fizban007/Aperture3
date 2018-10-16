@@ -379,6 +379,7 @@ curl_add_2d(VectorField<Scalar>& result, const VectorField<Scalar>& u,
 
 FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
     : m_Etmp(g),
+        m_Etmp2(g),
       m_Erk(g),
       m_Brk(g)
 // , m_tmp2(g),
@@ -413,8 +414,8 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
       // m_Brk = data.B;
       // m_Erk.multiplyBy(m_a[n] + m_b[n - 1]);
       // m_Brk.multiplyBy(m_a[n] + m_b[n - 1]);
-      m_Erk.assign(data.E, m_a[n] + m_b[n - 1]);
-      m_Brk.assign(data.B, m_a[n] + m_b[n - 1]);
+      m_Erk.assign(data.E, m_a[n] - m_b[n - 1]);
+      m_Brk.assign(data.B, m_a[n] - m_b[n - 1]);
     }
     update_field_substep(m_Erk, m_Brk, data.J,
                          m_Erk, m_Brk, dt);
@@ -436,6 +437,8 @@ FieldSolver_FFE_Cyl::update_field_substep(
   // m_tmp2.initialize();
   m_Etmp.initialize();
   m_Etmp.set_field_type(FieldType::E);
+  m_Etmp2.copyFrom(E_in);
+  m_Etmp2.set_field_type(FieldType::E);
 
   timer::stamp();
   // Compute the curl of E_in and add it to B_out
@@ -444,9 +447,9 @@ FieldSolver_FFE_Cyl::update_field_substep(
   timer::show_duration_since_stamp("First curl and add", "ms");
 
   // Compute both dE and J together, put the result of J into Etmp, and
-  // update E_out with the curl of B_in
+  // update m_Etmp2 with the curl of B_in
   timer::stamp();
-  ffe_dE(E_out, m_Etmp, E_in, B_in, dt);
+  ffe_dE(m_Etmp2, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
 
   // Interpolate m_Etmp back to J_out, removing the dt factor
@@ -456,7 +459,7 @@ FieldSolver_FFE_Cyl::update_field_substep(
 
   // Handle removal of the parallel delta_E, and when E larger than B
   timer::stamp();
-  ffe_reduceE(m_Etmp, E_out, B_out);
+  ffe_reduceE(m_Etmp, m_Etmp2, B_out);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Reducing FFE E", "ms");
 
