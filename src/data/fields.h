@@ -140,6 +140,7 @@ class VectorField : public FieldBase {
 
   void assign(data_type value, int n);
   void assign(data_type value);
+  void assign(const VectorField<T>& field, T q);
   void copyFrom(const self_type &field);
 
   void resize(const grid_type &grid);
