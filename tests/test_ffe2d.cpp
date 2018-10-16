@@ -19,7 +19,7 @@ class FFETests {
 
  public:
   FFETests() :
-      env("test_diff.toml"),
+      env("test_diff2d.toml"),
       E(env.local_grid()),
       B(env.local_grid()),
       E_out(env.local_grid()),
