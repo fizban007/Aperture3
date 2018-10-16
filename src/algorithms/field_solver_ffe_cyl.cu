@@ -231,8 +231,8 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
 
   // Now use EcrossB1 to compute curl B
   EcrossB1 = (s_b3[c2][c1] - s_b3[c2 - 1][c1]) * dev_mesh.inv_delta[1];
-  EcrossB2 = (r1s * s_b3[c2][c1] - r0s * s_b3[c2][c1 - 1]) * dev_mesh.inv_delta[0] * 2.0f /
-      (r1s + r0s);
+  EcrossB2 = (r1s * s_b3[c2][c1] - r0s * s_b3[c2][c1 - 1]) *
+             dev_mesh.inv_delta[0] * 2.0f / (r1s + r0s);
   EcrossB3 = (s_b2[c2][c1] - s_b2[c2][c1 - 1]) * dev_mesh.inv_delta[0] -
              (s_b1[c2][c1] - s_b1[c2 - 1][c1]) * dev_mesh.inv_delta[1];
 
@@ -242,7 +242,76 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
   (*(Scalar*)((char*)e3out.ptr + globalOffset)) += dt * EcrossB3;
 }
 
+template <int DIM1, int DIM2>
+__global__ void
+compute_curl_add_2d_cyl(cudaPitchedPtr v1, cudaPitchedPtr v2,
+                        cudaPitchedPtr v3, cudaPitchedPtr u1,
+                        cudaPitchedPtr u2, cudaPitchedPtr u3,
+                        Stagger s1, Stagger s2, Stagger s3,
+                        Scalar q = 1.0) {
+  // Declare cache array in shared memory
+  __shared__ Scalar
+      s_u1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_u2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+  __shared__ Scalar
+      s_u3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
+
+  // Load shared memory
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x + Pad<2>::val,
+      c2 = threadIdx.y + Pad<2>::val;
+  size_t globalOffset =
+      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) *
+          u1.pitch +
+      (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) *
+          sizeof(Scalar);
+
+  init_shared_memory_2d<2, DIM1, DIM2>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                        globalOffset, c1, c2);
+  __syncthreads();
+
+  // Do the actual computation here
+  // (Curl u)_1 = d2u3 - d3u2
+  (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+      q *
+      (s_u3[c2 + flip(s3[1])][c1] - s_u3[c2 - 1 + flip(s3[1])][c1]) *
+      dev_mesh.inv_delta[1];
+
+  // (Curl u)_2 = d3u1 - d1u3
+  Scalar r1 = dev_mesh.pos(
+      0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x, flip(s3[0]));
+  Scalar r0 = dev_mesh.pos(
+      0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x - 1, flip(s3[0]));
+  (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+      q *
+      (r1 * s_u3[c2][c1 + flip(s3[0])] -
+       r0 * s_u3[c2][c1 - 1 + flip(s3[0])]) *
+      dev_mesh.inv_delta[0] * 2.0f / (r1 + r0);
+
+  // (Curl u)_3 = d1u2 - d2u1
+  (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+      q *
+      ((s_u2[c2][c1 + flip(s2[0])] - s_u2[c2][c1 - 1 + flip(s2[0])]) *
+           dev_mesh.inv_delta[0] -
+       (s_u1[c2 + flip(s1[1])][c1] - s_u1[c2 - 1 + flip(s1[1])][c1]) *
+           dev_mesh.inv_delta[1]);
+}
+
 }  // namespace Kernels
+
+void
+curl_add_2d(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+            Scalar q) {
+  auto& mesh = u.grid().mesh();
+
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+  Kernels::compute_curl_add_2d_cyl<32, 16><<<gridSize, blockSize>>>(
+      result.ptr(0), result.ptr(1), result.ptr(2), u.ptr(0), u.ptr(1),
+      u.ptr(2), u.stagger(0), u.stagger(1), u.stagger(2), q);
+  CudaCheckError();
+}
 
 FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
     : m_Etmp(g),
@@ -280,7 +349,7 @@ FieldSolver_FFE_Cyl::update_field_substep(
 
   timer::stamp();
   // Compute the curl of E_in and add it to B_out
-  curl_add(B_out, E_in, dt);
+  curl_add_2d(B_out, E_in, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("First curl and add", "ms");
 
@@ -289,14 +358,16 @@ FieldSolver_FFE_Cyl::update_field_substep(
   ffe_dE(E_out, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Computing FFE J", "ms");
+
+  // TODO: Figure out how to best handle removal of the parallel
+  // delta_E, and when E larger than B
+
   // interpolate J back to staggered position, multiply by dt, and add
   // to E_out
   timer::stamp();
   m_Etmp.interpolate_from_center_add(E_out, dt);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Interpolate and add", "ms");
-
-  // TODO: Figure out how to best handle removal of the parallel delta_E
 }
 
 void

@@ -7,7 +7,7 @@
 
 using namespace Aperture;
 
-class FFETests {
+class FFETests2D {
  protected:
   Environment env;
   VectorField<Scalar> E, B;
@@ -18,7 +18,7 @@ class FFETests {
   FieldSolver_FFE_Cyl solver;
 
  public:
-  FFETests() :
+  FFETests2D() :
       env("test_diff2d.toml"),
       E(env.local_grid()),
       B(env.local_grid()),
@@ -27,6 +27,7 @@ class FFETests {
       J_out(env.local_grid()),
       mesh(env.local_grid().mesh()),
       solver(env.local_grid()) {
+    Logger::print_info("Grid size is {}", mesh.dims[0]);
   }
 
   void init_u() {
@@ -54,7 +55,7 @@ class FFETests {
   }
 };
 
-TEST_CASE_METHOD(FFETests, "FF Cylindrical substep", "[FFE]") {
+TEST_CASE_METHOD(FFETests2D, "FF Cylindrical substep", "[FFE]") {
   init_u();
 
   timer::stamp("FFE");
