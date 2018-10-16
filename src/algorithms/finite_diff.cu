@@ -364,6 +364,49 @@ compute_curl_add(cudaPitchedPtr v1, cudaPitchedPtr v2,
            d2<Order, DIM1, DIM2, DIM3>(s_u1, c1, c2 + flip(s1[1]), c3));
 }
 
+template <int Order, int DIM1, int DIM2>
+__global__ void
+compute_curl_add_2d(cudaPitchedPtr v1, cudaPitchedPtr v2,
+                    cudaPitchedPtr v3, cudaPitchedPtr u1,
+                    cudaPitchedPtr u2, cudaPitchedPtr u3, Stagger s1,
+                    Stagger s2, Stagger s3, Scalar q = 1.0) {
+  // Declare cache array in shared memory
+  __shared__ Scalar
+      s_u1[DIM2 + 2 * Pad<Order>::val][DIM1 + 2 * Pad<Order>::val];
+  __shared__ Scalar
+      s_u2[DIM2 + 2 * Pad<Order>::val][DIM1 + 2 * Pad<Order>::val];
+  __shared__ Scalar
+      s_u3[DIM2 + 2 * Pad<Order>::val][DIM1 + 2 * Pad<Order>::val];
+
+  // Load shared memory
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x + Pad<Order>::val,
+      c2 = threadIdx.y + Pad<Order>::val;
+  size_t globalOffset =
+      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<Order>::val) *
+          u1.pitch +
+      (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<Order>::val) *
+          sizeof(Scalar);
+
+  init_shared_memory<Order, DIM1, DIM2>(s_u1, s_u2, s_u3, u1, u2, u3,
+                                        globalOffset, c1, c2);
+  __syncthreads();
+
+  // Do the actual computation here
+  // (Curl u)_1 = d2u3 - d3u2
+  (*(Scalar*)((char*)v1.ptr + globalOffset)) +=
+      q * d2<Order, DIM1, DIM2>(s_u3, c1, c2 + flip(s3[1]));
+
+  // (Curl u)_2 = d3u1 - d1u3
+  (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
+      q * d1<Order, DIM1, DIM2>(s_u3, c1 + flip(s3[0]), c2);
+
+  // (Curl u)_3 = d1u2 - d2u1
+  (*(Scalar*)((char*)v3.ptr + globalOffset)) +=
+      q * (d1<Order, DIM1, DIM2>(s_u2, c1 + flip(s2[0]), c2) -
+           d2<Order, DIM1, DIM2>(s_u1, c1, c2 + flip(s1[1])));
+}
+
 template <int Order, int DIM1, int DIM2, int DIM3>
 __global__ void
 compute_div(cudaPitchedPtr v, cudaPitchedPtr u1, cudaPitchedPtr u2,
