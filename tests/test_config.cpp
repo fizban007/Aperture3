@@ -8,8 +8,8 @@ ConfigFile config;
 void check_test_params(const SimParams& params) {
   CHECK(params.delta_t == Approx(0.3e-4));
   CHECK(params.q_e == Approx(0.1));
-  CHECK(params.max_ptc_number == 100000000);
-  CHECK(params.max_photon_number == 100000000);
+  CHECK(params.max_ptc_number == 10000000);
+  CHECK(params.max_photon_number == 10000000);
   CHECK(params.create_pairs == true);
   CHECK(params.trace_photons == true);
   CHECK(params.gamma_thr == Approx(5.0));

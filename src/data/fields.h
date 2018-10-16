@@ -150,6 +150,7 @@ class VectorField : public FieldBase {
   self_type &multiplyBy(const ScalarField<T> &field);
   self_type &addBy(data_type value, int n);
   self_type &addBy(const VectorField<T> &field);
+  self_type &addBy(const VectorField<T> &field, T q);
   self_type &subtractBy(data_type value, int n);
   self_type &subtractBy(const VectorField<T> &field);
 
@@ -163,7 +164,7 @@ class VectorField : public FieldBase {
 
   // Interpolate the field from cell center to the stagger position
   // according to m_stagger, and store the result to @result
-  void interpolate_from_center(self_type &result);
+  void interpolate_from_center(self_type &result, Scalar q = 1.0);
 
   // Interpolate the field from cell center to the stagger position
   // according to m_stagger, and add the result to @result

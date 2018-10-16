@@ -34,7 +34,10 @@ class FieldSolver_FFE_Cyl : public FieldSolver {
                    const VectorField<Scalar>& B);
 
   // sfield_t m_sf;
-  vfield_t m_Etmp, m_Btmp;
+  vfield_t m_Etmp;
+  vfield_t m_Erk, m_Brk;
+
+  Scalar m_a[4], m_b[4];
 };  // ----- end of class FieldSolver_FFE_Cyl -----
 
 }  // namespace Aperture

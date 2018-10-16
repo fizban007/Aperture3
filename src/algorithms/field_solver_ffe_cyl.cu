@@ -379,23 +379,47 @@ curl_add_2d(VectorField<Scalar>& result, const VectorField<Scalar>& u,
 
 FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
     : m_Etmp(g),
-      m_Btmp(g)
+      m_Erk(g),
+      m_Brk(g)
 // , m_tmp2(g),
 // m_e1(g), m_e2(g), m_e3(g), m_e4(g),
 // m_b1(g), m_b2(g), m_b3(g), m_b4(g)
 {
+  m_Brk.set_field_type(FieldType::B);
   // m_j1(g), m_j2(g), m_j3(g), m_j4(g) {
   // m_b1.set_field_type(FieldType::B);
   // m_b2.set_field_type(FieldType::B);
   // m_b3.set_field_type(FieldType::B);
   // m_b4.set_field_type(FieldType::B);
+  m_a[0] = 0.0f;
+  m_a[1] = 1.0f / 3.0f;
+  m_a[2] = 1.0f;
+  m_a[3] = 1.0f;
+  m_b[0] = 1.0f / 8.0f;
+  m_b[1] = 3.0f / 8.0f;
+  m_b[2] = 3.0f / 8.0f;
+  m_b[3] = 1.0f / 8.0f;
 }
 
 FieldSolver_FFE_Cyl::~FieldSolver_FFE_Cyl() {}
 
 void
 FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
-                                   double time) {}
+                                   double time) {
+  // Apply Low Storage RK4 method here:
+  for (int n = 0; n < 4; n++) {
+    if (n > 0) {
+      m_Erk = data.E;
+      m_Brk = data.B;
+      m_Erk.multiplyBy(m_a[n] + m_b[n - 1]);
+      m_Brk.multiplyBy(m_a[n] + m_b[n - 1]);
+    }
+    update_field_substep(m_Erk, m_Brk, data.J,
+                         m_Erk, m_Brk, dt);
+    data.E.addBy(m_Erk, m_b[n] * dt);
+    data.B.addBy(m_Brk, m_b[n] * dt);
+  }
+}
 
 void
 FieldSolver_FFE_Cyl::compute_J(vfield_t& J, const vfield_t& E,
@@ -422,16 +446,19 @@ FieldSolver_FFE_Cyl::update_field_substep(
   timer::stamp();
   ffe_dE(E_out, m_Etmp, E_in, B_in, dt);
   cudaDeviceSynchronize();
+
+  // Interpolate m_Etmp back to J_out, removing the dt factor
+  m_Etmp.interpolate_from_center(J_out, 1.0f / dt);
+  cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Computing FFE J", "ms");
 
-  // TODO: Figure out how to best handle removal of the parallel
-  // delta_E, and when E larger than B
+  // Handle removal of the parallel delta_E, and when E larger than B
   timer::stamp();
   ffe_reduceE(m_Etmp, E_out, B_out);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("Reducing FFE E", "ms");
 
-  // interpolate the result from the center to E_out
+  // Interpolate the result from the center to E_out
   timer::stamp();
   m_Etmp.interpolate_from_center(E_out);
   cudaDeviceSynchronize();
@@ -499,8 +526,8 @@ FieldSolver_FFE_Cyl::ffe_reduceE(VectorField<Scalar>& E_center,
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
   Kernels::reduce_E<32, 16><<<gridSize, blockSize>>>(
-      E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
-      B.ptr(2), E_center.ptr(0), E_center.ptr(1), E_center.ptr(2));
+      E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+      E_center.ptr(0), E_center.ptr(1), E_center.ptr(2));
   CudaCheckError();
 }
 

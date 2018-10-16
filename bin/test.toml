@@ -5,10 +5,10 @@ delta_t = 0.3e-4
 q_e = 0.1
 
 # Maximum number of particles per node
-max_ptc_number = 100000000
+max_ptc_number = 10000000
 
 # Maximum number of photons per node
-max_photon_number = 100000000
+max_photon_number = 10000000
 
 # Create pairs or not
 create_pairs = true

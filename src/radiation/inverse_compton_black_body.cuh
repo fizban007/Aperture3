@@ -43,7 +43,7 @@ template <typename RandFunc>
 HOST_DEVICE Scalar
 InverseComptonBB<RandFunc>::draw_photon_e1p(Scalar gamma) {
   float u = m_rng();
-  Scalar e1p;
+  Scalar e1p = 0.0;
   return e1p;
 }
 
@@ -52,7 +52,7 @@ template <typename RandFunc>
 HOST_DEVICE Scalar
 InverseComptonBB<RandFunc>::draw_photon_ep(Scalar e1p, Scalar gamma) {
   float u = m_rng();
-  Scalar ep;
+  Scalar ep = 0.0;
   // Scalar alpha = dev_params.spectral_alpha;
   return ep;
 }

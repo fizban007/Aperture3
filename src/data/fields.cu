@@ -645,16 +645,56 @@ VectorField<T>::addBy(const VectorField<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
-  dim3 gridSize(8, 8, 8);
-  dim3 blockSize(8, 8, 8);
-  for (int i = 0; i < VECTOR_DIM; ++i) {
-    // detail::map_multi_array(m_array[i].begin(),
-    // field.data(i).begin(),
-    //                         this -> m_grid -> extent(),
-    //                         detail::Op_PlusAssign<T>());
-    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-        field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
-        detail::Op_PlusAssign<T>());
+  if (field.grid().dim() == 3) {
+    dim3 gridSize(8, 8, 8);
+    dim3 blockSize(8, 8, 8);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      // detail::map_multi_array(m_array[i].begin(),
+      // field.data(i).begin(),
+      //                         this -> m_grid -> extent(),
+      //                         detail::Op_PlusAssign<T>());
+      Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_PlusAssign<T>());
+    }
+  } else if (field.grid().dim() == 2) {
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_PlusAssign<T>());
+    }
+  }
+  return (*this);
+}
+
+template <typename T>
+VectorField<T>&
+VectorField<T>::addBy(const VectorField<T>& field, T q) {
+  this->check_grid_extent(this->m_grid->extent(),
+                          field.grid().extent());
+
+  if (field.grid().dim() == 3) {
+    dim3 gridSize(8, 8, 8);
+    dim3 blockSize(8, 8, 8);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      // detail::map_multi_array(m_array[i].begin(),
+      // field.data(i).begin(),
+      //                         this -> m_grid -> extent(),
+      //                         detail::Op_PlusAssign<T>());
+      Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_MultConstAdd<T>(q));
+    }
+  } else if (field.grid().dim() == 2) {
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
+    for (int i = 0; i < VECTOR_DIM; ++i) {
+      Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
+          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          detail::Op_MultConstAdd<T>(q));
+    }
   }
   return (*this);
 }
@@ -771,7 +811,7 @@ VectorField<T>::interpolate_to_center(self_type& result) {
 
 template <typename T>
 void
-VectorField<T>::interpolate_from_center(self_type& result) {
+VectorField<T>::interpolate_from_center(self_type& result, Scalar q) {
   result.initialize();
   auto& mesh = m_grid->mesh();
 
@@ -792,7 +832,7 @@ VectorField<T>::interpolate_from_center(self_type& result) {
     Kernels::interp_from_center_2d<2, 32, 32><<<gridSize, blockSize>>>(
         result.ptr(0), result.ptr(1), result.ptr(2),
         m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
-        m_type);
+        m_type, q);
     CudaCheckError();
   }
 }
