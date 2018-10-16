@@ -237,9 +237,9 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
              (s_b1[c2][c1] - s_b1[c2 - 1][c1]) * dev_mesh.inv_delta[1];
 
   // Compute the update of E, sans J
-  (*(Scalar*)((char*)e1out.ptr + globalOffset)) += dt * EcrossB1;
-  (*(Scalar*)((char*)e2out.ptr + globalOffset)) += dt * EcrossB2;
-  (*(Scalar*)((char*)e3out.ptr + globalOffset)) += dt * EcrossB3;
+  (*(Scalar*)((char*)e1out.ptr + globalOffset)) = s_e1[c2][c1] + dt * EcrossB1;
+  (*(Scalar*)((char*)e2out.ptr + globalOffset)) = s_e2[c2][c1] + dt * EcrossB2;
+  (*(Scalar*)((char*)e3out.ptr + globalOffset)) = s_e3[c2][c1] + dt * EcrossB3;
 }
 
 template <int DIM1, int DIM2>
@@ -437,8 +437,8 @@ FieldSolver_FFE_Cyl::update_field_substep(
   // m_tmp2.initialize();
   m_Etmp.initialize();
   m_Etmp.set_field_type(FieldType::E);
-  m_Etmp2.copyFrom(E_in);
-  m_Etmp2.set_field_type(FieldType::E);
+  // m_Etmp2.copyFrom(E_in);
+  // m_Etmp2.set_field_type(FieldType::E);
 
   timer::stamp();
   // Compute the curl of E_in and add it to B_out

@@ -38,7 +38,7 @@ MultiArray<T>::MultiArray(int width, int height, int depth,
   _size = _extent.size();
   // Logger::print_info("extent has {}, {}, {}", _extent.width(),
   //                    _extent.height(), _extent.depth());
-  auto ext = cuda_ext(_extent, T{});
+  // auto ext = cuda_ext(_extent, T{});
   // Logger::print_info("now cuda extent has {}, {}, {}", ext.width,
   //                    ext.height, ext.depth);
   find_dim();
