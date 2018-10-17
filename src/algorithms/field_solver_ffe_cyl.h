@@ -17,6 +17,7 @@ class FieldSolver_FFE_Cyl : public FieldSolver {
   void update_field_substep(vfield_t& E_out, vfield_t& B_out,
                             vfield_t& J_out, const vfield_t& E_in,
                             const vfield_t& B_in, Scalar dt);
+  void axis_boundary(vfield_t& E, vfield_t& B);
   virtual void set_background_j(const vfield_t& j) override {}
 
  private:

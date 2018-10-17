@@ -220,6 +220,9 @@ class VectorField : public FieldBase {
   void sync_to_host() {
     for (int i = 0; i < VECTOR_DIM; i++) m_array[i].sync_to_host();
   }
+  void sync_to_host(int n) {
+    m_array[n].sync_to_host();
+  }
 
  private:
   std::array<array_type, VECTOR_DIM> m_array;
