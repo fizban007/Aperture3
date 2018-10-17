@@ -396,10 +396,12 @@ FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
   m_a[1] = 1.0f / 3.0f;
   m_a[2] = 1.0f;
   m_a[3] = 1.0f;
+
   m_b[0] = 1.0f / 8.0f;
   m_b[1] = 3.0f / 8.0f;
   m_b[2] = 3.0f / 8.0f;
   m_b[3] = 1.0f / 8.0f;
+
   m_c[0] = 0.0f;
   m_c[1] = 1.0f / 3.0f;
   m_c[2] = 2.0f / 3.0f;
@@ -413,7 +415,7 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
                                    double time) {
   // Apply Low Storage RK4 method here:
   for (int n = 0; n < 4; n++) {
-    timer::stamp();
+    // timer::stamp();
     if (n > 0) {
       // m_Erk = data.E;
       // m_Brk = data.B;
@@ -426,7 +428,7 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
                          m_Erk, m_Brk, m_b[n] * dt);
     // data.E.addBy(m_Erk, m_b[n] * dt);
     // data.B.addBy(m_Brk, m_b[n] * dt);
-  timer::show_duration_since_stamp("FFE substep", "ms");
+    // timer::show_duration_since_stamp("FFE substep", "ms");
   }
 }
 
