@@ -49,6 +49,7 @@ struct SimParamsBase {
   float annih_fraction = 0.01;
   float track_percent = 0.2;
   float constE = 1.0;
+  float B0 = 1.0;
 
   // These parameters are for radiative transfer
   float E_cutoff = 10.0;

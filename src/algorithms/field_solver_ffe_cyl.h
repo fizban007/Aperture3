@@ -11,23 +11,16 @@ class FieldSolver_FFE_Cyl : public FieldSolver {
   virtual ~FieldSolver_FFE_Cyl();
 
   virtual void update_fields(SimData& data, double dt,
-                             double time = 0.0) override;
+                             double omega = 0.0) override;
 
   void compute_J(vfield_t& J, const vfield_t& E, const vfield_t& B);
   void update_field_substep(vfield_t& E_out, vfield_t& B_out,
                             vfield_t& J_out, const vfield_t& E_in,
-                            const vfield_t& B_in, Scalar dt);
-  void axis_boundary(vfield_t& E, vfield_t& B);
+                            const vfield_t& B_in, Scalar omega, Scalar dt);
+  void handle_boundary(SimData& data, Scalar omega, Scalar dt);
   virtual void set_background_j(const vfield_t& j) override {}
 
  private:
-  void ffe_edotb(ScalarField<Scalar>& result,
-                 const VectorField<Scalar>& E,
-                 const VectorField<Scalar>& B, Scalar q = 1.0);
-  void ffe_j(VectorField<Scalar>& result,
-             const ScalarField<Scalar>& tmp_f,
-             const VectorField<Scalar>& E, const VectorField<Scalar>& B,
-             Scalar q = 1.0);
   void ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
               const VectorField<Scalar>& E,
               const VectorField<Scalar>& B, Scalar dt);

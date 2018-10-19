@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 0.001
+delta_t = 0.0002
 
 # Charge of an electron
 q_e = 0.1
@@ -49,6 +49,9 @@ track_percent = 0.1
 # Data output directory
 data_dir = "/home/alex/storage/Data/Aperture3/"
 
+# Dipole B0
+B0 = 1000.0
+
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
 # dimension, just set N to 1 and guard to 0 on that dimension.
@@ -65,7 +68,7 @@ guard = [2, 2, 0]
 lower = [0.0, 1.0, 0.0]
 
 # Size of the box in each dimension
-size = [4.0, 4.0, 1.0]
+size = [2.0, 5.0, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]

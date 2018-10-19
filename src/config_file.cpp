@@ -93,6 +93,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
       config->get_as<double>("E_ph_min").value_or(defaults.E_ph_min);
   params.constE =
       config->get_as<double>("constE").value_or(defaults.constE);
+  params.B0 =
+      config->get_as<double>("B0").value_or(defaults.B0);
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
