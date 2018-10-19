@@ -62,7 +62,7 @@ TEST_CASE_METHOD(FFETests2D, "FF Cylindrical substep", "[FFE]") {
   init_u();
 
   timer::stamp("FFE");
-  solver.update_field_substep(E_out, B_out, J_out, E, B, 0.01);
+  solver.update_field_substep(E_out, B_out, J_out, E, B, 0.0, 0.01);
   cudaDeviceSynchronize();
   timer::show_duration_since_stamp("FFE cylindrical substep", "ms", "FFE");
 }

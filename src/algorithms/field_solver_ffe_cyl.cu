@@ -12,119 +12,6 @@ namespace Kernels {
 
 template <int DIM1, int DIM2>
 __global__ void
-compute_FFE_EdotB(cudaPitchedPtr eb, cudaPitchedPtr e1,
-                  cudaPitchedPtr e2, cudaPitchedPtr e3,
-                  cudaPitchedPtr b1, cudaPitchedPtr b2,
-                  cudaPitchedPtr b3, Scalar q) {
-  // Declare cache array in shared memory
-  __shared__ Scalar
-      s_e1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_e2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_e3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-
-  // Load shared memory
-  int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
-  size_t globalOffset =
-      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) * e1.pitch +
-      (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) *
-          sizeof(Scalar);
-
-  init_shared_memory_2d<2, DIM1, DIM2>(s_e1, s_e2, s_e3, e1, e2, e3,
-                                       globalOffset, c1, c2);
-  init_shared_memory_2d<2, DIM1, DIM2>(s_b1, s_b2, s_b3, b1, b2, b3,
-                                       globalOffset, c1, c2);
-  __syncthreads();
-
-  Scalar vecE1 = 0.5f * (s_e1[c2][c1] + s_e1[c2][c1 - 1]);
-  Scalar vecE2 = 0.5f * (s_e2[c2][c1] + s_e2[c2 - 1][c1]);
-  Scalar vecE3 = s_e3[c2][c1];
-  Scalar vecB1 = 0.5f * (s_b1[c2][c1] + s_b1[c2 - 1][c1]);
-  Scalar vecB2 = 0.5f * (s_b2[c2][c1] + s_b2[c2][c1 - 1]);
-  Scalar vecB3 = 0.25f * (s_b3[c2][c1] + s_b3[c2][c1 - 1] +
-                          s_b3[c2 - 1][c1] + s_b3[c2 - 1][c1 - 1]);
-  Scalar EdotB = vecE1 * vecB1 + vecE2 * vecB2 + vecE3 * vecB3;
-
-  // Do the actual computation here
-  (*(Scalar*)((char*)eb.ptr + globalOffset)) += q * EdotB;
-}
-
-template <int DIM1, int DIM2>
-__global__ void
-compute_FFE_J(cudaPitchedPtr j1, cudaPitchedPtr j2, cudaPitchedPtr j3,
-              cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
-              cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
-              cudaPitchedPtr f, Scalar q) {
-  // Declare cache array in shared memory
-  __shared__ Scalar
-      s_e1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_e2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_e3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b2[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar
-      s_b3[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-  __shared__ Scalar s_f[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
-
-  // Load shared memory
-  int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
-  size_t globalOffset =
-      (dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val) * e1.pitch +
-      (dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val) *
-          sizeof(Scalar);
-
-  init_shared_memory_2d<2, DIM1, DIM2>(s_e1, s_e2, s_e3, e1, e2, e3,
-                                       globalOffset, c1, c2);
-  init_shared_memory_2d<2, DIM1, DIM2>(s_b1, s_b2, s_b3, b1, b2, b3,
-                                       globalOffset, c1, c2);
-  init_shared_memory_2d<2, DIM1, DIM2>(s_f, f, globalOffset, c1, c2);
-  __syncthreads();
-
-  Scalar vecE1 = 0.5f * (s_e1[c2][c1] + s_e1[c2][c1 - 1]);
-  Scalar vecE2 = 0.5f * (s_e2[c2][c1] + s_e2[c2 - 1][c1]);
-  Scalar vecE3 = s_e3[c2][c1];
-  Scalar vecB1 = 0.5f * (s_b1[c2][c1] + s_b1[c2 - 1][c1]);
-  Scalar vecB2 = 0.5f * (s_b2[c2][c1] + s_b2[c2][c1 - 1]);
-  Scalar vecB3 = 0.25f * (s_b3[c2][c1] + s_b3[c2][c1 - 1] +
-                          s_b3[c2 - 1][c1] + s_b3[c2 - 1][c1 - 1]);
-  Scalar inv_B_sqr =
-      1.0f / (vecB1 * vecB1 + vecB2 * vecB2 + vecB3 * vecB3);
-  Scalar r1 = dev_mesh.pos(
-      0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x, false);
-  Scalar r0 = dev_mesh.pos(
-      0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x - 1, false);
-  Scalar divE = (r1 * s_e1[c2][c1] - r0 * s_e1[c2][c1 - 1]) /
-                    (0.5f * (r0 + r1) * dev_mesh.delta[0]) +
-                (s_e2[c2][c1] - s_e2[c2 - 1][c1]) / dev_mesh.delta[1];
-  Scalar EcrossB1 = vecE2 * vecB3 - vecE3 * vecB2;
-  Scalar EcrossB2 = vecE3 * vecB1 - vecE1 * vecB3;
-  Scalar EcrossB3 = vecE1 * vecB2 - vecE2 * vecB1;
-  // Scalar EdotB = vecE1 * vecB1 + vecE2 * vecB2 + vecE3 * vecB3;
-
-  // Do the actual computation here
-  (*(Scalar*)((char*)j1.ptr + globalOffset)) =
-      q * (s_f[c2][c1] * vecB1 + divE * EcrossB1) * inv_B_sqr;
-  (*(Scalar*)((char*)j2.ptr + globalOffset)) =
-      q * (s_f[c2][c1] * vecB2 + divE * EcrossB2) * inv_B_sqr;
-  (*(Scalar*)((char*)j3.ptr + globalOffset)) =
-      q * (s_f[c2][c1] * vecB3 + divE * EcrossB3) * inv_B_sqr;
-}
-
-template <int DIM1, int DIM2>
-__global__ void
 compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
                cudaPitchedPtr e3out, cudaPitchedPtr j1,
                cudaPitchedPtr j2, cudaPitchedPtr j3, cudaPitchedPtr e1,
@@ -191,7 +78,6 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
       divE * EcrossB3 * inv_B_sqr * dt;
 
   // Reuse EcrossB1, 2, 3 to compute B\dot(curl B)
-  // TODO: Add cylindrical coefficients
   EcrossB1 = vecB1 * 0.5f *
              (s_b3[c2][c1] - s_b3[c2 - 1][c1] + s_b3[c2][c1 - 1] -
               s_b3[c2 - 1][c1 - 1]) *
@@ -237,9 +123,12 @@ compute_FFE_dE(cudaPitchedPtr e1out, cudaPitchedPtr e2out,
              (s_b1[c2][c1] - s_b1[c2 - 1][c1]) * dev_mesh.inv_delta[1];
 
   // Compute the update of E, sans J
-  (*(Scalar*)((char*)e1out.ptr + globalOffset)) = s_e1[c2][c1] + dt * EcrossB1;
-  (*(Scalar*)((char*)e2out.ptr + globalOffset)) = s_e2[c2][c1] + dt * EcrossB2;
-  (*(Scalar*)((char*)e3out.ptr + globalOffset)) = s_e3[c2][c1] + dt * EcrossB3;
+  (*(Scalar*)((char*)e1out.ptr + globalOffset)) =
+      s_e1[c2][c1] + dt * EcrossB1;
+  (*(Scalar*)((char*)e2out.ptr + globalOffset)) =
+      s_e2[c2][c1] + dt * EcrossB2;
+  (*(Scalar*)((char*)e3out.ptr + globalOffset)) =
+      s_e3[c2][c1] + dt * EcrossB3;
 }
 
 template <int DIM1, int DIM2>
@@ -281,6 +170,7 @@ compute_curl_add_2d_cyl(cudaPitchedPtr v1, cudaPitchedPtr v2,
       0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x, flip(s3[0]));
   Scalar r0 = dev_mesh.pos(
       0, dev_mesh.guard[0] + t1 * DIM1 + threadIdx.x - 1, flip(s3[0]));
+  // if (t1 * DIM1 + threadIdx.x == 0)
   (*(Scalar*)((char*)v2.ptr + globalOffset)) +=
       q *
       (r1 * s_u3[c2][c1 + flip(s3[0])] -
@@ -362,6 +252,107 @@ reduce_E(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
   (*(Scalar*)((char*)ec3.ptr + globalOffset)) = vecE3;
 }
 
+template <int DIM2>
+__global__ void
+axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
+              cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
+              Scalar dt) {
+  int t2 = blockIdx.x;
+  int c2 = threadIdx.x;
+  int j = dev_mesh.guard[1] + t2 * DIM2 + c2;
+
+  size_t globalOffset =
+      j * e1.pitch + (dev_mesh.guard[1] - 1) * sizeof(Scalar);
+
+  // e1 is zero
+  (*(Scalar*)((char*)e1.ptr + globalOffset)) = 0.0f;
+  // Mirror e2
+  (*(Scalar*)((char*)e2.ptr + globalOffset)) =
+      (*(Scalar*)((char*)e2.ptr + globalOffset + sizeof(Scalar)));
+  // Reflect e3
+  (*(Scalar*)((char*)e3.ptr + globalOffset)) =
+      -(*(Scalar*)((char*)e3.ptr + globalOffset + sizeof(Scalar)));
+  // update b1
+  (*(Scalar*)((char*)b1.ptr + globalOffset)) +=
+      -4.0f *
+      (*(Scalar*)((char*)e3.ptr + globalOffset + sizeof(Scalar))) * dt /
+      dev_mesh.delta[0];
+  // b3 is zero
+  (*(Scalar*)((char*)b3.ptr + globalOffset)) = 0.0f;
+}
+
+template <int DIM2>
+__global__ void
+outer_r_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
+                 cudaPitchedPtr e3, cudaPitchedPtr b1,
+                 cudaPitchedPtr b2, cudaPitchedPtr b3) {
+  int t2 = blockIdx.x;
+  int c2 = threadIdx.x;
+  int j = dev_mesh.guard[1] + t2 * DIM2 + c2;
+
+  Scalar z = dev_mesh.pos(1, j, false);
+  Scalar zs = dev_mesh.pos(1, j, true);
+  int n_damp = 20;
+  for (int i = dev_mesh.dims[0] - 1; i >= dev_mesh.dims[0] - n_damp;
+       i--) {
+    size_t globalOffset = j * e1.pitch + i * sizeof(Scalar);
+
+    Scalar r = dev_mesh.pos(0, i, false);
+    Scalar rs = dev_mesh.pos(0, i, true);
+
+    Scalar b1bg =
+        dev_params.B0 * 1.5f * r * zs / std::pow(r * r + zs * zs, 2.5f);
+    Scalar b2bg = dev_params.B0 * (z * z - 0.5f * rs * rs) /
+                  std::pow(rs * rs + z * z, 2.5f);
+
+    Scalar lambda = 1.0f - ((Scalar)(i - dev_mesh.dims[0] + n_damp) /
+                            (Scalar)n_damp) *
+                               0.05f;
+    // if (j == 100)
+    //   printf("lambda is %f\n", lambda);
+    Scalar b1p = (*(Scalar*)((char*)b1.ptr + globalOffset));
+    (*(Scalar*)((char*)b1.ptr + globalOffset)) =
+        b1bg + lambda * (b1p - b1bg);
+    Scalar b2p = (*(Scalar*)((char*)b2.ptr + globalOffset));
+    (*(Scalar*)((char*)b2.ptr + globalOffset)) =
+        b2bg + lambda * (b2p - b2bg);
+    (*(Scalar*)((char*)e1.ptr + globalOffset)) *= lambda;
+    (*(Scalar*)((char*)e2.ptr + globalOffset)) *= lambda;
+    (*(Scalar*)((char*)e3.ptr + globalOffset)) *= lambda;
+  }
+}
+
+
+template <int DIM1>
+__global__ void
+outer_z_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
+                 cudaPitchedPtr e3, cudaPitchedPtr b1,
+                 cudaPitchedPtr b2, cudaPitchedPtr b3) {}
+
+template <int DIM1>
+__global__ void
+lower_z_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
+                 cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3, Scalar omega) {
+  int t1 = blockIdx.x;
+  int c1 = threadIdx.x;
+  int i = dev_mesh.guard[0] + t1 * DIM1 + c1;
+  for (int c2 = 0; c2 <= dev_mesh.guard[1]; c2++) {
+    size_t globalOffset = c2 * e1.pitch + i * sizeof(Scalar);
+
+    Scalar r = dev_mesh.pos(0, i, true);
+    if (r < 0.1) {
+      // printf("r is %f\n", r);
+      (*(Scalar*)((char*)e1.ptr + globalOffset)) =
+          r * omega * (*(Scalar*)((char*)b2.ptr + globalOffset));
+    } else {
+      (*(Scalar*)((char*)e1.ptr + globalOffset)) = 0.0f;
+    }
+    (*(Scalar*)((char*)e2.ptr + globalOffset)) = 0.0f;
+    (*(Scalar*)((char*)e3.ptr + globalOffset)) = 0.0f;
+    (*(Scalar*)((char*)b3.ptr + globalOffset)) = 0.0f;
+  }
+}
+
 }  // namespace Kernels
 
 void
@@ -378,14 +369,7 @@ curl_add_2d(VectorField<Scalar>& result, const VectorField<Scalar>& u,
 }
 
 FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
-    : m_Etmp(g),
-        m_Etmp2(g),
-      m_Erk(g),
-      m_Brk(g)
-// , m_tmp2(g),
-// m_e1(g), m_e2(g), m_e3(g), m_e4(g),
-// m_b1(g), m_b2(g), m_b3(g), m_b4(g)
-{
+    : m_Etmp(g), m_Etmp2(g), m_Erk(g), m_Brk(g) {
   m_Brk.set_field_type(FieldType::B);
   // m_j1(g), m_j2(g), m_j3(g), m_j4(g) {
   // m_b1.set_field_type(FieldType::B);
@@ -412,7 +396,9 @@ FieldSolver_FFE_Cyl::~FieldSolver_FFE_Cyl() {}
 
 void
 FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
-                                   double time) {
+                                   double omega) {
+  m_Erk.copyFrom(data.E);
+  m_Brk.copyFrom(data.B);
   // Apply Low Storage RK4 method here:
   for (int n = 0; n < 4; n++) {
     // timer::stamp();
@@ -424,8 +410,9 @@ FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
       m_Erk.assign(data.E, m_a[n] - m_b[n - 1]);
       m_Brk.assign(data.B, m_a[n] - m_b[n - 1]);
     }
-    update_field_substep(data.E, data.B, data.J,
-                         m_Erk, m_Brk, m_b[n] * dt);
+    update_field_substep(data.E, data.B, data.J, m_Erk, m_Brk, omega,
+                         m_b[n] * dt);
+    handle_boundary(data, omega, dt);
     // data.E.addBy(m_Erk, m_b[n] * dt);
     // data.B.addBy(m_Brk, m_b[n] * dt);
     // timer::show_duration_since_stamp("FFE substep", "ms");
@@ -437,9 +424,12 @@ FieldSolver_FFE_Cyl::compute_J(vfield_t& J, const vfield_t& E,
                                const vfield_t& B) {}
 
 void
-FieldSolver_FFE_Cyl::update_field_substep(
-    vfield_t& E_out, vfield_t& B_out, vfield_t& J_out,
-    const vfield_t& E_in, const vfield_t& B_in, Scalar dt) {
+FieldSolver_FFE_Cyl::update_field_substep(vfield_t& E_out,
+                                          vfield_t& B_out,
+                                          vfield_t& J_out,
+                                          const vfield_t& E_in,
+                                          const vfield_t& B_in,
+                                          Scalar omega, Scalar dt) {
   // Initialize all tmp fields to zero on the device
   // m_tmp.initialize();
   // m_tmp2.initialize();
@@ -467,47 +457,16 @@ FieldSolver_FFE_Cyl::update_field_substep(
 
   // Handle removal of the parallel delta_E, and when E larger than B
   // timer::stamp();
-  ffe_reduceE(m_Etmp, m_Etmp2, B_out);
-  cudaDeviceSynchronize();
+  // ffe_reduceE(m_Etmp, m_Etmp2, B_out);
+  // cudaDeviceSynchronize();
   // timer::show_duration_since_stamp("Reducing FFE E", "ms");
 
   // Interpolate the result from the center to E_out
   // timer::stamp();
-  m_Etmp.interpolate_from_center(E_out);
-  cudaDeviceSynchronize();
+  // m_Etmp.interpolate_from_center(E_out);
+  // cudaDeviceSynchronize();
   // timer::show_duration_since_stamp("Interpolate and add", "ms");
-}
-
-void
-FieldSolver_FFE_Cyl::ffe_edotb(ScalarField<Scalar>& result,
-                               const VectorField<Scalar>& E,
-                               const VectorField<Scalar>& B, Scalar q) {
-  auto& grid = E.grid();
-  auto& mesh = grid.mesh();
-
-  dim3 blockSize(32, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-  Kernels::compute_FFE_EdotB<32, 16><<<gridSize, blockSize>>>(
-      result.ptr(), E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1),
-      B.ptr(2), q);
-  CudaCheckError();
-}
-
-void
-FieldSolver_FFE_Cyl::ffe_j(VectorField<Scalar>& result,
-                           const ScalarField<Scalar>& tmp_f,
-                           const VectorField<Scalar>& E,
-                           const VectorField<Scalar>& B, Scalar q) {
-  auto& grid = E.grid();
-  auto& mesh = grid.mesh();
-
-  dim3 blockSize(32, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-
-  Kernels::compute_FFE_J<32, 16><<<gridSize, blockSize>>>(
-      result.ptr(0), result.ptr(1), result.ptr(2), E.ptr(0), E.ptr(1),
-      E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2), tmp_f.ptr(), q);
-  CudaCheckError();
+  E_out.copyFrom(m_Etmp2);
 }
 
 void
@@ -541,6 +500,28 @@ FieldSolver_FFE_Cyl::ffe_reduceE(VectorField<Scalar>& E_center,
   Kernels::reduce_E<32, 16><<<gridSize, blockSize>>>(
       E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
       E_center.ptr(0), E_center.ptr(1), E_center.ptr(2));
+  CudaCheckError();
+}
+
+void
+FieldSolver_FFE_Cyl::handle_boundary(SimData& data, Scalar omega,
+                                     Scalar dt) {
+  auto& grid = data.E.grid();
+  auto& mesh = grid.mesh();
+
+  Kernels::axis_boundary<256><<<mesh.reduced_dim(1) / 256, 256>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2), dt);
+  CudaCheckError();
+
+  Kernels::outer_r_boundary<256><<<mesh.reduced_dim(1) / 256, 256>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2));
+  CudaCheckError();
+
+  Kernels::lower_z_boundary<256><<<mesh.reduced_dim(0) / 256, 256>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2), omega);
   CudaCheckError();
 }
 
