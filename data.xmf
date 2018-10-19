@@ -1,0 +1,50 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+
+<Xdmf>
+<Domain>
+<Grid Name="ffe" GridType="Collection" CollectionType="Temporal" >
+
+<Grid Name="ffe" Type="Uniform" >
+  <Time Type="Single" Value="0.0" />
+  <Topology Type="2DSMesh" NumberOfElements="2052 2052"/>
+  <!--   <DataStructure Dimensions="    19241095" NumberType="Int" Format="HDF" >fensap-mesh.h5:/CONNE </DataStructure> -->
+  <!-- </Topology> -->
+  <Geometry GeometryType="X_Y">
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      mesh.h5:x1
+    </DataItem>
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      mesh.h5:x2
+    </DataItem>
+  </Geometry>
+  <Attribute Name="B1" Center="Node" AttributeType="Scalar">
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      data00000.h5:B1
+    </DataItem>
+  </Attribute>
+</Grid>
+
+<Grid Name="ffe" Type="Uniform" >
+  <Time Type="Single" Value="0.01" />
+  <Topology Type="2DSMesh" NumberOfElements="2052 2052"/>
+  <!--   <DataStructure Dimensions="    19241095" NumberType="Int" Format="HDF" >fensap-mesh.h5:/CONNE </DataStructure> -->
+  <!-- </Topology> -->
+  <Geometry GeometryType="X_Y">
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      mesh.h5:x1
+    </DataItem>
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      mesh.h5:x2
+    </DataItem>
+  </Geometry>
+  <Attribute Name="B1" Center="Node" AttributeType="Scalar">
+    <DataItem Dimensions="2052 2052" NumberType="Float" Precision="4" Format="HDF">
+      data00001.h5:B1
+    </DataItem>
+  </Attribute>
+</Grid>
+
+</Grid>
+</Domain>
+</Xdmf>
