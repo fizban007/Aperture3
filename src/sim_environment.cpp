@@ -112,8 +112,8 @@ Environment::setup_env(const std::string& conf_file) {
   // initialize the data exporter
   // m_exporter = std::make_unique<DataExporter>(
   //     m_params.data_dir, m_params.data_file_prefix);
-  m_exporter = std::unique_ptr<DataExporter>(new DataExporter(
-      m_grid, m_params.data_dir, m_params.data_file_prefix));
+  // m_exporter = std::unique_ptr<DataExporter>(new DataExporter(
+  //     m_grid, m_params.data_dir, m_params.data_file_prefix));
 
   // Initialize logger for future use
   // Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl,

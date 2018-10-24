@@ -10,6 +10,8 @@
 #include "sim_params.h"
 #include <string>
 #include <vector>
+#include <boost/multi_array.hpp>
+#include <fstream>
 
 namespace Aperture {
 
@@ -25,7 +27,7 @@ struct dataset {
 };
 
 template <typename Ptc>
-struct ptcdata {
+struct ptcoutput {
   std::string name;
   const Ptc* ptc;
   std::vector<float> data_x;
@@ -33,7 +35,7 @@ struct ptcdata {
 };
 
 template <>
-struct ptcdata<Photons> {
+struct ptcoutput<Photons> {
   std::string name;
   const Photons* ptc;
   std::vector<float> data_x;
@@ -41,13 +43,38 @@ struct ptcdata<Photons> {
   std::vector<float> data_l;
 };
 
+template <typename T>
+struct vfieldoutput {
+  std::string name;
+  const VectorField<T>* field;
+  boost::multi_array<Scalar, 3> f1;
+  boost::multi_array<Scalar, 3> f2;
+  boost::multi_array<Scalar, 3> f3;
+};
+
+template <typename T>
+struct sfieldoutput {
+  std::string name;
+  const ScalarField<T>* field;
+  boost::multi_array<float, 3> f;
+};
+
+struct meshoutput {
+  std::string name;
+  boost::multi_array<float, 3> x1;
+  boost::multi_array<float, 3> x2;
+  boost::multi_array<float, 3> x3;
+};
+
 class DataExporter {
  public:
   // DataExporter();
   DataExporter(const Grid& g, const std::string& dir,
-               const std::string& prefix);
+               const std::string& prefix, int downsample = 1);
 
   ~DataExporter();
+
+  void WriteGrid();
 
   void WriteOutput(int timestep, float time);
 
@@ -61,6 +88,13 @@ class DataExporter {
   template <typename T>
   void AddArray(const std::string& name, MultiArray<T>& field);
 
+  template <typename T>
+  void AddField(const std::string& name, const ScalarField<T>& field);
+  template <typename T>
+  void AddField(const std::string& name, const VectorField<T>& field);
+
+  void InterpolateFieldValues();
+
   void AddParticleArray(const std::string& name, const Particles& ptc);
   void AddParticleArray(const std::string& name, const Photons& ptc);
   // void AddParticleArray(const Photons& ptc);
@@ -70,6 +104,10 @@ class DataExporter {
 
   // void setGrid(const Grid& g) { grid = g; }
   void writeConfig(const SimParams& params);
+  void writeXMFHead(std::ofstream& fs);
+  void writeXMFStep(std::ofstream& fs, int step, double time);
+  void writeXMFTail(std::ofstream& fs);
+  void writeXMF(int step, double time);
   void createDirectories();
   bool checkDirectories();
 
@@ -82,11 +120,16 @@ class DataExporter {
 
   std::vector<dataset<float>> dbFloat;
   std::vector<dataset<double>> dbDouble;
+  std::vector<sfieldoutput<Scalar>> dbScalars;
+  std::vector<vfieldoutput<Scalar>> dbVectors;
+  meshoutput dbMesh;
 
-  std::vector<ptcdata<Particles>> dbPtcData;
-  std::vector<ptcdata<Photons>> dbPhotonData;
+  std::vector<ptcoutput<Particles>> dbPtcData;
+  std::vector<ptcoutput<Photons>> dbPhotonData;
 
   const Grid& grid;
+  int downsample_factor;
+  std::ofstream xmf;
 };  // ----- end of class DataExporter -----
 
 }  // namespace Aperture

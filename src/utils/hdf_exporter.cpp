@@ -1,23 +1,33 @@
 #include "utils/hdf_exporter.h"
-#include "fmt/ostream.h"
+#include "fmt/core.h"
 #include "utils/logger.h"
 // #include "config_file.h"
 #include "commandline_args.h"
 #include "nlohmann/json.hpp"
-#include <H5Cpp.h>
+// #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <fstream>
+
+#define H5_USE_BOOST
+
+#include <highfive/H5DataSet.hpp>
+#include <highfive/H5DataSpace.hpp>
+#include <highfive/H5File.hpp>
 #include <time.h>
 
 using json = nlohmann::json;
+using namespace HighFive;
 
 namespace Aperture {
 
 // DataExporter::DataExporter() {}
 
 DataExporter::DataExporter(const Grid &g, const std::string &dir,
-                           const std::string &prefix)
-    : outputDirectory(dir), filePrefix(prefix), grid(g) {
+                           const std::string &prefix, int downsample)
+    : outputDirectory(dir),
+      filePrefix(prefix),
+      grid(g),
+      downsample_factor(downsample) {
   boost::filesystem::path rootPath(dir.c_str());
   boost::system::error_code returnedError;
 
@@ -25,16 +35,16 @@ DataExporter::DataExporter(const Grid &g, const std::string &dir,
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
 
   // Format the output directory as Data%Y%m%d-%H%M
-  char myTime[150] = {};
-  char subDir[200] = {};
-  time_t rawtime;
-  struct tm *timeinfo;
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
-  strftime(myTime, 140, "%Y%m%d-%H%M", timeinfo);
-  snprintf(subDir, sizeof(subDir), "Data%s/", myTime);
+  // char myTime[150] = {};
+  // char subDir[200] = {};
+  // time_t rawtime;
+  // struct tm *timeinfo;
+  // time(&rawtime);
+  // timeinfo = localtime(&rawtime);
+  // strftime(myTime, 140, "%Y%m%d-%H%M", timeinfo);
+  // snprintf(subDir, sizeof(subDir), "Data%s/", myTime);
 
-  outputDirectory += subDir;
+  // outputDirectory += subDir;
 }
 
 DataExporter::~DataExporter() {}
@@ -56,55 +66,137 @@ DataExporter::checkDirectories() {
   return boost::filesystem::exists(outputDirectory);
 }
 
+// void
+// DataExporter::AddArray(const std::string &name, float *data, int
+// *dims,
+//                        int ndims) {
+//   dataset<float> tempData;
+
+//   tempData.name = name;
+//   tempData.data = data;
+//   tempData.ndims = ndims;
+//   for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
+
+//   dbFloat.push_back(tempData);
+// }
+
+// void
+// DataExporter::AddArray(const std::string &name, double *data, int
+// *dims,
+//                        int ndims) {
+//   dataset<double> tempData;
+
+//   tempData.name = name;
+//   tempData.data = data;
+//   tempData.ndims = ndims;
+//   for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
+
+//   dbDouble.push_back(tempData);
+// }
+
+// template <typename T>
+// void
+// DataExporter::AddArray(const std::string &name, MultiArray<T> &array)
+// {
+//   int ndims = array.dim();
+//   int *dims = new int[ndims];
+//   for (int i = 0; i < ndims; i++) dims[i] = array.extent()[i];
+
+//   AddArray(name, array.data(), dims, ndims);
+
+//   delete[] dims;
+// }
+
+// template <typename T>
+// void
+// DataExporter::AddArray(const std::string &name, VectorField<T>
+// &field,
+//                        int component) {
+//   AddArray(name, field.data(component));
+// }
+
+template <typename T>
 void
-DataExporter::AddArray(const std::string &name, float *data, int *dims,
-                       int ndims) {
-  dataset<float> tempData;
+DataExporter::AddField(const std::string &name,
+                       const ScalarField<T> &field) {
+  sfieldoutput<T> tempData;
+  auto &mesh = grid.mesh();
 
   tempData.name = name;
-  tempData.data = data;
-  tempData.ndims = ndims;
-  for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
+  tempData.field = &field;
+  tempData.f.resize(
+      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
 
-  dbFloat.push_back(tempData);
-}
-
-void
-DataExporter::AddArray(const std::string &name, double *data, int *dims,
-                       int ndims) {
-  dataset<double> tempData;
-
-  tempData.name = name;
-  tempData.data = data;
-  tempData.ndims = ndims;
-  for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
-
-  dbDouble.push_back(tempData);
+  dbScalars.push_back(std::move(tempData));
 }
 
 template <typename T>
 void
-DataExporter::AddArray(const std::string &name, MultiArray<T> &array) {
-  int ndims = array.dim();
-  int *dims = new int[ndims];
-  for (int i = 0; i < ndims; i++) dims[i] = array.extent()[i];
+DataExporter::AddField(const std::string &name,
+                       const VectorField<T> &field) {
+  vfieldoutput<T> tempData;
+  auto &mesh = grid.mesh();
 
-  AddArray(name, array.data(), dims, ndims);
+  tempData.name = name;
+  tempData.field = &field;
+  tempData.f1.resize(
+      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+  tempData.f2.resize(
+      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+  tempData.f3.resize(
+      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
 
-  delete[] dims;
+  dbVectors.push_back(std::move(tempData));
 }
 
-template <typename T>
 void
-DataExporter::AddArray(const std::string &name, VectorField<T> &field,
-                       int component) {
-  AddArray(name, field.data(component));
+DataExporter::InterpolateFieldValues() {
+  for (auto &sf : dbScalars) {
+    auto &mesh = sf.field->grid().mesh();
+    for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
+      for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+        for (int i = 0; i < mesh.reduced_dim(0);
+             i += downsample_factor) {
+          sf.f[k / downsample_factor + mesh.guard[2]]
+              [j / downsample_factor + mesh.guard[1]]
+              [i / downsample_factor + mesh.guard[0]] = (*sf.field)(
+              i + mesh.guard[0], j + mesh.guard[1], k + mesh.guard[2]);
+        }
+      }
+    }
+  }
+
+  for (auto &vf : dbVectors) {
+    auto &mesh = vf.field->grid().mesh();
+    for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
+      for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+        for (int i = 0; i < mesh.reduced_dim(0);
+             i += downsample_factor) {
+          vf.f1[k / downsample_factor + mesh.guard[2]]
+               [j / downsample_factor + mesh.guard[1]]
+               [i / downsample_factor + mesh.guard[0]] =
+              (*vf.field)(0, i + mesh.guard[0], j + mesh.guard[1],
+                          k + mesh.guard[2]);
+          vf.f2[k / downsample_factor + mesh.guard[2]]
+               [j / downsample_factor + mesh.guard[1]]
+               [i / downsample_factor + mesh.guard[0]] =
+              (*vf.field)(1, i + mesh.guard[0], j + mesh.guard[1],
+                          k + mesh.guard[2]);
+          vf.f3[k / downsample_factor + mesh.guard[2]]
+               [j / downsample_factor + mesh.guard[1]]
+               [i / downsample_factor + mesh.guard[0]] =
+              (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1],
+                          k + mesh.guard[2]);
+        }
+      }
+    }
+  }
 }
 
 void
 DataExporter::AddParticleArray(const std::string &name,
                                const Particles &ptc) {
-  ptcdata<Particles> temp;
+  ptcoutput<Particles> temp;
   temp.name = name;
   temp.ptc = &ptc;
   temp.data_x = std::vector<float>(MAX_TRACKED);
@@ -116,7 +208,7 @@ DataExporter::AddParticleArray(const std::string &name,
 void
 DataExporter::AddParticleArray(const std::string &name,
                                const Photons &ptc) {
-  ptcdata<Photons> temp;
+  ptcoutput<Photons> temp;
   temp.name = name;
   temp.ptc = &ptc;
   temp.data_x = std::vector<float>(MAX_TRACKED);
@@ -127,125 +219,187 @@ DataExporter::AddParticleArray(const std::string &name,
 }
 
 void
+DataExporter::WriteGrid() {
+  if (grid.dim() == 3) {
+    auto &mesh = grid.mesh();
+    boost::multi_array<float, 3> x1_array(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    boost::multi_array<float, 3> x2_array(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    boost::multi_array<float, 3> x3_array(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+
+    for (int k = 0; k < mesh.dims[2]; k++) {
+      for (int j = 0; j < mesh.dims[1]; j++) {
+        for (int i = 0; i < mesh.dims[0]; i++) {
+          x1_array[k][j][i] = mesh.pos(0, i, false);
+          x2_array[k][j][i] = mesh.pos(1, j, false);
+          x3_array[k][j][i] = mesh.pos(2, k, false);
+        }
+      }
+    }
+
+    std::string meshfilename = outputDirectory + "mesh.h5";
+    Logger::print_info("{}", meshfilename);
+    File meshfile(meshfilename.c_str(),
+                  File::ReadWrite | File::Create | File::Truncate);
+    DataSet mesh_x1 =
+        meshfile.createDataSet<float>("x1", DataSpace::From(x1_array));
+    mesh_x1.write(x1_array);
+    DataSet mesh_x2 =
+        meshfile.createDataSet<float>("x2", DataSpace::From(x2_array));
+    mesh_x2.write(x2_array);
+    DataSet mesh_x3 =
+        meshfile.createDataSet<float>("x3", DataSpace::From(x3_array));
+    mesh_x3.write(x3_array);
+  } else if (grid.dim() == 2) {
+    auto &mesh = grid.mesh();
+    boost::multi_array<float, 2> x1_array(
+        boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    boost::multi_array<float, 2> x2_array(
+        boost::extents[mesh.dims[1]][mesh.dims[0]]);
+
+    for (int j = 0; j < mesh.dims[1]; j++) {
+      for (int i = 0; i < mesh.dims[0]; i++) {
+        x1_array[j][i] = mesh.pos(0, i, false);
+        x2_array[j][i] = mesh.pos(1, j, false);
+      }
+    }
+
+    std::string meshfilename = outputDirectory + "mesh.h5";
+    Logger::print_info("{}", meshfilename);
+    File meshfile(meshfilename.c_str(),
+                  File::ReadWrite | File::Create | File::Truncate);
+    DataSet mesh_x1 =
+        meshfile.createDataSet<float>("x1", DataSpace::From(x1_array));
+    mesh_x1.write(x1_array);
+    DataSet mesh_x2 =
+        meshfile.createDataSet<float>("x2", DataSpace::From(x2_array));
+    mesh_x2.write(x2_array);
+  }
+}
+
+void
 DataExporter::WriteOutput(int timestep, float time) {
   if (!checkDirectories()) createDirectories();
-  try {
-    std::string filename = outputDirectory + filePrefix +
-                           fmt::format("{0:06d}.h5", timestep);
-    H5::H5File *file = new H5::H5File(filename, H5F_ACC_TRUNC);
+  InterpolateFieldValues();
+  // try {
+  //   std::string filename = outputDirectory + filePrefix +
+  //                          fmt::format("{0:06d}.h5", timestep);
+  //   H5::H5File *file = new H5::H5File(filename, H5F_ACC_TRUNC);
 
-    for (auto &ds : dbFloat) {
-      hsize_t *sizes = new hsize_t[ds.ndims];
-      for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
-      H5::DataSpace space(ds.ndims, sizes);
-      H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
-          ds.name, H5::PredType::NATIVE_FLOAT, space));
-      dataset->write((void *)ds.data, H5::PredType::NATIVE_FLOAT);
+  //   for (auto &ds : dbFloat) {
+  //     hsize_t *sizes = new hsize_t[ds.ndims];
+  //     for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
+  //     H5::DataSpace space(ds.ndims, sizes);
+  //     H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
+  //         ds.name, H5::PredType::NATIVE_FLOAT, space));
+  //     dataset->write((void *)ds.data, H5::PredType::NATIVE_FLOAT);
 
-      delete[] sizes;
-      delete dataset;
-    }
+  //     delete[] sizes;
+  //     delete dataset;
+  //   }
 
-    for (auto &ds : dbDouble) {
-      hsize_t *sizes = new hsize_t[ds.ndims];
-      for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
-      H5::DataSpace space(ds.ndims, sizes);
-      H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
-          ds.name, H5::PredType::NATIVE_DOUBLE, space));
-      dataset->write((void *)ds.data, H5::PredType::NATIVE_DOUBLE);
+  //   for (auto &ds : dbDouble) {
+  //     hsize_t *sizes = new hsize_t[ds.ndims];
+  //     for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
+  //     H5::DataSpace space(ds.ndims, sizes);
+  //     H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
+  //         ds.name, H5::PredType::NATIVE_DOUBLE, space));
+  //     dataset->write((void *)ds.data, H5::PredType::NATIVE_DOUBLE);
 
-      delete[] sizes;
-      delete dataset;
-    }
+  //     delete[] sizes;
+  //     delete dataset;
+  //   }
 
-    for (auto &ds : dbPtcData) {
-      std::string name_x = ds.name + "_x";
-      std::string name_p = ds.name + "_p";
-      unsigned int idx = 0;
-      for (Index_t n = 0; n < ds.ptc->number(); n++) {
-        if (!ds.ptc->is_empty(n) &&
-            ds.ptc->check_flag(n, ParticleFlag::tracked) &&
-            idx < MAX_TRACKED) {
-          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
-                                     ds.ptc->data().x1[n]);
-          ds.data_x[idx] = x;
-          ds.data_p[idx] = ds.ptc->data().p1[n];
-          idx += 1;
-        }
-      }
-      hsize_t sizes[1] = {idx};
-      H5::DataSpace space(1, sizes);
-      H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-          name_x, H5::PredType::NATIVE_FLOAT, space));
-      dataset_x->write((void *)ds.data_x.data(),
-                       H5::PredType::NATIVE_FLOAT);
-      H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-          name_p, H5::PredType::NATIVE_FLOAT, space));
-      dataset_p->write((void *)ds.data_p.data(),
-                       H5::PredType::NATIVE_FLOAT);
+  //   for (auto &ds : dbPtcData) {
+  //     std::string name_x = ds.name + "_x";
+  //     std::string name_p = ds.name + "_p";
+  //     unsigned int idx = 0;
+  //     for (Index_t n = 0; n < ds.ptc->number(); n++) {
+  //       if (!ds.ptc->is_empty(n) &&
+  //           ds.ptc->check_flag(n, ParticleFlag::tracked) &&
+  //           idx < MAX_TRACKED) {
+  //         Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
+  //                                    ds.ptc->data().x1[n]);
+  //         ds.data_x[idx] = x;
+  //         ds.data_p[idx] = ds.ptc->data().p1[n];
+  //         idx += 1;
+  //       }
+  //     }
+  //     hsize_t sizes[1] = {idx};
+  //     H5::DataSpace space(1, sizes);
+  //     H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
+  //         name_x, H5::PredType::NATIVE_FLOAT, space));
+  //     dataset_x->write((void *)ds.data_x.data(),
+  //                      H5::PredType::NATIVE_FLOAT);
+  //     H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
+  //         name_p, H5::PredType::NATIVE_FLOAT, space));
+  //     dataset_p->write((void *)ds.data_p.data(),
+  //                      H5::PredType::NATIVE_FLOAT);
 
-      delete dataset_x;
-      delete dataset_p;
+  //     delete dataset_x;
+  //     delete dataset_p;
 
-      Logger::print_info("Written {} tracked particles", idx);
-    }
+  //     Logger::print_info("Written {} tracked particles", idx);
+  //   }
 
-    for (auto &ds : dbPhotonData) {
-      std::string name_x = ds.name + "_x";
-      std::string name_p = ds.name + "_p";
-      // std::string name_l = ds.name + "_l";
-      unsigned int idx = 0;
-      for (Index_t n = 0; n < ds.ptc->number(); n++) {
-        if (!ds.ptc->is_empty(n) &&
-            ds.ptc->check_flag(n, PhotonFlag::tracked) &&
-            idx < MAX_TRACKED) {
-          Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
-                                     ds.ptc->data().x1[n]);
-          ds.data_x[idx] = x;
-          ds.data_p[idx] = ds.ptc->data().p1[n];
-          // ds.data_l[idx] = ds.ptc->data().path[n];
-          idx += 1;
-        }
-      }
-      hsize_t sizes[1] = {idx};
-      H5::DataSpace space(1, sizes);
-      H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-          name_x, H5::PredType::NATIVE_FLOAT, space));
-      dataset_x->write((void *)ds.data_x.data(),
-                       H5::PredType::NATIVE_FLOAT);
-      H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-          name_p, H5::PredType::NATIVE_FLOAT, space));
-      dataset_p->write((void *)ds.data_p.data(),
-                       H5::PredType::NATIVE_FLOAT);
-      // H5::DataSet *dataset_l = new
-      // H5::DataSet(file->createDataSet(name_l,
-      // H5::PredType::NATIVE_FLOAT, space));
-      // dataset_l->write((void*)ds.data_l.data(),
-      // H5::PredType::NATIVE_FLOAT);
+  //   for (auto &ds : dbPhotonData) {
+  //     std::string name_x = ds.name + "_x";
+  //     std::string name_p = ds.name + "_p";
+  //     // std::string name_l = ds.name + "_l";
+  //     unsigned int idx = 0;
+  //     for (Index_t n = 0; n < ds.ptc->number(); n++) {
+  //       if (!ds.ptc->is_empty(n) &&
+  //           ds.ptc->check_flag(n, PhotonFlag::tracked) &&
+  //           idx < MAX_TRACKED) {
+  //         Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
+  //                                    ds.ptc->data().x1[n]);
+  //         ds.data_x[idx] = x;
+  //         ds.data_p[idx] = ds.ptc->data().p1[n];
+  //         // ds.data_l[idx] = ds.ptc->data().path[n];
+  //         idx += 1;
+  //       }
+  //     }
+  //     hsize_t sizes[1] = {idx};
+  //     H5::DataSpace space(1, sizes);
+  //     H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
+  //         name_x, H5::PredType::NATIVE_FLOAT, space));
+  //     dataset_x->write((void *)ds.data_x.data(),
+  //                      H5::PredType::NATIVE_FLOAT);
+  //     H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
+  //         name_p, H5::PredType::NATIVE_FLOAT, space));
+  //     dataset_p->write((void *)ds.data_p.data(),
+  //                      H5::PredType::NATIVE_FLOAT);
+  //     // H5::DataSet *dataset_l = new
+  //     // H5::DataSet(file->createDataSet(name_l,
+  //     // H5::PredType::NATIVE_FLOAT, space));
+  //     // dataset_l->write((void*)ds.data_l.data(),
+  //     // H5::PredType::NATIVE_FLOAT);
 
-      delete dataset_x;
-      delete dataset_p;
-      // delete dataset_l;
+  //     delete dataset_x;
+  //     delete dataset_p;
+  //     // delete dataset_l;
 
-      Logger::print_info("Written {} tracked photons", idx);
-    }
-    delete file;
-  }
-  // catch failure caused by the H5File operations
-  catch (H5::FileIException &error) {
-    error.printErrorStack();
-    // return -1;
-  }
-  // catch failure caused by the DataSet operations
-  catch (H5::DataSetIException &error) {
-    error.printErrorStack();
-    // return -1;
-  }
-  // catch failure caused by the DataSpace operations
-  catch (H5::DataSpaceIException &error) {
-    error.printErrorStack();
-    // return -1;
-  }
+  //     Logger::print_info("Written {} tracked photons", idx);
+  //   }
+  //   delete file;
+  // }
+  // // catch failure caused by the H5File operations
+  // catch (H5::FileIException &error) {
+  //   error.printErrorStack();
+  //   // return -1;
+  // }
+  // // catch failure caused by the DataSet operations
+  // catch (H5::DataSetIException &error) {
+  //   error.printErrorStack();
+  //   // return -1;
+  // }
+  // // catch failure caused by the DataSpace operations
+  // catch (H5::DataSpaceIException &error) {
+  //   error.printErrorStack();
+  //   // return -1;
+  // }
 }
 
 void
@@ -283,18 +437,147 @@ DataExporter::writeConfig(const SimParams &params) {
   o << std::setw(4) << conf << std::endl;
 }
 
+void
+DataExporter::writeXMFHead(std::ofstream &fs) {
+  fs << "<?xml version=\"1.0\" ?>" << std::endl;
+  fs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
+  fs << "<Xdmf>" << std::endl;
+  fs << "<Domain>" << std::endl;
+  fs << "<Grid Name=\"Aperture\" GridType=\"Collection\" "
+        "CollectionType=\"Temporal\" >"
+     << std::endl;
+}
+
+void
+DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
+  std::string dim_str;
+  auto &mesh = grid.mesh();
+  if (grid.dim() == 3) {
+    dim_str = fmt::format("{} {} {}", mesh.dims[2], mesh.dims[1],
+                          mesh.dims[0]);
+  } else if (grid.dim() == 2) {
+    dim_str = fmt::format("{} {}", mesh.dims[1], mesh.dims[0]);
+  }
+
+  fs << "<Grid Name=\"Aperture\" Type=\"Uniform\">" << std::endl;
+  fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>"
+     << std::endl;
+  if (grid.dim() == 3) {
+    fs << "  <Topology Type=\"3DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y_Z\">" << std::endl;
+  } else if (grid.dim() == 2) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  }
+  fs << "    <DataItem Dimensions=\"" << dim_str
+     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+     << std::endl;
+  fs << "      mesh.h5:x1" << std::endl;
+  fs << "    </DataItem>" << std::endl;
+  fs << "    <DataItem Dimensions=\"" << dim_str
+     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+     << std::endl;
+  fs << "      mesh.h5:x2" << std::endl;
+  fs << "    </DataItem>" << std::endl;
+  if (grid.dim() == 3) {
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x3" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+
+  fs << "  </Geometry>" << std::endl;
+
+  for (auto &sf : dbScalars) {
+    fs << "  <Attribute Name=\"" << sf.name
+       << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, sf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+  }
+  for (auto &vf : dbVectors) {
+    fs << "  <Attribute Name=\"" << vf.name
+       << "1\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}1", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+    fs << "  <Attribute Name=\"" << vf.name
+       << "2\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}2", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+    fs << "  <Attribute Name=\"" << vf.name
+       << "3\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}3", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+  }
+
+  fs << "</Grid>" << std::endl;
+}
+
+void
+DataExporter::writeXMFTail(std::ofstream &fs) {
+  fs << "</Grid>" << std::endl;
+  fs << "</Domain>" << std::endl;
+  fs << "</Xdmf>" << std::endl;
+}
+
+void
+DataExporter::writeXMF(int step, double time) {
+  if (!xmf.is_open()) {
+    xmf.open(outputDirectory + "data.xmf");
+    writeXMFHead(xmf);
+    writeXMFStep(xmf, step, time);
+    writeXMFTail(xmf);
+  } else {
+    long pos = xmf.tellp();
+    xmf.seekp(pos - 26);
+    writeXMFStep(xmf, step, time);
+    writeXMFTail(xmf);
+  }
+}
+
 // Explicit instantiation of templates
-template void DataExporter::AddArray<float>(const std::string &name,
-                                            MultiArray<float> &array);
+// template void DataExporter::AddArray<float>(const std::string &name,
+//                                             MultiArray<float>
+//                                             &array);
 
-template void DataExporter::AddArray<double>(const std::string &name,
-                                             MultiArray<double> &array);
+// template void DataExporter::AddArray<double>(const std::string &name,
+//                                              MultiArray<double>
+//                                              &array);
 
-template void DataExporter::AddArray<float>(const std::string &name,
-                                            VectorField<float> &field,
-                                            int component);
+// template void DataExporter::AddArray<float>(const std::string &name,
+//                                             VectorField<float>
+//                                             &field, int component);
 
-template void DataExporter::AddArray<double>(const std::string &name,
-                                             VectorField<double> &field,
-                                             int component);
+// template void DataExporter::AddArray<double>(const std::string &name,
+//                                              VectorField<double>
+//                                              &field, int component);
+template void DataExporter::AddField<Scalar>(
+    const std::string &name, const ScalarField<Scalar> &array);
+template void DataExporter::AddField<Scalar>(
+    const std::string &name, const VectorField<Scalar> &array);
 }  // namespace Aperture

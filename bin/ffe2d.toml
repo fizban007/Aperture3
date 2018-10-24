@@ -58,7 +58,7 @@ B0 = 1000.0
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [2048, 2048, 1]
+N = [512, 512, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard

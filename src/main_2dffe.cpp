@@ -1,17 +1,22 @@
 #include "algorithms/field_solver_ffe_cyl.h"
 #include "sim_data.h"
 #include "sim_environment.h"
+#include "utils/hdf_exporter.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 #include <fmt/core.h>
 #include <fstream>
-#include <highfive/H5DataSet.hpp>
-#include <highfive/H5DataSpace.hpp>
-#include <highfive/H5File.hpp>
 #include <iostream>
 #include <random>
 #include <vector>
+
+#define H5_USE_BOOST
+
+#include <boost/multi_array.hpp>
+#include <highfive/H5DataSet.hpp>
+#include <highfive/H5DataSpace.hpp>
+#include <highfive/H5File.hpp>
 
 using namespace Aperture;
 using namespace HighFive;
@@ -61,15 +66,26 @@ main(int argc, char* argv[]) {
       2, [](Scalar x1, Scalar x2, Scalar x3) { return 0.0f; });
   data.B.sync_to_device();
 
-  ScalarField<Scalar> x1(env.grid()), x2(env.grid());
-  x1.initialize([](Scalar x1, Scalar x2, Scalar x3){
-                  return x1;
-                });
-  x2.initialize([](Scalar x1, Scalar x2, Scalar x3){
-                  return x2;
-                });
-  Scalar** x1_ptr = new Scalar*[mesh.dims[1]];
-  Scalar** x2_ptr = new Scalar*[mesh.dims[1]];
+  DataExporter exporter(env.grid(), "./ffe_cyl/", "data", 1);
+  exporter.WriteGrid();
+
+  // ScalarField<Scalar> x1(env.grid()), x2(env.grid());
+  // x1.initialize([](Scalar x1, Scalar x2, Scalar x3){
+  //                 return x1;
+  //               });
+  // x2.initialize([](Scalar x1, Scalar x2, Scalar x3){
+  //                 return x2;
+  //               });
+  // Scalar** x1_ptr = new Scalar*[mesh.dims[1]];
+  // Scalar** x2_ptr = new Scalar*[mesh.dims[1]];
+  // boost::multi_array<Scalar, 2> x1_array(
+  //     boost::extents[mesh.dims[1]][mesh.dims[0]]);
+  // boost::multi_array<Scalar, 2> x2_array(
+  //     boost::extents[mesh.dims[1]][mesh.dims[0]]);
+  // boost::multi_array<Scalar, 2> x1_array(
+  //     boost::extents[mesh.dims[1]][mesh.dims[0]]);
+  // boost::multi_array<Scalar, 2> x2_array(
+  //     boost::extents[mesh.dims[1]][mesh.dims[0]]);
   // for (int i = 0; i < 100; i++) {
   //   Logger::print_info("{}", data.B(0, i, 100));
   // }
@@ -95,39 +111,47 @@ main(int argc, char* argv[]) {
     e2_ptr[i] = data.E.data(1).data() + i * mesh.dims[0];
     e3_ptr[i] = data.E.data(2).data() + i * mesh.dims[0];
 
-    x1_ptr[i] = x1.data().data() + i * mesh.dims[0];
-    x2_ptr[i] = x2.data().data() + i * mesh.dims[0];
+    // x1_ptr[i] = x1.data().data() + i * mesh.dims[0];
+    // x2_ptr[i] = x2.data().data() + i * mesh.dims[0];
     // Logger::print_info("{}", b2_ptr[i][100]);
   }
 
-  std::string meshfile_name = "./ffe_cyl/mesh.h5";
-  File meshfile(meshfile_name.c_str(),
-                File::ReadWrite | File::Create | File::Truncate);
+  // std::string meshfile_name = "./ffe_cyl/mesh.h5";
+  // File meshfile(meshfile_name.c_str(),
+  //               File::ReadWrite | File::Create | File::Truncate);
   std::vector<size_t> dims(2);
   dims[0] = env.grid().mesh().dims[0];
   dims[1] = env.grid().mesh().dims[1];
-  DataSet mesh_x1 =
-      meshfile.createDataSet<Scalar>("x1", DataSpace(dims));
-  mesh_x1.write((Scalar**)x1_ptr[0]);
-  DataSet mesh_x2 =
-      meshfile.createDataSet<Scalar>("x2", DataSpace(dims));
-  mesh_x2.write((Scalar**)x2_ptr[0]);
-  delete[] x1_ptr;
-  delete[] x2_ptr;
+  // DataSet mesh_x1 =
+  //     meshfile.createDataSet<Scalar>("x1",
+  //     DataSpace::From(x1_array));
+  // mesh_x1.write(x1_array);
+  // DataSet mesh_x2 =
+  //     meshfile.createDataSet<Scalar>("x2",
+  //     DataSpace::From(x2_array));
+  // mesh_x2.write(x2_array);
+  // delete[] x1_ptr;
+  // delete[] x2_ptr;
+  exporter.AddField("B", data.B);
+  exporter.AddField("E", data.E);
+  exporter.AddField("flux", flux);
 
+  // std::ofstream fs("./ffe_cyl/data_test.xmf");
   // Run the simulation
   for (unsigned int step = 0; step < env.params().max_steps; step++) {
     Scalar time = env.params().delta_t * step;
     Scalar omega = 0.0;
-    if (time < 0.1) omega = 100.f*time;
-    else if (time < 0.2) omega = 100.f*(0.2 - time);
-    
+    if (time < 0.1)
+      omega = 100.f * time;
+    else if (time < 0.2)
+      omega = 100.f * (0.2 - time);
+
     if ((step % env.params().data_interval) == 0) {
       data.B.sync_to_host();
       Logger::print_info("Export data here");
       compute_flux(flux, data.B);
-      std::string filename = fmt::format("./ffe_cyl/data{:05d}.h5",
-                                         step);
+      std::string filename =
+          fmt::format("./ffe_cyl/data{:06d}.h5", step);
       Logger::print_info("file name is {}", filename);
       File datafile(filename.c_str(),
                     File::ReadWrite | File::Create | File::Truncate);
@@ -154,16 +178,19 @@ main(int argc, char* argv[]) {
       DataSet data_e3 =
           datafile.createDataSet<Scalar>("E3", DataSpace(dims));
       data_e3.write((Scalar**)e3_ptr[0]);
+
+      exporter.writeXMF(step, time);
     }
 
     Logger::print_info("At timestep {}, omega is {}", step, omega);
     timer::stamp();
     field_solver.update_fields(data, env.params().delta_t, omega);
     // field_solver.update_field_substep(data.E, data.B, data.J,
-    //                                   data.E, data.B, env.params().delta_t);
+    //                                   data.E, data.B,
+    //                                   env.params().delta_t);
     timer::show_duration_since_stamp("FFE step", "ms");
-
   }
+  // fs.close();
 
   delete[] flux_ptr;
   delete[] bphi_ptr;
