@@ -30,7 +30,7 @@ main(int argc, char* argv[]) {
   std::default_random_engine gen;
   std::uniform_int_distribution<int> dist(10, 51);
   auto& mesh = env.grid().mesh();
-  uint32_t N = 150000000;
+  uint32_t N = 100000000;
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.f, 0.f, 0.f}, {5.0f, 0.0f, 1.0f},
                           mesh.get_idx(dist(gen), dist(gen), dist(gen)),
@@ -49,10 +49,12 @@ main(int argc, char* argv[]) {
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
-    timer::stamp();
-    data.particles.sort_by_cell();
-    auto t_sort = timer::get_duration_since_stamp("us");
-    Logger::print_info("Ptc sort took {}us", t_sort);
+    if (step % 10 == 0) {
+      timer::stamp();
+      data.particles.sort_by_cell();
+      auto t_sort = timer::get_duration_since_stamp("us");
+      Logger::print_info("Ptc sort took {}us", t_sort);
+    }
 
     timer::stamp();
     // ptc_updater.handle_boundary(data);

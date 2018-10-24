@@ -7,7 +7,8 @@ add_definitions(-DCUDA_ENABLED)
 # endif()
 
 set(Aperture_src
-  "utils/logger.cpp" "utils/timer.cpp" "utils/hdf_exporter.cpp"
+  "utils/logger.cpp" "utils/timer.cpp"
+  "utils/hdf_exporter.cpp"
   "utils/mpi_helper.cpp"
   "data/grid.cpp" "data/detail/particle_data_impl.cpp"
   "commandline_args.cpp" "config_file.cpp"

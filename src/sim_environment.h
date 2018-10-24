@@ -73,7 +73,7 @@ class Environment {
   // const Grid& data_grid() const { return m_data_grid; }
   // MetricType metric_type() const { return m_metric_type; }
 
-  DataExporter& exporter() { return *m_exporter; }
+  // DataExporter& exporter() { return *m_exporter; }
   // const MPICommWorld& world() const { return m_comm->world(); }
   // const MPICommCartesian& cartesian() const { return
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
@@ -105,7 +105,7 @@ class Environment {
   VectorField<Scalar> m_Bbg;
 
   // std::unique_ptr<MPIComm> m_comm;
-  std::unique_ptr<DataExporter> m_exporter;
+  // std::unique_ptr<DataExporter> m_exporter;
   // std::unique_ptr<InitialCondition> m_ic;
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;
