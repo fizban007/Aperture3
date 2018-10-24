@@ -119,39 +119,57 @@ template <typename T>
 void
 DataExporter::AddField(const std::string &name,
                        const ScalarField<T> &field) {
-  sfieldoutput<T> tempData;
   auto &mesh = grid.mesh();
 
-  tempData.name = name;
-  tempData.field = &field;
-  tempData.f.resize(
-      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+  if (grid.dim() == 3) {
+    sfieldoutput3d<T> tempData;
+    tempData.name = name;
+    tempData.field = &field;
 
-  dbScalars.push_back(std::move(tempData));
+    tempData.f.resize(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    dbScalars3d.push_back(std::move(tempData));
+  } else if (grid.dim() == 2) {
+    sfieldoutput2d<T> tempData;
+    tempData.name = name;
+    tempData.field = &field;
+
+    tempData.f.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    dbScalars2d.push_back(std::move(tempData));
+  }
 }
 
 template <typename T>
 void
 DataExporter::AddField(const std::string &name,
                        const VectorField<T> &field) {
-  vfieldoutput<T> tempData;
   auto &mesh = grid.mesh();
 
-  tempData.name = name;
-  tempData.field = &field;
-  tempData.f1.resize(
-      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-  tempData.f2.resize(
-      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-  tempData.f3.resize(
-      boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-
-  dbVectors.push_back(std::move(tempData));
+  if (grid.dim() == 3) {
+    vfieldoutput3d<T> tempData;
+    tempData.name = name;
+    tempData.field = &field;
+    tempData.f1.resize(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    tempData.f2.resize(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    tempData.f3.resize(
+        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    dbVectors3d.push_back(std::move(tempData));
+  } else if (grid.dim() == 2) {
+    vfieldoutput2d<T> tempData;
+    tempData.name = name;
+    tempData.field = &field;
+    tempData.f1.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    tempData.f2.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    tempData.f3.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    dbVectors2d.push_back(std::move(tempData));
+  }
 }
 
 void
 DataExporter::InterpolateFieldValues() {
-  for (auto &sf : dbScalars) {
+  for (auto &sf : dbScalars3d) {
     auto &mesh = sf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -166,7 +184,7 @@ DataExporter::InterpolateFieldValues() {
     }
   }
 
-  for (auto &vf : dbVectors) {
+  for (auto &vf : dbVectors3d) {
     auto &mesh = vf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -188,6 +206,37 @@ DataExporter::InterpolateFieldValues() {
               (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1],
                           k + mesh.guard[2]);
         }
+      }
+    }
+  }
+
+  for (auto &sf : dbScalars2d) {
+    auto &mesh = sf.field->grid().mesh();
+    for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+      for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+        sf.f[j / downsample_factor + mesh.guard[1]]
+            [i / downsample_factor + mesh.guard[0]] =
+            (*sf.field)(i + mesh.guard[0], j + mesh.guard[1]);
+      }
+    }
+  }
+
+  for (auto &vf : dbVectors2d) {
+    Logger::print_info("Writing {}", vf.name);
+    auto &mesh = vf.field->grid().mesh();
+    for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+      for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+        vf.f1[j / downsample_factor + mesh.guard[1]]
+             [i / downsample_factor + mesh.guard[0]] =
+            (*vf.field)(0, i + mesh.guard[0], j + mesh.guard[1]);
+        // std::cout << vf.f1[j / downsample_factor + mesh.guard[1]]
+        //     [i / downsample_factor + mesh.guard[0]] << std::endl;
+        vf.f2[j / downsample_factor + mesh.guard[1]]
+             [i / downsample_factor + mesh.guard[0]] =
+            (*vf.field)(1, i + mesh.guard[0], j + mesh.guard[1]);
+        vf.f3[j / downsample_factor + mesh.guard[1]]
+             [i / downsample_factor + mesh.guard[0]] =
+            (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1]);
       }
     }
   }
@@ -280,9 +329,13 @@ DataExporter::WriteGrid() {
 }
 
 void
-DataExporter::WriteOutput(int timestep, float time) {
+DataExporter::WriteOutput(int timestep, double time) {
   if (!checkDirectories()) createDirectories();
   InterpolateFieldValues();
+  File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                            filePrefix, timestep)
+                    .c_str(),
+                File::ReadWrite | File::Create | File::Truncate);
   // try {
   //   std::string filename = outputDirectory + filePrefix +
   //                          fmt::format("{0:06d}.h5", timestep);
@@ -400,6 +453,41 @@ DataExporter::WriteOutput(int timestep, float time) {
   //   error.printErrorStack();
   //   // return -1;
   // }
+  for (auto &sf : dbScalars2d) {
+    DataSet data =
+        datafile.createDataSet<float>(sf.name, DataSpace::From(sf.f));
+    data.write(sf.f);
+  }
+
+  for (auto &sf : dbScalars3d) {
+    DataSet data =
+        datafile.createDataSet<float>(sf.name, DataSpace::From(sf.f));
+    data.write(sf.f);
+  }
+
+  for (auto &vf : dbVectors2d) {
+    DataSet data1 = datafile.createDataSet<float>(
+        fmt::format("{}1", vf.name), DataSpace::From(vf.f1));
+    data1.write(vf.f1);
+    DataSet data2 = datafile.createDataSet<float>(
+        fmt::format("{}2", vf.name), DataSpace::From(vf.f2));
+    data2.write(vf.f2);
+    DataSet data3 = datafile.createDataSet<float>(
+        fmt::format("{}3", vf.name), DataSpace::From(vf.f3));
+    data3.write(vf.f3);
+  }
+
+  for (auto &vf : dbVectors3d) {
+    DataSet data1 = datafile.createDataSet<float>(
+        fmt::format("{}1", vf.name), DataSpace::From(vf.f1));
+    data1.write(vf.f1);
+    DataSet data2 = datafile.createDataSet<float>(
+        fmt::format("{}2", vf.name), DataSpace::From(vf.f2));
+    data2.write(vf.f2);
+    DataSet data3 = datafile.createDataSet<float>(
+        fmt::format("{}3", vf.name), DataSpace::From(vf.f3));
+    data3.write(vf.f3);
+  }
 }
 
 void
@@ -491,7 +579,7 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
 
   fs << "  </Geometry>" << std::endl;
 
-  for (auto &sf : dbScalars) {
+  for (auto &sf : dbScalars2d) {
     fs << "  <Attribute Name=\"" << sf.name
        << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
     fs << "    <DataItem Dimensions=\"" << dim_str
@@ -502,7 +590,51 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
     fs << "    </DataItem>" << std::endl;
     fs << "  </Attribute>" << std::endl;
   }
-  for (auto &vf : dbVectors) {
+  for (auto &sf : dbScalars3d) {
+    fs << "  <Attribute Name=\"" << sf.name
+       << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, sf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+  }
+  for (auto &vf : dbVectors2d) {
+    fs << "  <Attribute Name=\"" << vf.name
+       << "1\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}1", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+    fs << "  <Attribute Name=\"" << vf.name
+       << "2\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}2", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+    fs << "  <Attribute Name=\"" << vf.name
+       << "3\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << fmt::format("      {}{:06d}.h5:{}3", filePrefix, step,
+                      vf.name)
+       << std::endl;
+    fs << "    </DataItem>" << std::endl;
+    fs << "  </Attribute>" << std::endl;
+  }
+
+  for (auto &vf : dbVectors3d) {
     fs << "  <Attribute Name=\"" << vf.name
        << "1\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
     fs << "    <DataItem Dimensions=\"" << dim_str

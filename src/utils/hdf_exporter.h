@@ -44,7 +44,7 @@ struct ptcoutput<Photons> {
 };
 
 template <typename T>
-struct vfieldoutput {
+struct vfieldoutput3d {
   std::string name;
   const VectorField<T>* field;
   boost::multi_array<Scalar, 3> f1;
@@ -53,17 +53,26 @@ struct vfieldoutput {
 };
 
 template <typename T>
-struct sfieldoutput {
+struct sfieldoutput3d {
   std::string name;
   const ScalarField<T>* field;
   boost::multi_array<float, 3> f;
 };
 
-struct meshoutput {
+template <typename T>
+struct vfieldoutput2d {
   std::string name;
-  boost::multi_array<float, 3> x1;
-  boost::multi_array<float, 3> x2;
-  boost::multi_array<float, 3> x3;
+  const VectorField<T>* field;
+  boost::multi_array<Scalar, 2> f1;
+  boost::multi_array<Scalar, 2> f2;
+  boost::multi_array<Scalar, 2> f3;
+};
+
+template <typename T>
+struct sfieldoutput2d {
+  std::string name;
+  const ScalarField<T>* field;
+  boost::multi_array<float, 2> f;
 };
 
 class DataExporter {
@@ -76,7 +85,7 @@ class DataExporter {
 
   void WriteGrid();
 
-  void WriteOutput(int timestep, float time);
+  void WriteOutput(int timestep, double time);
 
   void AddArray(const std::string& name, float* data, int* dims,
                 int ndims);
@@ -118,11 +127,13 @@ class DataExporter {
   std::string subName;
   std::string filePrefix;  //!< Sets the common prefix of the data files
 
-  std::vector<dataset<float>> dbFloat;
-  std::vector<dataset<double>> dbDouble;
-  std::vector<sfieldoutput<Scalar>> dbScalars;
-  std::vector<vfieldoutput<Scalar>> dbVectors;
-  meshoutput dbMesh;
+  // std::vector<dataset<float>> dbFloat;
+  // std::vector<dataset<double>> dbDouble;
+  std::vector<sfieldoutput2d<Scalar>> dbScalars2d;
+  std::vector<vfieldoutput2d<Scalar>> dbVectors2d;
+  std::vector<sfieldoutput3d<Scalar>> dbScalars3d;
+  std::vector<vfieldoutput3d<Scalar>> dbVectors3d;
+  // meshoutput dbMesh;
 
   std::vector<ptcoutput<Particles>> dbPtcData;
   std::vector<ptcoutput<Photons>> dbPhotonData;
