@@ -118,7 +118,48 @@ struct Interpolator3D {
     return interp(x);
   }
 
-  HD_INLINE int radius() const { return Interp::radius; }
+  HD_INLINE int radius() const { return Interp::radius + 1; }
+  HD_INLINE int support() const { return Interp::support; }
+};
+
+template <typename Interp>
+struct Interpolator2D {
+  Interp interp;
+
+  template <typename FloatT>
+  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
+                                int c1, int c2, Stagger stagger) const {
+    Scalar result = 0.0f;
+    for (int j = c2 - Interp::radius;
+         j <= c2 + Interp::support - Interp::radius; j++) {
+      size_t j_offset = j * f.pitch;
+      for (int i = c1 - Interp::radius;
+           i <= c1 + Interp::support - Interp::radius; i++) {
+        size_t globalOffset = j_offset + i * sizeof(Scalar);
+
+        result += (*(Scalar*)((char*)f.ptr + globalOffset)) *
+                  interp_cell(interp, x1, c1, i, stagger[0]) *
+                  interp_cell(interp, x2, c2, j, stagger[1]);
+      }
+    }
+    return result;
+  }
+
+  template <typename FloatT>
+  HOST_DEVICE Scalar compute_weight(FloatT x1, FloatT x2, FloatT x3,
+                                    int c1, int c2, int c3, int t1,
+                                    int t2, int t3,
+                                    Stagger stagger) const {
+    return interp_cell(interp, x1, c1, t1, stagger[0]) *
+           interp_cell(interp, x2, c2, t2, stagger[1]);
+  }
+
+  template <typename FloatT>
+  HD_INLINE Scalar interpolate(FloatT x) const {
+    return interp(x);
+  }
+
+  HD_INLINE int radius() const { return Interp::radius + 1; }
   HD_INLINE int support() const { return Interp::support; }
 };
 
