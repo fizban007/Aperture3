@@ -693,21 +693,6 @@ DataExporter::writeXMF(int step, double time) {
 }
 
 // Explicit instantiation of templates
-// template void DataExporter::AddArray<float>(const std::string &name,
-//                                             MultiArray<float>
-//                                             &array);
-
-// template void DataExporter::AddArray<double>(const std::string &name,
-//                                              MultiArray<double>
-//                                              &array);
-
-// template void DataExporter::AddArray<float>(const std::string &name,
-//                                             VectorField<float>
-//                                             &field, int component);
-
-// template void DataExporter::AddArray<double>(const std::string &name,
-//                                              VectorField<double>
-//                                              &field, int component);
 template void DataExporter::AddField<Scalar>(
     const std::string &name, const ScalarField<Scalar> &array);
 template void DataExporter::AddField<Scalar>(
