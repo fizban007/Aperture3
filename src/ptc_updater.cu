@@ -48,8 +48,8 @@ movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
 #define MAX_THREADS_PER_BLOCK 256
 __global__ void
 __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
-    update_particles(particle_data ptc, size_t num, fields_data fields,
-                     Scalar dt) {
+update_particles(particle_data ptc, size_t num, fields_data fields,
+                 Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
