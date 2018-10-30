@@ -66,7 +66,7 @@ main(int argc, char* argv[]) {
       2, [](Scalar x1, Scalar x2, Scalar x3) { return 0.0f; });
   data.B.sync_to_device();
 
-  DataExporter exporter(env.params(), "./ffe_cyl/", "data", 1);
+  DataExporter exporter(env.params(), "./ffe_cyl/", "data", 2);
   exporter.WriteGrid();
 
   ScalarField<Scalar> flux(env.grid());

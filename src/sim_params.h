@@ -95,6 +95,7 @@ struct SimParams : public SimParamsBase {
   std::string initial_condition = "empty";
 
   int random_seed = 4321;
+  int downsample = 1;
 };
 
 }  // namespace Aperture
