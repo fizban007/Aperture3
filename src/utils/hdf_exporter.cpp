@@ -36,8 +36,8 @@ DataExporter::DataExporter(const SimParams &params,
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
 
   grid.init(params);
-  for (int i = 0; i < grid.dim(); i++) {
-    grid.mesh().dims[i] /= params.N[i] / downsample + 2 * params.guard[i];
+  for (int i = 0; i < grid.mesh().dim(); i++) {
+    grid.mesh().dims[i] = params.N[i] / downsample + 2 * params.guard[i];
     grid.mesh().delta[i] *= downsample;
     grid.mesh().inv_delta[i] /= downsample;
   }
