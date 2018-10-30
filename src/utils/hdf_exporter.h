@@ -17,6 +17,7 @@ namespace Aperture {
 
 class ConfigFile;
 class CommandArgs;
+struct SimParams;
 
 template <typename T>
 struct dataset {
@@ -78,7 +79,7 @@ struct sfieldoutput2d {
 class DataExporter {
  public:
   // DataExporter();
-  DataExporter(const Grid& g, const std::string& dir,
+  DataExporter(const SimParams& params, const std::string& dir,
                const std::string& prefix, int downsample = 1);
 
   ~DataExporter();
@@ -138,7 +139,7 @@ class DataExporter {
   std::vector<ptcoutput<Particles>> dbPtcData;
   std::vector<ptcoutput<Photons>> dbPhotonData;
 
-  const Grid& grid;
+  Grid grid;
   int downsample_factor;
   std::ofstream xmf;
 };  // ----- end of class DataExporter -----

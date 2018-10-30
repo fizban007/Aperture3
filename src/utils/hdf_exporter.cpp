@@ -4,6 +4,7 @@
 // #include "config_file.h"
 #include "commandline_args.h"
 #include "nlohmann/json.hpp"
+#include "sim_params.h"
 // #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <fstream>
@@ -22,11 +23,11 @@ namespace Aperture {
 
 // DataExporter::DataExporter() {}
 
-DataExporter::DataExporter(const Grid &g, const std::string &dir,
+DataExporter::DataExporter(const SimParams &params,
+                           const std::string &dir,
                            const std::string &prefix, int downsample)
     : outputDirectory(dir),
       filePrefix(prefix),
-      grid(g),
       downsample_factor(downsample) {
   boost::filesystem::path rootPath(dir.c_str());
   boost::system::error_code returnedError;
@@ -34,6 +35,12 @@ DataExporter::DataExporter(const Grid &g, const std::string &dir,
   boost::filesystem::create_directories(rootPath, returnedError);
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
 
+  grid.init(params);
+  for (int i = 0; i < grid.dim(); i++) {
+    grid.mesh().dims[i] /= params.N[i] / downsample + 2 * params.guard[i];
+    grid.mesh().delta[i] *= downsample;
+    grid.mesh().inv_delta[i] /= downsample;
+  }
   // Format the output directory as Data%Y%m%d-%H%M
   // char myTime[150] = {};
   // char subDir[200] = {};
