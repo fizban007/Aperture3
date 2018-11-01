@@ -20,6 +20,7 @@ set(Aperture_src
   "data/photons.cu" "data/photons_1d.cu"
   "data/fields_utils.cu"
   "algorithms/field_solver_default.cu"
+  "algorithms/field_solver_log_sph.cu"
   "algorithms/ptc_pusher_constE.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
   # "algorithms/ptc_pusher_geodesic.cpp"
