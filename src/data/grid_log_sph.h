@@ -14,8 +14,10 @@ class Grid_LogSph : public Grid
   void init(const SimParams& params);
 
   struct mesh_ptrs {
-    Scalar *h1, *h2, *h3;
+    cudaPitchedPtr h1, h2, h3;
   };
+
+  mesh_ptrs get_mesh_ptrs() const;
 
  private:
   MultiArray<Scalar> m_h1, m_h2, m_h3;
