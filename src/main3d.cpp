@@ -30,7 +30,7 @@ main(int argc, char* argv[]) {
   std::default_random_engine gen;
   std::uniform_int_distribution<int> dist(10, 51);
   auto& mesh = env.grid().mesh();
-  uint32_t N = 100000000;
+  uint32_t N = 10000000;
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.f, 0.f, 0.f}, {5.0f, 0.0f, 1.0f},
                           mesh.get_idx(dist(gen), dist(gen), dist(gen)),

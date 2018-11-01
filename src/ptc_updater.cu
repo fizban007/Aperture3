@@ -9,6 +9,8 @@
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 
+#define DEPOSIT_EPS 1.0e-10f
+
 namespace Aperture {
 
 namespace Kernels {
@@ -47,9 +49,10 @@ movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
 #define MIN_BLOCKS_PER_MP 3
 #define MAX_THREADS_PER_BLOCK 256
 __global__ void
-__launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
-update_particles(particle_data ptc, size_t num, fields_data fields,
-                 Scalar dt) {
+// __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
+__launch_bounds__(256, 4)
+    update_particles(particle_data ptc, size_t num, fields_data fields,
+                     Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -60,7 +63,7 @@ update_particles(particle_data ptc, size_t num, fields_data fields,
     Interpolator3D<spline_t> interp;
     auto flag = ptc.flag[idx];
     int sp = get_ptc_type(flag);
-    auto w = ptc.weight[idx];
+    // auto w = ptc.weight[idx];
     auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx],
          old_x3 = ptc.x3[idx];
     auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
@@ -118,6 +121,34 @@ update_particles(particle_data ptc, size_t num, fields_data fields,
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
     }
+  }
+}
+
+__global__ void
+__launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
+    deposit_current_3d(particle_data ptc, size_t num,
+                       fields_data fields, Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+
+    // Load particle quantities
+    Interpolator3D<spline_t> interp;
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    int c3 = dev_mesh.get_c3(c);
+    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
+    auto flag = ptc.flag[idx];
+    int sp = get_ptc_type(flag);
+    auto w = ptc.weight[idx];
+    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx],
+         old_x3 = ptc.x3[idx];
+
+    // step 0: Grab E & M fields at the particle position
+    Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+
     // step 2: Compute particle movement and update position
     Pos_t new_x1 = old_x1 + dt * p1 / gamma;
     Pos_t new_x2 = old_x2 + dt * p2 / gamma;
@@ -125,10 +156,10 @@ update_particles(particle_data ptc, size_t num, fields_data fields,
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
     int dc3 = floor(new_x3);
+    ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2, c3 + dc3);
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
     new_x3 -= (Pos_t)dc3;
-    ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2, c3 + dc3);
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = new_x3;
@@ -142,29 +173,32 @@ update_particles(particle_data ptc, size_t num, fields_data fields,
     int sup2 = interp.support() + 2;
     int sup23 = sup2 * sup2 * sup2;
     for (int k = 0; k < sup2; k++) {
-      int kk = (((idx + k) % sup23) / (sup2 * sup2));
-      Scalar sz0 =
-          interp.interpolate(0.5f + kk - interp.radius() - old_x3);
-      Scalar sz1 = interp.interpolate(0.5f + kk - interp.radius() +
-                                      dc3 - new_x3);
-      size_t k_offset = (kk - interp.radius() + c3) * fields.J1.pitch *
-                        fields.J1.ysize;
+      int kk = (((idx + k) % sup23) / (sup2 * sup2)) - interp.radius();
+      Scalar sz0 = interp.interpolate(0.5f - old_x3 + kk);
+      Scalar sz1 = interp.interpolate(0.5f - new_x3 + (kk + dc3));
+      if (std::abs(sz0) < DEPOSIT_EPS && std::abs(sz1) < DEPOSIT_EPS)
+        continue;
+      size_t k_offset = (kk + c3) * fields.J1.pitch * fields.J1.ysize;
       for (int j = 0; j < sup2; j++) {
         // int jj = j;
-        int jj = (((idx + j) % sup23) / sup2) % sup2;
-        Scalar sy0 =
-            interp.interpolate(0.5f + jj - interp.radius() - old_x2);
-        Scalar sy1 = interp.interpolate(0.5f + jj - interp.radius() +
-                                        dc2 - new_x2);
-        size_t j_offset = (jj - interp.radius() + c2) * fields.J1.pitch;
+        int jj = (((idx + j) % sup23) / sup2) % sup2 - interp.radius();
+        Scalar sy0 = interp.interpolate(0.5f - old_x2 + jj);
+        Scalar sy1 = interp.interpolate(0.5f - new_x2 + (jj + dc2));
+        // if (std::abs(sy0) < DEPOSIT_EPS && std::abs(sy1) <
+        // DEPOSIT_EPS)
+        //   continue;
+        size_t j_offset = (jj + c2) * fields.J1.pitch;
         // Scalar djx = 0.0f;
         for (int i = 0; i < sup2; i++) {
           // int ii = i;
           int ii = ((idx + i) % sup23) % sup2;
-          Scalar sx0 =
-              interp.interpolate(0.5f + ii - interp.radius() - old_x1);
-          Scalar sx1 = interp.interpolate(0.5f + ii - interp.radius() +
-                                          dc1 - new_x1);
+          Scalar sx0 = interp.interpolate(0.5f - old_x1 +
+                                          (ii - interp.radius()));
+          Scalar sx1 = interp.interpolate(0.5f - new_x1 +
+                                          (ii - interp.radius() + dc1));
+          // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
+          // DEPOSIT_EPS)
+          //   continue;
 
           int offset = k_offset + j_offset + (ii + c1) * sizeof(Scalar);
           // djx -= wdt * dev_mesh.delta[0] *
@@ -175,17 +209,22 @@ update_particles(particle_data ptc, size_t num, fields_data fields,
           // djz[i + interp.radius() + 1][j + interp.radius() + 1] -=
           //     wdt * dev_mesh.delta[2] *
           //     movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
-          atomicAdd((Scalar *)((char *)fields.J1.ptr + offset),
-                    wdt * dev_mesh.delta[0] *
-                        movement3d(sy0, sy1, sz0, sz1, sx0, sx1));
-          atomicAdd((Scalar *)((char *)fields.J2.ptr + offset),
-                    wdt * dev_mesh.delta[1] *
-                        movement3d(sz0, sz1, sx0, sx1, sy0, sy1));
-          atomicAdd((Scalar *)((char *)fields.J3.ptr + offset),
-                    wdt * dev_mesh.delta[2] *
-                        movement3d(sx0, sx1, sy0, sy1, sz0, sz1));
-          atomicAdd((Scalar *)((char *)fields.Rho[sp].ptr + offset),
-                    sx1 * sy1 * sz1 * dev_charges[sp]);
+          Scalar val0 = movement3d(sy0, sy1, sz0, sz1, sx0, sx1);
+          if (std::abs(val0) > 0.0f)
+            atomicAdd((Scalar *)((char *)fields.J1.ptr + offset),
+                      wdt * dev_mesh.delta[0] * val0);
+          Scalar val1 = movement3d(sz0, sz1, sx0, sx1, sy0, sy1);
+          if (std::abs(val1) > 0.0f)
+            atomicAdd((Scalar *)((char *)fields.J2.ptr + offset),
+                      wdt * dev_mesh.delta[1] * val1);
+          Scalar val2 = movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
+          if (std::abs(val2) > 0.0f)
+            atomicAdd((Scalar *)((char *)fields.J3.ptr + offset),
+                      wdt * dev_mesh.delta[2] * val2);
+          Scalar s1 = sx1 * sy1 * sz1;
+          if (std::abs(s1) > 0.0f)
+            atomicAdd((Scalar *)((char *)fields.Rho[sp].ptr + offset),
+                      s1 * dev_charges[sp]);
         }
       }
     }
@@ -415,13 +454,17 @@ PtcUpdater::update_particles(SimData &data, double dt) {
     CudaCheckError();
   } else if (m_env.grid().dim() == 2) {
     Kernels::update_particles_2d<<<256, 256>>>(data.particles.data(),
-                                            data.particles.number(),
-                                            m_dev_fields, dt);
+                                               data.particles.number(),
+                                               m_dev_fields, dt);
     CudaCheckError();
   } else if (m_env.grid().dim() == 3) {
     Kernels::update_particles<<<256, 256>>>(data.particles.data(),
                                             data.particles.number(),
                                             m_dev_fields, dt);
+
+    Kernels::deposit_current_3d<<<256, 256>>>(data.particles.data(),
+                                              data.particles.number(),
+                                              m_dev_fields, dt);
     CudaCheckError();
   }
   cudaDeviceSynchronize();
