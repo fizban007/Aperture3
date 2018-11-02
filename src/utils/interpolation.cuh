@@ -86,12 +86,12 @@ struct Interpolator3D {
     //      k <= c3 + Interp::support - Interp::radius; k++) {
     for (int k = 0; k <= Interp::support; k++) {
       int kk = k + c3 - Interp::radius;
-      size_t k_offset = k * f.pitch * f.ysize;
+      size_t k_offset = kk * f.pitch * f.ysize;
       for (int j = 0; j <= Interp::support; j++) {
       // for (int j = c2 - Interp::radius;
       //      j <= c2 + Interp::support - Interp::radius; j++) {
         int jj = j + c2 - Interp::radius;
-        size_t j_offset = j * f.pitch;
+        size_t j_offset = jj * f.pitch;
         for (int i = 0; i <= Interp::support; i++) {
         // for (int i = c1 - Interp::radius;
         //      i <= c1 + Interp::support - Interp::radius; i++) {
@@ -133,19 +133,25 @@ struct Interpolator2D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(cudaPitchedPtr& f, FloatT x1, FloatT x2,
                                 int c1, int c2, Stagger stagger) const {
     Scalar result = 0.0f;
-    for (int j = c2 - Interp::radius;
-         j <= c2 + Interp::support - Interp::radius; j++) {
-      size_t j_offset = j * f.pitch;
-      for (int i = c1 - Interp::radius;
-           i <= c1 + Interp::support - Interp::radius; i++) {
-        size_t globalOffset = j_offset + i * sizeof(Scalar);
+    // for (int j = c2 - Interp::radius;
+    //      j <= c2 + Interp::support - Interp::radius; j++) {
+    for (int j = 0; j <= Interp::support; j++) {
+      int jj = j + c2 - Interp::radius;
+      size_t j_offset = jj * f.pitch;
+      // for (int i = c1 - Interp::radius;
+      //      i <= c1 + Interp::support - Interp::radius; i++) {
+      for (int i = 0; i <= Interp::support; i++) {
+        int ii = i + c1 - Interp::radius;
+        size_t globalOffset = j_offset + ii * sizeof(Scalar);
+        // printf("add %f\n", *ptrAddr(f, globalOffset));
 
-        result += (*(Scalar*)((char*)f.ptr + globalOffset)) *
-                  interp_cell(interp, x1, c1, i, stagger[0]) *
-                  interp_cell(interp, x2, c2, j, stagger[1]);
+        result += (*ptrAddr(f, globalOffset)) *
+                  interp_cell(interp, x1, c1, ii, stagger[0]) *
+                  interp_cell(interp, x2, c2, jj, stagger[1]);
+        // printf("%f\n",result);
       }
     }
     return result;

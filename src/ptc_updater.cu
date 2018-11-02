@@ -3,6 +3,7 @@
 #include "cuda/kernels.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater.h"
+#include "ptc_updater_helper.cuh"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/interpolation.cuh"
@@ -14,37 +15,6 @@
 namespace Aperture {
 
 namespace Kernels {
-
-typedef Spline::cloud_in_cell spline_t;
-
-HD_INLINE Scalar
-cloud_in_cell_f(Scalar dx) {
-  return max(1.0 - std::abs(dx), 0.0);
-}
-
-HD_INLINE Scalar
-interpolate(Scalar rel_pos, int ptc_cell, int target_cell) {
-  Scalar dx =
-      ((Scalar)target_cell + 0.5 - (rel_pos + Scalar(ptc_cell)));
-  return cloud_in_cell_f(dx);
-}
-
-HD_INLINE Scalar
-center2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
-  return (2.0f * sx1 * sy1 + sx0 * sy1 + sx1 * sy0 + 2.0f * sx0 * sy0) *
-         0.1666667f;
-}
-
-HD_INLINE Scalar
-movement3d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1, Scalar sz0,
-           Scalar sz1) {
-  return (sz1 - sz0) * center2d(sx0, sx1, sy0, sy1);
-}
-
-HD_INLINE Scalar
-movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
-  return (sy1 - sy0) * 0.5f * (sx0 + sx1);
-}
 
 HOST_DEVICE void
 vay_push_2d(Scalar &p1, Scalar &p2, Scalar &p3, Scalar &gamma,
@@ -92,11 +62,11 @@ ptc_movement_2d(Pos_t &new_x1, Pos_t &new_x2, Pos_t &new_x3, Scalar p1,
 
 #define MIN_BLOCKS_PER_MP 3
 #define MAX_THREADS_PER_BLOCK 256
-    __global__ void
-    // __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
-    __launch_bounds__(256, 4)
-        update_particles(particle_data ptc, size_t num,
-                         fields_data fields, Scalar dt) {
+__global__ void
+// __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
+__launch_bounds__(256, 4)
+    update_particles(particle_data ptc, size_t num, fields_data fields,
+                     Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -235,11 +205,9 @@ __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
         // Scalar djx = 0.0f;
         for (int i = 0; i < sup2; i++) {
           // int ii = i;
-          int ii = ((idx + i) % sup23) % sup2;
-          Scalar sx0 = interp.interpolate(0.5f - old_x1 +
-                                          (ii - interp.radius()));
-          Scalar sx1 = interp.interpolate(0.5f - new_x1 +
-                                          (ii - interp.radius() + dc1));
+          int ii = ((idx + i) % sup23) % sup2 - interp.radius();
+          Scalar sx0 = interp.interpolate(0.5f - old_x1 + ii);
+          Scalar sx1 = interp.interpolate(0.5f - new_x1 + (ii + dc1));
           // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
           // DEPOSIT_EPS)
           //   continue;
@@ -431,9 +399,7 @@ PtcUpdater::~PtcUpdater() {
 }
 
 void
-PtcUpdater::update_particles(SimData &data, double dt) {
-  Logger::print_info("Updating particles");
-  // Track the right fields
+PtcUpdater::initialize_dev_fields(SimData &data) {
   if (!m_fields_initialized) {
     m_dev_fields.E1 = data.E.ptr(0);
     m_dev_fields.E2 = data.E.ptr(1);
@@ -449,6 +415,13 @@ PtcUpdater::update_particles(SimData &data, double dt) {
     }
     m_fields_initialized = true;
   }
+}
+
+void
+PtcUpdater::update_particles(SimData &data, double dt) {
+  Logger::print_info("Updating particles");
+  // Track the right fields
+  initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 1) {
     Kernels::update_particles_1d<<<512, 512>>>(
@@ -465,6 +438,7 @@ PtcUpdater::update_particles(SimData &data, double dt) {
     Kernels::update_particles<<<256, 256>>>(data.particles.data(),
                                             data.particles.number(),
                                             m_dev_fields, dt);
+    CudaCheckError();
 
     Kernels::deposit_current_3d<<<256, 256>>>(data.particles.data(),
                                               data.particles.number(),

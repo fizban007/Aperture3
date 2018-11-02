@@ -18,10 +18,12 @@ class PtcUpdater {
   PtcUpdater(const Environment& env);
   virtual ~PtcUpdater();
 
-  void update_particles(SimData& data, double dt);
-  void handle_boundary(SimData& data);
+  virtual void update_particles(SimData& data, double dt);
+  virtual void handle_boundary(SimData& data);
 
- private:
+ protected:
+  void initialize_dev_fields(SimData& data);
+  
   const Environment& m_env;
 
   fields_data m_dev_fields;
