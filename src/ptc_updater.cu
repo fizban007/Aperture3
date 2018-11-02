@@ -46,13 +46,57 @@ movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
   return (sy1 - sy0) * 0.5f * (sx0 + sx1);
 }
 
+HOST_DEVICE void
+vay_push_2d(Scalar &p1, Scalar &p2, Scalar &p3, Scalar &gamma,
+            fields_data &fields, Pos_t x1, Pos_t x2, int c1, int c2,
+            Scalar q_over_m) {
+  Interpolator2D<spline_t> interp;
+  Scalar E1 =
+      interp(fields.E1, x1, x2, c1, c2, Stagger(0b001)) * q_over_m;
+  Scalar E2 =
+      interp(fields.E2, x1, x2, c1, c2, Stagger(0b010)) * q_over_m;
+  Scalar E3 =
+      interp(fields.E3, x1, x2, c1, c2, Stagger(0b100)) * q_over_m;
+  Scalar B1 =
+      interp(fields.B1, x1, x2, c1, c2, Stagger(0b110)) * q_over_m;
+  Scalar B2 =
+      interp(fields.B2, x1, x2, c1, c2, Stagger(0b101)) * q_over_m;
+  Scalar B3 =
+      interp(fields.B3, x1, x2, c1, c2, Stagger(0b011)) * q_over_m;
+
+  // step 1: Update particle momentum using vay pusher
+  Scalar up1 = p1 + 2.0f * E1 + (p2 * B3 - p3 * B2) / gamma;
+  Scalar up2 = p2 + 2.0f * E2 + (p3 * B1 - p1 * B3) / gamma;
+  Scalar up3 = p3 + 2.0f * E3 + (p1 * B2 - p2 * B1) / gamma;
+  Scalar tt = B1 * B1 + B2 * B2 + B3 * B3;
+  Scalar ut = up1 * B1 + up2 * B3 + up3 * B3;
+
+  Scalar sigma = 1.0f + up1 * up1 + up2 * up2 + up3 * up3 - tt;
+  Scalar inv_gamma2 =
+      2.0f / (sigma + std::sqrt(sigma * sigma + 4.0f * (tt + ut * ut)));
+  Scalar s = 1.0f / (1.0f + inv_gamma2 * tt);
+  gamma = 1.0f / std::sqrt(inv_gamma2);
+
+  p1 = (up1 + B1 * ut * inv_gamma2 + (up2 * B3 - up3 * B2) / gamma) * s;
+  p2 = (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) * s;
+  p3 = (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) * s;
+}
+
+HOST_DEVICE void
+ptc_movement_2d(Pos_t &new_x1, Pos_t &new_x2, Pos_t &new_x3, Scalar p1,
+                Scalar p2, Scalar p3, Scalar gamma, Scalar dt) {
+  new_x1 += dt * p1 / gamma;
+  new_x2 += dt * p2 / gamma;
+  new_x3 += dt * p3 / gamma;
+}
+
 #define MIN_BLOCKS_PER_MP 3
 #define MAX_THREADS_PER_BLOCK 256
-__global__ void
-// __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
-__launch_bounds__(256, 4)
-    update_particles(particle_data ptc, size_t num, fields_data fields,
-                     Scalar dt) {
+    __global__ void
+    // __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
+    __launch_bounds__(256, 4)
+        update_particles(particle_data ptc, size_t num,
+                         fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -254,56 +298,16 @@ update_particles_2d(particle_data ptc, size_t num, fields_data fields,
     // step 0: Grab E & M fields at the particle position
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
-      Scalar E1 =
-          interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
-          q_over_m;
-      Scalar E2 =
-          interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
-          q_over_m;
-      Scalar E3 =
-          interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b100)) *
-          q_over_m;
-      Scalar B1 =
-          interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b110)) *
-          q_over_m;
-      Scalar B2 =
-          interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b101)) *
-          q_over_m;
-      Scalar B3 =
-          interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b011)) *
-          q_over_m;
-
-      // step 1: Update particle momentum using vay pusher
-      Scalar up1 = p1 + 2.0f * E1 + (p2 * B3 - p3 * B2) / gamma;
-      Scalar up2 = p2 + 2.0f * E2 + (p3 * B1 - p1 * B3) / gamma;
-      Scalar up3 = p3 + 2.0f * E3 + (p1 * B2 - p2 * B1) / gamma;
-      Scalar tt = B1 * B1 + B2 * B2 + B3 * B3;
-      Scalar ut = up1 * B1 + up2 * B3 + up3 * B3;
-
-      Scalar sigma = 1.0f + up1 * up1 + up2 * up2 + up3 * up3 - tt;
-      Scalar inv_gamma2 =
-          2.0f /
-          (sigma + std::sqrt(sigma * sigma + 4.0f * (tt + ut * ut)));
-      Scalar s = 1.0f / (1.0f + inv_gamma2 * tt);
-      gamma = 1.0f / std::sqrt(inv_gamma2);
-
-      p1 =
-          (up1 + B1 * ut * inv_gamma2 + (up2 * B3 - up3 * B2) / gamma) *
-          s;
-      p2 =
-          (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) *
-          s;
-      p3 =
-          (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
-          s;
+      vay_push_2d(p1, p2, p3, gamma, fields, old_x1, old_x2, c1, c2,
+                  q_over_m);
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
     }
 
     // step 2: Compute particle movement and update position
-    Pos_t new_x1 = old_x1 + dt * p1 / gamma;
-    Pos_t new_x2 = old_x2 + dt * p2 / gamma;
+    Pos_t new_x1 = old_x1, new_x2 = old_x2, new_x3 = old_x3;
+    ptc_movement_2d(new_x1, new_x2, new_x3, p1, p2, p3, gamma, dt);
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
     new_x1 -= (Pos_t)dc1;
