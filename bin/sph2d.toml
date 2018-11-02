@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 0.0002
+delta_t = 0.002
 
 # Charge of an electron
 q_e = 0.1
@@ -11,10 +11,10 @@ ion_mass = 5.0
 num_species = 2
 
 # Maximum number of particles per node
-max_ptc_number = 10000
+max_ptc_number = 20000000
 
 # Maximum number of photons per node
-max_photon_number = 10000
+max_photon_number = 20000000
 
 # Create pairs or not
 create_pairs = false

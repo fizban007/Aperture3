@@ -26,6 +26,8 @@ Grid_LogSph::init(const SimParams& params) {
     m_A2_b.resize(m_mesh.dims[0], m_mesh.dims[1]);
     m_A3_b.resize(m_mesh.dims[0], m_mesh.dims[1]);
 
+    m_dV.resize(m_mesh.dims[0], m_mesh.dims[1]);
+
     for (int j = 0; j < m_mesh.dims[1]; j++) {
       Scalar x2 = m_mesh.pos(1, j, 0);
       Scalar x2s = m_mesh.pos(1, j, 1);
@@ -52,6 +54,9 @@ Grid_LogSph::init(const SimParams& params) {
         m_A1_b(i, j) = std::exp(2.0 * x1) * (std::cos(x2) - std::cos(x2 + m_mesh.delta[1]));
         m_A2_b(i, j) = 0.5 * std::sin(x2) * (std::exp(2.0 * (x1 + m_mesh.delta[0])) - std::exp(2.0 * x1));
         m_A3_b(i, j) = 0.5 * m_mesh.delta[1] * (std::exp(2.0 * (x1 + m_mesh.delta[0])) - std::exp(2.0 * x1));
+
+        // m_dV(i, j) = std::exp(2.0 * x1) * std::sin(x2) * m_mesh.delta[0] * m_mesh.delta[1];
+        m_dV(i, j) = std::exp(2.0 * x1) * std::sin(x2);
       }
     }
   } else if (m_mesh.dim() == 3) {
@@ -72,6 +77,7 @@ Grid_LogSph::init(const SimParams& params) {
   m_A2_b.sync_to_device();
   m_A3_b.sync_to_device();
 
+  m_dV.sync_to_device();
 }
 
 Grid_LogSph::mesh_ptrs
@@ -91,6 +97,7 @@ Grid_LogSph::get_mesh_ptrs() const {
   ptrs.A2_b = m_A2_b.data_d();
   ptrs.A3_b = m_A3_b.data_d();
 
+  ptrs.dV = m_dV.data_d();
   return ptrs;
 }
 
