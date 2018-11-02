@@ -4,6 +4,8 @@
 #include "cuda/cudaUtility.h"
 #include "fmt/format.h"
 #include <memory>
+#include "data/grid_log_sph.h"
+#include "data/grid_1dGR.h"
 // #include "data/detail/grid_impl.hpp"
 // #include "sim_data.h"
 // #include "domain_communicator.h"
@@ -52,9 +54,19 @@ Environment::setup_env(const std::string& conf_file) {
   init_dev_params(m_params);
 
   // Setup the grid
-  m_grid.init(m_params);
-  std::cout << "Grid dimension is " << m_grid.dim() << std::endl;
-  if (m_grid.mesh().delta[0] < m_params.delta_t) {
+  if (m_params.coord_system == "Cartesian") {
+    // m_grid = std::make_shared<Grid>();
+    m_grid.reset(new Grid());
+  } else if (m_params.coord_system == "LogSpherical") {
+    // m_grid = std::make_shared<Grid_LogSph>();
+    m_grid.reset(new Grid_LogSph());
+  } else {
+    // m_grid = std::make_shared<Grid>();
+    m_grid.reset(new Grid());
+  }
+  m_grid->init(m_params);
+  std::cout << "Grid dimension is " << m_grid->dim() << std::endl;
+  if (m_grid->mesh().delta[0] < m_params.delta_t) {
     std::cerr << "Grid spacing should be larger than delta_t! Aborting!"
               << std::endl;
     abort();
@@ -63,12 +75,12 @@ Environment::setup_env(const std::string& conf_file) {
   // << std::endl; std::cout << "size of quadmesh is " <<
   // sizeof(Quadmesh) << std::endl; cudaMemcpyToSymbol(dev_mesh,
   // (void*)m_grid.mesh_ptr(), sizeof(Quadmesh)); CudaCheckError();
-  init_dev_mesh(*m_grid.mesh_ptr());
+  init_dev_mesh(*(m_grid->mesh_ptr()));
 
   // Initialize the background fields
   if (m_params.use_bg_fields) {
-    m_Ebg = VectorField<Scalar>(m_grid);
-    m_Bbg = VectorField<Scalar>(m_grid);
+    m_Ebg = VectorField<Scalar>(*m_grid);
+    m_Bbg = VectorField<Scalar>(*m_grid);
     init_dev_bg_fields(m_Ebg, m_Bbg);
   }
 

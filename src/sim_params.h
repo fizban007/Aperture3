@@ -15,8 +15,6 @@ namespace Aperture {
 ///  reference to determine how the simulation will unfold.
 /////////////////////////////////////////////////////////////////////////
 struct SimParamsBase {
-  // std::string metric = "Cartesian";
-
   // physical parameters
   Scalar delta_t = 0.01;
   Scalar q_e = 1.0;
@@ -78,6 +76,8 @@ struct SimParamsBase {
 };
 
 struct SimParams : public SimParamsBase {
+  std::string coord_system = "Cartesian";
+
   std::string data_dir = "../Data/";
   std::string data_file_prefix = "output";
   std::string log_method = "stdout";
