@@ -27,7 +27,7 @@ class Grid {
   Grid(Grid&& g);
   virtual ~Grid();
 
-  void init(const SimParams& params);
+  virtual void init(const SimParams& params);
 
   Grid& operator=(const Grid& g);
   Grid& operator=(Grid&& g);

@@ -38,9 +38,16 @@ Grid_LogSph::init(const SimParams& params) {
         m_l1_b(i, j) = std::exp(x1s) - std::exp(x1s - m_mesh.delta[0]);
         m_l2_b(i, j) = std::exp(x1s) * m_mesh.delta[1];
         m_l3_b(i, j) = std::exp(x1s) * std::sin(x2s);
+        // Avoid axis singularity
+        if (std::abs(x2s) < 1.0e-5)
+          m_l3_b(i, j) = std::exp(x1s) * std::sin(1.0e-5);
 
         m_A1_e(i, j) = std::exp(2.0 * x1s) * (std::cos(x2s - m_mesh.delta[1]) - std::cos(x2s));
         m_A2_e(i, j) = 0.5 * std::sin(x2s) * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
+        // Avoid axis singularity
+        if (std::abs(x2s) < 1.0e-5)
+          m_A2_e(i, j) = 0.5 * std::sin(1.0e-5) * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
+
         m_A3_e(i, j) = 0.5 * m_mesh.delta[1] * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
         m_A1_b(i, j) = std::exp(2.0 * x1) * (std::cos(x2) - std::cos(x2 + m_mesh.delta[1]));
         m_A2_b(i, j) = 0.5 * std::sin(x2) * (std::exp(2.0 * (x1 + m_mesh.delta[0])) - std::exp(2.0 * x1));

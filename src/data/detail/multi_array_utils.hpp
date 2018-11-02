@@ -7,7 +7,7 @@
 
 namespace Aperture {
 
-inline Scalar* ptrAddr(cudaPitchedPtr p, size_t offset) {
+HD_INLINE Scalar* ptrAddr(cudaPitchedPtr p, size_t offset) {
   return (Scalar*)((char*)p.ptr + offset);
 }
 

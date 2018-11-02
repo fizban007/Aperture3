@@ -84,8 +84,7 @@ __global__ void
 compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
                  cudaPitchedPtr b2, cudaPitchedPtr b3,
-                 Grid_LogSph::mesh_ptrs mesh_ptrs,
-                 Scalar dt) {
+                 Grid_LogSph::mesh_ptrs mesh_ptrs, Scalar dt) {
   // Declare cache array in shared memory
   // __shared__ Scalar
   //     s_b1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
@@ -108,11 +107,12 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(b1, globalOffset)) +=
-      dt * (*ptrAddr(e3, globalOffset + e1.pitch) *
-                 *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-             *ptrAddr(e3, globalOffset) *
-                 *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-                *ptrAddr(mesh_ptrs.A1_b, globalOffset);
+      dt *
+      (*ptrAddr(e3, globalOffset + e1.pitch) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
+       *ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+      *ptrAddr(mesh_ptrs.A1_b, globalOffset);
   // q * d2<Order, DIM1, DIM2>(s_u3, c1, c2 + flip(s3[1]));
 
   // (Curl u)_2 = d3u1 - d1u3
@@ -121,10 +121,10 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   (*ptrAddr(b2, globalOffset)) +=
       dt *
       (*ptrAddr(e3, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l3_e, globalOffset - sizeof(Scalar)) -
-        *ptrAddr(e3, globalOffset) *
-            *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-           *ptrAddr(mesh_ptrs.A2_b, globalOffset);
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset - sizeof(Scalar)) -
+       *ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+      *ptrAddr(mesh_ptrs.A2_b, globalOffset);
 
   // (Curl u)_3 = d1u2 - d2u1
   // (*(Scalar*)((char*)e3.ptr + globalOffset)) += 0.0;
@@ -140,8 +140,9 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
             *ptrAddr(mesh_ptrs.l1_b, globalOffset - e1.pitch) +
         *ptrAddr(b1, globalOffset) *
             *ptrAddr(mesh_ptrs.l1_b, globalOffset)) /
-           *ptrAddr(mesh_ptrs.A3_e, globalOffset));
+       *ptrAddr(mesh_ptrs.A3_e, globalOffset));
 }
+
 }  // namespace Kernels
 
 FieldSolver_LogSph::FieldSolver_LogSph(const Grid_LogSph& g)
@@ -156,7 +157,34 @@ FieldSolver_LogSph::update_fields(SimData& data, double dt,
 void
 FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
                                   const vfield_t& J, double dt,
-                                  double time) {}
+                                  double time) {
+  Logger::print_info("Updating fields");
+  auto mesh_ptrs = m_grid.get_mesh_ptrs();
+  auto& mesh = m_grid.mesh();
+
+  if (m_grid.dim() == 2) {
+    // We only implemented 2d at the moment
+    dim3 blockSize(32, 16);
+    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+    // Update B
+    Kernels::compute_b_update<32, 16><<<gridSize, blockSize>>>(
+        E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+        mesh_ptrs, dt);
+    CudaCheckError();
+
+    // Update E
+    Kernels::compute_e_update<32, 16><<<gridSize, blockSize>>>(
+        E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+        J.ptr(0), J.ptr(1), J.ptr(2), mesh_ptrs, dt);
+    CudaCheckError();
+
+    if (m_comm_callback_vfield != nullptr) {
+      m_comm_callback_vfield(E);
+      m_comm_callback_vfield(B);
+    }
+  }
+
+}
 
 void
 FieldSolver_LogSph::set_background_j(const vfield_t& J) {}

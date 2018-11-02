@@ -12,6 +12,7 @@
 #include <vector>
 #include <boost/multi_array.hpp>
 #include <fstream>
+#include <memory>
 
 namespace Aperture {
 
@@ -127,6 +128,7 @@ class DataExporter {
   std::string subDirectory;  //!< Sets the directory of current rank
   std::string subName;
   std::string filePrefix;  //!< Sets the common prefix of the data files
+  const SimParams& m_params;
 
   // std::vector<dataset<float>> dbFloat;
   // std::vector<dataset<double>> dbDouble;
@@ -139,7 +141,8 @@ class DataExporter {
   std::vector<ptcoutput<Particles>> dbPtcData;
   std::vector<ptcoutput<Photons>> dbPhotonData;
 
-  Grid grid;
+  // Grid grid;
+  std::unique_ptr<Grid> grid;
   int downsample_factor;
   std::ofstream xmf;
 };  // ----- end of class DataExporter -----
