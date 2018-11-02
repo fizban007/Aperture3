@@ -84,8 +84,7 @@ __global__ void
 compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
                  cudaPitchedPtr b2, cudaPitchedPtr b3,
-                 Grid_LogSph::mesh_ptrs mesh_ptrs,
-                 Scalar dt) {
+                 Grid_LogSph::mesh_ptrs mesh_ptrs, Scalar dt) {
   // Declare cache array in shared memory
   // __shared__ Scalar
   //     s_b1[DIM2 + 2 * Pad<2>::val][DIM1 + 2 * Pad<2>::val];
@@ -108,39 +107,40 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(b1, globalOffset)) +=
-      dt * (*ptrAddr(e3, globalOffset + e1.pitch) *
-                 *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-             *ptrAddr(e3, globalOffset) *
-                 *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-                *ptrAddr(mesh_ptrs.A1_b, globalOffset);
+      -dt *
+      (*ptrAddr(e3, globalOffset + e1.pitch) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
+       *ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+      *ptrAddr(mesh_ptrs.A1_b, globalOffset);
   // q * d2<Order, DIM1, DIM2>(s_u3, c1, c2 + flip(s3[1]));
 
   // (Curl u)_2 = d3u1 - d1u3
   // (*(Scalar*)((char*)e2.ptr + globalOffset)) += 0.0;
   // q * d1<Order, DIM1, DIM2>(s_u3, c1 + flip(s3[0]), c2);
   (*ptrAddr(b2, globalOffset)) +=
-      dt *
-      (*ptrAddr(e3, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l3_e, globalOffset - sizeof(Scalar)) -
-        *ptrAddr(e3, globalOffset) *
-            *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-           *ptrAddr(mesh_ptrs.A2_b, globalOffset);
+      -dt *
+      (*ptrAddr(e3, globalOffset + sizeof(Scalar)) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset + sizeof(Scalar)) -
+       *ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+      *ptrAddr(mesh_ptrs.A2_b, globalOffset);
 
   // (Curl u)_3 = d1u2 - d2u1
   // (*(Scalar*)((char*)e3.ptr + globalOffset)) += 0.0;
   // q * (d1<Order, DIM1, DIM2>(s_u2, c1 + flip(s2[0]), c2) -
   //      d2<Order, DIM1, DIM2>(s_u1, c1, c2 + flip(s1[1])));
-  (*ptrAddr(e3, globalOffset)) +=
-      dt *
-      ((*ptrAddr(b2, globalOffset) *
-            *ptrAddr(mesh_ptrs.l2_b, globalOffset) -
-        *ptrAddr(b2, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l2_b, globalOffset - sizeof(Scalar)) -
-        *ptrAddr(b1, globalOffset - e1.pitch) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset - e1.pitch) +
-        *ptrAddr(b1, globalOffset) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset)) /
-           *ptrAddr(mesh_ptrs.A3_e, globalOffset));
+  (*ptrAddr(b3, globalOffset)) +=
+      -dt *
+      ((*ptrAddr(e2, globalOffset + sizeof(Scalar)) *
+            *ptrAddr(mesh_ptrs.l2_e, globalOffset + sizeof(Scalar)) -
+        *ptrAddr(e2, globalOffset) *
+            *ptrAddr(mesh_ptrs.l2_e, globalOffset) -
+        *ptrAddr(e1, globalOffset) *
+            *ptrAddr(mesh_ptrs.l1_e, globalOffset) +
+        *ptrAddr(e1, globalOffset + e1.pitch) *
+            *ptrAddr(mesh_ptrs.l1_e, globalOffset + e1.pitch)) /
+       *ptrAddr(mesh_ptrs.A3_b, globalOffset));
 }
 }  // namespace Kernels
 
