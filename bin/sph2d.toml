@@ -1,0 +1,78 @@
+# Time step size
+delta_t = 0.0002
+
+# Charge of an electron
+q_e = 0.1
+
+# Ion mass
+ion_mass = 5.0
+
+# Number of species
+num_species = 2
+
+# Maximum number of particles per node
+max_ptc_number = 10000
+
+# Maximum number of photons per node
+max_photon_number = 10000
+
+# Create pairs or not
+create_pairs = false
+
+# Trace photons or not
+trace_photons = false
+
+# Threshold for creating a photon / pair
+gamma_thr = 5.0
+
+# Free path for energetic photons
+photon_path = 100.0
+
+# Free path for inverse Compton once a particle reaches threshold
+ic_path = 20.0
+
+# Spectral index alpha for the background soft photon
+spectral_alpha = 1.2
+
+# Minimum energy for the above power law soft photon
+e_min = 1.0e-5
+
+# Separation between two energy regimes for inverse Compton scattering
+e_s = 0.2
+
+# Whether to use periodic boundary condition in each direction
+periodic_boundary = [false, false]
+
+# Fraction of total particles to track
+track_percent = 0.1
+
+# Data output directory
+data_dir = "/home/alex/storage/Data/Aperture3/"
+
+# Dipole B0
+B0 = 1000.0
+
+# This section describes the grid parameters. Every parameter is an array with 3
+# elements, describing the number for each dimension. If you wish to disable one
+# dimension, just set N to 1 and guard to 0 on that dimension.
+[Grid]
+# Number of grid points in each direction, excluding guard cells. This should be
+# a power of 2.
+N = [512, 512, 1]
+
+# Number of guard cells on each end. Effective number of cells per dimension
+# will be N + 2*guard
+guard = [2, 2, 0]
+
+# Lower limit of the coordinate
+lower = [0.0, 0.0, 0.0]
+
+# Size of the box in each dimension
+size = [3.3, 3.141593, 1.0]
+
+# Size of a tile of cells
+tile_size = [16, 16, 1]
+
+[Simulation]
+
+coord_system = "LogSpherical"

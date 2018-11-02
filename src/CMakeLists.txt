@@ -106,6 +106,8 @@ target_link_libraries(aper3d Aperture)
 add_executable(aperffe "main_2dffe.cpp")
 target_link_libraries(aperffe Aperture)
 
+add_executable(aper2d "main_2dsph.cpp")
+target_link_libraries(aper2d Aperture)
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)
 
