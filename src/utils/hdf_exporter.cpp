@@ -1,4 +1,5 @@
 #include "utils/hdf_exporter.h"
+#include "data/grid_log_sph.h"
 #include "fmt/core.h"
 #include "utils/logger.h"
 // #include "config_file.h"
@@ -28,6 +29,7 @@ DataExporter::DataExporter(const SimParams &params,
                            const std::string &prefix, int downsample)
     : outputDirectory(dir),
       filePrefix(prefix),
+      m_params(params),
       downsample_factor(downsample) {
   boost::filesystem::path rootPath(dir.c_str());
   boost::system::error_code returnedError;
@@ -35,11 +37,23 @@ DataExporter::DataExporter(const SimParams &params,
   boost::filesystem::create_directories(rootPath, returnedError);
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
 
-  grid.init(params);
-  for (int i = 0; i < grid.mesh().dim(); i++) {
-    grid.mesh().dims[i] = params.N[i] / downsample + 2 * params.guard[i];
-    grid.mesh().delta[i] *= downsample;
-    grid.mesh().inv_delta[i] /= downsample;
+  // Setup the grid
+  if (params.coord_system == "Cartesian") {
+    // grid = std::make_shared<Grid>();
+    grid.reset(new Grid());
+  } else if (params.coord_system == "LogSpherical") {
+    // grid = std::make_shared<Grid_LogSph>();
+    grid.reset(new Grid_LogSph());
+  } else {
+    // grid = std::make_shared<Grid>();
+    grid.reset(new Grid());
+  }
+
+  grid->init(params);
+  for (int i = 0; i < grid->mesh().dim(); i++) {
+    grid->mesh().dims[i] = params.N[i] / downsample + 2 * params.guard[i];
+    grid->mesh().delta[i] *= downsample;
+    grid->mesh().inv_delta[i] /= downsample;
   }
   // Format the output directory as Data%Y%m%d-%H%M
   // char myTime[150] = {};
@@ -126,9 +140,9 @@ template <typename T>
 void
 DataExporter::AddField(const std::string &name,
                        const ScalarField<T> &field) {
-  auto &mesh = grid.mesh();
+  auto &mesh = grid->mesh();
 
-  if (grid.dim() == 3) {
+  if (grid->dim() == 3) {
     sfieldoutput3d<T> tempData;
     tempData.name = name;
     tempData.field = &field;
@@ -136,7 +150,7 @@ DataExporter::AddField(const std::string &name,
     tempData.f.resize(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
     dbScalars3d.push_back(std::move(tempData));
-  } else if (grid.dim() == 2) {
+  } else if (grid->dim() == 2) {
     sfieldoutput2d<T> tempData;
     tempData.name = name;
     tempData.field = &field;
@@ -150,9 +164,9 @@ template <typename T>
 void
 DataExporter::AddField(const std::string &name,
                        const VectorField<T> &field) {
-  auto &mesh = grid.mesh();
+  auto &mesh = grid->mesh();
 
-  if (grid.dim() == 3) {
+  if (grid->dim() == 3) {
     vfieldoutput3d<T> tempData;
     tempData.name = name;
     tempData.field = &field;
@@ -163,7 +177,7 @@ DataExporter::AddField(const std::string &name,
     tempData.f3.resize(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
     dbVectors3d.push_back(std::move(tempData));
-  } else if (grid.dim() == 2) {
+  } else if (grid->dim() == 2) {
     vfieldoutput2d<T> tempData;
     tempData.name = name;
     tempData.field = &field;
@@ -276,8 +290,8 @@ DataExporter::AddParticleArray(const std::string &name,
 
 void
 DataExporter::WriteGrid() {
-  if (grid.dim() == 3) {
-    auto &mesh = grid.mesh();
+  if (grid->dim() == 3) {
+    auto &mesh = grid->mesh();
     boost::multi_array<float, 3> x1_array(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
     boost::multi_array<float, 3> x2_array(
@@ -308,8 +322,8 @@ DataExporter::WriteGrid() {
     DataSet mesh_x3 =
         meshfile.createDataSet<float>("x3", DataSpace::From(x3_array));
     mesh_x3.write(x3_array);
-  } else if (grid.dim() == 2) {
-    auto &mesh = grid.mesh();
+  } else if (grid->dim() == 2) {
+    auto &mesh = grid->mesh();
     boost::multi_array<float, 2> x1_array(
         boost::extents[mesh.dims[1]][mesh.dims[0]]);
     boost::multi_array<float, 2> x2_array(
@@ -317,8 +331,15 @@ DataExporter::WriteGrid() {
 
     for (int j = 0; j < mesh.dims[1]; j++) {
       for (int i = 0; i < mesh.dims[0]; i++) {
-        x1_array[j][i] = mesh.pos(0, i, false);
-        x2_array[j][i] = mesh.pos(1, j, false);
+        if (m_params.coord_system == "LogSpherical") {
+          float r = std::exp(mesh.pos(0, i, false));
+          float theta = mesh.pos(1, j, false);
+          x1_array[j][i] = r * std::sin(theta);
+          x2_array[j][i] = r * std::cos(theta);
+        } else {
+          x1_array[j][i] = mesh.pos(0, i, false);
+          x2_array[j][i] = mesh.pos(1, j, false);
+        }
       }
     }
 
@@ -546,22 +567,22 @@ DataExporter::writeXMFHead(std::ofstream &fs) {
 void
 DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   std::string dim_str;
-  auto &mesh = grid.mesh();
-  if (grid.dim() == 3) {
+  auto &mesh = grid->mesh();
+  if (grid->dim() == 3) {
     dim_str = fmt::format("{} {} {}", mesh.dims[2], mesh.dims[1],
                           mesh.dims[0]);
-  } else if (grid.dim() == 2) {
+  } else if (grid->dim() == 2) {
     dim_str = fmt::format("{} {}", mesh.dims[1], mesh.dims[0]);
   }
 
-  fs << "<Grid Name=\"Aperture\" Type=\"Uniform\">" << std::endl;
+  fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
   fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>"
      << std::endl;
-  if (grid.dim() == 3) {
+  if (grid->dim() == 3) {
     fs << "  <Topology Type=\"3DSMesh\" NumberOfElements=\"" << dim_str
        << "\"/>" << std::endl;
     fs << "  <Geometry GeometryType=\"X_Y_Z\">" << std::endl;
-  } else if (grid.dim() == 2) {
+  } else if (grid->dim() == 2) {
     fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
        << "\"/>" << std::endl;
     fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
@@ -576,7 +597,7 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
      << std::endl;
   fs << "      mesh.h5:x2" << std::endl;
   fs << "    </DataItem>" << std::endl;
-  if (grid.dim() == 3) {
+  if (grid->dim() == 3) {
     fs << "    <DataItem Dimensions=\"" << dim_str
        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
        << std::endl;
