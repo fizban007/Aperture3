@@ -61,9 +61,9 @@ class Environment {
   SimParams& params() { return m_params; }
   const SimParams& params() const { return m_params; }
   // const ConfigFile& conf_file() const { return m_conf_file; }
-  const Grid& grid() const { return m_grid; }
-  const Grid& local_grid() const { return m_grid; }
-  const Quadmesh& mesh() const { return m_grid.mesh(); }
+  const Grid& grid() const { return *m_grid; }
+  const Grid& local_grid() const { return *m_grid; }
+  const Quadmesh& mesh() const { return m_grid->mesh(); }
   VectorField<Scalar>& E_bg() { return m_Ebg; }
   VectorField<Scalar>& B_bg() { return m_Bbg; }
 
@@ -93,7 +93,7 @@ class Environment {
   SimParams m_params;
   ConfigFile m_conf_file;
 
-  Grid m_grid;
+  std::unique_ptr<Grid> m_grid;
   // Grid m_local_grid, m_local_grid_dual;
   // Grid m_super_grid;
   // Grid m_data_grid, m_data_super_grid;

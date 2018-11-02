@@ -135,6 +135,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   // Simulation configuration
   auto sim_table = config->get_table("Simulation");
   if (sim_table) {
+    params.coord_system = sim_table->get_as<std::string>("coord_system")
+        .value_or(defaults.coord_system);
     params.algorithm_ptc_move =
         sim_table->get_as<std::string>("algorithm_ptc_move")
             .value_or(defaults.algorithm_ptc_move);
