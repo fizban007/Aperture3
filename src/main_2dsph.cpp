@@ -39,10 +39,12 @@ int main(int argc, char *argv[])
                          return B0 * sin(x2) / (r * r * r);
                        });
   data.B.sync_to_device();
+  ScalarField<Scalar> flux(env.local_grid());
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);
   exporter.AddField("J", data.J);
   exporter.AddField("Rho_e", data.Rho[0]);
+  exporter.AddField("flux", flux);
 
   // Initialize a bunch of particles
   std::default_random_engine gen;
@@ -73,6 +75,7 @@ int main(int argc, char *argv[])
       data.B.sync_to_host();
       data.J.sync_to_host();
       data.Rho[0].sync_to_host();
+      dynamic_cast<const Grid_LogSph*>(&env.local_grid())->compute_flux(flux, data.B);
 
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);

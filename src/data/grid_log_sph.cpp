@@ -101,4 +101,19 @@ Grid_LogSph::get_mesh_ptrs() const {
   return ptrs;
 }
 
+void
+Grid_LogSph::compute_flux( ScalarField<Scalar> &flux, VectorField<Scalar> &B ) const {
+  flux.initialize();
+  flux.sync_to_host();
+  auto& mesh = B.grid().mesh();
+
+  for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1]; j++) {
+    for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+      Scalar r = std::exp(mesh.pos(0, i, true));
+      Scalar theta = mesh.pos(1, j, false);
+      flux(i, j) = flux(i, j - 1) + mesh.delta[1] * r * r * std::sin(theta) * B(0, i, j);
+    }
+  }
+}
+
 }  // namespace Aperture

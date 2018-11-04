@@ -2,6 +2,7 @@
 #define _GRID_LOG_SPH_H_
 
 #include "data/grid.h"
+#include "data/fields.h"
 
 namespace Aperture {
 
@@ -22,6 +23,8 @@ class Grid_LogSph : public Grid
   };
 
   mesh_ptrs get_mesh_ptrs() const;
+
+  void compute_flux(ScalarField<Scalar>& flux, VectorField<Scalar>& B) const;
 
  private:
   MultiArray<Scalar> m_l1_e, m_l2_e, m_l3_e;
