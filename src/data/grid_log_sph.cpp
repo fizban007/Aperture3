@@ -41,21 +41,42 @@ Grid_LogSph::init(const SimParams& params) {
         m_l2_b(i, j) = std::exp(x1s) * m_mesh.delta[1];
         m_l3_b(i, j) = std::exp(x1s) * std::sin(x2s);
         // Avoid axis singularity
-        if (std::abs(x2s) < 1.0e-5)
+        if (std::abs(x2s) < 1.0e-5 || std::abs(x2s - CONST_PI) < 1.0e-5)
           m_l3_b(i, j) = std::exp(x1s) * std::sin(1.0e-5);
 
-        m_A1_e(i, j) = std::exp(2.0 * x1s) * (std::cos(x2s - m_mesh.delta[1]) - std::cos(x2s));
-        m_A2_e(i, j) = 0.5 * std::sin(x2s) * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
+        m_A1_e(i, j) =
+            std::exp(2.0 * x1s) *
+            (std::cos(x2s - m_mesh.delta[1]) - std::cos(x2s));
+        m_A2_e(i, j) = 0.5 * std::sin(x2s) *
+                       (std::exp(2.0 * x1s) -
+                        std::exp(2.0 * (x1s - m_mesh.delta[0])));
         // Avoid axis singularity
-        if (std::abs(x2s) < 1.0e-5)
-          m_A2_e(i, j) = 0.5 * std::sin(1.0e-5) * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
+        if (std::abs(x2s) < 1.0e-5 || std::abs(x2s - CONST_PI) < 1.0e-5)
+          m_A2_e(i, j) = 0.5 * std::sin(1.0e-5) *
+                         (std::exp(2.0 * x1s) -
+                          std::exp(2.0 * (x1s - m_mesh.delta[0])));
 
-        m_A3_e(i, j) = 0.5 * m_mesh.delta[1] * (std::exp(2.0 * x1s) - std::exp(2.0 * (x1s - m_mesh.delta[0])));
-        m_A1_b(i, j) = std::exp(2.0 * x1) * (std::cos(x2) - std::cos(x2 + m_mesh.delta[1]));
-        m_A2_b(i, j) = 0.5 * std::sin(x2) * (std::exp(2.0 * (x1 + m_mesh.delta[0])) - std::exp(2.0 * x1));
-        m_A3_b(i, j) = 0.5 * m_mesh.delta[1] * (std::exp(2.0 * (x1 + m_mesh.delta[0])) - std::exp(2.0 * x1));
+        m_A3_e(i, j) = 0.5 * m_mesh.delta[1] *
+                       (std::exp(2.0 * x1s) -
+                        std::exp(2.0 * (x1s - m_mesh.delta[0])));
+        if (j == m_mesh.reduced_dim(1) + m_mesh.guard[1] - 1) {
+          m_A1_b(i, j) = std::exp(2.0 * x1) * (-2.0 * std::cos(x2));
+        } else if (j == m_mesh.guard[1] - 1) {
+          m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2 + m_mesh.delta[1]));
+        } else {
+          m_A1_b(i, j) =
+              std::exp(2.0 * x1) *
+              (std::cos(x2) - std::cos(x2 + m_mesh.delta[1]));
+        }
+        m_A2_b(i, j) = 0.5 * std::sin(x2) *
+                       (std::exp(2.0 * (x1 + m_mesh.delta[0])) -
+                        std::exp(2.0 * x1));
+        m_A3_b(i, j) = 0.5 * m_mesh.delta[1] *
+                       (std::exp(2.0 * (x1 + m_mesh.delta[0])) -
+                        std::exp(2.0 * x1));
 
-        // m_dV(i, j) = std::exp(2.0 * x1) * std::sin(x2) * m_mesh.delta[0] * m_mesh.delta[1];
+        // m_dV(i, j) = std::exp(2.0 * x1) * std::sin(x2) *
+        // m_mesh.delta[0] * m_mesh.delta[1];
         m_dV(i, j) = std::exp(2.0 * x1) * std::sin(x2);
       }
     }
@@ -102,7 +123,9 @@ Grid_LogSph::get_mesh_ptrs() const {
 }
 
 void
-Grid_LogSph::compute_flux( ScalarField<Scalar> &flux, VectorField<Scalar> &B ) const {
+Grid_LogSph::compute_flux(ScalarField<Scalar>& flux,
+                          VectorField<Scalar>& B,
+                          VectorField<Scalar>& B_bg) const {
   flux.initialize();
   flux.sync_to_host();
   auto& mesh = B.grid().mesh();
@@ -111,7 +134,8 @@ Grid_LogSph::compute_flux( ScalarField<Scalar> &flux, VectorField<Scalar> &B ) c
     for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
       Scalar r = std::exp(mesh.pos(0, i, true));
       Scalar theta = mesh.pos(1, j, false);
-      flux(i, j) = flux(i, j - 1) + mesh.delta[1] * r * r * std::sin(theta) * B(0, i, j);
+      flux(i, j) = flux(i, j - 1) +
+          mesh.delta[1] * r * r * std::sin(theta) * (B(0, i, j) + B_bg(0, i, j));
     }
   }
 }

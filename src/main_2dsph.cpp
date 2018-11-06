@@ -4,12 +4,13 @@
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
+#include "utils/util_functions.h"
 #include <random>
 
 using namespace Aperture;
 
-int main(int argc, char *argv[])
-{
+int
+main(int argc, char* argv[]) {
   // Construct the simulation environment
   Environment env(&argc, &argv);
 
@@ -17,29 +18,40 @@ int main(int argc, char *argv[])
   SimData data(env);
 
   // Initialize the field solver
-  FieldSolver_LogSph field_solver(*dynamic_cast<const Grid_LogSph*>(&env.local_grid()));
+  FieldSolver_LogSph field_solver(
+      *dynamic_cast<const Grid_LogSph*>(&env.grid()));
 
   // Initialize particle updater
   PtcUpdaterLogSph ptc_updater(env);
 
   // Initialize data exporter
-  DataExporter exporter(env.params(), "/home/alex/storage/Data/Aperture3/2d_test/",
+  DataExporter exporter(env.params(),
+                        "/home/alex/storage/Data/Aperture3/2d_test/",
                         "data", 1);
   exporter.WriteGrid();
 
   Scalar B0 = 1000.0;
+  auto& mesh = env.grid().mesh();
   data.E.initialize();
   data.B.initialize();
-  data.B.initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
-                         Scalar r = exp(x1);
-                         return 2.0 * B0 * cos(x2) / (r * r * r);
-                       });
-  data.B.initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
-                         Scalar r = exp(x1);
-                         return B0 * sin(x2) / (r * r * r);
-                       });
+  data.B.initialize(0, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+    Scalar r = exp(x1);
+    // return 2.0 * B0 * cos(x2) / (r * r * r);
+    return B0 * cos(x2) *
+           (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
+            1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) / (r * mesh.delta[0]);
+  });
+  data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+    Scalar r = exp(x1);
+    // return B0 * sin(x2) / (r * r * r);
+    return B0 * (cos(x2 - 0.5 * mesh.delta[1]) - cos(x2 + 0.5 * mesh.delta[1])) / (r*r*r*mesh.delta[1]);
+  });
   data.B.sync_to_device();
-  ScalarField<Scalar> flux(env.local_grid());
+  // Put the initial condition to the background
+  env.init_bg_fields(data);
+
+  ScalarField<Scalar> flux(env.grid());
+  flux.initialize();
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);
   exporter.AddField("J", data.J);
@@ -49,7 +61,6 @@ int main(int argc, char *argv[])
   // Initialize a bunch of particles
   std::default_random_engine gen;
   std::uniform_int_distribution<int> dist(100, 258);
-  auto &mesh = env.grid().mesh();
   uint32_t N = 1;
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.f, 0.f, 0.f}, {0.0f, -5.0f, 0.0f},
@@ -75,14 +86,17 @@ int main(int argc, char *argv[])
       data.B.sync_to_host();
       data.J.sync_to_host();
       data.Rho[0].sync_to_host();
-      dynamic_cast<const Grid_LogSph*>(&env.local_grid())->compute_flux(flux, data.B);
+      dynamic_cast<const Grid_LogSph*>(&env.local_grid())
+          ->compute_flux(flux, data.B, env.B_bg());
+      Logger::print_info("Finished computing flux");
 
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);
     }
-    
+
     timer::stamp();
     ptc_updater.update_particles(data, dt);
+    // ptc_updater.handle_boundary(data);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
@@ -93,11 +107,10 @@ int main(int argc, char *argv[])
       Logger::print_info("Ptc sort took {}us", t_sort);
     }
 
-    // timer::stamp();
-    // // ptc_updater.handle_boundary(data);
+    timer::stamp();
     // field_solver.update_fields(data.E, data.B, data.J, dt, time);
-    // auto t_field = timer::get_duration_since_stamp("us");
-    // Logger::print_info("Field Update took {}us", t_field);
+    auto t_field = timer::get_duration_since_stamp("us");
+    Logger::print_info("Field Update took {}us", t_field);
   }
   return 0;
 }

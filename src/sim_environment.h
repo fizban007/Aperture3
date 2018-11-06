@@ -21,7 +21,7 @@
 
 namespace Aperture {
 
-// struct SimData;
+struct SimData;
 // class DomainCommunicator;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +50,7 @@ class Environment {
   // void add_ptcBC(ptcBC* bc);
 
   void add_output(const std::string& name);
+  void init_bg_fields(SimData& data);
 
   // void apply_initial_condition(SimData& data);
 

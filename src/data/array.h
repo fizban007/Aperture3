@@ -33,13 +33,13 @@ class Array {
 
   /// Linearized indexing operator, read only
   const data_type& operator[](size_t idx) const {
-    assert(idx >= 0 && idx < m_length);
+    assert(idx < m_length);
     return m_data_h[idx];
   }
 
   /// Linearized indexing operator, read and write
   data_type& operator[](size_t idx) {
-    assert(idx >= 0 && idx < m_length);
+    assert(idx < m_length);
     return m_data_h[idx];
   }
 

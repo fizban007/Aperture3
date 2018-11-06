@@ -29,9 +29,9 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   // Load shared memory
   int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
-  int n1 = dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val;
-  int n2 = dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * DIM1 + c1;
+  int n2 = dev_mesh.guard[1] + t2 * DIM2 + c2;
   size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
   // init_shared_memory<2, DIM1, DIM2>(s_u1, s_u2, s_u3, u1, u2, u3,
@@ -70,9 +70,9 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
       ((*ptrAddr(b2, globalOffset) *
             *ptrAddr(mesh_ptrs.l2_b, globalOffset) -
         *ptrAddr(b2, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l2_b, globalOffset - sizeof(Scalar)) -
+            *ptrAddr(mesh_ptrs.l2_b, globalOffset - sizeof(Scalar)) +
         *ptrAddr(b1, globalOffset - e1.pitch) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset - e1.pitch) +
+            *ptrAddr(mesh_ptrs.l1_b, globalOffset - e1.pitch) -
         *ptrAddr(b1, globalOffset) *
             *ptrAddr(mesh_ptrs.l1_b, globalOffset)) /
            *ptrAddr(mesh_ptrs.A3_e, globalOffset) -
@@ -95,9 +95,9 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   // Load shared memory
   int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x + Pad<2>::val, c2 = threadIdx.y + Pad<2>::val;
-  int n1 = dev_mesh.guard[0] + t1 * DIM1 + c1 - Pad<2>::val;
-  int n2 = dev_mesh.guard[1] + t2 * DIM2 + c2 - Pad<2>::val;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * DIM1 + c1;
+  int n2 = dev_mesh.guard[1] + t2 * DIM2 + c2;
   size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
   // init_shared_memory<2, DIM1, DIM2>(s_u1, s_u2, s_u3, u1, u2, u3,
@@ -135,9 +135,9 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
       ((*ptrAddr(e2, globalOffset + sizeof(Scalar)) *
             *ptrAddr(mesh_ptrs.l2_e, globalOffset + sizeof(Scalar)) -
         *ptrAddr(e2, globalOffset) *
-            *ptrAddr(mesh_ptrs.l2_e, globalOffset) -
+            *ptrAddr(mesh_ptrs.l2_e, globalOffset) +
         *ptrAddr(e1, globalOffset) *
-            *ptrAddr(mesh_ptrs.l1_e, globalOffset) +
+            *ptrAddr(mesh_ptrs.l1_e, globalOffset) -
         *ptrAddr(e1, globalOffset + e1.pitch) *
             *ptrAddr(mesh_ptrs.l1_e, globalOffset + e1.pitch)) /
        *ptrAddr(mesh_ptrs.A3_b, globalOffset));
@@ -171,12 +171,14 @@ FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
         mesh_ptrs, dt);
     CudaCheckError();
+    cudaDeviceSynchronize();
 
     // Update E
     Kernels::compute_e_update<32, 16><<<gridSize, blockSize>>>(
         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
         J.ptr(0), J.ptr(1), J.ptr(2), mesh_ptrs, dt);
     CudaCheckError();
+    cudaDeviceSynchronize();
 
     if (m_comm_callback_vfield != nullptr) {
       m_comm_callback_vfield(E);
