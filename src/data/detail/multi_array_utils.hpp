@@ -53,6 +53,20 @@ map_array_unary_op(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
   }
 }
 
+template <typename T, typename UnaryOp>
+__global__ void
+map_array_unary_op_2d(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
+       j += blockDim.y * gridDim.y) {
+    T* row = (T*)((char*)array.ptr + j * array.pitch);
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+         i += blockDim.x * gridDim.x) {
+      // size_t idx = i + j * ext.x + k * ext.x * ext.y;
+      op(row[i]);
+    }
+  }
+}
+
 template <typename T, typename BinaryOp>
 __global__ void
 map_array_binary_op(cudaPitchedPtr input, cudaPitchedPtr output,

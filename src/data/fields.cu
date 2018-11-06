@@ -661,11 +661,19 @@ VectorField<T>::addBy(data_type value, int n) {
   // detail::map_multi_array(m_array[n].begin(), this -> m_grid ->
   // extent(),
   //                         detail::Op_PlusConst<T>(value));
-  dim3 gridSize(8, 8, 8);
-  dim3 blockSize(8, 8, 8);
-  Kernels::map_array_unary_op<T>
-      <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
-                                detail::Op_PlusConst<T>(value));
+  if (this->m_grid->dim() == 3) {
+    dim3 gridSize(8, 8, 8);
+    dim3 blockSize(8, 8, 8);
+    Kernels::map_array_unary_op<T>
+        <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
+                                  detail::Op_PlusConst<T>(value));
+  } else if (this->m_grid->dim() == 2) {
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
+    Kernels::map_array_unary_op_2d<T>
+        <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
+                                  detail::Op_PlusConst<T>(value));
+  }
   return (*this);
 }
 
