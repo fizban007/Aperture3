@@ -141,11 +141,24 @@ template <typename T>
 void
 MultiArray<T>::assign_dev(const data_type& value) {
   CudaSafeCall(cudaSetDevice(_devId));
-  dim3 blockSize(8, 8, 8);
-  dim3 gridSize(8, 8, 8);
-  Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
-      _data_d, _extent, detail::Op_AssignConst<T>(value));
-  CudaCheckError();
+  if (_dim == 3) {
+    // Logger::print_info("assign_dev 3d version");
+    dim3 blockSize(8, 8, 8);
+    // dim3 gridSize(8, 8, 8);
+    dim3 gridSize((_extent.x + 7)/8,
+                  (_extent.y + 7)/8,
+                  (_extent.z + 7)/8);
+    Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
+        _data_d, _extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
+  } else if (_dim == 2) {
+    // Logger::print_info("assign_dev 2d version");
+    dim3 blockSize(32, 16);
+    dim3 gridSize((_extent.x+31)/32, (_extent.y+15)/16);
+    Kernels::map_array_unary_op_2d<T><<<gridSize, blockSize>>>(
+        _data_d, _extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
+  }
 }
 
 template <typename T>
