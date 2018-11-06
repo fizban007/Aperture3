@@ -21,9 +21,14 @@ class FieldSolver_LogSph : public FieldSolver {
                         const vfield_t& J, double dt);
   void compute_B_update(vfield_t& B, const vfield_t& E, double dt);
   virtual void set_background_j(const vfield_t& J) override;
+  void boundary_conditions(SimData& data, double omega);
+
+  sfield_t& get_divE() { return m_divE; }
+  sfield_t& get_divB() { return m_divB; }
 
  private:
   const Grid_LogSph& m_grid;
+  sfield_t m_divE, m_divB;
 }; // ----- end of class FieldSolver_LogSph : public FieldSolver -----
 
 

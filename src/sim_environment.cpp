@@ -370,6 +370,8 @@ void
 Environment::init_bg_fields(SimData& data) {
   m_Ebg = data.E;
   m_Bbg = data.B;
+  m_Ebg.sync_to_host();
+  m_Bbg.sync_to_host();
 
   data.E.assign(0.0);
   data.B.assign(0.0);
