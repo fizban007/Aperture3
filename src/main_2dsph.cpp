@@ -39,12 +39,16 @@ main(int argc, char* argv[]) {
     // return 2.0 * B0 * cos(x2) / (r * r * r);
     return B0 * cos(x2) *
            (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
-            1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) / (r * mesh.delta[0]);
+            1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
+           (r * mesh.delta[0]);
   });
   data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
     Scalar r = exp(x1);
     // return B0 * sin(x2) / (r * r * r);
-    return B0 * (cos(x2 - 0.5 * mesh.delta[1]) - cos(x2 + 0.5 * mesh.delta[1])) / (r*r*r*mesh.delta[1]);
+    return B0 *
+           (cos(x2 - 0.5 * mesh.delta[1]) -
+            cos(x2 + 0.5 * mesh.delta[1])) /
+           (r * r * r * mesh.delta[1]);
   });
   data.B.sync_to_device();
   // Put the initial condition to the background
@@ -54,9 +58,12 @@ main(int argc, char* argv[]) {
   flux.initialize();
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);
+  exporter.AddField("B_bg", env.B_bg());
   exporter.AddField("J", data.J);
   exporter.AddField("Rho_e", data.Rho[0]);
   exporter.AddField("flux", flux);
+  exporter.AddField("divE", field_solver.get_divE());
+  exporter.AddField("divB", field_solver.get_divB());
 
   // Initialize a bunch of particles
   std::default_random_engine gen;
@@ -66,7 +73,7 @@ main(int argc, char* argv[]) {
     data.particles.append({0.f, 0.f, 0.f}, {0.0f, -5.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
                           mesh.get_idx(100, 258),
-                          ParticleType::electron, 1000.0);
+                          ParticleType::electron, 1.0);
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
@@ -81,6 +88,13 @@ main(int argc, char* argv[]) {
     double time = step * dt;
     Logger::print_info("At timestep {}, time = {}", step, time);
 
+    // Apply boundary conditions
+    if (time <= 1.0) {
+      field_solver.boundary_conditions(data, 0.1*(time / 1.0));
+    } else {
+      field_solver.boundary_conditions(data, 0.1);
+    }
+
     if ((step % env.params().data_interval) == 0) {
       data.E.sync_to_host();
       data.B.sync_to_host();
@@ -89,6 +103,8 @@ main(int argc, char* argv[]) {
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
           ->compute_flux(flux, data.B, env.B_bg());
       Logger::print_info("Finished computing flux");
+      field_solver.get_divE().sync_to_host();
+      field_solver.get_divB().sync_to_host();
 
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);
@@ -96,7 +112,7 @@ main(int argc, char* argv[]) {
 
     timer::stamp();
     ptc_updater.update_particles(data, dt);
-    // ptc_updater.handle_boundary(data);
+    ptc_updater.handle_boundary(data);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
@@ -108,7 +124,7 @@ main(int argc, char* argv[]) {
     }
 
     timer::stamp();
-    // field_solver.update_fields(data.E, data.B, data.J, dt, time);
+    field_solver.update_fields(data.E, data.B, data.J, dt, time);
     auto t_field = timer::get_duration_since_stamp("us");
     Logger::print_info("Field Update took {}us", t_field);
   }

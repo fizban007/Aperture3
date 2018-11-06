@@ -170,7 +170,7 @@ __launch_bounds__(512, 4)
     Scalar r3p = atan(y / x);
     if (x < 0.0) v1 *= -1.0;
 
-    printf("position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
+    // printf("position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
 
     cart2logsph(v1, v2, v3, r1p, r2p, r3p);
     ptc.p1[idx] = v1 * gamma;
@@ -180,13 +180,17 @@ __launch_bounds__(512, 4)
     // Scalar old_pos3 =
     Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
     Pos_t new_x2 = old_x2 + (r2p - r2) / dev_mesh.delta[1];
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is %f\n", new_x1, new_x2, old_x1, old_x2);
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
+#ifndef NDEBUG
     if (dc1 > 1 || dc1 < -1 || dc2 > 1 || dc2 < -1)
       printf("----------------- Error: moved more than 1 cell!");
+#endif
     ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2, dc2);
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = r3p;
@@ -196,7 +200,8 @@ __launch_bounds__(512, 4)
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
     Scalar wdt =
-        -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w;
+        // -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w / dt;
+        -dev_charges[sp] * w / dt;
     int sup2 = interp.support() + 2;
     // int sup22 = sup2 * sup2;
     Scalar djy[spline_t::support + 2] = {0.0f};
@@ -204,7 +209,7 @@ __launch_bounds__(512, 4)
       int jj = j - interp.radius();
       // int jj = (((idx + j) % sup22) / sup2) - interp.radius();
       Scalar sy0 = interp.interpolate(0.5f - old_x2 + jj);
-      Scalar sy1 = interp.interpolate(0.5f - new_x2 + (jj + dc2));
+      Scalar sy1 = interp.interpolate(0.5f - new_x2 + (jj - dc2));
       // if (std::abs(sy0) < DEPOSIT_EPS && std::abs(sy1) <
       // DEPOSIT_EPS)
       //   continue;
@@ -214,7 +219,7 @@ __launch_bounds__(512, 4)
         int ii = i - interp.radius();
         // int ii = ((idx + i) % sup22) % sup2;
         Scalar sx0 = interp.interpolate(0.5f - old_x1 + ii);
-        Scalar sx1 = interp.interpolate(0.5f - new_x1 + (ii + dc1));
+        Scalar sx1 = interp.interpolate(0.5f - new_x1 + (ii - dc1));
         // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
         // DEPOSIT_EPS)
         //   continue;
@@ -223,17 +228,18 @@ __launch_bounds__(512, 4)
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         // printf("dq0 = %f, ", val0);
         if (std::abs(val0) > 0.0f) {
-          djx += wdt * val0;
+          djx += wdt * val0 * dev_mesh.delta[0] * dev_mesh.delta[1];
           atomicAdd(ptrAddr(fields.J1, offset),
                     djx / *ptrAddr(mesh_ptrs.A1_e, offset));
         }
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         // printf("dq1 = %f, ", val1);
         if (std::abs(val1) > 0.0f) {
-          djy[i] += wdt * val1;
+          djy[i] += wdt * val1 * dev_mesh.delta[0] * dev_mesh.delta[1];
           atomicAdd(ptrAddr(fields.J2, offset),
                     djy[i] / *ptrAddr(mesh_ptrs.A2_e, offset));
         }
+        // printf("val1 = %f, djy[%d] = %f, ", val1, i, djy[i]);
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
         // printf("dq2 = %f, ", val2);
         if (std::abs(val2) > 0.0f)
@@ -247,6 +253,7 @@ __launch_bounds__(512, 4)
                     w * s1 * dev_charges[sp] /
                         *ptrAddr(mesh_ptrs.dV, offset));
       }
+      // printf("\n");
     }
   }
 }
@@ -288,6 +295,8 @@ PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
 }
 
 void
-PtcUpdaterLogSph::handle_boundary(SimData &data) {}
+PtcUpdaterLogSph::handle_boundary(SimData &data) {
+  data.particles.clear_guard_cells();
+}
 
 }  // namespace Aperture

@@ -68,7 +68,7 @@ include_directories(${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR} ${MPI_INCLUDE_PATH
 # message(${CUDA_TOOLKIT_ROOT_DIR})
 
 set(GCC5 /usr/bin/g++-5)
-set(CMAKE_CUDA_FLAGS "-lineinfo -lcublas -lcurand -Xcompiler -fPIC -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored -Xcudafe --diag_suppress=code_is_unreachable")
+set(CMAKE_CUDA_FLAGS "-arch=compute_61 -code=sm_61 -lineinfo -lcublas -lcurand -Xcompiler -fPIC -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored -Xcudafe --diag_suppress=code_is_unreachable")
 macro(add_cuda_target cuda_target)
   add_library(${cuda_target} ${${cuda_target}_src})
   # target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")

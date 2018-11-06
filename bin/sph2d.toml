@@ -2,7 +2,7 @@
 delta_t = 0.001
 
 # Charge of an electron
-q_e = 0.1
+q_e = 1.0
 
 # Ion mass
 ion_mass = 5.0
