@@ -19,6 +19,7 @@ SimData::SimData(const Environment& e, int deviceId)
       devId(deviceId) {
   // initialize(env);
   num_species = env.params().num_species;
+  B.set_field_type(FieldType::B);
   E.initialize();
   B.initialize();
   J.initialize();
@@ -30,11 +31,12 @@ SimData::SimData(const Environment& e, int deviceId)
 
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
+    Rho[i].initialize();
     Rho[i].sync_to_device();
     // rho_ptrs[i] = Rho[i].ptr();
-    Rho_avg.emplace_back(env.local_grid());
-    J_s.emplace_back(env.local_grid());
-    J_avg.emplace_back(env.local_grid());
+    // Rho_avg.emplace_back(env.local_grid());
+    // J_s.emplace_back(env.local_grid());
+    // J_avg.emplace_back(env.local_grid());
     // particles.emplace_back(env.params(),
     // static_cast<ParticleType>(i));
   }

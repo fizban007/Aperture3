@@ -9,6 +9,12 @@
 namespace Aperture {
 
 template <typename T>
+HD_INLINE T
+square(const T &val) {
+  return val * val;
+}
+
+template <typename T>
 HD_INLINE int
 sgn(T val) {
   return (T(0) < val) - (val < T(0));

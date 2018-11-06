@@ -24,7 +24,8 @@ class Grid_LogSph : public Grid
 
   mesh_ptrs get_mesh_ptrs() const;
 
-  void compute_flux(ScalarField<Scalar>& flux, VectorField<Scalar>& B) const;
+  void compute_flux(ScalarField<Scalar>& flux, VectorField<Scalar>& B,
+                    VectorField<Scalar>& B_bg) const;
 
  private:
   MultiArray<Scalar> m_l1_e, m_l2_e, m_l3_e;

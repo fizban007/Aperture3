@@ -7,7 +7,7 @@
 #include "data/grid_log_sph.h"
 #include "data/grid_1dGR.h"
 // #include "data/detail/grid_impl.hpp"
-// #include "sim_data.h"
+#include "sim_data.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -364,6 +364,17 @@ Environment::check_dev_mesh(Quadmesh& mesh) {
 void
 Environment::check_dev_params(SimParams& params) {
   get_dev_params(params);
+}
+
+void
+Environment::init_bg_fields(SimData& data) {
+  m_Ebg = data.E;
+  m_Bbg = data.B;
+
+  data.E.assign(0.0);
+  data.B.assign(0.0);
+  data.E.sync_to_host();
+  data.B.sync_to_host();
 }
 
 }  // namespace Aperture

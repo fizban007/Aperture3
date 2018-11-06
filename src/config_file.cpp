@@ -67,8 +67,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                             .value_or(defaults.create_pairs);
   params.trace_photons = config->get_as<bool>("trace_photons")
                              .value_or(defaults.trace_photons);
-  params.use_bg_fields = config->get_as<bool>("use_bg_fields")
-                             .value_or(defaults.use_bg_fields);
+  // params.use_bg_fields = config->get_as<bool>("use_bg_fields")
+  //                            .value_or(defaults.use_bg_fields);
   params.track_percent = config->get_as<double>("track_percent")
                              .value_or(defaults.track_percent);
   params.gamma_thr =

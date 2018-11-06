@@ -60,27 +60,39 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
-          interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
+          (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
+           interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
+                  Stagger(0b001))) *
           q_over_m;
       Scalar E2 =
-          interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
+          (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
+           interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
+                  Stagger(0b010))) *
           q_over_m;
       Scalar E3 =
-          interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b100)) *
+          (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b100)) +
+           interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
+                  Stagger(0b100))) *
           q_over_m;
       Scalar B1 =
-          interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b110)) *
+          (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b110)) +
+           interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
+                  Stagger(0b110))) *
           q_over_m;
       Scalar B2 =
-          interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b101)) *
+          (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b101)) +
+           interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
+                  Stagger(0b101))) *
           q_over_m;
       Scalar B3 =
-          interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b011)) *
+          (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b011)) +
+           interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
+                  Stagger(0b011))) *
           q_over_m;
 
       // printf("B1 = %f, B2 = %f, B3 = %f\n", B1, B2, B3);
-      // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar) + c2*fields.B1.pitch));
-      // printf("q over m is %f\n", q_over_m);
+      // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar)
+      // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
 
       // step 1: Update particle momentum using vay pusher
       Scalar up1 = p1 + 2.0f * E1 + (p2 * B3 - p3 * B2) / gamma;
