@@ -78,7 +78,7 @@ main(int argc, char* argv[]) {
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
-  data.particles.sync_to_device();
+  // data.particles.sync_to_device();
 
   // exporter.WriteOutput(0, 0.0);
   // exporter.writeXMF(0, 0.0);
@@ -116,7 +116,7 @@ main(int argc, char* argv[]) {
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
     // if (step == 0)
-    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 100.0);
+    ptc_updater.inject_ptc(data, 2, 10.0, 0.0, 0.0, 500.0);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 

@@ -59,7 +59,7 @@ measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad,
                           bit_or(ParticleFlag::primary));
     // Logger::print_info("Particle flag is {}", data.particles.data().flag[0]);
   }
-  data.particles.sync_to_device();
+  // data.particles.sync_to_device();
 
   // output particle spectra
   std::vector<std::vector<uint32_t>> spectra_p, spectra_s, spectra_ph;
