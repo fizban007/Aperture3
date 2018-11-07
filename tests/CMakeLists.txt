@@ -25,7 +25,7 @@ set(tests_src
   # "test_particles.cpp"
   "test_finite_diff.cpp" "test_ffe.cpp" "test_ffe2d.cpp"
   "test_IC_PL.cpp"
-  "test_pair_creation.cpp"
+  # "test_pair_creation.cpp"
   )
 add_executable(tests ${tests_src})
 target_link_libraries(tests

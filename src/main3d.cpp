@@ -38,7 +38,7 @@ main(int argc, char* argv[]) {
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
-  data.particles.sync_to_device();
+  // data.particles.sync_to_device();
 
   // Update loop
   for (uint32_t step = 0; step < env.params().max_steps; step++) {
