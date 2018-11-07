@@ -1,8 +1,8 @@
 #ifndef _PTC_UPDATER_LOGSPH_H_
 #define _PTC_UPDATER_LOGSPH_H_
 
-#include "ptc_updater.h"
 #include "data/grid_log_sph.h"
+#include "ptc_updater.h"
 
 namespace Aperture {
 
@@ -13,9 +13,13 @@ class PtcUpdaterLogSph : public PtcUpdater {
 
   virtual void update_particles(SimData& data, double dt);
   virtual void handle_boundary(SimData& data);
+  void inject_ptc(SimData& data, int inj_per_cell, Scalar p1, Scalar p2,
+                  Scalar p3, Scalar w);
 
  private:
   Grid_LogSph::mesh_ptrs m_mesh_ptrs;
+  void* d_rand_states;
+  int m_threadsPerBlock, m_blocksPerGrid;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdater -----
 
 }  // namespace Aperture

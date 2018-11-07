@@ -2,6 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
+#include "cuda/kernels.h"
 #include "data/particles.h"
 #include "data/particles_1d.h"
 #include "data/photons.h"
@@ -13,19 +14,12 @@
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
-#include <curand_kernel.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 
 namespace Aperture {
 
 namespace Kernels {
-
-__global__ void
-init_rand_states(curandState* states, int seed) {
-  int id = threadIdx.x + blockIdx.x * blockDim.x;
-  curand_init(seed, id, 0, &states[id]);
-}
 
 template <typename PtcData, typename RadModel>
 __global__ void
@@ -204,9 +198,10 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(
   CudaSafeCall(cudaMalloc(
       &d_rand_states,
       m_threadsPerBlock * m_blocksPerGrid * sizeof(curandState)));
-  Kernels::init_rand_states<<<m_blocksPerGrid, m_threadsPerBlock>>>(
-      (curandState*)d_rand_states, seed);
-  CudaCheckError();
+  init_rand_states((curandState*)d_rand_states, seed, m_threadsPerBlock, m_blocksPerGrid);
+  // Kernels::init_rand_states<<<m_blocksPerGrid, m_threadsPerBlock>>>(
+  //     (curandState*)d_rand_states, seed);
+  // CudaCheckError();
 
   // Allocate auxiliary arrays for pair creation
   // CudaSafeCall(cudaMalloc(&m_numPerBlock, m_blocksPerGrid *

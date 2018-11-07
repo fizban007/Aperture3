@@ -8,6 +8,12 @@ namespace Aperture {
 namespace Kernels {
 
 __global__ void
+init_rand_states(curandState* states, int seed) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curand_init(seed, id, 0, &states[id]);
+}
+
+__global__ void
 compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
@@ -102,6 +108,12 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
       hist, E, num, num_bins, Emax, flags, flag);
   // Wait for GPU to finish
   cudaDeviceSynchronize();
+  CudaCheckError();
+}
+
+void
+init_rand_states(curandState* states, int seed, int threadPerBlock, int blockPerGrid) {
+  Kernels::init_rand_states<<<blockPerGrid, threadPerBlock>>>(states, seed);
   CudaCheckError();
 }
 

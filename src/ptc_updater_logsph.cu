@@ -91,15 +91,17 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
           q_over_m;
 
       // printf("B1 = %f, B2 = %f, B3 = %f\n", B1, B2, B3);
+      // printf("E1 = %f, E2 = %f, E3 = %f\n", E1, E2, E3);
       // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar)
       // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
+      // printf("gamma before is %f\n", gamma);
 
       // step 1: Update particle momentum using vay pusher
       Scalar up1 = p1 + 2.0f * E1 + (p2 * B3 - p3 * B2) / gamma;
       Scalar up2 = p2 + 2.0f * E2 + (p3 * B1 - p1 * B3) / gamma;
       Scalar up3 = p3 + 2.0f * E3 + (p1 * B2 - p2 * B1) / gamma;
       Scalar tt = B1 * B1 + B2 * B2 + B3 * B3;
-      Scalar ut = up1 * B1 + up2 * B3 + up3 * B3;
+      Scalar ut = up1 * B1 + up2 * B2 + up3 * B3;
 
       Scalar sigma = 1.0f + up1 * up1 + up2 * up2 + up3 * up3 - tt;
       Scalar inv_gamma2 =
@@ -117,6 +119,96 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
       p3 =
           (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
           s;
+
+      // printf("gamma after is %f\n", gamma);
+      // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
+      //        ptc.p3[idx]);
+      // printf("p after is (%f, %f, %f)\n", p1, p2, p3);
+      ptc.p1[idx] = p1;
+      ptc.p2[idx] = p2;
+      ptc.p3[idx] = p3;
+    }
+  }
+}
+
+__global__ void
+boris_push_2d(particle_data ptc, size_t num, fields_data fields,
+              Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+
+    // Load particle quantities
+    Interpolator2D<spline_t> interp;
+    auto flag = ptc.flag[idx];
+    int sp = get_ptc_type(flag);
+    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
+    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
+    // step 0: Grab E & M fields at the particle position
+    if (!check_bit(flag, ParticleFlag::ignore_EM)) {
+      Scalar E1 =
+          (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
+           interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
+                  Stagger(0b001))) *
+          q_over_m;
+      Scalar E2 =
+          (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
+           interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
+                  Stagger(0b010))) *
+          q_over_m;
+      Scalar E3 =
+          (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b100)) +
+           interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
+                  Stagger(0b100))) *
+          q_over_m;
+      Scalar B1 =
+          (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b110)) +
+           interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
+                  Stagger(0b110))) *
+          q_over_m;
+      Scalar B2 =
+          (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b101)) +
+           interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
+                  Stagger(0b101))) *
+          q_over_m;
+      Scalar B3 =
+          (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b011)) +
+           interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
+                  Stagger(0b011))) *
+          q_over_m;
+
+      // printf("B is (%f, %f, %f)\n", B1, B2, B3);
+      // printf("p is (%f, %f, %f)\n", p1, p2, p3);
+      // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar)
+      // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
+
+      // step 1: Update particle momentum using boris pusher
+      Scalar pm1 = p1 + E1;
+      Scalar pm2 = p2 + E2;
+      Scalar pm3 = p3 + E3;
+      // printf("pm is (%f, %f, %f)\n", pm1, pm2, pm3);
+      Scalar gamma =
+          std::sqrt(1.0f + pm1 * pm1 + pm2 * pm2 + pm3 * pm3);
+      Scalar pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
+      Scalar pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
+      Scalar pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
+      // printf("pp is (%f, %f, %f)\n", pp1, pp2, pp3);
+      Scalar t2p1 =
+          1.0f + (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma);
+      // printf("t2p1 is %f, gamma is %f\n", t2p1, gamma);
+      // printf("cross3 are: %f, %f\n", (pm1 * B2 - pm2 * B1) / gamma,
+      //        2.0f * (pp1 * B2 - pp2 * B1) / t2p1);
+
+      // p1 -= 10.0*dt;
+      p1 = E1 + pm1 + 2.0f * (pp2 * B3 - pp3 * B2) / t2p1;
+      p2 = E2 + pm2 + 2.0f * (pp3 * B1 - pp1 * B3) / t2p1;
+      p3 = E3 + pm3 + 2.0f * (pp1 * B2 - pp2 * B1) / t2p1;
+      // printf("p is (%f, %f, %f)\n", p1, p2, p3);
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
@@ -152,6 +244,7 @@ __launch_bounds__(512, 4)
     v1 = v1 / gamma;
     v2 = v2 / gamma;
     v3 = v3 / gamma;
+    // printf("velocity is (%f, %f, %f)\n", v1, v2, v3);
 
     // step 1: Compute particle movement and update position
     Scalar r1 = dev_mesh.pos(0, c1, old_x1);
@@ -159,8 +252,10 @@ __launch_bounds__(512, 4)
     Scalar x = std::exp(r1) * std::sin(r2) * std::cos(old_x3);
     Scalar y = std::exp(r1) * std::sin(r2) * std::sin(old_x3);
     Scalar z = std::exp(r1) * std::cos(r2);
+    // printf("cart position is (%f, %f, %f)\n", x, y, z);
 
     logsph2cart(v1, v2, v3, r1, r2, old_x3);
+    // printf("cart velocity is (%f, %f, %f)\n", v1, v2, v3);
     x += v1 * dt;
     y += v2 * dt;
     z += v3 * dt;
@@ -168,7 +263,7 @@ __launch_bounds__(512, 4)
     Scalar r2p = acos(z / r1p);
     r1p = log(r1p);
     Scalar r3p = atan(y / x);
-    if (x < 0.0) v1 *= -1.0;
+    if (x < 0.0f) v1 *= -1.0f;
 
     // printf("position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
 
@@ -180,7 +275,8 @@ __launch_bounds__(512, 4)
     // Scalar old_pos3 =
     Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
     Pos_t new_x2 = old_x2 + (r2p - r2) / dev_mesh.delta[1];
-    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is %f\n", new_x1, new_x2, old_x1, old_x2);
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
+    // %f\n", new_x1, new_x2, old_x1, old_x2);
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
 #ifndef NDEBUG
@@ -190,7 +286,8 @@ __launch_bounds__(512, 4)
     ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
-    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2, dc2);
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+    // dc2);
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = r3p;
@@ -200,7 +297,8 @@ __launch_bounds__(512, 4)
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
     Scalar wdt =
-        // -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w / dt;
+        // -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w
+        // / dt;
         -dev_charges[sp] * w / dt;
     int sup2 = interp.support() + 2;
     // int sup22 = sup2 * sup2;
@@ -258,16 +356,69 @@ __launch_bounds__(512, 4)
   }
 }
 
+__global__ void
+inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
+           Scalar p2, Scalar p3, Scalar w, curandState *states) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState localState = states[id];
+  for (int i =
+           dev_mesh.guard[1] + blockIdx.x * blockDim.x + threadIdx.x;
+       i < dev_mesh.dims[1] - dev_mesh.guard[1];
+       i += blockDim.x * gridDim.x) {
+    size_t offset = num + i * inj_per_cell * 2;
+    Scalar theta = dev_mesh.pos(1, i, false);
+    Pos_t x2 = curand_uniform(&localState);
+    for (int n = 0; n < inj_per_cell; n++) {
+      ptc.x1[offset + n * 2] = 0.5f;
+      ptc.x2[offset + n * 2] = x2;
+      ptc.x3[offset + n * 2] = 0.0f;
+      ptc.p1[offset + n * 2] = 1.0f;
+      ptc.p2[offset + n * 2] = 0.0f;
+      ptc.p3[offset + n * 2] = 0.0f;
+      ptc.cell[offset + n * 2] =
+          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+      ptc.weight[offset + n * 2] = w * sin(theta);
+      ptc.flag[offset + n * 2] = set_ptc_type_flag(
+          bit_or(ParticleFlag::primary), ParticleType::electron);
+
+      ptc.x1[offset + n * 2 + 1] = 0.5f;
+      ptc.x2[offset + n * 2 + 1] = x2;
+      ptc.x3[offset + n * 2 + 1] = 0.0f;
+      ptc.p1[offset + n * 2 + 1] = 1.0f;
+      ptc.p2[offset + n * 2 + 1] = 0.0f;
+      ptc.p3[offset + n * 2 + 1] = 0.0f;
+      ptc.cell[offset + n * 2 + 1] =
+          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+      ptc.weight[offset + n * 2 + 1] = w * sin(theta);
+      ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
+          bit_or(ParticleFlag::primary), ParticleType::positron);
+    }
+  }
+  states[id] = localState;
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const Environment &env)
-    : PtcUpdater(env) {
+    : PtcUpdater(env),
+      d_rand_states(nullptr),
+      m_threadsPerBlock(256),
+      m_blocksPerGrid(128) {
   const Grid_LogSph &grid =
       dynamic_cast<const Grid_LogSph &>(env.grid());
   m_mesh_ptrs = grid.get_mesh_ptrs();
+
+  int seed = m_env.params().random_seed;
+  CudaSafeCall(cudaMalloc(
+      &d_rand_states,
+      m_threadsPerBlock * m_blocksPerGrid * sizeof(curandState)));
+  init_rand_states((curandState *)d_rand_states, seed,
+                   m_threadsPerBlock, m_blocksPerGrid);
 }
 
-PtcUpdaterLogSph::~PtcUpdaterLogSph() {}
+PtcUpdaterLogSph::~PtcUpdaterLogSph() {
+  cudaFree((curandState *)d_rand_states);
+}
 
 void
 PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
@@ -297,6 +448,21 @@ PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
 void
 PtcUpdaterLogSph::handle_boundary(SimData &data) {
   data.particles.clear_guard_cells();
+}
+
+void
+PtcUpdaterLogSph::inject_ptc(SimData &data, int inj_per_cell,
+                             Scalar p1, Scalar p2, Scalar p3,
+                             Scalar w) {
+  Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
+      data.particles.data(), data.particles.number(), inj_per_cell,
+      p1, p2, p3, w,
+      (curandState *)d_rand_states);
+  CudaCheckError();
+
+  data.particles.set_num(data.particles.number() +
+                         2 * inj_per_cell *
+                             data.E.grid().mesh().reduced_dim(1));
 }
 
 }  // namespace Aperture

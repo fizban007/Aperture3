@@ -30,7 +30,7 @@ main(int argc, char* argv[]) {
                         "data", 1);
   exporter.WriteGrid();
 
-  Scalar B0 = 1000.0;
+  Scalar B0 = 20000.0;
   auto& mesh = env.grid().mesh();
   data.E.initialize();
   data.B.initialize();
@@ -61,6 +61,7 @@ main(int argc, char* argv[]) {
   exporter.AddField("B_bg", env.B_bg());
   exporter.AddField("J", data.J);
   exporter.AddField("Rho_e", data.Rho[0]);
+  exporter.AddField("Rho_p", data.Rho[1]);
   exporter.AddField("flux", flux);
   exporter.AddField("divE", field_solver.get_divE());
   exporter.AddField("divB", field_solver.get_divB());
@@ -72,7 +73,7 @@ main(int argc, char* argv[]) {
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.f, 0.f, 0.f}, {0.0f, -5.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 258),
+                          mesh.get_idx(100, 10),
                           ParticleType::electron, 1.0);
   }
   Logger::print_info("number of particles is {}",
@@ -89,8 +90,8 @@ main(int argc, char* argv[]) {
     Logger::print_info("At timestep {}, time = {}", step, time);
 
     // Apply boundary conditions
-    if (time <= 1.0) {
-      field_solver.boundary_conditions(data, 0.1*(time / 1.0));
+    if (time <= 5.0) {
+      field_solver.boundary_conditions(data, 0.1*(time / 5.0));
     } else {
       field_solver.boundary_conditions(data, 0.1);
     }
@@ -100,6 +101,7 @@ main(int argc, char* argv[]) {
       data.B.sync_to_host();
       data.J.sync_to_host();
       data.Rho[0].sync_to_host();
+      data.Rho[1].sync_to_host();
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
           ->compute_flux(flux, data.B, env.B_bg());
       Logger::print_info("Finished computing flux");
@@ -113,6 +115,8 @@ main(int argc, char* argv[]) {
     timer::stamp();
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
+    // if (step == 0)
+    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 100.0);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
