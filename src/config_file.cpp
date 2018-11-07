@@ -94,6 +94,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.constE =
       config->get_as<double>("constE").value_or(defaults.constE);
   params.B0 = config->get_as<double>("B0").value_or(defaults.B0);
+  params.damping_coef = config->get_as<double>("damping_coef")
+                            .value_or(defaults.damping_coef);
+  params.damping_length = config->get_as<uint64_t>("damping_length")
+                            .value_or(defaults.damping_length);
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
@@ -136,7 +140,7 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   auto sim_table = config->get_table("Simulation");
   if (sim_table) {
     params.coord_system = sim_table->get_as<std::string>("coord_system")
-        .value_or(defaults.coord_system);
+                              .value_or(defaults.coord_system);
     params.algorithm_ptc_move =
         sim_table->get_as<std::string>("algorithm_ptc_move")
             .value_or(defaults.algorithm_ptc_move);

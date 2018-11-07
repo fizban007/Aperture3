@@ -1,3 +1,6 @@
+#ifndef _INVERSE_COMPTON_POWER_LAW_CUH_
+#define _INVERSE_COMPTON_POWER_LAW_CUH_
+
 #include "utils/util_functions.h"
 #include "utils/logger.h"
 // #include "cuda/cudaUtility.h"
@@ -186,3 +189,5 @@ make_inverse_compton_PL1D(const SimParamsBase& params, RandFunc& rng) {
 }
 
 }  // namespace Aperture
+
+#endif // _INVERSE_COMPTON_POWER_LAW_CUH_

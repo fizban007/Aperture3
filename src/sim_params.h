@@ -38,6 +38,8 @@ struct SimParamsBase {
   LogLevel log_lvl = LogLevel::debug;
   size_t max_steps = 1000;
   size_t data_interval = 100;
+  int damping_length = 30;
+  float damping_coef = 0.002;
 
   bool create_pairs = false;
   bool trace_photons = false;
@@ -60,6 +62,9 @@ struct SimParamsBase {
   float ic_path = 1.0;
   int rad_energy_bins = 256;
   float lph_cutoff = 1.0e4;
+  float E_thr = 15.0;
+  float E_secondary = 4.0;
+  float r_cutoff = 4.0;
 
   // Domain decomposition parameters
   int dim_x = 1;

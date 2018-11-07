@@ -10,6 +10,7 @@
 #include "radiation/inverse_compton_dummy.h"
 #include "radiation/inverse_compton_power_law.h"
 #include "radiation/inverse_compton_black_body.h"
+#include "radiation/curvature_instant.h"
 #include "radiation/radiation_transfer.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -249,7 +250,7 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::emit_photons(
   m_numPerBlock.sync_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1] +
                     m_numPerBlock[m_blocksPerGrid - 1];
-  // Logger::print_info("{} photons are produced!", new_photons);
+  Logger::print_info("{} photons are produced!", new_photons);
 
   Kernels::produce_photons<typename PtcClass::DataClass,
                            typename PhotonClass::DataClass, RadModel>
@@ -309,16 +310,18 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::produce_pairs(
 //  Explicit instantiations
 ////////////////////////////////////////////////////////////////////////
 
-template class RadiationTransfer<Particles_1D, Photons_1D,
-                                 InverseComptonDummy<Kernels::CudaRng>>;
+// template class RadiationTransfer<Particles_1D, Photons_1D,
+                                 // InverseComptonDummy<Kernels::CudaRng>>;
 template class RadiationTransfer<Particles, Photons,
                                  InverseComptonDummy<Kernels::CudaRng>>;
-template class RadiationTransfer<Particles_1D, Photons_1D,
-                                 InverseComptonPL1D<Kernels::CudaRng>>;
+// template class RadiationTransfer<Particles_1D, Photons_1D,
+                                 // InverseComptonPL1D<Kernels::CudaRng>>;
 template class RadiationTransfer<Particles, Photons,
                                  InverseComptonPL1D<Kernels::CudaRng>>;
 template class RadiationTransfer<Particles, Photons,
                                  InverseComptonBB<Kernels::CudaRng>>;
+template class RadiationTransfer<Particles, Photons,
+                                 CurvatureInstant<Kernels::CudaRng>>;
 
 
 }  // namespace Aperture

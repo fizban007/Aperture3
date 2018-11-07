@@ -1,5 +1,9 @@
 #include "algorithms/field_solver_log_sph.h"
+#include "cuda/constant_mem_func.h"
+#include "cuda/cudarng.h"
 #include "ptc_updater_logsph.h"
+#include "radiation/curvature_instant.h"
+#include "radiation/radiation_transfer.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -24,13 +28,18 @@ main(int argc, char* argv[]) {
   // Initialize particle updater
   PtcUpdaterLogSph ptc_updater(env);
 
+  // Initialize radiation module
+  RadiationTransfer<Particles, Photons,
+                    CurvatureInstant<Kernels::CudaRng>>
+      rad(env);
+
   // Initialize data exporter
   DataExporter exporter(env.params(),
                         "/home/alex/storage/Data/Aperture3/2d_test/",
-                        "data", 1);
+                        "data", 2);
   exporter.WriteGrid();
 
-  Scalar B0 = 20000.0;
+  Scalar B0 = env.params().B0;
   auto& mesh = env.grid().mesh();
   data.E.initialize();
   data.B.initialize();
@@ -73,15 +82,11 @@ main(int argc, char* argv[]) {
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.f, 0.f, 0.f}, {0.0f, -5.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 10),
-                          ParticleType::electron, 1.0);
+                          mesh.get_idx(100, 10), ParticleType::electron,
+                          1.0);
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
-  // data.particles.sync_to_device();
-
-  // exporter.WriteOutput(0, 0.0);
-  // exporter.writeXMF(0, 0.0);
 
   for (uint32_t step = 0; step < env.params().max_steps; step++) {
     double dt = env.params().delta_t;
@@ -91,11 +96,12 @@ main(int argc, char* argv[]) {
 
     // Apply boundary conditions
     if (time <= 5.0) {
-      field_solver.boundary_conditions(data, 0.1*(time / 5.0));
+      field_solver.boundary_conditions(data, 0.1 * (time / 5.0));
     } else {
       field_solver.boundary_conditions(data, 0.1);
     }
 
+    // Output data
     if ((step % env.params().data_interval) == 0) {
       data.E.sync_to_host();
       data.B.sync_to_host();
@@ -113,16 +119,19 @@ main(int argc, char* argv[]) {
     }
 
     timer::stamp();
+    // rad.emit_photons(data.photons, data.particles);
     ptc_updater.update_particles(data, dt);
+    // rad.produce_pairs(data.particles, data.photons);
     ptc_updater.handle_boundary(data);
     // if (step == 0)
-    ptc_updater.inject_ptc(data, 2, 10.0, 0.0, 0.0, 500.0);
+    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
-    if (step % 50 == 0) {
+    if (step % 20 == 0) {
       timer::stamp();
       data.particles.sort_by_cell();
+      data.photons.sort_by_cell();
       auto t_sort = timer::get_duration_since_stamp("us");
       Logger::print_info("Ptc sort took {}us", t_sort);
     }
