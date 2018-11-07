@@ -217,6 +217,65 @@ boris_push_2d(particle_data ptc, size_t num, fields_data fields,
 }
 
 __global__ void
+move_photons(photon_data photons, size_t num, Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = photons.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+    // Load particle quantities
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    auto v1 = photons.p1[idx], v2 = photons.p2[idx], v3 = photons.p3[idx];
+    Scalar E = std::sqrt(v1 * v1 + v2 * v2 + v3 * v3);
+    v1 = v1 / E;
+    v2 = v2 / E;
+    v3 = v3 / E;
+
+    auto old_x1 = photons.x1[idx], old_x2 = photons.x2[idx],
+         old_x3 = photons.x3[idx];
+
+    // Compute the actual movement
+    Scalar r1 = dev_mesh.pos(0, c1, old_x1);
+    Scalar r2 = dev_mesh.pos(1, c2, old_x2);
+    Scalar x = std::exp(r1) * std::sin(r2) * std::cos(old_x3);
+    Scalar y = std::exp(r1) * std::sin(r2) * std::sin(old_x3);
+    Scalar z = std::exp(r1) * std::cos(r2);
+
+    logsph2cart(v1, v2, v3, r1, r2, old_x3);
+    x += v1 * dt;
+    y += v2 * dt;
+    z += v3 * dt;
+    Scalar r1p = sqrt(x * x + y * y + z * z);
+    Scalar r2p = acos(z / r1p);
+    r1p = log(r1p);
+    Scalar r3p = atan(y / x);
+    if (x < 0.0f) v1 *= -1.0f;
+
+    cart2logsph(v1, v2, v3, r1p, r2p, r3p);
+    photons.p1[idx] = v1 * E;
+    photons.p2[idx] = v2 * E;
+    photons.p3[idx] = v3 * E;
+
+    Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
+    Pos_t new_x2 = old_x2 + (r2p - r2) / dev_mesh.delta[1];
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
+    // %f\n", new_x1, new_x2, old_x1, old_x2);
+    int dc1 = floor(new_x1);
+    int dc2 = floor(new_x2);
+    photons.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
+    new_x1 -= (Pos_t)dc1;
+    new_x2 -= (Pos_t)dc2;
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+    // dc2);
+    photons.x1[idx] = new_x1;
+    photons.x2[idx] = new_x2;
+    photons.x3[idx] = r3p;
+    photons.path_left[idx] -= dt;
+  }
+}
+
+__global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
                                fields_data fields,
@@ -422,25 +481,36 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 
 void
 PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
-  Logger::print_info(
-      "Updating {} particles in log spherical coordinates",
-      data.particles.number());
 
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
-    Kernels::vay_push_2d<<<256, 512>>>(data.particles.data(),
-                                       data.particles.number(),
-                                       m_dev_fields, dt);
-    CudaCheckError();
-    data.J.initialize();
-    for (auto &rho : data.Rho) {
-      rho.initialize();
+    // Skip empty particle array
+    if (data.particles.number() > 0) {
+      Logger::print_info(
+          "Updating {} particles in log spherical coordinates",
+          data.particles.number());
+      Kernels::vay_push_2d<<<256, 512>>>(data.particles.data(),
+                                         data.particles.number(),
+                                         m_dev_fields, dt);
+      CudaCheckError();
+      data.J.initialize();
+      for (auto &rho : data.Rho) {
+        rho.initialize();
+      }
+      Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
+          data.particles.data(), data.particles.number(), m_dev_fields,
+          m_mesh_ptrs, dt);
+      CudaCheckError();
     }
-    Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
-        data.particles.data(), data.particles.number(), m_dev_fields,
-        m_mesh_ptrs, dt);
-    CudaCheckError();
+    // Skip empty particle array
+    if (data.photons.number() > 0) {
+      Logger::print_info(
+          "Updating {} photons in log spherical coordinates",
+          data.photons.number());
+      Kernels::move_photons<<<256, 512>>>(data.photons.data(), data.photons.number(), dt);
+      CudaCheckError();
+    }
   }
   cudaDeviceSynchronize();
 }
@@ -448,6 +518,7 @@ PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
 void
 PtcUpdaterLogSph::handle_boundary(SimData &data) {
   data.particles.clear_guard_cells();
+  data.photons.clear_guard_cells();
 }
 
 void

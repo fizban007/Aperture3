@@ -211,6 +211,29 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
   }
 }
 
+template <int DIM2>
+__global__ void
+outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
+                 cudaPitchedPtr e3, cudaPitchedPtr b1,
+                 cudaPitchedPtr b2, cudaPitchedPtr b3) {
+  for (int j = blockIdx.x * blockDim.x + threadIdx.x;
+       j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
+    for (int i = 0; i < dev_params.damping_length; i++) {
+      int n1 = dev_mesh.dims[0] - dev_params.damping_length + i;
+      size_t offset = j * e1.pitch + n1 * sizeof(Scalar);
+      Scalar lambda =
+          1.0f - dev_params.damping_coef *
+                     square((Scalar)i / dev_params.damping_length);
+      // (*ptrAddr(e1, offset)) *= lambda;
+      (*ptrAddr(e2, offset)) *= lambda;
+      (*ptrAddr(e3, offset)) *= lambda;
+      // (*ptrAddr(b1, offset)) *= lambda;
+      (*ptrAddr(b2, offset)) *= lambda;
+      (*ptrAddr(b3, offset)) *= lambda;
+    }
+  }
+}
+
 }  // namespace Kernels
 
 FieldSolver_LogSph::FieldSolver_LogSph(const Grid_LogSph& g)
@@ -269,14 +292,19 @@ FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 void
 FieldSolver_LogSph::boundary_conditions(SimData& data, double omega) {
   Logger::print_info("omega is {}", omega);
-  Kernels::stellar_boundary<256><<<128, 256>>>(
+  Kernels::stellar_boundary<256><<<32, 256>>>(
       data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
       data.B.ptr(1), data.B.ptr(2), omega);
   CudaCheckError();
 
   Kernels::axis_boundary<256>
-      <<<128, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
+      <<<32, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
                      data.B.ptr(0), data.B.ptr(1), data.B.ptr(2));
+  CudaCheckError();
+
+  Kernels::outflow_boundary<256>
+      <<<32, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
+                    data.B.ptr(0), data.B.ptr(1), data.B.ptr(2));
   CudaCheckError();
 }
 

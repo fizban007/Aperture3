@@ -15,7 +15,7 @@ SimData::SimData(const Environment& e, int deviceId)
       B(env.local_grid()),
       J(env.local_grid()),
       particles(env.params()),
-      photons(env),
+      photons(env.params()),
       devId(deviceId) {
   // initialize(env);
   num_species = env.params().num_species;
@@ -25,15 +25,11 @@ SimData::SimData(const Environment& e, int deviceId)
   J.initialize();
 
   CudaSafeCall(cudaSetDevice(devId));
-  // Initialize the pointer array that contains the device pointers
-  // CudaSafeCall(
-  //     cudaMallocManaged(&rho_ptrs, num_species * sizeof(Scalar*)));
 
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
     Rho[i].initialize();
     Rho[i].sync_to_device();
-    // rho_ptrs[i] = Rho[i].ptr();
     // Rho_avg.emplace_back(env.local_grid());
     // J_s.emplace_back(env.local_grid());
     // J_avg.emplace_back(env.local_grid());
@@ -41,8 +37,6 @@ SimData::SimData(const Environment& e, int deviceId)
     // static_cast<ParticleType>(i));
   }
 
-  // particles.sync_to_device(0);
-  // photons.sync_to_device(0);
   E.sync_to_device();
   B.sync_to_device();
   J.sync_to_device();
@@ -51,7 +45,6 @@ SimData::SimData(const Environment& e, int deviceId)
 }
 
 SimData::~SimData() {
-  // cudaFree(rho_ptrs);
 }
 
 void
