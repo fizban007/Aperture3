@@ -226,7 +226,8 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
     // Load particle quantities
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
-    auto v1 = photons.p1[idx], v2 = photons.p2[idx], v3 = photons.p3[idx];
+    auto v1 = photons.p1[idx], v2 = photons.p2[idx],
+         v3 = photons.p3[idx];
     Scalar E = std::sqrt(v1 * v1 + v2 * v2 + v3 * v3);
     v1 = v1 / E;
     v2 = v2 / E;
@@ -304,6 +305,8 @@ __launch_bounds__(512, 4)
     v2 = v2 / gamma;
     v3 = v3 / gamma;
     // printf("velocity is (%f, %f, %f)\n", v1, v2, v3);
+    // printf("cell is (%d, %d), x is (%f, %f)\n", c1, c2, old_x1,
+    // old_x2);
 
     // step 1: Compute particle movement and update position
     Scalar r1 = dev_mesh.pos(0, c1, old_x1);
@@ -318,13 +321,14 @@ __launch_bounds__(512, 4)
     x += v1 * dt;
     y += v2 * dt;
     z += v3 * dt;
+    // printf("new cart position is (%f, %f, %f)\n", x, y, z);
     Scalar r1p = sqrt(x * x + y * y + z * z);
     Scalar r2p = acos(z / r1p);
     r1p = log(r1p);
     Scalar r3p = atan(y / x);
     if (x < 0.0f) v1 *= -1.0f;
 
-    // printf("position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
+    // printf("new position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
 
     cart2logsph(v1, v2, v3, r1p, r2p, r3p);
     ptc.p1[idx] = v1 * gamma;
@@ -342,9 +346,17 @@ __launch_bounds__(512, 4)
     if (dc1 > 1 || dc1 < -1 || dc2 > 1 || dc2 < -1)
       printf("----------------- Error: moved more than 1 cell!");
 #endif
-    ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
+    // reflect around the axis
+    if (c2 + dc2 < dev_mesh.guard[1]) {
+      dc2 += 1;
+      new_x2 = 1.0f - new_x2;
+    } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1]) {
+      dc2 -= 1;
+      new_x2 = 1.0f - new_x2;
+    }
+    ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
     // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
     // dc2);
     ptc.x1[idx] = new_x1;
@@ -393,6 +405,8 @@ __launch_bounds__(512, 4)
         // printf("dq1 = %f, ", val1);
         if (std::abs(val1) > 0.0f) {
           djy[i] += wdt * val1 * dev_mesh.delta[0] * dev_mesh.delta[1];
+          // if (jj + c2 >= dev_mesh.guard[1] &&
+          //     jj + c2 < dev_mesh.dims[1] - dev_mesh.guard[1])
           atomicAdd(ptrAddr(fields.J2, offset),
                     djy[i] / *ptrAddr(mesh_ptrs.A2_e, offset));
         }
@@ -401,8 +415,10 @@ __launch_bounds__(512, 4)
         // printf("dq2 = %f, ", val2);
         if (std::abs(val2) > 0.0f)
           atomicAdd(ptrAddr(fields.J3, offset),
-                    dev_charges[sp] * w * v3 * val2 /
-                        *ptrAddr(mesh_ptrs.dV, offset));
+                    // dev_charges[sp] * w * v3 * val2 /
+                    //     *ptrAddr(mesh_ptrs.dV, offset));
+                    dev_charges[sp] * w * v3 * val2 * dev_mesh.delta[1] * dev_mesh.delta[0] /
+                        *ptrAddr(mesh_ptrs.A3_e, offset));
         Scalar s1 = sx1 * sy1;
         // printf("s1 = %f\n", s1);
         if (std::abs(s1) > 0.0f)
@@ -425,8 +441,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
        i < dev_mesh.dims[1] - dev_mesh.guard[1];
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
-    Scalar theta = dev_mesh.pos(1, i, false);
     Pos_t x2 = curand_uniform(&localState);
+    Scalar theta = dev_mesh.pos(1, i, x2);
     for (int n = 0; n < inj_per_cell; n++) {
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
@@ -456,6 +472,43 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
   states[id] = localState;
 }
 
+__global__ void
+boundary_rho(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+    size_t offset_0 =
+        i * sizeof(Scalar) + dev_mesh.guard[1] * fields.Rho[0].pitch;
+    size_t offset_pi = i * sizeof(Scalar) +
+                       (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
+                           fields.Rho[0].pitch;
+    for (int n = 0; n < dev_params.num_species; n++) {
+      (*ptrAddr(fields.Rho[n], offset_0)) -=
+          *ptrAddr(fields.Rho[n], offset_0 - fields.Rho[0].pitch);
+      (*ptrAddr(fields.Rho[n], offset_pi)) +=
+          *ptrAddr(fields.Rho[n], offset_pi + fields.Rho[0].pitch) *
+          *ptrAddr(mesh_ptrs.dV, offset_pi + fields.Rho[0].pitch) /
+          *ptrAddr(mesh_ptrs.dV, offset_pi);
+
+      (*ptrAddr(fields.Rho[n], offset_0 - fields.Rho[0].pitch)) = 0.0f;
+      (*ptrAddr(fields.Rho[n], offset_pi + fields.Rho[0].pitch)) = 0.0f;
+    }
+    (*ptrAddr(fields.J1, offset_0)) -=
+        *ptrAddr(fields.J1, offset_0 - fields.J1.pitch);
+    (*ptrAddr(fields.J1, offset_pi)) +=
+        *ptrAddr(fields.J1, offset_pi + fields.J1.pitch) *
+        *ptrAddr(mesh_ptrs.A1_e, offset_pi + fields.J1.pitch) /
+        *ptrAddr(mesh_ptrs.A1_e, offset_pi);
+
+    *ptrAddr(fields.J1, offset_0 - fields.J1.pitch) = 0.0f;
+    *ptrAddr(fields.J1, offset_pi + fields.J1.pitch) = 0.0f;
+
+    (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) = 0.0f;
+    (*ptrAddr(fields.J2, offset_pi)) = 0.0f;
+    (*ptrAddr(fields.J2, offset_pi - fields.J2.pitch)) -=
+        *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
+  }
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const Environment &env)
@@ -481,7 +534,6 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 
 void
 PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
-
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
@@ -508,7 +560,8 @@ PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
       Logger::print_info(
           "Updating {} photons in log spherical coordinates",
           data.photons.number());
-      Kernels::move_photons<<<256, 512>>>(data.photons.data(), data.photons.number(), dt);
+      Kernels::move_photons<<<256, 512>>>(data.photons.data(),
+                                          data.photons.number(), dt);
       CudaCheckError();
     }
   }
@@ -519,16 +572,17 @@ void
 PtcUpdaterLogSph::handle_boundary(SimData &data) {
   data.particles.clear_guard_cells();
   data.photons.clear_guard_cells();
+
+  Kernels::boundary_rho<<<32, 512>>>(m_dev_fields, m_mesh_ptrs);
+  CudaCheckError();
 }
 
 void
-PtcUpdaterLogSph::inject_ptc(SimData &data, int inj_per_cell,
-                             Scalar p1, Scalar p2, Scalar p3,
-                             Scalar w) {
+PtcUpdaterLogSph::inject_ptc(SimData &data, int inj_per_cell, Scalar p1,
+                             Scalar p2, Scalar p3, Scalar w) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
-      data.particles.data(), data.particles.number(), inj_per_cell,
-      p1, p2, p3, w,
-      (curandState *)d_rand_states);
+      data.particles.data(), data.particles.number(), inj_per_cell, p1,
+      p2, p3, w, (curandState *)d_rand_states);
   CudaCheckError();
 
   data.particles.set_num(data.particles.number() +
