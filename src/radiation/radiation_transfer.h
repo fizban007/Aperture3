@@ -3,6 +3,7 @@
 
 #include "data/array.h"
 #include "data/typedefs.h"
+#include "data/fields.h"
 
 namespace Aperture {
 
@@ -17,6 +18,9 @@ class RadiationTransfer {
   void emit_photons(PhotonClass& photons, PtcClass& ptc);
   void produce_pairs(PtcClass& ptc, PhotonClass& photons);
 
+  ScalarField<Scalar>& get_pair_events() { return m_pair_events; }
+  ScalarField<Scalar>& get_ph_events() { return m_ph_events; }
+
  private:
   const Environment& m_env;
   void* d_rand_states;
@@ -24,6 +28,9 @@ class RadiationTransfer {
   Array<int> m_numPerBlock;
   Array<int> m_cumNumPerBlock;
   Array<int> m_posInBlock;
+
+  ScalarField<Scalar> m_pair_events;
+  ScalarField<Scalar> m_ph_events;
 };  // ----- end of class RadiationTransfer -----
 
 }  // namespace Aperture

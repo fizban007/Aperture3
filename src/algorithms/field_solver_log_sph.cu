@@ -119,17 +119,17 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * b1.pitch + n1 * sizeof(Scalar);
 
-    // (*ptrAddr(b1, globalOffset)) +=
-    //     -dt *
-    //     (*ptrAddr(e3, globalOffset + e1.pitch) *
-    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-    //      *ptrAddr(e3, globalOffset) *
-    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
     (*ptrAddr(b1, globalOffset)) +=
-        -dt * *ptrAddr(e3, globalOffset + e3.pitch) *
-        *ptrAddr(mesh_ptrs.l3_e, globalOffset + e3.pitch) /
+        -dt *
+        (*ptrAddr(e3, globalOffset + e1.pitch) *
+             *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
+         *ptrAddr(e3, globalOffset) *
+             *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
         *ptrAddr(mesh_ptrs.A1_b, globalOffset);
+    // (*ptrAddr(b1, globalOffset)) +=
+    //     -dt * *ptrAddr(e3, globalOffset + e3.pitch) *
+    //     *ptrAddr(mesh_ptrs.l3_e, globalOffset + e3.pitch) /
+    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
 
     (*ptrAddr(b3, globalOffset)) = 0.0f;
   }
@@ -208,22 +208,34 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
                       i * sizeof(Scalar))) = 0.0f;
     (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
                       i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(
-        e3, (dev_mesh.guard[1] - 1) * e3.pitch + i * sizeof(Scalar))) =
-        -*ptrAddr(e3,
-                  dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar));
+    (*ptrAddr(b1, (dev_mesh.guard[1] - 1) * b1.pitch +
+                      i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(
+    //     e3, (dev_mesh.guard[1] - 1) * e3.pitch + i * sizeof(Scalar)))
+    //     = *ptrAddr(e3,
+    //               dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar));
+    (*ptrAddr(e3, dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar))) =
+        0.0f;
+
     (*ptrAddr(e2,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch +
                   i * sizeof(Scalar))) = 0.0f;
     (*ptrAddr(b3,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
                   i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(b1,
+              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
+                  i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(e3,
+    //           (dev_mesh.dims[1] - dev_mesh.guard[1]) * e3.pitch +
+    //               i * sizeof(Scalar))) =
+    //     *ptrAddr(e3,
+    //               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
+    //               e3.pitch +
+    //                   i * sizeof(Scalar));
     (*ptrAddr(e3,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
-                  i * sizeof(Scalar))) =
-        -*ptrAddr(e3,
-                  (dev_mesh.dims[1] - dev_mesh.guard[1]) * e3.pitch +
-                      i * sizeof(Scalar));
+                  i * sizeof(Scalar))) = 0.0f;
   }
 }
 
@@ -240,7 +252,7 @@ outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
       Scalar lambda =
           1.0f - dev_params.damping_coef *
                      square((Scalar)i / dev_params.damping_length);
-      // (*ptrAddr(e1, offset)) *= lambda;
+      (*ptrAddr(e1, offset)) *= lambda;
       (*ptrAddr(e2, offset)) *= lambda;
       (*ptrAddr(e3, offset)) *= lambda;
       // (*ptrAddr(b1, offset)) *= lambda;

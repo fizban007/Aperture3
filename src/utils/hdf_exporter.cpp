@@ -139,7 +139,7 @@ DataExporter::checkDirectories() {
 template <typename T>
 void
 DataExporter::AddField(const std::string &name,
-                       const ScalarField<T> &field) {
+                       ScalarField<T> &field) {
   auto &mesh = grid->mesh();
 
   if (grid->dim() == 3) {
@@ -163,7 +163,7 @@ DataExporter::AddField(const std::string &name,
 template <typename T>
 void
 DataExporter::AddField(const std::string &name,
-                       const VectorField<T> &field) {
+                       VectorField<T> &field) {
   auto &mesh = grid->mesh();
 
   if (grid->dim() == 3) {
@@ -191,6 +191,7 @@ DataExporter::AddField(const std::string &name,
 void
 DataExporter::InterpolateFieldValues() {
   for (auto &sf : dbScalars3d) {
+    sf.field->sync_to_host();
     auto &mesh = sf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -206,6 +207,7 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &vf : dbVectors3d) {
+    vf.field->sync_to_host();
     auto &mesh = vf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -232,6 +234,7 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &sf : dbScalars2d) {
+    sf.field->sync_to_host();
     auto &mesh = sf.field->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -243,7 +246,8 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &vf : dbVectors2d) {
-    Logger::print_info("Writing {}", vf.name);
+    vf.field->sync_to_host();
+    // Logger::print_info("Writing {}", vf.name);
     auto &mesh = vf.field->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -722,7 +726,7 @@ DataExporter::writeXMF(int step, double time) {
 
 // Explicit instantiation of templates
 template void DataExporter::AddField<Scalar>(
-    const std::string &name, const ScalarField<Scalar> &array);
+    const std::string &name, ScalarField<Scalar> &array);
 template void DataExporter::AddField<Scalar>(
-    const std::string &name, const VectorField<Scalar> &array);
+    const std::string &name, VectorField<Scalar> &array);
 }  // namespace Aperture

@@ -74,6 +74,8 @@ main(int argc, char* argv[]) {
   exporter.AddField("flux", flux);
   exporter.AddField("divE", field_solver.get_divE());
   exporter.AddField("divB", field_solver.get_divB());
+  exporter.AddField("photon_produced", rad.get_ph_events());
+  exporter.AddField("pair_produced", rad.get_pair_events());
 
   // Initialize a bunch of particles
   std::default_random_engine gen;
@@ -103,38 +105,38 @@ main(int argc, char* argv[]) {
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
-      data.E.sync_to_host();
-      data.B.sync_to_host();
-      data.J.sync_to_host();
-      data.Rho[0].sync_to_host();
-      data.Rho[1].sync_to_host();
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
           ->compute_flux(flux, data.B, env.B_bg());
-      Logger::print_info("Finished computing flux");
-      field_solver.get_divE().sync_to_host();
-      field_solver.get_divB().sync_to_host();
+      // Logger::print_info("Finished computing flux");
 
-      Logger::print_info("Rho 512: {}, 513: {}, 514: {}",
-                         data.Rho[0](100, 512), data.Rho[0](100, 513),
-                         data.Rho[0](100, 514));
-      Logger::print_info("J2 512: {}, 513: {}, 514: {}",
-                         data.J(1, 100, 512), data.J(1, 100, 513),
-                         data.J(1, 100, 514));
-      Logger::print_info("E2 512: {}, 513: {}, 514: {}",
-                         data.E(1, 100, 512), data.E(1, 100, 513),
-                         data.E(1, 100, 514));
+      // Logger::print_info("Rho 512: {}, 513: {}, 514: {}",
+      //                    data.Rho[0](100, 512), data.Rho[0](100, 513),
+      //                    data.Rho[0](100, 514));
+      // Logger::print_info("J2 512: {}, 513: {}, 514: {}",
+      //                    data.J(1, 100, 512), data.J(1, 100, 513),
+      //                    data.J(1, 100, 514));
+      // Logger::print_info("E2 512: {}, 513: {}, 514: {}",
+      //                    data.E(1, 100, 512), data.E(1, 100, 513),
+      //                    data.E(1, 100, 514));
+      // Logger::print_info("divE 512: {}, 513: {}, 514: {}",
+      //                    field_solver.get_divE()(100, 512), field_solver.get_divE()(100, 513),
+      //                    field_solver.get_divE()(100, 514));
 
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);
+      rad.get_ph_events().initialize();
+      rad.get_pair_events().initialize();
+
+      Logger::print_info("Finished output!");
     }
 
     timer::stamp();
-    // rad.emit_photons(data.photons, data.particles);
+    rad.emit_photons(data.photons, data.particles);
     ptc_updater.update_particles(data, dt);
-    // rad.produce_pairs(data.particles, data.photons);
+    rad.produce_pairs(data.particles, data.photons);
     ptc_updater.handle_boundary(data);
     // if (step == 0)
-    // ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
+    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
