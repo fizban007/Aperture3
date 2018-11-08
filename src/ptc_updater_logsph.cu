@@ -415,10 +415,10 @@ __launch_bounds__(512, 4)
         // printf("dq2 = %f, ", val2);
         if (std::abs(val2) > 0.0f)
           atomicAdd(ptrAddr(fields.J3, offset),
-                    // dev_charges[sp] * w * v3 * val2 /
-                    //     *ptrAddr(mesh_ptrs.dV, offset));
-                    dev_charges[sp] * w * v3 * val2 * dev_mesh.delta[1] * dev_mesh.delta[0] /
-                        *ptrAddr(mesh_ptrs.A3_e, offset));
+                    dev_charges[sp] * w * v3 * val2 /
+                        *ptrAddr(mesh_ptrs.dV, offset));
+                    // dev_charges[sp] * w * v3 * val2 * dev_mesh.delta[1] * dev_mesh.delta[0] /
+                    //     *ptrAddr(mesh_ptrs.A3_e, offset));
         Scalar s1 = sx1 * sy1;
         // printf("s1 = %f\n", s1);
         if (std::abs(s1) > 0.0f)
@@ -437,8 +437,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i =
-           dev_mesh.guard[1] + blockIdx.x * blockDim.x + threadIdx.x;
-       i < dev_mesh.dims[1] - dev_mesh.guard[1];
+           dev_mesh.guard[1] + 1 + blockIdx.x * blockDim.x + threadIdx.x;
+       i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Pos_t x2 = curand_uniform(&localState);

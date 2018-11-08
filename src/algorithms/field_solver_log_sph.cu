@@ -54,8 +54,8 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
             *ptrAddr(mesh_ptrs.l2_b, globalOffset) -
         *ptrAddr(b2, globalOffset - sizeof(Scalar)) *
             *ptrAddr(mesh_ptrs.l2_b, globalOffset - sizeof(Scalar)) +
-        *ptrAddr(b1, globalOffset - e1.pitch) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset - e1.pitch) -
+        *ptrAddr(b1, globalOffset - b1.pitch) *
+            *ptrAddr(mesh_ptrs.l1_b, globalOffset - b1.pitch) -
         *ptrAddr(b1, globalOffset) *
             *ptrAddr(mesh_ptrs.l1_b, globalOffset)) /
            *ptrAddr(mesh_ptrs.A3_e, globalOffset) -
@@ -114,13 +114,20 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
             *ptrAddr(mesh_ptrs.l1_e, globalOffset + e1.pitch)) /
        *ptrAddr(mesh_ptrs.A3_b, globalOffset));
 
-  // Extra work for the axis
+  // Extra work for the axis at theta = 0
   if (threadIdx.y == 0) {
     n2 = dev_mesh.guard[1] - 1;
-    globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+    globalOffset = n2 * b1.pitch + n1 * sizeof(Scalar);
 
+    // (*ptrAddr(b1, globalOffset)) +=
+    //     -dt *
+    //     (*ptrAddr(e3, globalOffset + e1.pitch) *
+    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
+    //      *ptrAddr(e3, globalOffset) *
+    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
     (*ptrAddr(b1, globalOffset)) +=
-        -dt * 2.0f * *ptrAddr(e3, globalOffset + e3.pitch) *
+        -dt * *ptrAddr(e3, globalOffset + e3.pitch) *
         *ptrAddr(mesh_ptrs.l3_e, globalOffset + e3.pitch) /
         *ptrAddr(mesh_ptrs.A1_b, globalOffset);
 
@@ -140,8 +147,7 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
   int n2 = dev_mesh.guard[1] + t2 * DIM2 + c2;
   size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
 
-  if (n1 > dev_mesh.guard[0] &&
-      n2 != dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+  if (n1 > dev_mesh.guard[0]) {
     (*ptrAddr(divE, globalOffset)) =
         (*ptrAddr(e1, globalOffset) *
              *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
@@ -202,12 +208,22 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
                       i * sizeof(Scalar))) = 0.0f;
     (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
                       i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(
+        e3, (dev_mesh.guard[1] - 1) * e3.pitch + i * sizeof(Scalar))) =
+        -*ptrAddr(e3,
+                  dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar));
     (*ptrAddr(e2,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch +
                   i * sizeof(Scalar))) = 0.0f;
     (*ptrAddr(b3,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
                   i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(e3,
+              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
+                  i * sizeof(Scalar))) =
+        -*ptrAddr(e3,
+                  (dev_mesh.dims[1] - dev_mesh.guard[1]) * e3.pitch +
+                      i * sizeof(Scalar));
   }
 }
 
@@ -292,14 +308,14 @@ FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 void
 FieldSolver_LogSph::boundary_conditions(SimData& data, double omega) {
   Logger::print_info("omega is {}", omega);
-  Kernels::stellar_boundary<256><<<32, 256>>>(
-      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
-      data.B.ptr(1), data.B.ptr(2), omega);
+  Kernels::stellar_boundary<256>
+      <<<32, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
+                    data.B.ptr(0), data.B.ptr(1), data.B.ptr(2), omega);
   CudaCheckError();
 
   Kernels::axis_boundary<256>
       <<<32, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
-                     data.B.ptr(0), data.B.ptr(1), data.B.ptr(2));
+                    data.B.ptr(0), data.B.ptr(1), data.B.ptr(2));
   CudaCheckError();
 
   Kernels::outflow_boundary<256>

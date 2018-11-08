@@ -60,9 +60,12 @@ Grid_LogSph::init(const SimParams& params) {
                        (std::exp(2.0 * x1s) -
                         std::exp(2.0 * (x1s - m_mesh.delta[0])));
         if (j == m_mesh.reduced_dim(1) + m_mesh.guard[1] - 1) {
-          m_A1_b(i, j) = std::exp(2.0 * x1) * (-2.0 * std::cos(x2));
+          // m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2));
+          // m_A1_b(i, j) = std::exp(x1) * (std::sin(x2) * std::sin(x2));
+          m_A1_b(i, j) = std::exp(2.0 * x1) * std::sin(x2) * m_mesh.delta[1];
         } else if (j == m_mesh.guard[1] - 1) {
-          m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2 + m_mesh.delta[1]));
+          // m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2 + m_mesh.delta[1]));
+          m_A1_b(i, j) = std::exp(2.0 * x1) * std::sin(x2 + m_mesh.delta[1]) * m_mesh.delta[1];
         } else {
           m_A1_b(i, j) =
               std::exp(2.0 * x1) *
