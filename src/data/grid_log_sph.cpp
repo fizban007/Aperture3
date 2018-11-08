@@ -62,10 +62,11 @@ Grid_LogSph::init(const SimParams& params) {
         if (j == m_mesh.reduced_dim(1) + m_mesh.guard[1] - 1) {
           // m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2));
           // m_A1_b(i, j) = std::exp(x1) * (std::sin(x2) * std::sin(x2));
-          m_A1_b(i, j) = std::exp(2.0 * x1) * std::sin(x2) * m_mesh.delta[1];
+          m_A1_b(i, j) = 2.0 * std::exp(2.0 * x1) * std::sin(x2) * m_mesh.delta[1];
         } else if (j == m_mesh.guard[1] - 1) {
           // m_A1_b(i, j) = std::exp(2.0 * x1) * (2.0 * std::cos(x2 + m_mesh.delta[1]));
-          m_A1_b(i, j) = std::exp(2.0 * x1) * std::sin(x2 + m_mesh.delta[1]) * m_mesh.delta[1];
+          // m_A1_b(i, j) = std::exp(2.0 * x1) * std::sin(x2 + m_mesh.delta[1]) * m_mesh.delta[1];
+          m_A1_b(i, j) = 2.0 * std::exp(2.0 * x1) * std::sin(x2 + m_mesh.delta[1]) * m_mesh.delta[1];
         } else {
           m_A1_b(i, j) =
               std::exp(2.0 * x1) *
@@ -131,6 +132,7 @@ Grid_LogSph::compute_flux(ScalarField<Scalar>& flux,
                           VectorField<Scalar>& B_bg) const {
   flux.initialize();
   flux.sync_to_host();
+  B.sync_to_host();
   auto& mesh = B.grid().mesh();
 
   for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1]; j++) {

@@ -48,7 +48,7 @@ struct ptcoutput<Photons> {
 template <typename T>
 struct vfieldoutput3d {
   std::string name;
-  const VectorField<T>* field;
+  VectorField<T>* field;
   boost::multi_array<Scalar, 3> f1;
   boost::multi_array<Scalar, 3> f2;
   boost::multi_array<Scalar, 3> f3;
@@ -57,14 +57,14 @@ struct vfieldoutput3d {
 template <typename T>
 struct sfieldoutput3d {
   std::string name;
-  const ScalarField<T>* field;
+  ScalarField<T>* field;
   boost::multi_array<float, 3> f;
 };
 
 template <typename T>
 struct vfieldoutput2d {
   std::string name;
-  const VectorField<T>* field;
+  VectorField<T>* field;
   boost::multi_array<Scalar, 2> f1;
   boost::multi_array<Scalar, 2> f2;
   boost::multi_array<Scalar, 2> f3;
@@ -73,7 +73,7 @@ struct vfieldoutput2d {
 template <typename T>
 struct sfieldoutput2d {
   std::string name;
-  const ScalarField<T>* field;
+  ScalarField<T>* field;
   boost::multi_array<float, 2> f;
 };
 
@@ -100,9 +100,9 @@ class DataExporter {
   void AddArray(const std::string& name, MultiArray<T>& field);
 
   template <typename T>
-  void AddField(const std::string& name, const ScalarField<T>& field);
+  void AddField(const std::string& name, ScalarField<T>& field);
   template <typename T>
-  void AddField(const std::string& name, const VectorField<T>& field);
+  void AddField(const std::string& name, VectorField<T>& field);
 
   void InterpolateFieldValues();
 
