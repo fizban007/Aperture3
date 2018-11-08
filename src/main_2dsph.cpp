@@ -36,7 +36,7 @@ main(int argc, char* argv[]) {
   // Initialize data exporter
   DataExporter exporter(env.params(),
                         "/home/alex/storage/Data/Aperture3/2d_test/",
-                        "data", 2);
+                        "data", 1);
   exporter.WriteGrid();
 
   Scalar B0 = env.params().B0;
@@ -80,10 +80,10 @@ main(int argc, char* argv[]) {
   std::uniform_int_distribution<int> dist(100, 258);
   uint32_t N = 1;
   for (uint32_t i = 0; i < N; i++) {
-    data.particles.append({0.f, 0.f, 0.f}, {0.0f, -5.0f, 0.0f},
+    data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 5.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 10), ParticleType::electron,
-                          1.0);
+                          mesh.get_idx(100, 508),
+                          ParticleType::electron, 1000.0);
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
@@ -114,6 +114,16 @@ main(int argc, char* argv[]) {
       field_solver.get_divE().sync_to_host();
       field_solver.get_divB().sync_to_host();
 
+      Logger::print_info("Rho 512: {}, 513: {}, 514: {}",
+                         data.Rho[0](100, 512), data.Rho[0](100, 513),
+                         data.Rho[0](100, 514));
+      Logger::print_info("J2 512: {}, 513: {}, 514: {}",
+                         data.J(1, 100, 512), data.J(1, 100, 513),
+                         data.J(1, 100, 514));
+      Logger::print_info("E2 512: {}, 513: {}, 514: {}",
+                         data.E(1, 100, 512), data.E(1, 100, 513),
+                         data.E(1, 100, 514));
+
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);
     }
@@ -124,7 +134,7 @@ main(int argc, char* argv[]) {
     // rad.produce_pairs(data.particles, data.photons);
     ptc_updater.handle_boundary(data);
     // if (step == 0)
-    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
+    // ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
