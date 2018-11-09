@@ -34,6 +34,12 @@ E_secondary = 10.0
 # Radius cutoff for pair creation
 r_cutoff = 3.0
 
+# Gravity switch
+gravity_on = true
+
+# Gravity strength
+gravity = 1.0
+
 # Free path for inverse Compton once a particle reaches threshold
 ic_path = 20.0
 
