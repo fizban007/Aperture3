@@ -4,7 +4,6 @@
 #include "data/typedefs.h"
 #include "utils/interpolation.cuh"
 
-
 namespace Aperture {
 
 namespace Kernels {
@@ -40,9 +39,55 @@ movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
   return (sy1 - sy0) * 0.5f * (sx0 + sx1);
 }
 
+union float2UllUnion {
+  // double d;
+  float2 f;
+  unsigned long long int ull;
+};
+
+__device__ __forceinline__ void
+atomicAddKbn(float2* __restrict address, const float val) {
+  unsigned long long int* address_as_ull =
+      (unsigned long long int*)address;
+  float2UllUnion old, assumed, tmp;
+  old.ull = *address_as_ull;
+  do {
+    assumed = old;
+    tmp = assumed;
+
+    // Kahan and Babuska summation, Neumaier variant
+    float t = tmp.f.x + val;
+    tmp.f.y += (fabsf(tmp.f.x) >= fabsf(val)) ? ((tmp.f.x - t) + val)
+                                              : ((val - t) + tmp.f.x);
+    tmp.f.x = t;
+
+    old.ull = atomicCAS(address_as_ull, assumed.ull, tmp.ull);
+
+  } while (assumed.ull != old.ull);
 }
 
+__device__ __forceinline__ void
+atomicAddKahan(float2* __restrict address, const float val) {
+  unsigned long long int* address_as_ull =
+      (unsigned long long int*)address;
+  float2UllUnion old, assumed, tmp;
+  old.ull = *address_as_ull;
+  do {
+    assumed = old;
+    tmp = assumed;
+    // kahan summation
+    const float y = val - tmp.f.y;
+    const float t = tmp.f.x + y;
+    tmp.f.y = (t - tmp.f.x) - y;
+    tmp.f.x = t;
 
+    old.ull = atomicCAS(address_as_ull, assumed.ull, tmp.ull);
+
+  } while (assumed.ull != old.ull);
 }
+
+}  // namespace Kernels
+
+}  // namespace Aperture
 
 #endif

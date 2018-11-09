@@ -17,16 +17,22 @@ max_ptc_number = 150000000
 max_photon_number = 100000000
 
 # Create pairs or not
-create_pairs = false
+create_pairs = true
 
 # Trace photons or not
-trace_photons = false
+trace_photons = true
 
 # Threshold for creating a photon / pair
-gamma_thr = 35.0
+gamma_thr = 3000.0
 
 # Free path for energetic photons
-photon_path = 1.0
+photon_path = 0.0
+
+# Secondary particle energy
+E_secondary = 10.0
+
+# Radius cutoff for pair creation
+r_cutoff = 3.0
 
 # Free path for inverse Compton once a particle reaches threshold
 ic_path = 20.0
@@ -53,10 +59,13 @@ data_dir = "/home/alex/storage/Data/Aperture3/"
 B0 = 10000.0
 
 # Damping coefficient
-damping_coef = 0.005
+damping_coef = 0.006
 
 # Damping layer thickness in cells
 damping_length = 32
+
+# Star rotating omega
+omega = 0.05
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -64,7 +73,7 @@ damping_length = 32
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [512, 512, 1]
+N = [1024, 1024, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard
@@ -74,7 +83,7 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [2.71, 3.1415926535898, 1.0]
+size = [3.3, 3.1415926535898, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]

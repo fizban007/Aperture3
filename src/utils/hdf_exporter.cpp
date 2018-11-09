@@ -139,7 +139,7 @@ DataExporter::checkDirectories() {
 template <typename T>
 void
 DataExporter::AddField(const std::string &name,
-                       ScalarField<T> &field) {
+                       ScalarField<T> &field, bool sync) {
   auto &mesh = grid->mesh();
 
   if (grid->dim() == 3) {
@@ -149,6 +149,7 @@ DataExporter::AddField(const std::string &name,
 
     tempData.f.resize(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    tempData.sync = sync;
     dbScalars3d.push_back(std::move(tempData));
   } else if (grid->dim() == 2) {
     sfieldoutput2d<T> tempData;
@@ -156,6 +157,7 @@ DataExporter::AddField(const std::string &name,
     tempData.field = &field;
 
     tempData.f.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    tempData.sync = sync;
     dbScalars2d.push_back(std::move(tempData));
   }
 }
@@ -163,7 +165,7 @@ DataExporter::AddField(const std::string &name,
 template <typename T>
 void
 DataExporter::AddField(const std::string &name,
-                       VectorField<T> &field) {
+                       VectorField<T> &field, bool sync) {
   auto &mesh = grid->mesh();
 
   if (grid->dim() == 3) {
@@ -176,6 +178,7 @@ DataExporter::AddField(const std::string &name,
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
     tempData.f3.resize(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    tempData.sync = sync;
     dbVectors3d.push_back(std::move(tempData));
   } else if (grid->dim() == 2) {
     vfieldoutput2d<T> tempData;
@@ -184,6 +187,7 @@ DataExporter::AddField(const std::string &name,
     tempData.f1.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
     tempData.f2.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
     tempData.f3.resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    tempData.sync = sync;
     dbVectors2d.push_back(std::move(tempData));
   }
 }
@@ -191,7 +195,8 @@ DataExporter::AddField(const std::string &name,
 void
 DataExporter::InterpolateFieldValues() {
   for (auto &sf : dbScalars3d) {
-    sf.field->sync_to_host();
+    if (sf.sync)
+      sf.field->sync_to_host();
     auto &mesh = sf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -207,7 +212,8 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &vf : dbVectors3d) {
-    vf.field->sync_to_host();
+    if (vf.sync)
+      vf.field->sync_to_host();
     auto &mesh = vf.field->grid().mesh();
     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
       for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -234,7 +240,8 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &sf : dbScalars2d) {
-    sf.field->sync_to_host();
+    if (sf.sync)
+      sf.field->sync_to_host();
     auto &mesh = sf.field->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -246,7 +253,8 @@ DataExporter::InterpolateFieldValues() {
   }
 
   for (auto &vf : dbVectors2d) {
-    vf.field->sync_to_host();
+    if (vf.sync)
+      vf.field->sync_to_host();
     // Logger::print_info("Writing {}", vf.name);
     auto &mesh = vf.field->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -726,7 +734,7 @@ DataExporter::writeXMF(int step, double time) {
 
 // Explicit instantiation of templates
 template void DataExporter::AddField<Scalar>(
-    const std::string &name, ScalarField<Scalar> &array);
+    const std::string &name, ScalarField<Scalar> &array, bool sync);
 template void DataExporter::AddField<Scalar>(
-    const std::string &name, VectorField<Scalar> &array);
+    const std::string &name, VectorField<Scalar> &array, bool sync);
 }  // namespace Aperture

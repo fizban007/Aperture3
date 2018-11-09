@@ -3,7 +3,8 @@
 #include "cuda/cudarng.h"
 #include "ptc_updater_logsph.h"
 #include "radiation/curvature_instant.h"
-#include "radiation/radiation_transfer.h"
+// #include "radiation/radiation_transfer.h"
+#include "radiation/rt_pulsar.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -29,14 +30,12 @@ main(int argc, char* argv[]) {
   PtcUpdaterLogSph ptc_updater(env);
 
   // Initialize radiation module
-  RadiationTransfer<Particles, Photons,
-                    CurvatureInstant<Kernels::CudaRng>>
-      rad(env);
+  RadiationTransferPulsar rad(env);
 
   // Initialize data exporter
   DataExporter exporter(env.params(),
-                        "/home/alex/storage/Data/Aperture3/2d_test/",
-                        "data", 1);
+                        "/home/alex/storage/Data/Aperture3/2d_weak_pulsar/",
+                        "data", 2);
   exporter.WriteGrid();
 
   Scalar B0 = env.params().B0;
@@ -62,6 +61,7 @@ main(int argc, char* argv[]) {
   data.B.sync_to_device();
   // Put the initial condition to the background
   env.init_bg_fields(data);
+  env.B_bg().sync_to_host();
 
   ScalarField<Scalar> flux(env.grid());
   flux.initialize();
@@ -71,22 +71,22 @@ main(int argc, char* argv[]) {
   exporter.AddField("J", data.J);
   exporter.AddField("Rho_e", data.Rho[0]);
   exporter.AddField("Rho_p", data.Rho[1]);
-  exporter.AddField("flux", flux);
+  exporter.AddField("flux", flux, false);
   exporter.AddField("divE", field_solver.get_divE());
   exporter.AddField("divB", field_solver.get_divB());
   exporter.AddField("photon_produced", rad.get_ph_events());
   exporter.AddField("pair_produced", rad.get_pair_events());
 
   // Initialize a bunch of particles
-  std::default_random_engine gen;
-  std::uniform_int_distribution<int> dist(100, 258);
-  uint32_t N = 1;
-  for (uint32_t i = 0; i < N; i++) {
-    data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 5.0f, 0.0f},
-                          // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 508),
-                          ParticleType::electron, 1000.0);
-  }
+  // std::default_random_engine gen;
+  // std::uniform_int_distribution<int> dist(100, 258);
+  // uint32_t N = 1;
+  // for (uint32_t i = 0; i < N; i++) {
+  //   data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 5.0f, 0.0f},
+  //                         // mesh.get_idx(dist(gen), dist(gen)),
+  //                         mesh.get_idx(100, 508),
+  //                         ParticleType::electron, 1000.0);
+  // }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
 
@@ -97,11 +97,13 @@ main(int argc, char* argv[]) {
     Logger::print_info("At timestep {}, time = {}", step, time);
 
     // Apply boundary conditions
+    Scalar omega = 0.0;
     if (time <= 5.0) {
-      field_solver.boundary_conditions(data, 0.1 * (time / 5.0));
+      omega = env.params().omega * (time / 5.0);
     } else {
-      field_solver.boundary_conditions(data, 0.1);
+      omega = env.params().omega;
     }
+    field_solver.boundary_conditions(data, omega);
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
@@ -110,8 +112,8 @@ main(int argc, char* argv[]) {
       // Logger::print_info("Finished computing flux");
 
       // Logger::print_info("Rho 512: {}, 513: {}, 514: {}",
-      //                    data.Rho[0](100, 512), data.Rho[0](100, 513),
-      //                    data.Rho[0](100, 514));
+      //                    data.Rho[0](100, 512), data.Rho[0](100,
+      //                    513), data.Rho[0](100, 514));
       // Logger::print_info("J2 512: {}, 513: {}, 514: {}",
       //                    data.J(1, 100, 512), data.J(1, 100, 513),
       //                    data.J(1, 100, 514));
@@ -119,7 +121,8 @@ main(int argc, char* argv[]) {
       //                    data.E(1, 100, 512), data.E(1, 100, 513),
       //                    data.E(1, 100, 514));
       // Logger::print_info("divE 512: {}, 513: {}, 514: {}",
-      //                    field_solver.get_divE()(100, 512), field_solver.get_divE()(100, 513),
+      //                    field_solver.get_divE()(100, 512),
+      //                    field_solver.get_divE()(100, 513),
       //                    field_solver.get_divE()(100, 514));
 
       exporter.WriteOutput(step, time);
@@ -131,12 +134,12 @@ main(int argc, char* argv[]) {
     }
 
     timer::stamp();
-    rad.emit_photons(data.photons, data.particles);
     ptc_updater.update_particles(data, dt);
-    rad.produce_pairs(data.particles, data.photons);
     ptc_updater.handle_boundary(data);
-    // if (step == 0)
-    ptc_updater.inject_ptc(data, 1, 10.0, 0.0, 0.0, 500.0);
+    rad.emit_photons(data.photons, data.particles);
+    rad.produce_pairs(data.particles, data.photons);
+    if (step % 1 == 0)
+      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 100.0, omega);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 

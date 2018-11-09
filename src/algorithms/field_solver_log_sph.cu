@@ -208,8 +208,8 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
                       i * sizeof(Scalar))) = 0.0f;
     (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
                       i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(b1, (dev_mesh.guard[1] - 1) * b1.pitch +
-                      i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(b1, (dev_mesh.guard[1] - 1) * b1.pitch +
+    //                   i * sizeof(Scalar))) = 0.0f;
     // (*ptrAddr(
     //     e3, (dev_mesh.guard[1] - 1) * e3.pitch + i * sizeof(Scalar)))
     //     = *ptrAddr(e3,
@@ -223,9 +223,9 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
     (*ptrAddr(b3,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
                   i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(b1,
-              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
-                  i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(b1,
+    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
+    //               i * sizeof(Scalar))) = 0.0f;
     // (*ptrAddr(e3,
     //           (dev_mesh.dims[1] - dev_mesh.guard[1]) * e3.pitch +
     //               i * sizeof(Scalar))) =
@@ -273,7 +273,9 @@ FieldSolver_LogSph::~FieldSolver_LogSph() {}
 
 void
 FieldSolver_LogSph::update_fields(SimData& data, double dt,
-                                  double time) {}
+                                  double time) {
+  update_fields(data.E, data.B, data.J, dt, time);
+}
 
 void
 FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
@@ -319,7 +321,7 @@ FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 
 void
 FieldSolver_LogSph::boundary_conditions(SimData& data, double omega) {
-  Logger::print_info("omega is {}", omega);
+  // Logger::print_info("omega is {}", omega);
   Kernels::stellar_boundary<256>
       <<<32, 256>>>(data.E.ptr(0), data.E.ptr(1), data.E.ptr(2),
                     data.B.ptr(0), data.B.ptr(1), data.B.ptr(2), omega);

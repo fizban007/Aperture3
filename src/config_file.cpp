@@ -96,6 +96,12 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.B0 = config->get_as<double>("B0").value_or(defaults.B0);
   params.damping_coef = config->get_as<double>("damping_coef")
                             .value_or(defaults.damping_coef);
+  params.E_secondary = config->get_as<double>("E_secondary")
+                            .value_or(defaults.E_secondary);
+  params.r_cutoff = config->get_as<double>("r_cutoff")
+                            .value_or(defaults.r_cutoff);
+  params.omega = config->get_as<double>("omega")
+                            .value_or(defaults.omega);
   params.damping_length = config->get_as<uint64_t>("damping_length")
                             .value_or(defaults.damping_length);
   auto periodic_boundary =
