@@ -65,6 +65,7 @@ struct SimParamsBase {
   float E_thr = 15.0;
   float E_secondary = 4.0;
   float r_cutoff = 4.0;
+  float omega = 0.2;
 
   // Domain decomposition parameters
   int dim_x = 1;
