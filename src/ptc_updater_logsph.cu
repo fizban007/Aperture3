@@ -120,6 +120,12 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
           (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
           s;
 
+      // Add an artificial gravity
+      if (dev_params.gravity_on) {
+        Scalar r = exp(dev_mesh.pos(0, c1, old_x1));
+        p1 -= dt * dev_params.gravity / (r * r * r);
+      }
+      
       // printf("gamma after is %f\n", gamma);
       // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
       //        ptc.p3[idx]);
