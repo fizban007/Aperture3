@@ -1,3 +1,4 @@
+#include "additional_diagnostics.h"
 #include "algorithms/field_solver_log_sph.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudarng.h"
@@ -37,6 +38,7 @@ main(int argc, char* argv[]) {
                         env.params().data_dir + "2d_weak_pulsar",
                         "data", 2);
   exporter.WriteGrid();
+  AdditionalDiagnostics diag(env);
 
   Scalar B0 = env.params().B0;
   auto& mesh = env.grid().mesh();
@@ -76,17 +78,26 @@ main(int argc, char* argv[]) {
   exporter.AddField("divB", field_solver.get_divB());
   exporter.AddField("photon_produced", rad.get_ph_events());
   exporter.AddField("pair_produced", rad.get_pair_events());
+  exporter.AddField("photon_num", diag.get_ph_num());
+  exporter.AddField("gamma_e", diag.get_gamma(0));
+  exporter.AddField("gamma_p", diag.get_gamma(1));
 
   // Initialize a bunch of particles
   // std::default_random_engine gen;
   // std::uniform_int_distribution<int> dist(100, 258);
-  // uint32_t N = 1;
-  // for (uint32_t i = 0; i < N; i++) {
-  //   data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 5.0f, 0.0f},
-  //                         // mesh.get_idx(dist(gen), dist(gen)),
-  //                         mesh.get_idx(100, 508),
-  //                         ParticleType::electron, 1000.0);
-  // }
+  uint32_t N = 1000;
+  for (uint32_t i = 0; i < N; i++) {
+    data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 100.0f, 0.0f},
+                          // mesh.get_idx(dist(gen), dist(gen)),
+                          mesh.get_idx(100, 508),
+                          ParticleType::electron, 1000.0);
+  }
+  for (uint32_t i = 0; i < N; i++) {
+    data.particles.append({0.5f, 0.f, 0.f}, {0.0f, -100.0f, 0.0f},
+                          // mesh.get_idx(dist(gen), dist(gen)),
+                          mesh.get_idx(100, 508),
+                          ParticleType::positron, 1000.0);
+  }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
 
@@ -98,8 +109,8 @@ main(int argc, char* argv[]) {
 
     // Apply boundary conditions
     Scalar omega = 0.0;
-    if (time <= 5.0) {
-      omega = env.params().omega * (time / 5.0);
+    if (time <= 10.0) {
+      omega = env.params().omega * (time / 10.0);
     } else {
       omega = env.params().omega;
     }
@@ -107,6 +118,7 @@ main(int argc, char* argv[]) {
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
+      diag.collect_diagnostics(data);
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
           ->compute_flux(flux, data.B, env.B_bg());
       // Logger::print_info("Finished computing flux");
@@ -124,7 +136,6 @@ main(int argc, char* argv[]) {
       //                    field_solver.get_divE()(100, 512),
       //                    field_solver.get_divE()(100, 513),
       //                    field_solver.get_divE()(100, 514));
-
       exporter.WriteOutput(step, time);
       exporter.writeXMF(step, time);
       rad.get_ph_events().initialize();
@@ -136,10 +147,10 @@ main(int argc, char* argv[]) {
     timer::stamp();
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
-    rad.emit_photons(data.photons, data.particles);
-    rad.produce_pairs(data.particles, data.photons);
-    if (step % 1 == 0)
-      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 100.0, omega);
+    // rad.emit_photons(data.photons, data.particles);
+    // rad.produce_pairs(data.particles, data.photons);
+    // if (step % 2 == 0)
+    //   ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 100.0, omega);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 

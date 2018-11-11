@@ -77,6 +77,7 @@ class ScalarField : public FieldBase {
   self_type &addBy(const ScalarField<T> &field);
   self_type &subtractBy(data_type value);
   self_type &subtractBy(const ScalarField<T> &field);
+  self_type &divideBy(const ScalarField<T> &field);
 
   // template <int Order>
   T interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,
