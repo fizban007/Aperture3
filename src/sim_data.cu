@@ -29,7 +29,7 @@ SimData::SimData(const Environment& e, int deviceId)
   for (int i = 0; i < num_species; i++) {
     Rho.emplace_back(env.local_grid());
     Rho[i].initialize();
-    Rho[i].sync_to_device();
+    Rho[i].sync_to_host();
     // Rho_avg.emplace_back(env.local_grid());
     // J_s.emplace_back(env.local_grid());
     // J_avg.emplace_back(env.local_grid());
@@ -37,9 +37,9 @@ SimData::SimData(const Environment& e, int deviceId)
     // static_cast<ParticleType>(i));
   }
 
-  E.sync_to_device();
-  B.sync_to_device();
-  J.sync_to_device();
+  E.sync_to_host();
+  B.sync_to_host();
+  J.sync_to_host();
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 }

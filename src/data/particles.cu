@@ -87,6 +87,7 @@ Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
   Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type, weight, flag);
   CudaCheckError();
   m_number += 1;
+  cudaDeviceSynchronize();
 }
 
 void
