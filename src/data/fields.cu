@@ -396,6 +396,30 @@ ScalarField<T>::subtractBy(const ScalarField<T>& field) {
 }
 
 template <typename T>
+ScalarField<T>&
+ScalarField<T>::divideBy(const ScalarField<T>& field) {
+  this->check_grid_extent(this->m_grid->extent(),
+                          field.grid().extent());
+
+  if (field.grid().dim() == 3) {
+    dim3 gridSize(8, 8, 8);
+    dim3 blockSize(8, 8, 8);
+    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
+        field.data().data_d(), m_array.data_d(), m_grid->extent(),
+        detail::Op_DivAssign<T>());
+  } else if (field.grid().dim() == 2) {
+    dim3 gridSize(32, 32);
+    dim3 blockSize(32, 32);
+    Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
+        field.data().data_d(), m_array.data_d(), m_grid->extent(),
+        detail::Op_DivAssign<T>());
+  }
+  CudaCheckError();
+  return (*this);
+
+}
+
+template <typename T>
 // template <int Order>
 T
 ScalarField<T>::interpolate(const Vec3<int>& c,

@@ -3,11 +3,13 @@
 
 #include "cuda/cuda_control.h"
 #include "data/vec3.h"
+#include "constant_defs.h"
 // #include "data/detail/multi_array_iter_impl.hpp"
 
 namespace Aperture {
 
-HD_INLINE Scalar* ptrAddr(cudaPitchedPtr p, size_t offset) {
+HD_INLINE Scalar*
+ptrAddr(cudaPitchedPtr p, size_t offset) {
   return (Scalar*)((char*)p.ptr + offset);
 }
 
@@ -37,6 +39,21 @@ map_array_unary_op(cudaPitchedPtr input, cudaPitchedPtr output,
 
 template <typename T, typename UnaryOp>
 __global__ void
+map_array_unary_op_2d(cudaPitchedPtr input, cudaPitchedPtr output,
+                      const Extent ext, UnaryOp op) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
+       j += blockDim.y * gridDim.y) {
+    T* row_in = (T*)((char*)input.ptr + j * input.pitch);
+    T* row_out = (T*)((char*)output.ptr + j * output.pitch);
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+         i += blockDim.x * gridDim.x) {
+      row_out[i] = op(row_in[i]);
+    }
+  }
+}
+
+template <typename T, typename UnaryOp>
+__global__ void
 map_array_unary_op(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z; k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -55,7 +72,8 @@ map_array_unary_op(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
 
 template <typename T, typename UnaryOp>
 __global__ void
-map_array_unary_op_2d(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
+map_array_unary_op_2d(cudaPitchedPtr array, const Extent ext,
+                      UnaryOp op) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
        j += blockDim.y * gridDim.y) {
     T* row = (T*)((char*)array.ptr + j * array.pitch);
@@ -205,6 +223,16 @@ struct Op_MultAssign {
 };
 
 template <typename T>
+struct Op_DivAssign {
+  HD_INLINE void operator()(T& dest, const T& value) const {
+    if (std::abs(value) < 1.0e-5)
+      dest = 0.0f;
+    else
+      dest /= value;
+  }
+};
+
+template <typename T>
 struct Op_AssignConst {
   T _value;
   HOST_DEVICE Op_AssignConst(const T& value) : _value(value) {}
@@ -265,7 +293,7 @@ struct Op_MultConstAdd {
 };
 
 template <typename T>
-struct Op_AddMultConst{
+struct Op_AddMultConst {
   T _value;
   HOST_DEVICE Op_AddMultConst(const T& value) : _value(value) {}
 
