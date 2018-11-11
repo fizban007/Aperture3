@@ -238,6 +238,7 @@ template <typename T>
 ScalarField<T>::ScalarField(const grid_type& grid, Stagger stagger)
     : FieldBase(grid), m_array(grid.extent()), m_stagger(stagger) {
   // std::cout << grid.extent() << std::endl;
+  m_stagger = Stagger(0b111);
 }
 
 template <typename T>
@@ -473,7 +474,9 @@ VectorField<T>::VectorField(const grid_type& grid) : FieldBase(grid) {
     m_array[i] = array_type(grid.extent());
     // Default initialize to face-centered
     m_stagger[i] = Stagger();
-    m_stagger[i].set_bit(i, true);
+    // m_stagger[i].set_bit(i, true);
+    m_stagger[i].set_bit((i + 1) % 3, true);
+    m_stagger[i].set_bit((i + 2) % 3, true);
   }
   // init_array_ptrs();
 }
@@ -1027,13 +1030,13 @@ VectorField<T>::set_field_type(Aperture::FieldType type) {
   m_type = type;
   // TODO: If less than 3D, some components do not need to be staggered
   if (type == FieldType::E) {
-    set_stagger(0, Stagger(0b001));
-    set_stagger(1, Stagger(0b010));
-    set_stagger(2, Stagger(0b100));
-  } else if (type == FieldType::B) {
     set_stagger(0, Stagger(0b110));
     set_stagger(1, Stagger(0b101));
     set_stagger(2, Stagger(0b011));
+  } else if (type == FieldType::B) {
+    set_stagger(0, Stagger(0b001));
+    set_stagger(1, Stagger(0b010));
+    set_stagger(2, Stagger(0b100));
   }
 }
 

@@ -30,43 +30,57 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(e1, globalOffset)) +=
-      dt * ((*ptrAddr(b3, globalOffset) *
-                 *ptrAddr(mesh_ptrs.l3_b, globalOffset) -
-             *ptrAddr(b3, globalOffset - e1.pitch) *
-                 *ptrAddr(mesh_ptrs.l3_b, globalOffset - e1.pitch)) /
+      dt * ((*ptrAddr(b3, globalOffset + b3.pitch) *
+                 *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch) -
+             *ptrAddr(b3, globalOffset) *
+                 *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
                 *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
             *ptrAddr(j1, globalOffset));
 
   // (Curl u)_2 = d3u1 - d1u3
   (*ptrAddr(e2, globalOffset)) +=
       dt *
-      ((*ptrAddr(b3, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l3_b, globalOffset - sizeof(Scalar)) -
-        *ptrAddr(b3, globalOffset) *
-            *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
+      ((*ptrAddr(b3, globalOffset) *
+            *ptrAddr(mesh_ptrs.l3_b, globalOffset) -
+        *ptrAddr(b3, globalOffset + sizeof(Scalar)) *
+            *ptrAddr(mesh_ptrs.l3_b, globalOffset + sizeof(Scalar))) /
            *ptrAddr(mesh_ptrs.A2_e, globalOffset) -
        *ptrAddr(j2, globalOffset));
 
   // (Curl u)_3 = d1u2 - d2u1
   (*ptrAddr(e3, globalOffset)) +=
       dt *
-      ((*ptrAddr(b2, globalOffset) *
-            *ptrAddr(mesh_ptrs.l2_b, globalOffset) -
-        *ptrAddr(b2, globalOffset - sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l2_b, globalOffset - sizeof(Scalar)) +
-        *ptrAddr(b1, globalOffset - b1.pitch) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset - b1.pitch) -
+      ((*ptrAddr(b2, globalOffset + sizeof(Scalar)) *
+            *ptrAddr(mesh_ptrs.l2_b, globalOffset + sizeof(Scalar)) -
+        *ptrAddr(b2, globalOffset) *
+            *ptrAddr(mesh_ptrs.l2_b, globalOffset) +
         *ptrAddr(b1, globalOffset) *
-            *ptrAddr(mesh_ptrs.l1_b, globalOffset)) /
+            *ptrAddr(mesh_ptrs.l1_b, globalOffset) -
+        *ptrAddr(b1, globalOffset + b1.pitch) *
+            *ptrAddr(mesh_ptrs.l1_b, globalOffset + b1.pitch)) /
            *ptrAddr(mesh_ptrs.A3_e, globalOffset) -
        *ptrAddr(j3, globalOffset));
 
   // Extra work for the axis
-  if (threadIdx.y == 0) {
+  if (threadIdx.y == 0 && blockIdx.y == 0) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
-    (*ptrAddr(e2, globalOffset)) = 0.0f;
+    // (*ptrAddr(e2, globalOffset)) = 0.0f;
+    (*ptrAddr(e3, globalOffset)) = 0.0f;
+
+    (*ptrAddr(e1, globalOffset)) +=
+        dt * ((*ptrAddr(b3, globalOffset + b3.pitch) *
+                   *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch) -
+               *ptrAddr(b3, globalOffset) *
+                   *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
+                  *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
+              *ptrAddr(j1, globalOffset));
+    if (n1 == 4) {
+      printf("E1 is %f, %f\n", *ptrAddr(e1, globalOffset), *ptrAddr(e1, globalOffset + b3.pitch));
+      printf("E2 is %f, %f\n", *ptrAddr(e2, globalOffset), *ptrAddr(e2, globalOffset + b3.pitch));
+      printf("B3 is %f, %f\n", *ptrAddr(b3, globalOffset), *ptrAddr(b3, globalOffset + b3.pitch));
+    }
   }
 }
 
@@ -86,52 +100,52 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(b1, globalOffset)) +=
       -dt *
-      (*ptrAddr(e3, globalOffset + e1.pitch) *
-           *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-       *ptrAddr(e3, globalOffset) *
-           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+      (*ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset) -
+       *ptrAddr(e3, globalOffset - e3.pitch) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset - e3.pitch)) /
       *ptrAddr(mesh_ptrs.A1_b, globalOffset);
 
   // (Curl u)_2 = d3u1 - d1u3
   (*ptrAddr(b2, globalOffset)) +=
       -dt *
-      (*ptrAddr(e3, globalOffset) *
-           *ptrAddr(mesh_ptrs.l3_e, globalOffset) -
-       *ptrAddr(e3, globalOffset + sizeof(Scalar)) *
-           *ptrAddr(mesh_ptrs.l3_e, globalOffset + sizeof(Scalar))) /
+      (*ptrAddr(e3, globalOffset - sizeof(Scalar)) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset - sizeof(Scalar)) -
+       *ptrAddr(e3, globalOffset) *
+           *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
       *ptrAddr(mesh_ptrs.A2_b, globalOffset);
 
   // (Curl u)_3 = d1u2 - d2u1
   (*ptrAddr(b3, globalOffset)) +=
       -dt *
-      ((*ptrAddr(e2, globalOffset + sizeof(Scalar)) *
-            *ptrAddr(mesh_ptrs.l2_e, globalOffset + sizeof(Scalar)) -
-        *ptrAddr(e2, globalOffset) *
-            *ptrAddr(mesh_ptrs.l2_e, globalOffset) +
+      ((*ptrAddr(e2, globalOffset) *
+            *ptrAddr(mesh_ptrs.l2_e, globalOffset) -
+        *ptrAddr(e2, globalOffset - sizeof(Scalar)) *
+            *ptrAddr(mesh_ptrs.l2_e, globalOffset - sizeof(Scalar)) +
+        *ptrAddr(e1, globalOffset - e1.pitch) *
+            *ptrAddr(mesh_ptrs.l1_e, globalOffset - e1.pitch) -
         *ptrAddr(e1, globalOffset) *
-            *ptrAddr(mesh_ptrs.l1_e, globalOffset) -
-        *ptrAddr(e1, globalOffset + e1.pitch) *
-            *ptrAddr(mesh_ptrs.l1_e, globalOffset + e1.pitch)) /
+            *ptrAddr(mesh_ptrs.l1_e, globalOffset)) /
        *ptrAddr(mesh_ptrs.A3_b, globalOffset));
 
   // Extra work for the axis at theta = 0
-  if (threadIdx.y == 0) {
+  if (threadIdx.y == 0 && blockIdx.y == 0) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * b1.pitch + n1 * sizeof(Scalar);
 
-    (*ptrAddr(b1, globalOffset)) +=
-        -dt *
-        (*ptrAddr(e3, globalOffset + e1.pitch) *
-             *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-         *ptrAddr(e3, globalOffset) *
-             *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-        *ptrAddr(mesh_ptrs.A1_b, globalOffset);
+    // (*ptrAddr(b1, globalOffset)) +=
+    //     -dt *
+    //     (*ptrAddr(e3, globalOffset + e1.pitch) *
+    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
+    //      *ptrAddr(e3, globalOffset) *
+    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
+    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
     // (*ptrAddr(b1, globalOffset)) +=
     //     -dt * *ptrAddr(e3, globalOffset + e3.pitch) *
     //     *ptrAddr(mesh_ptrs.l3_e, globalOffset + e3.pitch) /
     //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
 
-    (*ptrAddr(b3, globalOffset)) = 0.0f;
+    (*ptrAddr(b2, globalOffset)) = 0.0f;
   }
 }
 
@@ -149,26 +163,26 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
 
   if (n1 > dev_mesh.guard[0]) {
     (*ptrAddr(divE, globalOffset)) =
-        (*ptrAddr(e1, globalOffset) *
-             *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
-         *ptrAddr(e1, globalOffset - sizeof(Scalar)) *
-             *ptrAddr(mesh_ptrs.A1_e, globalOffset - sizeof(Scalar)) +
+        (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
+             *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
+         *ptrAddr(e1, globalOffset) *
+             *ptrAddr(mesh_ptrs.A1_e, globalOffset) +
+         *ptrAddr(e2, globalOffset + e2.pitch) *
+             *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch) -
          *ptrAddr(e2, globalOffset) *
-             *ptrAddr(mesh_ptrs.A2_e, globalOffset) -
-         *ptrAddr(e2, globalOffset - e2.pitch) *
-             *ptrAddr(mesh_ptrs.A2_e, globalOffset - e2.pitch)) /
+             *ptrAddr(mesh_ptrs.A2_e, globalOffset)) /
         (*ptrAddr(mesh_ptrs.dV, globalOffset) * dev_mesh.delta[0] *
          dev_mesh.delta[1]);
   }
   (*ptrAddr(divB, globalOffset)) =
-      (*ptrAddr(b1, globalOffset + sizeof(Scalar)) *
-           *ptrAddr(mesh_ptrs.A1_b, globalOffset + sizeof(Scalar)) -
-       *ptrAddr(b1, globalOffset) *
-           *ptrAddr(mesh_ptrs.A1_b, globalOffset) +
-       *ptrAddr(b2, globalOffset + b2.pitch) *
-           *ptrAddr(mesh_ptrs.A2_b, globalOffset + b2.pitch) -
+      (*ptrAddr(b1, globalOffset) *
+           *ptrAddr(mesh_ptrs.A1_b, globalOffset) -
+       *ptrAddr(b1, globalOffset - sizeof(Scalar)) *
+           *ptrAddr(mesh_ptrs.A1_b, globalOffset - sizeof(Scalar)) +
        *ptrAddr(b2, globalOffset) *
-           *ptrAddr(mesh_ptrs.A2_b, globalOffset)) /
+           *ptrAddr(mesh_ptrs.A2_b, globalOffset) -
+       *ptrAddr(b2, globalOffset - b2.pitch) *
+           *ptrAddr(mesh_ptrs.A2_b, globalOffset - b2.pitch)) /
       (*ptrAddr(mesh_ptrs.dV, globalOffset) * dev_mesh.delta[0] *
        dev_mesh.delta[1]);
 }
@@ -191,9 +205,11 @@ stellar_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
       row_e2[i] = -omega * std::sin(theta_s) * r * row_b1[i];
       // Do not impose right on the surface
-      if (i != dev_mesh.guard[0]) {
-        row_e1[i] = omega * std::sin(theta) * r_s * row_b2[i];
-      }
+      row_e1[i] = omega * std::sin(theta) * r_s * row_b2[i];
+      (*ptrAddr(b1, j * b1.pitch + i * sizeof(Scalar))) = 0.0f;
+      (*ptrAddr(b2, j * b2.pitch + i * sizeof(Scalar))) = 0.0f;
+      (*ptrAddr(b3, j * b3.pitch + i * sizeof(Scalar))) = 0.0f;
+      (*ptrAddr(e3, j * e3.pitch + i * sizeof(Scalar))) = 0.0f;
     }
   }
 }
@@ -204,38 +220,33 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
               cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    (*ptrAddr(e2, (dev_mesh.guard[1] - 1) * e2.pitch +
+    (*ptrAddr(e3, (dev_mesh.guard[1] - 1) * e3.pitch +
                       i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
-                      i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
+    //                   i * sizeof(Scalar))) = 0.0f;
     // (*ptrAddr(b1, (dev_mesh.guard[1] - 1) * b1.pitch +
     //                   i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(
-    //     e3, (dev_mesh.guard[1] - 1) * e3.pitch + i * sizeof(Scalar)))
-    //     = *ptrAddr(e3,
-    //               dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar));
-    (*ptrAddr(e3, dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar))) =
-        0.0f;
+    (*ptrAddr(
+        b3, (dev_mesh.guard[1] - 1) * b3.pitch + i * sizeof(Scalar))) =
+        *ptrAddr(b3, dev_mesh.guard[1] * b3.pitch + i * sizeof(Scalar));
+    // (*ptrAddr(e3, dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar)))
+    // =
+    //     0.0f;
 
-    (*ptrAddr(e2,
-              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch +
-                  i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(b3,
-              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
-                  i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(b1,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
-    //               i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(e3,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1]) * e3.pitch +
-    //               i * sizeof(Scalar))) =
-    //     *ptrAddr(e3,
-    //               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
-    //               e3.pitch +
-    //                   i * sizeof(Scalar));
     (*ptrAddr(e3,
               (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
                   i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(b3,
+    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
+    //               i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(b1,
+    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
+    //               i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(b3, (dev_mesh.dims[1] - dev_mesh.guard[1]) * b3.pitch +
+                      i * sizeof(Scalar))) =
+        *ptrAddr(b3,
+                 (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
+                     i * sizeof(Scalar));
   }
 }
 
@@ -266,7 +277,7 @@ outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
 FieldSolver_LogSph::FieldSolver_LogSph(const Grid_LogSph& g)
     : m_grid(g), m_divE(g), m_divB(g) {
-  m_divB.set_stagger(0b111);
+  m_divB.set_stagger(0b000);
 }
 
 FieldSolver_LogSph::~FieldSolver_LogSph() {}
