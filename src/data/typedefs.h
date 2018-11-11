@@ -7,8 +7,11 @@
 
 namespace Aperture {
 
+#ifndef USE_DOUBLE
 typedef float Scalar;
-// typedef double Scalar;
+#else
+typedef double Scalar;
+#endif
 
 typedef float Mom_t;
 typedef float Pos_t;
