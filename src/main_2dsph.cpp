@@ -34,7 +34,7 @@ main(int argc, char* argv[]) {
 
   // Initialize data exporter
   DataExporter exporter(env.params(),
-                        "/home/alex/storage/Data/Aperture3/2d_weak_pulsar/",
+                        env.params().data_dir + "2d_weak_pulsar",
                         "data", 2);
   exporter.WriteGrid();
 

@@ -125,6 +125,7 @@ class DataExporter {
   void writeXMF(int step, double time);
   void createDirectories();
   bool checkDirectories();
+  void copyConfigFile();
 
  private:
   std::string

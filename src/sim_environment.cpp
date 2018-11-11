@@ -38,6 +38,7 @@ Environment::~Environment() {}
 
 void
 Environment::setup_env(const std::string& conf_file) {
+  m_params.conf_file = conf_file;
   // Read in the input file
   try {
     m_conf_file.parse_file(conf_file, m_params);

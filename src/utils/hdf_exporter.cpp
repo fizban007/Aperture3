@@ -36,6 +36,7 @@ DataExporter::DataExporter(const SimParams &params,
 
   boost::filesystem::create_directories(rootPath, returnedError);
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
+  copyConfigFile();
 
   // Setup the grid
   if (params.coord_system == "Cartesian") {
@@ -78,6 +79,13 @@ DataExporter::createDirectories() {
   boost::system::error_code returnedError;
   boost::filesystem::create_directories(subPath, returnedError);
   boost::filesystem::create_directories(logPath, returnedError);
+}
+
+void
+DataExporter::copyConfigFile() {
+  std::string path = outputDirectory + "config.toml";
+  Logger::print_info("{}", path);
+  boost::filesystem::copy_file(m_params.conf_file, path);
 }
 
 bool
