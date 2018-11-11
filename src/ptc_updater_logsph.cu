@@ -378,15 +378,15 @@ __launch_bounds__(512, 4)
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
     Scalar wdt =
-        // -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w
-        // / dt;
-        -dev_charges[sp] * w / dt;
-    int sup2 = interp.support() + 2;
-    // int sup22 = sup2 * sup2;
-    Scalar djy[spline_t::support + 2] = {0.0f};
+        -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w
+        / dt;
+        // -dev_charges[sp] * w / dt;
+    // int sup2 = interp.support() + 2;
+    const int sup2 = 5;
+    // Scalar djy[spline_t::support + 2] = {0.0f};
+    Scalar djy[5] = {0.0f};
     for (int j = 0; j < sup2; j++) {
-      int jj = j - interp.radius();
-      // int jj = (((idx + j) % sup22) / sup2) - interp.radius();
+      int jj = j - 2;
       Scalar sy0 = interp.interpolate(0.5f - old_x2 + jj);
       Scalar sy1 = interp.interpolate(0.5f - new_x2 + (jj - dc2));
       // if (std::abs(sy0) < DEPOSIT_EPS && std::abs(sy1) <
@@ -395,8 +395,7 @@ __launch_bounds__(512, 4)
       size_t j_offset = (jj + c2) * fields.J1.pitch;
       Scalar djx = 0.0f;
       for (int i = 0; i < sup2; i++) {
-        int ii = i - interp.radius();
-        // int ii = ((idx + i) % sup22) % sup2;
+        int ii = i - 2;
         Scalar sx0 = interp.interpolate(0.5f - old_x1 + ii);
         Scalar sx1 = interp.interpolate(0.5f - new_x1 + (ii - dc1));
         // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
@@ -407,7 +406,7 @@ __launch_bounds__(512, 4)
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         // printf("dq0 = %f, ", val0);
         if (std::abs(val0) > 0.0f) {
-          djx += wdt * val0 * dev_mesh.delta[0] * dev_mesh.delta[1];
+          djx += wdt * val0;
           // float2 *ptr =
           //     (float2 *)((char *)j1.ptr + (jj + c2) * j1.pitch +
           //                (ii + c1) * sizeof(double));
@@ -418,7 +417,7 @@ __launch_bounds__(512, 4)
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         // printf("dq1 = %f, ", val1);
         if (std::abs(val1) > 0.0f) {
-          djy[i] += wdt * val1 * dev_mesh.delta[0] * dev_mesh.delta[1];
+          djy[i] += wdt * val1;
           // if (jj + c2 >= dev_mesh.guard[1] &&
           //     jj + c2 < dev_mesh.dims[1] - dev_mesh.guard[1])
           // float2 *ptr =

@@ -73,7 +73,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
                 size_t ph_num, int* phPos, int* ph_count, int* ph_cum,
                 curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
+  CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
   // dev_params.e_s,
   //                                         dev_params.e_min,
@@ -107,10 +107,10 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
       // Add the new photon
       // Scalar path = rad_model.draw_photon_freepath(Eph);
-      // Scalar u = rng();
-      // Scalar path =
-      //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
-      Scalar path = dev_params.photon_path;
+      Scalar u = rng();
+      Scalar path =
+          dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
+      // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;
       // if (true) continue;
       // printf("Eph is %f, path is %f\n", Eph, path);
@@ -204,10 +204,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.p2[offset] = ptc.p2[offset + 1] = ratio * p2;
       ptc.p3[offset] = ptc.p3[offset + 1] = ratio * p3;
 
-      ptc.weight[offset] = photons.weight[tid];
-      ptc.weight[offset + 1] = photons.weight[tid];
-      ptc.cell[offset] = photons.cell[tid];
-      ptc.cell[offset + 1] = photons.cell[tid];
+      ptc.weight[offset] = ptc.weight[offset + 1] = photons.weight[tid];
+      ptc.cell[offset] = ptc.cell[offset + 1] = photons.cell[tid];
       ptc.flag[offset] = set_ptc_type_flag(
           bit_or(ParticleFlag::secondary), ParticleType::electron);
       ptc.flag[offset + 1] = set_ptc_type_flag(
@@ -224,7 +222,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 RadiationTransferPulsar::RadiationTransferPulsar(const Environment& env)
     : m_env(env),
       d_rand_states(nullptr),
-      m_threadsPerBlock(512),
+      m_threadsPerBlock(256),
       m_blocksPerGrid(512),
       m_numPerBlock(m_blocksPerGrid),
       m_cumNumPerBlock(m_blocksPerGrid),
