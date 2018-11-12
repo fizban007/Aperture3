@@ -207,6 +207,10 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.p2[offset] = ptc.p2[offset + 1] = ratio * p2;
       ptc.p3[offset] = ptc.p3[offset + 1] = ratio * p3;
 
+#ifndef NDEBUG
+      assert(ptc.cell[offset] == MAX_CELL);
+      assert(ptc.cell[offset + 1] == MAX_CELL);
+#endif
       ptc.weight[offset] = ptc.weight[offset + 1] = photons.weight[tid];
       ptc.cell[offset] = ptc.cell[offset + 1] = photons.cell[tid];
       ptc.flag[offset] = set_ptc_type_flag(
@@ -303,6 +307,7 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
   photons.set_num(photons.number() + new_photons);
   // Logger::print_info("There are {} photons in the pool",
   //                    photons.number());
+  cudaDeviceSynchronize();
 }
 
 void
@@ -323,6 +328,7 @@ RadiationTransferPulsar::produce_pairs(SimData& data) {
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
+  cudaDeviceSynchronize();
 
   // Scan the number of photons produced per block. The last one will be
   // the total
@@ -345,6 +351,7 @@ RadiationTransferPulsar::produce_pairs(SimData& data) {
   ptc.set_num(ptc.number() + new_pairs * 2);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
+  cudaDeviceSynchronize();
 }
 
 }  // namespace Aperture
