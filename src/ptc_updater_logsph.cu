@@ -504,9 +504,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     size_t offset = num + i * inj_per_cell * 2;
     Pos_t x2 = curand_uniform(&localState);
     Scalar theta = dev_mesh.pos(1, i, x2);
-    Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 1, 0.5f));
+    Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
     for (int n = 0; n < inj_per_cell; n++) {
-      ptc.x1[offset + n * 2] = 1.0f;
+      ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
       ptc.p1[offset + n * 2] = p1;
@@ -514,12 +514,12 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.p3[offset + n * 2] = omega * r * sin(theta);
       // ptc.p3[offset + n * 2] = p3;
       ptc.cell[offset + n * 2] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2] = w * sin(theta);
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::electron);
 
-      ptc.x1[offset + n * 2 + 1] = 1.0f;
+      ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
       ptc.x3[offset + n * 2 + 1] = 0.0f;
       ptc.p1[offset + n * 2 + 1] = p1;
@@ -527,7 +527,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.p3[offset + n * 2 + 1] = omega * r * sin(theta);
       // ptc.p3[offset + n * 2 + 1] = p3;
       ptc.cell[offset + n * 2 + 1] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2 + 1] = w * sin(theta);
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::positron);

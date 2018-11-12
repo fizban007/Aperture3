@@ -38,9 +38,6 @@ set(Aperture_src
   "algorithms/field_solver_ffe_cyl.cu"
   )
 # add_library(Aperture ${Aperture_src})
-if(USE_DOUBLE)
-  add_definitions(-DUSE_DOUBLE)
-endif()
 add_cuda_target(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
 
