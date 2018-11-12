@@ -85,7 +85,7 @@ main(int argc, char* argv[]) {
   // Initialize a bunch of particles
   // std::default_random_engine gen;
   // std::uniform_int_distribution<int> dist(100, 258);
-  uint32_t N = 1000;
+  uint32_t N = 0;
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.5f, 0.f, 0.f}, {0.0f, 100.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
@@ -109,8 +109,8 @@ main(int argc, char* argv[]) {
 
     // Apply boundary conditions
     Scalar omega = 0.0;
-    if (time <= 10.0) {
-      omega = env.params().omega * (time / 10.0);
+    if (time <= 1.0) {
+      omega = env.params().omega * (time / 1.0);
     } else {
       omega = env.params().omega;
     }
@@ -149,8 +149,8 @@ main(int argc, char* argv[]) {
     ptc_updater.handle_boundary(data);
     // rad.emit_photons(data.photons, data.particles);
     // rad.produce_pairs(data.particles, data.photons);
-    // if (step % 2 == 0)
-    //   ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 100.0, omega);
+    if (step % 1 == 0)
+      ptc_updater.inject_ptc(data, 2, 10.0, 0.0, 0.0, 200.0, omega);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
