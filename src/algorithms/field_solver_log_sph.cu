@@ -30,6 +30,7 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(e1, globalOffset)) +=
+      // -dt * *ptrAddr(j1, globalOffset);
       dt * ((*ptrAddr(b3, globalOffset + b3.pitch) *
                  *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch) -
              *ptrAddr(b3, globalOffset) *
@@ -39,6 +40,7 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   // (Curl u)_2 = d3u1 - d1u3
   (*ptrAddr(e2, globalOffset)) +=
+      // -dt * *ptrAddr(j2, globalOffset);
       dt *
       ((*ptrAddr(b3, globalOffset) *
             *ptrAddr(mesh_ptrs.l3_b, globalOffset) -
@@ -49,6 +51,7 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   // (Curl u)_3 = d1u2 - d2u1
   (*ptrAddr(e3, globalOffset)) +=
+      // -dt * *ptrAddr(j3, globalOffset);
       dt *
       ((*ptrAddr(b2, globalOffset + sizeof(Scalar)) *
             *ptrAddr(mesh_ptrs.l2_b, globalOffset + sizeof(Scalar)) -
@@ -185,6 +188,21 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
            *ptrAddr(mesh_ptrs.A2_b, globalOffset - b2.pitch)) /
       (*ptrAddr(mesh_ptrs.dV, globalOffset) * dev_mesh.delta[0] *
        dev_mesh.delta[1]);
+
+  // if (threadIdx.y == 0 && blockIdx.y == 0) {
+  //   n2 = dev_mesh.guard[1] - 1;
+  //   globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+
+  //   (*ptrAddr(divE, globalOffset)) =
+  //       (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
+  //            *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
+  //        *ptrAddr(e1, globalOffset) *
+  //        *ptrAddr(mesh_ptrs.A1_e, globalOffset) +
+  //        *ptrAddr(e2, globalOffset + e2.pitch) *
+  //        *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch)) /
+  //       (*ptrAddr(mesh_ptrs.dV, globalOffset) * dev_mesh.delta[0] *
+  //        dev_mesh.delta[1]);
+  // }
 }
 
 template <int DIM2>
@@ -305,7 +323,7 @@ FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
         mesh_ptrs, dt);
     CudaCheckError();
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 
     // Update E
     Kernels::compute_e_update<32, 16><<<gridSize, blockSize>>>(

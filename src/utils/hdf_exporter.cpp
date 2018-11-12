@@ -257,6 +257,11 @@ DataExporter::InterpolateFieldValues() {
             [i / downsample_factor + mesh.guard[0]] =
             (*sf.field)(i + mesh.guard[0], j + mesh.guard[1]);
       }
+      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      //   sf.f[mesh.guard[1] - 1]
+      //       [i / downsample_factor + mesh.guard[0]] =
+      //       (*sf.field)(i + mesh.guard[0], mesh.guard[1] - 1);
+      // }
     }
   }
 
@@ -278,6 +283,17 @@ DataExporter::InterpolateFieldValues() {
              [i / downsample_factor + mesh.guard[0]] =
             (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1]);
       }
+      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      //   vf.f1[mesh.guard[1] - 1]
+      //       [i / downsample_factor + mesh.guard[0]] =
+      //       (*vf.field)(0, i + mesh.guard[0], mesh.guard[1] - 1);
+      //   vf.f2[mesh.guard[1] - 1]
+      //       [i / downsample_factor + mesh.guard[0]] =
+      //       (*vf.field)(1, i + mesh.guard[0], mesh.guard[1] - 1);
+      //   vf.f3[mesh.guard[1] - 1]
+      //       [i / downsample_factor + mesh.guard[0]] =
+      //       (*vf.field)(2, i + mesh.guard[0], mesh.guard[1] - 1);
+      // }
     }
   }
 }

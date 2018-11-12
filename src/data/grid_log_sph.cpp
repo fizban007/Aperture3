@@ -1,4 +1,5 @@
 #include "data/grid_log_sph.h"
+#include "utils/logger.h"
 #include "utils/util_functions.h"
 
 namespace Aperture {
@@ -83,10 +84,9 @@ Grid_LogSph::init(const SimParams& params) {
         m_dV(i, j) = std::exp(2.0 * x1s) * std::sin(x2s);
         if (j == m_mesh.guard[1] - 1 ||
             j == m_mesh.dims[1] - m_mesh.guard[1] - 1) {
-          m_dV(i, j) = (1.0 - std::cos(0.5 * m_mesh.delta[1])) *
-                       (std::exp(3.0 * (x1 + m_mesh.delta[0])) -
-                        std::exp(3.0 * x1)) /
-                       (3.0 * m_mesh.delta[0] * m_mesh.delta[1]);
+          m_dV(i, j) = 2.0 * (1.0 - std::cos(0.5 * m_mesh.delta[1])) *
+                       std::exp(2.0 * x1s) / (m_mesh.delta[1]);
+          // if (i == 100) Logger::print_info("dV is {}", m_dV(i, j));
         }
       }
     }
