@@ -10,14 +10,15 @@ namespace Aperture {
 class Environment;
 class Particles;
 class Photons;
+struct SimData;
 
 class RadiationTransferPulsar {
  public:
   RadiationTransferPulsar(const Environment& env);
   virtual ~RadiationTransferPulsar();
 
-  void emit_photons(Photons& photons, Particles& ptc);
-  void produce_pairs(Particles& ptc, Photons& photons);
+  void emit_photons(SimData& data);
+  void produce_pairs(SimData& data);
 
   ScalarField<Scalar>& get_pair_events() { return m_pair_events; }
   ScalarField<Scalar>& get_ph_events() { return m_ph_events; }

@@ -10,6 +10,7 @@
 #include "data/photons_1d.h"
 #include "radiation/curvature_instant.h"
 #include "radiation/rt_pulsar.h"
+#include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
@@ -50,7 +51,8 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     Scalar gamma = ptc.E[tid];
 
     // if (rad_model.emit_photon(gamma)) {
-    if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff && r > 1.02f) {
+    if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
+        r > 1.02f) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
       int c2 = dev_mesh.get_c2(cell);
       atomicAdd(ptrAddr(ph_events,
@@ -132,7 +134,8 @@ template <typename PhotonData>
 __global__ void
 count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
                      int* pair_pos, curandState* states,
-                     cudaPitchedPtr pair_events) {
+                     cudaPitchedPtr pair_events, cudaPitchedPtr b1,
+                     cudaPitchedPtr b2, cudaPitchedPtr b3) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
@@ -256,8 +259,9 @@ RadiationTransferPulsar::~RadiationTransferPulsar() {
 }
 
 void
-RadiationTransferPulsar::emit_photons(Photons& photons,
-                                      Particles& ptc) {
+RadiationTransferPulsar::emit_photons(SimData& data) {
+  auto& ptc = data.particles;
+  auto& photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
@@ -277,8 +281,8 @@ RadiationTransferPulsar::emit_photons(Photons& photons,
 
   cudaDeviceSynchronize();
   // Logger::print_debug("Count finished");
-  // Scan the number of photons produced per block. The last one will be
-  // the total
+  // Scan the number of photons produced per block. The result gives the
+  // offset for each block
   thrust::exclusive_scan(ptrNumPerBlock,
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
   CudaCheckError();
@@ -302,8 +306,9 @@ RadiationTransferPulsar::emit_photons(Photons& photons,
 }
 
 void
-RadiationTransferPulsar::produce_pairs(Particles& ptc,
-                                       Photons& photons) {
+RadiationTransferPulsar::produce_pairs(SimData& data) {
+  auto& ptc = data.particles;
+  auto& photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
@@ -312,7 +317,8 @@ RadiationTransferPulsar::produce_pairs(Particles& ptc,
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           photons.data(), photons.number(), m_numPerBlock.data_d(),
           m_posInBlock.data_d(), (curandState*)d_rand_states,
-          m_pair_events.ptr());
+          m_pair_events.ptr(), data.B.ptr(0), data.B.ptr(1),
+          data.B.ptr(2));
   CudaCheckError();
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
@@ -326,8 +332,8 @@ RadiationTransferPulsar::produce_pairs(Particles& ptc,
   m_numPerBlock.sync_to_host();
   int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
                    m_numPerBlock[m_blocksPerGrid - 1]);
-  // Logger::print_info("{} electron-positron pairs are produced!",
-  //                    new_pairs);
+  Logger::print_info("{} electron-positron pairs are produced!",
+                     new_pairs);
 
   Kernels::produce_pairs<particle_data, photon_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
