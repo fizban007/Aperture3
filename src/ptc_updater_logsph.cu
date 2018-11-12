@@ -125,7 +125,7 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
         Scalar r = exp(dev_mesh.pos(0, c1, old_x1));
         p1 -= dt * dev_params.gravity / (r * r * r);
       }
-      
+
       // printf("gamma after is %f\n", gamma);
       // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
       //        ptc.p3[idx]);
@@ -161,32 +161,32 @@ boris_push_2d(particle_data ptc, size_t num, fields_data fields,
       Scalar E1 =
           (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
            interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
-                  Stagger(0b001))) *
+                  Stagger(0b110))) *
           q_over_m;
       Scalar E2 =
           (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
            interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
-                  Stagger(0b010))) *
+                  Stagger(0b101))) *
           q_over_m;
       Scalar E3 =
           (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b100)) +
            interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
-                  Stagger(0b100))) *
+                  Stagger(0b011))) *
           q_over_m;
       Scalar B1 =
           (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b110)) +
            interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
-                  Stagger(0b110))) *
+                  Stagger(0b001))) *
           q_over_m;
       Scalar B2 =
           (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b101)) +
            interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
-                  Stagger(0b101))) *
+                  Stagger(0b010))) *
           q_over_m;
       Scalar B3 =
           (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b011)) +
            interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
-                  Stagger(0b011))) *
+                  Stagger(0b100))) *
           q_over_m;
 
       // printf("B is (%f, %f, %f)\n", B1, B2, B3);
@@ -377,32 +377,32 @@ __launch_bounds__(512, 4)
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
-    Scalar wdt =
-        -dev_charges[sp] * dev_mesh.delta[0] * dev_mesh.delta[1] * w
-        / dt;
-        // -dev_charges[sp] * w / dt;
+    Scalar wdt = -dev_charges[sp] * dev_mesh.delta[0] *
+                 dev_mesh.delta[1] * w / dt;
+    // -dev_charges[sp] * w / dt;
     // int sup2 = interp.support() + 2;
-    const int sup2 = 5;
+    int j0 = (dc2 == -1 ? -2 : -1);
+    int j1 = (dc2 == 1 ? 1 : 0);
+    int i0 = (dc1 == -1 ? -2 : -1);
+    int i1 = (dc1 == 1 ? 1 : 0);
     // Scalar djy[spline_t::support + 2] = {0.0f};
-    Scalar djy[5] = {0.0f};
-    for (int j = 0; j < sup2; j++) {
-      int jj = j - 2;
-      Scalar sy0 = interp.interpolate(0.5f - old_x2 + jj);
-      Scalar sy1 = interp.interpolate(0.5f - new_x2 + (jj - dc2));
+    Scalar djy[3] = {0.0f};
+    for (int j = j0; j <= j1; j++) {
+      Scalar sy0 = interp.interpolate(-old_x2 + j);
+      Scalar sy1 = interp.interpolate(-new_x2 + (j - dc2));
       // if (std::abs(sy0) < DEPOSIT_EPS && std::abs(sy1) <
       // DEPOSIT_EPS)
       //   continue;
-      size_t j_offset = (jj + c2) * fields.J1.pitch;
+      size_t j_offset = (j + c2) * fields.J1.pitch;
       Scalar djx = 0.0f;
-      for (int i = 0; i < sup2; i++) {
-        int ii = i - 2;
-        Scalar sx0 = interp.interpolate(0.5f - old_x1 + ii);
-        Scalar sx1 = interp.interpolate(0.5f - new_x1 + (ii - dc1));
+      for (int i = i0; i <= i1; i++) {
+        Scalar sx0 = interp.interpolate(-old_x1 + i);
+        Scalar sx1 = interp.interpolate(-new_x1 + (i - dc1));
         // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
         // DEPOSIT_EPS)
         //   continue;
 
-        int offset = j_offset + (ii + c1) * sizeof(Scalar);
+        int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         // printf("dq0 = %f, ", val0);
         if (std::abs(val0) > 0.0f) {
@@ -417,15 +417,16 @@ __launch_bounds__(512, 4)
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         // printf("dq1 = %f, ", val1);
         if (std::abs(val1) > 0.0f) {
-          djy[i] += wdt * val1;
+          djy[i - i0] += wdt * val1;
           // if (jj + c2 >= dev_mesh.guard[1] &&
           //     jj + c2 < dev_mesh.dims[1] - dev_mesh.guard[1])
           // float2 *ptr =
           //     (float2 *)((char *)j2.ptr + (jj + c2) * j2.pitch +
           //                (ii + c1) * sizeof(double));
-          // atomicAddKbn(ptr, djy[i] / *ptrAddr(mesh_ptrs.A2_e, offset));
+          // atomicAddKbn(ptr, djy[i] / *ptrAddr(mesh_ptrs.A2_e,
+          // offset));
           atomicAdd(ptrAddr(fields.J2, offset),
-                    djy[i] / *ptrAddr(mesh_ptrs.A2_e, offset));
+                    djy[i - i0] / *ptrAddr(mesh_ptrs.A2_e, offset));
         }
         // printf("val1 = %f, djy[%d] = %f, ", val1, i, djy[i]);
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
@@ -467,7 +468,8 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
 
 __global__ void
 inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
-           Scalar p2, Scalar p3, Scalar w, curandState *states, Scalar omega) {
+           Scalar p2, Scalar p3, Scalar w, curandState *states,
+           Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i =
@@ -487,7 +489,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.p3[offset + n * 2] = omega * r * sin(theta);
       // ptc.p3[offset + n * 2] = p3;
       ptc.cell[offset + n * 2] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2] = w * sin(theta);
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::electron);
@@ -500,7 +502,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.p3[offset + n * 2 + 1] = omega * r * sin(theta);
       // ptc.p3[offset + n * 2 + 1] = p3;
       ptc.cell[offset + n * 2 + 1] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 1, i);
+          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2 + 1] = w * sin(theta);
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::positron);
@@ -516,33 +518,39 @@ boundary_rho(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs) {
     size_t offset_0 =
         i * sizeof(Scalar) + dev_mesh.guard[1] * fields.Rho[0].pitch;
     size_t offset_pi = i * sizeof(Scalar) +
-                       (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
+                       (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) *
                            fields.Rho[0].pitch;
     for (int n = 0; n < dev_params.num_species; n++) {
       (*ptrAddr(fields.Rho[n], offset_0)) -=
-          *ptrAddr(fields.Rho[n], offset_0 - fields.Rho[0].pitch);
+          *ptrAddr(fields.Rho[n], offset_0 - 2 * fields.Rho[0].pitch);
       (*ptrAddr(fields.Rho[n], offset_pi)) +=
-          *ptrAddr(fields.Rho[n], offset_pi + fields.Rho[0].pitch) *
-          *ptrAddr(mesh_ptrs.dV, offset_pi + fields.Rho[0].pitch) /
+          *ptrAddr(fields.Rho[n], offset_pi + 2 * fields.Rho[0].pitch) *
+          *ptrAddr(mesh_ptrs.dV, offset_pi + 2 * fields.Rho[0].pitch) /
           *ptrAddr(mesh_ptrs.dV, offset_pi);
 
-      (*ptrAddr(fields.Rho[n], offset_0 - fields.Rho[0].pitch)) = 0.0f;
-      (*ptrAddr(fields.Rho[n], offset_pi + fields.Rho[0].pitch)) = 0.0f;
+      (*ptrAddr(fields.Rho[n], offset_0 - 2 * fields.Rho[0].pitch)) =
+          0.0f;
+      (*ptrAddr(fields.Rho[n], offset_pi + 2 * fields.Rho[0].pitch)) =
+          0.0f;
     }
     (*ptrAddr(fields.J1, offset_0)) -=
-        *ptrAddr(fields.J1, offset_0 - fields.J1.pitch);
+        *ptrAddr(fields.J1, offset_0 - 2 * fields.J1.pitch);
     (*ptrAddr(fields.J1, offset_pi)) +=
-        *ptrAddr(fields.J1, offset_pi + fields.J1.pitch) *
-        *ptrAddr(mesh_ptrs.A1_e, offset_pi + fields.J1.pitch) /
+        *ptrAddr(fields.J1, offset_pi + 2 * fields.J1.pitch) *
+        *ptrAddr(mesh_ptrs.A1_e, offset_pi + 2 * fields.J1.pitch) /
         *ptrAddr(mesh_ptrs.A1_e, offset_pi);
 
-    *ptrAddr(fields.J1, offset_0 - fields.J1.pitch) = 0.0f;
-    *ptrAddr(fields.J1, offset_pi + fields.J1.pitch) = 0.0f;
+    *ptrAddr(fields.J1, offset_0 - 2 * fields.J1.pitch) = 0.0f;
+    *ptrAddr(fields.J1, offset_pi + 2 * fields.J1.pitch) = 0.0f;
 
-    (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) = 0.0f;
-    (*ptrAddr(fields.J2, offset_pi)) = 0.0f;
-    (*ptrAddr(fields.J2, offset_pi - fields.J2.pitch)) -=
-        *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
+    (*ptrAddr(fields.J2, offset_0)) -=
+        *ptrAddr(fields.J2, offset_0 - fields.J2.pitch);
+    (*ptrAddr(fields.J2, offset_pi + fields.J2.pitch)) -=
+        *ptrAddr(fields.J2, offset_pi + 2 * fields.J2.pitch);
+    // (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) = 0.0f;
+    // (*ptrAddr(fields.J2, offset_pi)) = 0.0f;
+    // (*ptrAddr(fields.J2, offset_pi - fields.J2.pitch)) -=
+    //     *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
   }
 }
 
@@ -627,7 +635,8 @@ PtcUpdaterLogSph::handle_boundary(SimData &data) {
 
 void
 PtcUpdaterLogSph::inject_ptc(SimData &data, int inj_per_cell, Scalar p1,
-                             Scalar p2, Scalar p3, Scalar w, Scalar omega) {
+                             Scalar p2, Scalar p3, Scalar w,
+                             Scalar omega) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
       data.particles.data(), data.particles.number(), inj_per_cell, p1,
       p2, p3, w, (curandState *)d_rand_states, omega);

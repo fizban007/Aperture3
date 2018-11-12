@@ -76,11 +76,11 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
                    *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
                   *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
               *ptrAddr(j1, globalOffset));
-    if (n1 == 4) {
-      printf("E1 is %f, %f\n", *ptrAddr(e1, globalOffset), *ptrAddr(e1, globalOffset + b3.pitch));
-      printf("E2 is %f, %f\n", *ptrAddr(e2, globalOffset), *ptrAddr(e2, globalOffset + b3.pitch));
-      printf("B3 is %f, %f\n", *ptrAddr(b3, globalOffset), *ptrAddr(b3, globalOffset + b3.pitch));
-    }
+    // if (n1 == 4) {
+    //   printf("E1 is %f, %f\n", *ptrAddr(e1, globalOffset), *ptrAddr(e1, globalOffset + b3.pitch));
+    //   printf("E2 is %f, %f\n", *ptrAddr(e2, globalOffset), *ptrAddr(e2, globalOffset + b3.pitch));
+    //   printf("B3 is %f, %f\n", *ptrAddr(b3, globalOffset), *ptrAddr(b3, globalOffset + b3.pitch));
+    // }
   }
 }
 
