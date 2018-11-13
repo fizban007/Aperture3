@@ -31,12 +31,12 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   // (Curl u)_1 = d2u3 - d3u2
   (*ptrAddr(e1, globalOffset)) +=
       // -dt * *ptrAddr(j1, globalOffset);
-      dt * ((*ptrAddr(b3, globalOffset + b3.pitch) *
-                 *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch) -
-             *ptrAddr(b3, globalOffset) *
-                 *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
-                *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
-            *ptrAddr(j1, globalOffset));
+      -dt * ((*ptrAddr(b3, globalOffset) *
+                  *ptrAddr(mesh_ptrs.l3_b, globalOffset) -
+              *ptrAddr(b3, globalOffset + b3.pitch) *
+                  *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch)) /
+                 *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
+             *ptrAddr(j1, globalOffset));
 
   // (Curl u)_2 = d3u1 - d1u3
   (*ptrAddr(e2, globalOffset)) +=
@@ -218,16 +218,16 @@ stellar_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
     Scalar* row_b2 = ptrAddr(dev_bg_fields.B2, j * b2.pitch);
     Scalar theta_s = dev_mesh.pos(1, j, true);
     Scalar theta = dev_mesh.pos(1, j, false);
-    for (int i = 0; i <= dev_mesh.guard[0]; i++) {
+    for (int i = 0; i <= dev_mesh.guard[0] + 1; i++) {
       Scalar r_s = std::exp(dev_mesh.pos(0, i, true));
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
+      (*ptrAddr(b1, j * b1.pitch + i * sizeof(Scalar))) = 0.0f;
+      (*ptrAddr(e3, j * e3.pitch + i * sizeof(Scalar))) = 0.0f;
       row_e2[i] = -omega * std::sin(theta_s) * r * row_b1[i];
       // Do not impose right on the surface
       row_e1[i] = omega * std::sin(theta) * r_s * row_b2[i];
-      (*ptrAddr(b1, j * b1.pitch + i * sizeof(Scalar))) = 0.0f;
       (*ptrAddr(b2, j * b2.pitch + i * sizeof(Scalar))) = 0.0f;
       (*ptrAddr(b3, j * b3.pitch + i * sizeof(Scalar))) = 0.0f;
-      (*ptrAddr(e3, j * e3.pitch + i * sizeof(Scalar))) = 0.0f;
     }
   }
 }
