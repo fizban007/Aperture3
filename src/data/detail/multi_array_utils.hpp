@@ -8,11 +8,6 @@
 
 namespace Aperture {
 
-HD_INLINE Scalar*
-ptrAddr(cudaPitchedPtr p, size_t offset) {
-  return (Scalar*)((char*)p.ptr + offset);
-}
-
 namespace Kernels {
 
 template <typename T, typename UnaryOp>

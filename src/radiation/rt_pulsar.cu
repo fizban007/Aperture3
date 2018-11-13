@@ -53,7 +53,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // if (rad_model.emit_photon(gamma)) {
     if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
         r > 1.02f) {
-      phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
+      phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
       int c2 = dev_mesh.get_c2(cell);
       atomicAdd(ptrAddr(ph_events,
                         c2 * ph_events.pitch + c1 * sizeof(Scalar)),
@@ -85,7 +85,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
-    if (pos_in_block > -1) {
+    if (pos_in_block > -1 && ptc.cell[tid] != MAX_CELL) {
       int start_pos = ph_cum[blockIdx.x];
 
       // TODO: Compute gamma
@@ -155,7 +155,7 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     if (cell == MAX_CELL) continue;
 
     if (photons.path_left[tid] <= 0.0f) {
-      pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
+      pair_pos[tid] = atomicAdd_block(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       int c2 = dev_mesh.get_c2(cell);
 
@@ -198,24 +198,27 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
 
       // Add the two new particles
-      int offset = ptc_num + start_pos + pos_in_block * 2;
-      ptc.x1[offset] = ptc.x1[offset + 1] = photons.x1[tid];
-      ptc.x2[offset] = ptc.x2[offset + 1] = photons.x2[tid];
-      ptc.x3[offset] = ptc.x3[offset + 1] = photons.x3[tid];
+      int offset_e = ptc_num + start_pos + pos_in_block * 2;
+      int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
+      // int offset_p = ptc_num + start_pos + pos_in_block + pair_count[blockIdx.x];
 
-      ptc.p1[offset] = ptc.p1[offset + 1] = ratio * p1;
-      ptc.p2[offset] = ptc.p2[offset + 1] = ratio * p2;
-      ptc.p3[offset] = ptc.p3[offset + 1] = ratio * p3;
+      ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
+      ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
+      ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
+
+      ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
+      ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
+      ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
 
 #ifndef NDEBUG
-      assert(ptc.cell[offset] == MAX_CELL);
-      assert(ptc.cell[offset + 1] == MAX_CELL);
+      assert(ptc.cell[offset_e] == MAX_CELL);
+      assert(ptc.cell[offset_p] == MAX_CELL);
 #endif
-      ptc.weight[offset] = ptc.weight[offset + 1] = photons.weight[tid];
-      ptc.cell[offset] = ptc.cell[offset + 1] = photons.cell[tid];
-      ptc.flag[offset] = set_ptc_type_flag(
+      ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
+      ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
+      ptc.flag[offset_e] = set_ptc_type_flag(
           bit_or(ParticleFlag::secondary), ParticleType::electron);
-      ptc.flag[offset + 1] = set_ptc_type_flag(
+      ptc.flag[offset_p] = set_ptc_type_flag(
           bit_or(ParticleFlag::secondary), ParticleType::positron);
 
       // Set this photon to be empty
@@ -314,7 +317,7 @@ void
 RadiationTransferPulsar::produce_pairs(SimData& data) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
-  m_posInBlock.assign_dev(0, ptc.number());
+  m_posInBlock.assign_dev(0, photons.number());
   m_numPerBlock.assign_dev(0);
   m_cumNumPerBlock.assign_dev(0);
 

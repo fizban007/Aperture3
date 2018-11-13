@@ -5,6 +5,7 @@
 #include "cuda/cuda_control.h"
 #include "data/stagger.h"
 #include "data/typedefs.h"
+#include "utils/util_functions.h"
 
 namespace Aperture {
 
