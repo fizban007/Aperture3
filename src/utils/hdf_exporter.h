@@ -45,39 +45,23 @@ struct ptcoutput<Photons> {
   std::vector<float> data_l;
 };
 
-template <typename T>
-struct vfieldoutput3d {
-  std::string name;
-  VectorField<T>* field;
-  boost::multi_array<Scalar, 3> f1;
-  boost::multi_array<Scalar, 3> f2;
-  boost::multi_array<Scalar, 3> f3;
-  bool sync;
-};
+// template <typename T, int n>
+// struct vfieldoutput {
+//   std::string name;
+//   VectorField<T>* field;
+//   boost::multi_array<float, n> f1;
+//   boost::multi_array<float, n> f2;
+//   boost::multi_array<float, n> f3;
+//   bool sync;
+// };
 
-template <typename T>
-struct sfieldoutput3d {
+template <int n>
+struct fieldoutput {
   std::string name;
-  ScalarField<T>* field;
-  boost::multi_array<float, 3> f;
-  bool sync;
-};
-
-template <typename T>
-struct vfieldoutput2d {
-  std::string name;
-  VectorField<T>* field;
-  boost::multi_array<Scalar, 2> f1;
-  boost::multi_array<Scalar, 2> f2;
-  boost::multi_array<Scalar, 2> f3;
-  bool sync;
-};
-
-template <typename T>
-struct sfieldoutput2d {
-  std::string name;
-  ScalarField<T>* field;
-  boost::multi_array<float, 2> f;
+  std::string type;
+  // ScalarField<T>* field;
+  FieldBase* field;
+  std::vector<boost::multi_array<float, n>> f;
   bool sync;
 };
 
@@ -108,7 +92,10 @@ class DataExporter {
   template <typename T>
   void AddField(const std::string& name, VectorField<T>& field, bool sync = true);
 
-  void InterpolateFieldValues();
+  template <typename T>
+  void InterpolateFieldValues(fieldoutput<2>& field, int components, T t);
+  template <typename T>
+  void InterpolateFieldValues(fieldoutput<3>& field, int components, T t);
 
   void AddParticleArray(const std::string& name, const Particles& ptc);
   void AddParticleArray(const std::string& name, const Photons& ptc);
@@ -137,10 +124,12 @@ class DataExporter {
 
   // std::vector<dataset<float>> dbFloat;
   // std::vector<dataset<double>> dbDouble;
-  std::vector<sfieldoutput2d<Scalar>> dbScalars2d;
-  std::vector<vfieldoutput2d<Scalar>> dbVectors2d;
-  std::vector<sfieldoutput3d<Scalar>> dbScalars3d;
-  std::vector<vfieldoutput3d<Scalar>> dbVectors3d;
+  // std::vector<sfieldoutput2d<double>> dbScalars2d;
+  // std::vector<vfieldoutput2d<double>> dbVectors2d;
+  // std::vector<sfieldoutput3d<double>> dbScalars3d;
+  // std::vector<vfieldoutput3d<double>> dbVectors3d;
+  std::vector<fieldoutput<2>> dbFields2d;
+  std::vector<fieldoutput<3>> dbFields3d;
   // meshoutput dbMesh;
 
   std::vector<ptcoutput<Particles>> dbPtcData;
