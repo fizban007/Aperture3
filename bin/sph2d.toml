@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 0.001
+delta_t = 0.0005
 
 # Charge of an electron
 q_e = 1.0
@@ -14,7 +14,7 @@ num_species = 2
 max_ptc_number = 150000000
 
 # Maximum number of photons per node
-max_photon_number = 100000000
+max_photon_number = 50000000
 
 # Create pairs or not
 create_pairs = true
@@ -23,10 +23,10 @@ create_pairs = true
 trace_photons = true
 
 # Threshold for creating a photon / pair
-gamma_thr = 20.0
+gamma_thr = 40.0
 
 # Free path for energetic photons
-photon_path = 0.01
+photon_path = 0.0
 
 # Secondary particle energy
 E_secondary = 6.0
@@ -35,7 +35,7 @@ E_secondary = 6.0
 r_cutoff = 4.0
 
 # Gravity switch
-gravity_on = true
+gravity_on = false
 
 # Gravity strength
 gravity = 1.0
@@ -62,7 +62,7 @@ track_percent = 0.1
 data_dir = "/home/alex/storage/Data/Aperture3/"
 
 # Dipole B0
-B0 = 20000.0
+B0 = 10000.0
 
 # Damping coefficient
 damping_coef = 0.006
@@ -71,7 +71,7 @@ damping_coef = 0.006
 damping_length = 32
 
 # Star rotating omega
-omega = 0.05
+omega = 0.1
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -82,7 +82,7 @@ omega = 0.05
 N = [1024, 1024, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
-# will be N + 2*guard
+# will be N + 2*guard. Minimum 2 is required!
 guard = [2, 2, 0]
 
 # Lower limit of the coordinate
@@ -97,3 +97,5 @@ tile_size = [16, 16, 1]
 [Simulation]
 
 coord_system = "LogSpherical"
+
+random_seed = 3333

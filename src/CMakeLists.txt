@@ -21,9 +21,9 @@ set(Aperture_src
   "data/photons.cu"
   # "data/photons_1d.cu"
   "data/fields_utils.cu"
-  "algorithms/field_solver_default.cu"
+  # "algorithms/field_solver_default.cu"
   "algorithms/field_solver_log_sph.cu"
-  "algorithms/ptc_pusher_constE.cu"
+  # "algorithms/ptc_pusher_constE.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
   # "algorithms/ptc_pusher_geodesic.cpp"
   "sim_data.cu"
@@ -34,8 +34,8 @@ set(Aperture_src
   "radiation/rt_pulsar.cu"
   # "algorithms/current_deposit_Esirkepov.cu"
   "algorithms/finite_diff.cu"
-  "algorithms/field_solver_force_free.cu"
-  "algorithms/field_solver_ffe_cyl.cu"
+  # "algorithms/field_solver_force_free.cu"
+  # "algorithms/field_solver_ffe_cyl.cu"
   )
 # add_library(Aperture ${Aperture_src})
 add_cuda_target(Aperture ${Aperture_src})
@@ -101,14 +101,14 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 # add_executable(aperture "main.cpp")
 # target_link_libraries(aperture Aperture AperCuda)
 
-add_executable(exponent "exponent.cpp")
-target_link_libraries(exponent Aperture)
+# add_executable(exponent "exponent.cpp")
+# target_link_libraries(exponent Aperture)
 
-add_executable(aper3d "main3d.cpp")
-target_link_libraries(aper3d Aperture)
+# add_executable(aper3d "main3d.cpp")
+# target_link_libraries(aper3d Aperture)
 
-add_executable(aperffe "main_2dffe.cpp")
-target_link_libraries(aperffe Aperture)
+# add_executable(aperffe "main_2dffe.cpp")
+# target_link_libraries(aperffe Aperture)
 
 add_executable(aper2d "main_2dsph.cpp")
 target_link_libraries(aper2d Aperture)
