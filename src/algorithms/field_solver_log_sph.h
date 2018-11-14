@@ -22,13 +22,17 @@ class FieldSolver_LogSph : public FieldSolver {
   void compute_B_update(vfield_t& B, const vfield_t& E, double dt);
   virtual void set_background_j(const vfield_t& J) override;
   void boundary_conditions(SimData& data, double omega);
+  void clean_divergence(SimData& data);
+  void init_dev_rho(SimData& data);
 
   sfield_t& get_divE() { return m_divE; }
   sfield_t& get_divB() { return m_divB; }
 
  private:
   const Grid_LogSph& m_grid;
-  sfield_t m_divE, m_divB;
+  sfield_t m_divE, m_divB, m_phi_e;
+  cudaPitchedPtr* m_dev_rho = nullptr;
+  bool m_rho_initialized = false;
 }; // ----- end of class FieldSolver_LogSph : public FieldSolver -----
 
 

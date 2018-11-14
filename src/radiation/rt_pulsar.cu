@@ -53,7 +53,8 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // if (rad_model.emit_photon(gamma)) {
     if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
         r > 1.02f) {
-      phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
+      // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
+      phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
       int c2 = dev_mesh.get_c2(cell);
       atomicAdd(ptrAddr(ph_events,
                         c2 * ph_events.pitch + c1 * sizeof(Scalar)),
@@ -153,11 +154,15 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     uint32_t cell = photons.cell[tid];
     // Skip empty photons
     if (cell == MAX_CELL) continue;
+    int c2 = dev_mesh.get_c2(cell);
+    if (c2 == dev_mesh.guard[1] || c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+      photons.cell[tid] = MAX_CELL;
+      continue;
+    }
 
     if (photons.path_left[tid] <= 0.0f) {
-      pair_pos[tid] = atomicAdd_block(&pairsProduced, 1) + 1;
+      pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
-      int c2 = dev_mesh.get_c2(cell);
 
       atomicAdd(ptrAddr(pair_events,
                         c2 * pair_events.pitch + c1 * sizeof(Scalar)),
@@ -307,7 +312,7 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  photons.set_num(photons.number() + new_photons);
+  photons.set_num(photons.number() + new_photons + 20);
   // Logger::print_info("There are {} photons in the pool",
   //                    photons.number());
   cudaDeviceSynchronize();
@@ -351,7 +356,7 @@ RadiationTransferPulsar::produce_pairs(SimData& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  ptc.set_num(ptc.number() + new_pairs * 2);
+  ptc.set_num(ptc.number() + new_pairs * 2 + 100);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
   cudaDeviceSynchronize();
