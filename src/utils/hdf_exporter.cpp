@@ -336,51 +336,74 @@ void
 DataExporter::InterpolateFieldValues(fieldoutput<2> &field,
                                      int components, T t) {
   if (components == 1) {
-    auto fptr = dynamic_cast<ScalarField<T>*>(field.field);
+    auto fptr = dynamic_cast<ScalarField<T> *>(field.field);
     if (field.sync) fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
         field.f[0][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] =
-            (*fptr)(i + mesh.guard[0], j + mesh.guard[1]);
+               [i / downsample_factor + mesh.guard[0]] = 0.0;
+        for (int n2 = 0; n2 < downsample_factor; n2++) {
+          for (int n1 = 0; n1 < downsample_factor; n1++) {
+            field.f[0][j / downsample_factor + mesh.guard[1]]
+                   [i / downsample_factor + mesh.guard[0]] +=
+                (*fptr)(i + n1 + mesh.guard[0],
+                        j + n2 + mesh.guard[1]) /
+                square(downsample_factor);
+          }
+        }
       }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   sf.f[mesh.guard[1] - 1]
-      //       [i / downsample_factor + mesh.guard[0]] =
-      //       (*sf.field)(i + mesh.guard[0], mesh.guard[1] - 1);
+      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      //   field.f[0][mesh.guard[1] - 1]
+      //          [i / downsample_factor + mesh.guard[0]] =
+      //       (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
       // }
     }
   } else if (components == 3) {
-    auto fptr = dynamic_cast<VectorField<T>*>(field.field);
+    auto fptr = dynamic_cast<VectorField<T> *>(field.field);
     if (field.sync) fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
         field.f[0][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] =
-            (*fptr)(0, i + mesh.guard[0], j + mesh.guard[1]);
-        // std::cout << vf.f1[j / downsample_factor + mesh.guard[1]]
-        //     [i / downsample_factor + mesh.guard[0]] << std::endl;
+               [i / downsample_factor + mesh.guard[0]] = 0.0;
         field.f[1][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] =
-            (*fptr)(1, i + mesh.guard[0], j + mesh.guard[1]);
+               [i / downsample_factor + mesh.guard[0]] = 0.0;
         field.f[2][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] =
-            (*fptr)(2, i + mesh.guard[0], j + mesh.guard[1]);
+               [i / downsample_factor + mesh.guard[0]] = 0.0;
+        for (int n2 = 0; n2 < downsample_factor; n2++) {
+          for (int n1 = 0; n1 < downsample_factor; n1++) {
+            field.f[0][j / downsample_factor + mesh.guard[1]]
+                   [i / downsample_factor + mesh.guard[0]] +=
+                (*fptr)(0, i + n1 + mesh.guard[0],
+                        j + n2 + mesh.guard[1]) /
+                square(downsample_factor);
+            // std::cout << vf.f1[j / downsample_factor + mesh.guard[1]]
+            //     [i / downsample_factor + mesh.guard[0]] << std::endl;
+            field.f[1][j / downsample_factor + mesh.guard[1]]
+                   [i / downsample_factor + mesh.guard[0]] +=
+                (*fptr)(1, i + n1 + mesh.guard[0],
+                        j + n2 + mesh.guard[1]) /
+                square(downsample_factor);
+
+            field.f[2][j / downsample_factor + mesh.guard[1]]
+                   [i / downsample_factor + mesh.guard[0]] +=
+                (*fptr)(2, i + n1 + mesh.guard[0],
+                        j + n2 + mesh.guard[1]) /
+                square(downsample_factor);
+          }
+        }
       }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   vf.f1[mesh.guard[1] - 1]
-      //       [i / downsample_factor + mesh.guard[0]] =
-      //       (*vf.field)(0, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   vf.f2[mesh.guard[1] - 1]
-      //       [i / downsample_factor + mesh.guard[0]] =
-      //       (*vf.field)(1, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   vf.f3[mesh.guard[1] - 1]
-      //       [i / downsample_factor + mesh.guard[0]] =
-      //       (*vf.field)(2, i + mesh.guard[0], mesh.guard[1] - 1);
+      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      //   field.f[0][mesh.guard[1] - 1]
+      //          [i / downsample_factor + mesh.guard[0]] =
+      //       (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
+      //   field.f[1][mesh.guard[1] - 1]
+      //          [i / downsample_factor + mesh.guard[0]] =
+      //       (*fptr)(1, i + mesh.guard[0], mesh.guard[1] - 1);
+      //   field.f[2][mesh.guard[1] - 1]
+      //          [i / downsample_factor + mesh.guard[0]] =
+      //       (*fptr)(2, i + mesh.guard[0], mesh.guard[1] - 1);
       // }
     }
   }
@@ -617,46 +640,11 @@ DataExporter::WriteOutput(int timestep, double time) {
     } else {
       for (int n = 0; n < components; n++) {
         DataSet data = datafile.createDataSet<float>(
-            f.name + std::to_string(n+1), DataSpace::From(f.f[n]));
+            f.name + std::to_string(n + 1), DataSpace::From(f.f[n]));
         data.write(f.f[n]);
       }
     }
   }
-  // for (auto &sf : dbScalars2d) {
-  //   DataSet data =
-  //       datafile.createDataSet<float>(sf.name, DataSpace::From(sf.f));
-  //   data.write(sf.f);
-  // }
-
-  // for (auto &sf : dbScalars3d) {
-  //   DataSet data =
-  //       datafile.createDataSet<float>(sf.name, DataSpace::From(sf.f));
-  //   data.write(sf.f);
-  // }
-
-  // for (auto &vf : dbVectors2d) {
-  //   DataSet data1 = datafile.createDataSet<float>(
-  //       fmt::format("{}1", vf.name), DataSpace::From(vf.f1));
-  //   data1.write(vf.f1);
-  //   DataSet data2 = datafile.createDataSet<float>(
-  //       fmt::format("{}2", vf.name), DataSpace::From(vf.f2));
-  //   data2.write(vf.f2);
-  //   DataSet data3 = datafile.createDataSet<float>(
-  //       fmt::format("{}3", vf.name), DataSpace::From(vf.f3));
-  //   data3.write(vf.f3);
-  // }
-
-  // for (auto &vf : dbVectors3d) {
-  //   DataSet data1 = datafile.createDataSet<float>(
-  //       fmt::format("{}1", vf.name), DataSpace::From(vf.f1));
-  //   data1.write(vf.f1);
-  //   DataSet data2 = datafile.createDataSet<float>(
-  //       fmt::format("{}2", vf.name), DataSpace::From(vf.f2));
-  //   data2.write(vf.f2);
-  //   DataSet data3 = datafile.createDataSet<float>(
-  //       fmt::format("{}3", vf.name), DataSpace::From(vf.f3));
-  //   data3.write(vf.f3);
-  // }
 }
 
 void
@@ -755,19 +743,21 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
       fs << "    <DataItem Dimensions=\"" << dim_str
          << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
          << std::endl;
-      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, f.name)
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+                        f.name)
          << std::endl;
       fs << "    </DataItem>" << std::endl;
       fs << "  </Attribute>" << std::endl;
     } else if (f.f.size() == 3) {
       for (int i = 0; i < 3; i++) {
-        fs << "  <Attribute Name=\"" << f.name << i+1
-           << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+        fs << "  <Attribute Name=\"" << f.name << i + 1
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
+           << std::endl;
         fs << "    <DataItem Dimensions=\"" << dim_str
            << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
            << std::endl;
         fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
-                          f.name, i+1)
+                          f.name, i + 1)
            << std::endl;
         fs << "    </DataItem>" << std::endl;
         fs << "  </Attribute>" << std::endl;
@@ -777,29 +767,34 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
 
   // for (auto &sf : dbScalars2d) {
   //   fs << "  <Attribute Name=\"" << sf.name
-  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
-  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, sf.name)
+  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+  //   sf.name)
   //      << std::endl;
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   // }
   // for (auto &sf : dbScalars3d) {
   //   fs << "  <Attribute Name=\"" << sf.name
-  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
-  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, sf.name)
+  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+  //   sf.name)
   //      << std::endl;
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   // }
   // for (auto &vf : dbVectors2d) {
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
@@ -809,7 +804,8 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
@@ -819,7 +815,8 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
@@ -832,7 +829,8 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
 
   // for (auto &vf : dbVectors3d) {
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
@@ -842,7 +840,8 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
@@ -852,7 +851,8 @@ DataExporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   //   fs << "    </DataItem>" << std::endl;
   //   fs << "  </Attribute>" << std::endl;
   //   fs << "  <Attribute Name=\"" << vf.name
-  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
   //   fs << "    <DataItem Dimensions=\"" << dim_str
   //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //      << std::endl;
