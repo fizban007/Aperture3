@@ -34,10 +34,10 @@ main(int argc, char* argv[]) {
   RadiationTransferPulsar rad(env);
 
   // Initialize data exporter
-  int downsample = 2;
   DataExporter exporter(env.params(),
                         env.params().data_dir + "2d_weak_pulsar",
-                        "data", downsample);
+                        "data", env.params().downsample);
+  Logger::print_info("{}", env.params().downsample);
   exporter.WriteGrid();
   AdditionalDiagnostics diag(env);
 
@@ -64,7 +64,6 @@ main(int argc, char* argv[]) {
   data.B.sync_to_device();
   // Put the initial condition to the background
   env.init_bg_fields(data);
-  env.B_bg().sync_to_host();
 
   ScalarField<Scalar> flux(env.grid());
   flux.initialize();
@@ -91,16 +90,16 @@ main(int argc, char* argv[]) {
   std::uniform_real_distribution<float> dist_f(0.0, 1.0);
   uint32_t N = 0;
   for (uint32_t i = 0; i < N; i++) {
-    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, -100.0f, 0.0f},
+    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 100.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 4),
-                          ParticleType::electron, 1000.0);
+                          mesh.get_idx(4, 512), ParticleType::electron,
+                          1000.0);
     // }
     // for (uint32_t i = 0; i < N; i++) {
     data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 0.0f},
                           // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(100, 4),
-                          ParticleType::positron, 1000.0);
+                          mesh.get_idx(4, 512), ParticleType::positron,
+                          1000.0);
   }
   Logger::print_info("number of particles is {}",
                      data.particles.number());
@@ -113,7 +112,8 @@ main(int argc, char* argv[]) {
 
     Scalar omega = 0.0;
     if (time <= 10.0) {
-      omega = env.params().omega * square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
+      omega = env.params().omega *
+              square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
     } else {
       omega = env.params().omega;
     }
@@ -134,10 +134,10 @@ main(int argc, char* argv[]) {
     }
 
     timer::stamp();
+    if (step % 5 == 0)
+      ptc_updater.inject_ptc(data, 1, 0.5, 0.0, 0.0, 400.0, omega);
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
-    // if (step % 4 == 0)
-    //   ptc_updater.inject_ptc(data, 2, 0.5, 0.0, 0.0, 500.0, omega);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
@@ -151,18 +151,29 @@ main(int argc, char* argv[]) {
       // field_solver.clean_divergence(data);
     }
 
-    // Apply boundary conditions
-    field_solver.boundary_conditions(data, omega);
-    // field_solver.boundary_conditions(data, 0.0);
-
     timer::stamp();
     field_solver.update_fields(data.E, data.B, data.J, dt, time);
+
+    field_solver.boundary_conditions(data, omega);
+    // field_solver.boundary_conditions(data, 0.0);
     auto t_field = timer::get_duration_since_stamp("us");
     Logger::print_info("Field Update took {}us", t_field);
 
     rad.emit_photons(data);
     rad.produce_pairs(data);
 
+    // if (step == 1) {
+    //   int c1 = dist(gen);
+    //   int c2 = dist(gen);
+    //   float x1 = dist_f(gen);
+    //   float x2 = dist_f(gen);
+    //   for (int n = 0; n < 1; n++) {
+    //     data.photons.append({x1, x2, 0.0f}, {1.0f, 1.0f, 0.0f}, -0.01,
+    //                         mesh.get_idx(c1, c2), 10000.0);
+    //     // data.photons.append({x1, x2, 0.0f}, {-100.0f, -100.0f, 0.0f},
+    //     //                     -0.01, mesh.get_idx(c1, c2), 100.0);
+    //   }
+    // }
     // if (step == 100 || step == 200) {
     //   int c1 = dist(gen);
     //   int c2 = dist(gen);

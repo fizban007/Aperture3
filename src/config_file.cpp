@@ -154,10 +154,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
     params.algorithm_ptc_move =
         sim_table->get_as<std::string>("algorithm_ptc_move")
             .value_or(defaults.algorithm_ptc_move);
-    params.random_seed = config->get_as<int>("random_seed")
+    params.random_seed = sim_table->get_as<int>("random_seed")
                              .value_or(defaults.random_seed);
     params.downsample =
-        config->get_as<int>("downsample").value_or(defaults.downsample);
+        sim_table->get_as<int>("downsample").value_or(defaults.downsample);
   }
 
   compute_derived_quantities(params);

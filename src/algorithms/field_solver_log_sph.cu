@@ -250,7 +250,7 @@ stellar_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
     Scalar* row_b2 = ptrAddr(dev_bg_fields.B2, j * b2.pitch);
     Scalar theta_s = dev_mesh.pos(1, j, true);
     Scalar theta = dev_mesh.pos(1, j, false);
-    for (int i = 0; i <= dev_mesh.guard[0] + 1; i++) {
+    for (int i = 0; i < dev_mesh.guard[0] + 1; i++) {
       Scalar r_s = std::exp(dev_mesh.pos(0, i, true));
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
       (*ptrAddr(b1, j * b1.pitch + i * sizeof(Scalar))) = 0.0f;
