@@ -49,6 +49,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // Skip photon emission when outside given radius
     Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
     Scalar gamma = ptc.E[tid];
+    Scalar w = ptc.weight[tid];
 
     // if (rad_model.emit_photon(gamma)) {
     if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
@@ -58,7 +59,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
       int c2 = dev_mesh.get_c2(cell);
       atomicAdd(ptrAddr(ph_events,
                         c2 * ph_events.pitch + c1 * sizeof(Scalar)),
-                1.0f);
+                w);
     }
   }
 
@@ -103,6 +104,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       ptc.p1[tid] = p1 * pf / pi;
       ptc.p2[tid] = p2 * pf / pi;
       ptc.p3[tid] = p3 * pf / pi;
+      ptc.E[tid] = gamma - Eph;
 
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
@@ -155,7 +157,8 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     // Skip empty photons
     if (cell == MAX_CELL) continue;
     int c2 = dev_mesh.get_c2(cell);
-    if (c2 == dev_mesh.guard[1] || c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+    if (c2 == dev_mesh.guard[1] ||
+        c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
       photons.cell[tid] = MAX_CELL;
       continue;
     }
@@ -163,10 +166,11 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     if (photons.path_left[tid] <= 0.0f) {
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
+      Scalar w = photons.weight[tid];
 
       atomicAdd(ptrAddr(pair_events,
                         c2 * pair_events.pitch + c1 * sizeof(Scalar)),
-                1.0f);
+                w);
     }
   }
 
@@ -205,7 +209,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       // Add the two new particles
       int offset_e = ptc_num + start_pos + pos_in_block * 2;
       int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
-      // int offset_p = ptc_num + start_pos + pos_in_block + pair_count[blockIdx.x];
+      // int offset_p = ptc_num + start_pos + pos_in_block +
+      // pair_count[blockIdx.x];
 
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
@@ -214,6 +219,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
       ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
+      ptc.E[offset_e] = ptc.E[offset_p] =
+          sqrt(1.0f + ratio * ratio * E_ph2);
 
 #ifndef NDEBUG
       assert(ptc.cell[offset_e] == MAX_CELL);
