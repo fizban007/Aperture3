@@ -685,6 +685,7 @@ PtcUpdaterLogSph::handle_boundary(SimData &data) {
 
   Kernels::boundary_rho<<<32, 512>>>(m_dev_fields, m_mesh_ptrs);
   CudaCheckError();
+  cudaDeviceSynchronize();
 }
 
 void
