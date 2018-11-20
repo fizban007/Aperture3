@@ -30,7 +30,7 @@ set(Aperture_src
   "additional_diagnostics.cu"
   "ptc_updater.cu" "ptc_updater_logsph.cu"
   "cuda/constant_mem.cu" "cuda/kernels.cu"
-  "radiation/radiation_transfer.cu"
+  # "radiation/radiation_transfer.cu"
   "radiation/rt_pulsar.cu"
   # "algorithms/current_deposit_Esirkepov.cu"
   "algorithms/finite_diff.cu"

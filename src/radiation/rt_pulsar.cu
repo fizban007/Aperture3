@@ -5,10 +5,10 @@
 #include "cuda/kernels.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "data/particles.h"
-#include "data/particles_1d.h"
+// #include "data/particles_1d.h"
 #include "data/photons.h"
-#include "data/photons_1d.h"
-#include "radiation/curvature_instant.h"
+// #include "data/photons_1d.h"
+// #include "radiation/curvature_instant.h"
 #include "radiation/rt_pulsar.h"
 #include "sim_data.h"
 #include "sim_environment.h"
@@ -215,6 +215,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
       ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
+      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e], ptc.x2[offset_e], ptc.x3[offset_e]);
 
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
@@ -319,7 +320,8 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  photons.set_num(photons.number() + new_photons + 20);
+  int padding = 1;
+  photons.set_num(photons.number() + new_photons + padding);
   // Logger::print_info("There are {} photons in the pool",
   //                    photons.number());
   cudaDeviceSynchronize();
@@ -363,7 +365,8 @@ RadiationTransferPulsar::produce_pairs(SimData& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  ptc.set_num(ptc.number() + new_pairs * 2 + 100);
+  int padding = 1;
+  ptc.set_num(ptc.number() + new_pairs * 2 + padding);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
   cudaDeviceSynchronize();
