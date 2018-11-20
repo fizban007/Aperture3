@@ -31,6 +31,7 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
   data.p1[num] = p[0];
   data.p2[num] = p[1];
   data.p3[num] = p[2];
+  data.E[num] = std::sqrt(1.0f + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
   data.weight[num] = w;
   data.cell[num] = cell;
   data.flag[num] = flag | gen_ptc_type_flag(type);

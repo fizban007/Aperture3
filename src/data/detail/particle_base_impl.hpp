@@ -14,11 +14,11 @@
 #include <thrust/copy.h>
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
+#include <thrust/extrema.h>
+#include <thrust/fill.h>
 #include <thrust/gather.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/sort.h>
-#include <thrust/fill.h>
-#include <thrust/extrema.h>
 
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
@@ -73,8 +73,8 @@ struct fill_pos_amount {
 
 //   template <typename T>
 //   void operator()(const char* name, T& x) const {
-//     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-//     cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
+//     typedef typename std::remove_reference<decltype(*x)>::type
+//     x_type; cudaMemPrefetchAsync(x, size_ * sizeof(x_type), devId_);
 //   }
 // };
 
@@ -108,9 +108,11 @@ struct rearrange_array {
   template <typename T, typename U>
   void operator()(const char* name, T& x, U& u) const {
     auto ptr_index = thrust::device_pointer_cast(index_);
-    if (std::strcmp(name, skip_.c_str()) == 0) return;
-
-    // printf("%d, %s\n", T::value, name);
+    // Logger::print_info("rearranging {}", name);
+    if (std::strcmp(name, skip_.c_str()) == 0) {
+    //   Logger::print_info("skipping {}", name);
+      return;
+    }
     auto x_ptr = thrust::device_pointer_cast(x);
     auto tmp_ptr =
         thrust::device_pointer_cast(reinterpret_cast<U*>(tmp_ptr_));
@@ -250,9 +252,8 @@ ParticleBase<ParticleClass>::erase(std::size_t pos,
 //                                  const ParticleClass& part) {
 //   if (pos >= m_numMax)
 //     throw std::runtime_error(
-//         "Trying to insert particle beyond the end of the array. Resize "
-//         "it "
-//         "first!");
+//         "Trying to insert particle beyond the end of the array.
+//         Resize " "it " "first!");
 
 //   for_each_arg(m_data, part, assign_at_idx(pos));
 //   if (pos >= m_number) m_number = pos + 1;
@@ -264,9 +265,8 @@ ParticleBase<ParticleClass>::erase(std::size_t pos,
 //   ParticleClass p_tmp = m_data[pos];
 //   if (pos >= m_numMax)
 //     throw std::runtime_error(
-//         "Trying to swap particle beyond the end of the array. Resize "
-//         "it "
-//         "first!");
+//         "Trying to swap particle beyond the end of the array. Resize
+//         " "it " "first!");
 
 //   // typedef boost::fusion::vector<array_type&, const ParticleClass&>
 //   // seq;
@@ -344,6 +344,7 @@ ParticleBase<ParticleClass>::sort_by_cell() {
 
   // Sort the index array by key
   thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
+  cudaDeviceSynchronize();
 
   // Move the rest of particle array using the new index
   rearrange_arrays("cell");
@@ -355,6 +356,8 @@ ParticleBase<ParticleClass>::sort_by_cell() {
                           MAX_CELL - 1) -
       ptr_cell;
 
+  // Logger::print_info("Sorting complete, there are {} particles in the
+  // pool", m_number);
   cudaDeviceSynchronize();
   CudaCheckError();
 }
@@ -383,8 +386,8 @@ ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
 // ParticleBase<ParticleClass>::sync_to_host() {
 //   // boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId,
 //   // m_number));
-//   visit_struct::for_each(m_data, sync_dev(cudaCpuDeviceId, m_number));
-//   cudaDeviceSynchronize();
+//   visit_struct::for_each(m_data, sync_dev(cudaCpuDeviceId,
+//   m_number)); cudaDeviceSynchronize();
 // }
 // template <typename ParticleClass>
 // void
@@ -717,13 +720,16 @@ ParticleBase<ParticleClass>::clear_guard_cells() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::compute_spectrum(int num_bins, std::vector<Scalar> &energies, std::vector<uint32_t> &nums) {
+ParticleBase<ParticleClass>::compute_spectrum(
+    int num_bins, std::vector<Scalar>& energies,
+    std::vector<uint32_t>& nums) {
   // Assume the particle energies have been computed
   energies.resize(num_bins, 0.0);
   nums.resize(num_bins, 0);
 
   // Find maximum energy in the array now
-  thrust::device_ptr<Scalar> E_ptr = thrust::device_pointer_cast(m_data.E);
+  thrust::device_ptr<Scalar> E_ptr =
+      thrust::device_pointer_cast(m_data.E);
   Scalar E_max = *thrust::max_element(E_ptr, E_ptr + m_number);
   // Logger::print_info("Maximum energy is {}", E_max);
 
@@ -742,14 +748,15 @@ ParticleBase<ParticleClass>::compute_spectrum(int num_bins, std::vector<Scalar> 
   thrust::fill_n(ptr_energies, num_bins, 0);
   cudaDeviceSynchronize();
 
-  compute_energy_histogram(d_energies, m_data.E, m_number, num_bins, E_max);
+  compute_energy_histogram(d_energies, m_data.E, m_number, num_bins,
+                           E_max);
 
   // Copy the resulting histogram to output
-  cudaMemcpy(nums.data(), d_energies, num_bins * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+  cudaMemcpy(nums.data(), d_energies, num_bins * sizeof(uint32_t),
+             cudaMemcpyDeviceToHost);
 
   cudaFree(d_energies);
 }
-
 
 }  // namespace Aperture
 
