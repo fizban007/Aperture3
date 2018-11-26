@@ -133,23 +133,15 @@ main(int argc, char* argv[]) {
       Logger::print_info("Finished output!");
     }
 
+    // Inject particles
     timer::stamp();
     if (step % 5 == 0)
-      ptc_updater.inject_ptc(data, 1, 0.5, 0.0, 0.0, 400.0, omega);
+      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 400.0, omega);
+
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
-
-    if (step % 20 == 0 && step != 0) {
-      timer::stamp();
-      data.particles.sort_by_cell();
-      data.photons.sort_by_cell();
-      auto t_sort = timer::get_duration_since_stamp("us");
-      Logger::print_info("Ptc sort took {}us", t_sort);
-
-      // field_solver.clean_divergence(data);
-    }
 
     timer::stamp();
     field_solver.update_fields(data.E, data.B, data.J, dt, time);
@@ -159,8 +151,17 @@ main(int argc, char* argv[]) {
     auto t_field = timer::get_duration_since_stamp("us");
     Logger::print_info("Field Update took {}us", t_field);
 
+    // Create photons and pairs
     rad.emit_photons(data);
     rad.produce_pairs(data);
+
+    if (step % env.params().sort_frequency == 0 && step != 0) {
+      timer::stamp();
+      data.particles.sort_by_cell();
+      data.photons.sort_by_cell();
+      auto t_sort = timer::get_duration_since_stamp("us");
+      Logger::print_info("Ptc sort took {}us", t_sort);
+    }
 
     // if (step == 1) {
     //   int c1 = dist(gen);

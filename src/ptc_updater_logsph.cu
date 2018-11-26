@@ -315,7 +315,6 @@ __launch_bounds__(512, 4)
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
     auto v1 = ptc.p1[idx], v2 = ptc.p2[idx], v3 = ptc.p3[idx];
-    // Scalar gamma = std::sqrt(1.0f + v1 * v1 + v2 * v2 + v3 * v3);
     Scalar gamma = ptc.E[idx];
     // printf("gamma is %f\n", gamma);
     // printf("velocity before is (%f, %f, %f)\n", v1, v2, v3);
@@ -329,10 +328,6 @@ __launch_bounds__(512, 4)
     v1 = v1 / gamma;
     v2 = v2 / gamma;
     v3 = v3 / gamma;
-    // printf("velocity is (%f, %f, %f), gamma is %f\n", v1, v2, v3,
-    // gamma);
-           // printf("cell is (%d, %d), x is (%f, %f)\n", c1, c2,
-    // old_x1, old_x2);
 
     // step 1: Compute particle movement and update position
     Scalar r1 = dev_mesh.pos(0, c1, old_x1);
@@ -395,73 +390,45 @@ __launch_bounds__(512, 4)
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
     Scalar weight = -dev_charges[sp] * w;
-    // -dev_charges[sp] * w / dt;
-    // int sup2 = interp.support() + 2;
+
     int j_0 = (dc2 == -1 ? -2 : -1);
     int j_1 = (dc2 == 1 ? 1 : 0);
     int i_0 = (dc1 == -1 ? -2 : -1);
     int i_1 = (dc1 == 1 ? 1 : 0);
-    // Scalar djy[spline_t::support + 2] = {0.0f};
     Scalar djy[3] = {0.0f};
     for (int j = j_0; j <= j_1; j++) {
       Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
       Scalar sy1 = interp.interpolate(-new_x2 + (j + 1 - dc2));
-      // if (std::abs(sy0) < DEPOSIT_EPS && std::abs(sy1) <
-      // DEPOSIT_EPS)
-      //   continue;
+
       size_t j_offset = (j + c2) * fields.J1.pitch;
       Scalar djx = 0.0f;
       for (int i = i_0; i <= i_1; i++) {
         Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
         Scalar sx1 = interp.interpolate(-new_x1 + (i + 1 - dc1));
-        // if (std::abs(sx0) < DEPOSIT_EPS && std::abs(sx1) <
-        // DEPOSIT_EPS)
-        //   continue;
 
+        // j1 is movement in r
         int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        // printf("dq0 = %.9f, djx = %.9f ", val0, djx);
-        // float2 *ptr =
-        //     (float2 *)((char *)j1.ptr + (j + c2) * j1.pitch +
-        //                (i + c1 + 1) * sizeof(double));
-        // atomicAddKbn(ptr, djx / *ptrAddr(mesh_ptrs.A1_e, offset +
-        // sizeof(Scalar)));
-        // if (std::abs(djx) > 0.0f) {
         atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
                   weight * djx);
-        // }
+
+        // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         djy[i - i_0] += val1;
-        // printf("dq1 = %.9f, djy = %.9f ", val1, djy[i - i_0]);
-        // float2 *ptr =
-        //     (float2 *)((char *)j2.ptr + (j + c2 + 1) * j2.pitch +
-        //                (i + c1) * sizeof(double));
-        // atomicAddKbn(ptr, djy[i] / *ptrAddr(mesh_ptrs.A2_e,
-        // offset + fields.J2.pitch));
-        // if (std::abs(djy[i - i_0]) > 0.0f) {
         atomicAdd(ptrAddr(fields.J2, offset + fields.J2.pitch),
                   weight * djy[i - i_0]);
-        // }
-        // printf("val1 = %f, djy[%d] = %f, ", val1, i, djy[i]);
+
+        // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
-        // printf("dq2 = %f, ", val2);
-        // if (std::abs(val2) > 0.0f)
         atomicAdd(ptrAddr(fields.J3, offset),
-                  dev_charges[sp] * w * v3 * val2 /
+                  -weight * v3 * val2 /
                       *ptrAddr(mesh_ptrs.dV, offset));
-        // printf("dV is %f, v3 is %f, j3 is %f\n",
-        //        *ptrAddr(mesh_ptrs.dV, offset), v3,
-        //        *ptrAddr(fields.J3, offset));
-        // dev_charges[sp] * w * v3 * val2 * dev_mesh.delta[1] *
-        // dev_mesh.delta[0] /
-        //     *ptrAddr(mesh_ptrs.A3_e, offset));
+
+        // rho is deposited at the final position
         Scalar s1 = sx1 * sy1;
-        // printf("s1 = %f\n", s1);
-        // if (std::abs(s1) > 0.0f)
         atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
       }
-      // printf("\n");
     }
   }
 }
