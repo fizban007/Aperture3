@@ -299,7 +299,7 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
 
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   // Logger::print_debug("Count finished");
   // Scan the number of photons produced per block. The result gives the
   // offset for each block
@@ -324,7 +324,7 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
   photons.set_num(photons.number() + new_photons + padding);
   // Logger::print_info("There are {} photons in the pool",
   //                    photons.number());
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 }
 
 void
@@ -345,7 +345,7 @@ RadiationTransferPulsar::produce_pairs(SimData& data) {
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 
   // Scan the number of photons produced per block. The last one will be
   // the total

@@ -102,6 +102,7 @@ struct SimParams : public SimParamsBase {
 
   int random_seed = 4321;
   int downsample = 1;
+  int sort_frequency = 20;
 };
 
 }  // namespace Aperture
