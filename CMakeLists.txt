@@ -5,6 +5,14 @@ message ("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
 option(build_tests "Build the test suite." ON)
 
+# enable colored cmake message.
+# Copied from https://stackoverflow.com/questions/18968979/how-to-get-colorized-output-with-cmake
+if(NOT WIN32)
+  string(ASCII 27 Esc)
+  set(ColorReset "${Esc}[m")
+  set(Yellow      "${Esc}[33m")
+endif()
+
 # Set CXX flags
 # set(CMAKE_CXX_COMPILER "/opt/intel/bin/icpc")
 set(CMAKE_CXX_STANDARD 14)
@@ -23,16 +31,19 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 # set(Project_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+if(LAB_ROOT_DIR)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LAB_ROOT_DIR}/lib)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LAB_ROOT_DIR})
+else()
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+endif()
 set(HDF5_USE_STATIC_LIBRARIES)
 
 find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C CXX)
-# find_package(Silo REQUIRED)
 # set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
-# find_package(GSL)
 # find_package(Eigen3)
 # if (EIGEN3_FOUND)
 #   message(${EIGEN3_INCLUDE_DIR})
