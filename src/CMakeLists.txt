@@ -6,6 +6,27 @@ add_definitions(-DCUDA_ENABLED)
   # message("Cuda library not found, skipping the GPU part of the code.")
 # endif()
 
+if(LAB_ROOT_DIR)
+  include("${LAB_ROOT_DIR}/src/CMakeLists.txt")
+  include_directories(BEFORE "${LAB_ROOT_DIR}/include")
+  include_directories(BEFORE "${LAB_ROOT_DIR}/src")
+  set(shadows "${LAB_SHADOWS}")
+  # list(FIND shadows "UserControl.cpp" Lab_User_Control_Found)
+  # if(Lab_User_Control_Found LESS 0)
+  #   set(Lab_User_Control_Found NO)
+  # else()
+  #   set(Lab_User_Control_Found YES)
+  # endif()
+  # list(REMOVE_ITEM shadows "UserControl.cpp")
+  set(Lab_Aperture_src ${shadows})
+  message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following shadowed${ColorReset}")
+  foreach(ARG ${LAB_SHADOWS})
+      message("${Yellow}    ${ARG}${ColorReset}")
+  endforeach()
+else()
+  message("${Yellow}No lab is invoked.${ColorReset}")
+endif()
+
 set(Aperture_src
   "utils/logger.cpp" "utils/timer.cpp"
   "utils/hdf_exporter.cpp"
@@ -37,6 +58,15 @@ set(Aperture_src
   # "algorithms/field_solver_force_free.cu"
   # "algorithms/field_solver_ffe_cyl.cu"
   )
+
+# modify Aperture_src using
+if(LAB_ROOT_DIR)
+  foreach(ARG ${Lab_Aperture_src})
+    list(REMOVE_ITEM Aperture_src ${ARG})
+    list(APPEND Aperture_src "${LAB_ROOT_DIR}/src/${ARG}")
+  endforeach()
+endif()
+
 # add_library(Aperture ${Aperture_src})
 add_cuda_target(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
@@ -110,11 +140,44 @@ target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRAR
 # add_executable(aperffe "main_2dffe.cpp")
 # target_link_libraries(aperffe Aperture)
 
-add_executable(aper2d "main_2dsph.cpp")
-target_link_libraries(aper2d Aperture)
+# add_executable(aper2d "main_2dsph.cpp")
+# target_link_libraries(aper2d Aperture)
+
+if(LAB_ROOT_DIR)
+  message("${Yellow}Using shadowed main.cpp from lab ${LAB_NAME}${ColorReset}")
+  add_executable(aperture "${LAB_ROOT_DIR}/src/main.cpp")
+  target_link_libraries(aperture Aperture)
+else()
+  message("${Yellow}Using default main.cpp${ColorReset}")
+  add_executable(aperture "main.cpp")
+  target_link_libraries(aperture Aperture)
+endif()
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)
 
 # if (CUDA_FOUND)
 #   target_link_libraries(aperture Pulsar_dev)
 # endif()
+
+if(LAB_ROOT_DIR)
+  set_target_properties(aperture PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${LAB_ROOT_DIR})
+
+  add_custom_target( LABREVIEW ALL
+    ${CMAKE_COMMAND} -E cmake_echo_color --yellow "The following are shadowed by LAB ${LAB_NAME}")
+
+  #TODO: display shadowed headers also
+  foreach(ARG ${Lab_Aperture_src})
+    add_custom_command(TARGET LABREVIEW POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    ${ARG}")
+  endforeach()
+  if(Lab_User_Control_Found)
+    add_custom_command(TARGET LABREVIEW POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    UserControl.cpp")
+  endif()
+
+  add_dependencies( LABREVIEW aperture )
+else()
+  add_custom_target( LABREVIEW ALL
+    ${CMAKE_COMMAND} -E cmake_echo_color --yellow "NO lab is invoked")
+endif()

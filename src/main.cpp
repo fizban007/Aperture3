@@ -1,237 +1,194 @@
-#include "pic_sim.h"
+#include "additional_diagnostics.h"
+#include "algorithms/field_solver_log_sph.h"
+#include "cuda/constant_mem_func.h"
+#include "cuda/cudarng.h"
+#include "ptc_updater_logsph.h"
+#include "radiation/curvature_instant.h"
+// #include "radiation/radiation_transfer.h"
+#include "radiation/rt_pulsar.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
+#include "utils/timer.h"
 #include "utils/util_functions.h"
-#include <iostream>
 #include <random>
 
 using namespace Aperture;
 
-// Define background charge density profile here
-double
-rho_gj(double jb, double x) {
-  // return jb * (0.85 - 130.0 / (80.0 + 250.0 * (x - 0.03)));
-  // return jb * 1.75* std::atan(1.0 * (2.0 * x - 1.2)) * 2.0 /
-  // CONST_PI; return jb * (0.44 + 0.6 * std::atan(5.0 * (2.0 * x
-  // - 1.2)) * 2.0 / CONST_PI); return jb * 0.9 * (2.0 * x - 1.0);
-  return jb * 0.7;
-}
-
 int
-main(int argc, char *argv[]) {
-  // Initialize the simulation environment
+main(int argc, char* argv[]) {
+  // Construct the simulation environment
   Environment env(&argc, &argv);
-
-  // These are debug output
-  Logger::print_debug("{}", env.params().delta_t);
-  Logger::print_debug("{}", env.params().conf_file);
-  Logger::print_debug("{}", env.params().data_interval);
-  Logger::print_debug("{}", env.params().max_steps);
 
   // Allocate simulation data
   SimData data(env);
 
-  // These are debug output
-  // std::cout << data.particles.size() << std::endl;
-  // std::cout << data.particles[0].numMax() << std::endl;
-  // std::cout << data.particles[0].number() << std::endl;
-  // std::cout << data.photons.numMax() << std::endl;
-  // std::cout << data.photons.number() << std::endl;
+  // Initialize the field solver
+  FieldSolver_LogSph field_solver(
+      *dynamic_cast<const Grid_LogSph*>(&env.grid()));
 
-  // std::cout << data.E.grid_size() << std::endl;
-  // std::cout << data.B.extent() << std::endl;
+  // Initialize particle updater
+  PtcUpdaterLogSph ptc_updater(env);
 
-  PICSim sim(env);
-  auto &grid = data.E.grid();
-  auto &mesh = grid.mesh();
-  // int ppc = env.params().ptc_per_cell;
+  // Initialize radiation module
+  RadiationTransferPulsar rad(env);
 
-  // Setup the initial condition of the simulation
-  // for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++)
-  // { data.particles[1].append(env.gen_rand(), 0.0, i,
-  //                          (env.gen_rand() <
-  //                          env.params().track_percent ?
-  //                          (int)ParticleFlag::tracked : 0));
-  //   for (int n = 0; n < ppc; n++) {
-  //     data.particles[1].append(env.gen_rand(), 100.0 - 10.0
-  //     + 20.0*env.gen_rand(), i,
-  //                              (env.gen_rand() <
-  //                              env.params().track_percent ?
-  //                              (int)ParticleFlag::tracked : 0));
-  //     // data.particles[0].append(dist(generator), 0.99 + 0.02 *
-  //     dist(generator), i, data.particles[0].append(env.gen_rand(),
-  //     -100.0
-  //     + 10.0 + 20.0*env.gen_rand(), i,
-  //                              (env.gen_rand() <
-  //                              env.params().track_percent ?
-  //                              (int)ParticleFlag::tracked : 0));
-  //   }
-  // }
+  // Initialize data exporter
+  DataExporter exporter(env.params(),
+                        env.params().data_dir + "2d_weak_pulsar",
+                        "data", env.params().downsample);
+  Logger::print_info("{}", env.params().downsample);
+  exporter.WriteGrid();
+  AdditionalDiagnostics diag(env);
 
-  // for (int i = mesh.dims[0] / 4; i < mesh.dims[0] * 3/ 4; i++) {
-  //   data.particles[0].append(env.gen_rand(), 0.0, i,
-  //                            (env.gen_rand() <
-  //                            env.params().track_percent ?
-  //                            (int)ParticleFlag::tracked : 0));
-  //   data.particles[1].append(env.gen_rand(), 0.0, i,
-  //                            (env.gen_rand() <
-  //                            env.params().track_percent ?
-  //                            (int)ParticleFlag::tracked : 0));
-  // }
+  Scalar B0 = env.params().B0;
+  auto& mesh = env.grid().mesh();
+  data.E.initialize();
+  data.B.initialize();
+  data.B.initialize(0, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+    Scalar r = exp(x1);
+    // return 2.0 * B0 * cos(x2) / (r * r * r);
+    return B0 * cos(x2) *
+           (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
+            1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
+           (r * mesh.delta[0]);
+  });
+  data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+    Scalar r = exp(x1);
+    // return B0 * sin(x2) / (r * r * r);
+    return B0 *
+           (cos(x2 - 0.5 * mesh.delta[1]) -
+            cos(x2 + 0.5 * mesh.delta[1])) /
+           (r * r * r * mesh.delta[1]);
+  });
+  data.B.sync_to_device();
+  // Put the initial condition to the background
+  env.init_bg_fields(data);
 
-  // for (int i = mesh.dims[0] * 3 / 4; i < mesh.dims[0]-mesh.guard[0];
-  // i++) {
-  //   data.particles[0].append(env.gen_rand(), 0.0, i,
-  //                            (env.gen_rand() <
-  //                            env.params().track_percent ?
-  //                            (int)ParticleFlag::tracked : 0));
-  //   for (int n = 0; n < ppc; n++) {
-  //     // data.particles[0].append(dist(generator), 0.99 + 0.02 *
-  //     dist(generator), i,
-  //     data.particles[1].append(env.gen_rand(), 1.0, i,
-  //                              (env.gen_rand() <
-  //                              env.params().track_percent ?
-  //                              (int)ParticleFlag::tracked : 0));
-  //   }
-  // }
-  double jb = 1.0;
-  double initial_M = 20.0;
-  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-    // double rho = -jb * 0.5 * (2.0 * i / (double)mesh.reduced_dim(0)
-    // - 1.3) / env.params().q_e; double rho = jb * (0.85 - 130.0 /
-    // (80.0 + 250.0 * i / (double)mesh.reduced_dim(0))) /
-    // env.params().q_e; double rho = jb * 0.5 * (1.85 - 130.0 / (80.0 +
-    // 250.0 * i / (double)mesh.reduced_dim(0))) / env.params().q_e;
-    double rho =
-        rho_gj(jb, i / (double)mesh.reduced_dim(0)) / env.params().q_e;
-    // double rho = (double)ppc * 0.2 * cos(2.0 * acos(-1.0) * i /
-    // (double)mesh.reduced_dim(0)); double rho = 0.0; if (i < 0.5 *
-    // (mesh.guard[0] + mesh.reduced_dim(0)))
-    //   rho = (double)ppc * 0.2 * (1.0 - 1.8 * i /
-    //   (double)mesh.reduced_dim(0));
-    // else
-    //   rho = (double)ppc * 0.2 * (1.8 * i /
-    //   (double)mesh.reduced_dim(0) - 0.8);
-    // for (int n = 0; n < 0.5*((jb *
-    // initial_M)/env.params().q_e-std::abs(rho)); n++) { for (int n =
-    // 0; n < 0.5*((jb * initial_M)/env.params().q_e); n++) {
-    // data.particles.append(env.gen_rand(), 0.0 * sgn(2.0 * i /
-    // mesh.reduced_dim(0) - 1.3), i,
-    //                       ParticleType::electron, 1.0,
-    //                       (env.gen_rand() <
-    //                       env.params().track_percent ?
-    //                       (int)ParticleFlag::tracked : 0));
-    // data.particles.append(env.gen_rand(), 0.0 * sgn(2.0 * i /
-    // mesh.reduced_dim(0) - 1.3), i,
-    //                       ParticleType::positron, 1.0,
-    //                       (env.gen_rand() <
-    //                       env.params().track_percent ?
-    //                       (int)ParticleFlag::tracked : 0));
-    // data.particles[1].append(env.gen_rand(), 0.0 * sgn(2.0 * i /
-    // mesh.reduced_dim(0) - 1.3), i,
-    //                          (env.gen_rand() <
-    //                          env.params().track_percent ?
-    //                          (int)ParticleFlag::tracked : 0));
+  ScalarField<Scalar> flux(env.grid());
+  flux.initialize();
+  exporter.AddField("E", data.E);
+  exporter.AddField("B", data.B);
+  exporter.AddField("B_bg", env.B_bg());
+  exporter.AddField("J", data.J);
+  exporter.AddField("Rho_e", data.Rho[0]);
+  exporter.AddField("Rho_p", data.Rho[1]);
+  exporter.AddField("flux", flux, false);
+  exporter.AddField("divE", field_solver.get_divE());
+  exporter.AddField("divB", field_solver.get_divB());
+  exporter.AddField("photon_produced", rad.get_ph_events());
+  exporter.AddField("pair_produced", rad.get_pair_events());
+  exporter.AddField("photon_num", diag.get_ph_num());
+  exporter.AddField("gamma_e", diag.get_gamma(0));
+  exporter.AddField("gamma_p", diag.get_gamma(1));
+  exporter.AddField("num_e", diag.get_ptc_num(0));
+  exporter.AddField("num_p", diag.get_ptc_num(1));
+
+  // Initialize a bunch of particles
+  std::default_random_engine gen;
+  std::uniform_int_distribution<int> dist(200, 300);
+  std::uniform_real_distribution<float> dist_f(0.0, 1.0);
+  uint32_t N = 0;
+  for (uint32_t i = 0; i < N; i++) {
+    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 100.0f, 0.0f},
+                          // mesh.get_idx(dist(gen), dist(gen)),
+                          mesh.get_idx(4, 512), ParticleType::electron,
+                          1000.0);
     // }
-
-    // for (int n = 0; n < std::abs(rho); n++) {
-    //   if (rho < 0)
-    //     data.particles[0].append(env.gen_rand(), 0.0, i,
-    //                              (env.gen_rand() <
-    //                              env.params().track_percent ?
-    //                              (int)ParticleFlag::tracked : 0));
-    //   else
-    //     data.particles[1].append(env.gen_rand(), 0.0, i,
-    //                              (env.gen_rand() <
-    //                              env.params().track_percent ?
-    //                              (int)ParticleFlag::tracked : 0));
-    // }
-    for (int n = 0; n < jb * initial_M; n++) {
-      data.particles.append(env.gen_rand(), 1.0, i,
-                            ParticleType::electron, 1.0,
-                            (env.gen_rand() < env.params().track_percent
-                                 ? (int)ParticleFlag::tracked
-                                 : 0));
-      data.particles.append(env.gen_rand(), -1.0, i,
-                            ParticleType::positron, 1.0,
-                            (env.gen_rand() < env.params().track_percent
-                                 ? (int)ParticleFlag::tracked
-                                 : 0));
-    }
+    // for (uint32_t i = 0; i < N; i++) {
+    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 0.0f},
+                          // mesh.get_idx(dist(gen), dist(gen)),
+                          mesh.get_idx(4, 512), ParticleType::positron,
+                          1000.0);
   }
-
-  // Setup the background current
-  VectorField<Scalar> Jb(grid);
-  for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0];
-       i++) {
-    // x is the staggered position where current is evaluated
-    // Scalar x = mesh.pos(0, i, true);
-    // Jb(0, i) = 1.0 + 9.0 * sin(CONST_PI * x / mesh.sizes[0]);
-    Jb(0, i) = jb;
-  }
-  sim.field_solver().set_background_j(Jb);
-
-  // Setup initial electric field
-  // for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0];
-  // i++) {
-  //   double x = mesh.pos(0, i, 1);
-  //   data.E(0, i) = -jb * 1 * (19182.2 + 0.85 * x - 2600.0 * log(x +
-  //   1600.0));
-  // }
-
-  // Initialize data output
-  env.exporter().AddArray("E1", data.E, 0);
-  // env.exporter().AddArray("E1avg", data.B, 0);
-  env.exporter().AddArray("J1", data.J, 0);
-  env.exporter().AddArray("Rho_e",
-                          data.Rho[(int)ParticleType::electron].data());
-  env.exporter().AddArray("Rho_p",
-                          data.Rho[(int)ParticleType::positron].data());
-  // env.exporter().AddArray("Rho_e_avg", data.Rho_avg[0].data());
-  // env.exporter().AddArray("Rho_p_avg", data.Rho_avg[1].data());
-  // env.exporter().AddArray("J_e_avg", data.J_avg[0].data());
-  // env.exporter().AddArray("J_p_avg", data.J_avg[1].data());
-  env.exporter().AddParticleArray("Electrons", data.particles);
-  // env.exporter().AddParticleArray("Positrons", data.particles[1]);
-  // if (env.params().trace_photons)
-  //   env.exporter().AddParticleArray("Photons", data.photons);
-  env.exporter().writeConfig(env.params());
-
-  // Some more debug output
-  Logger::print_info("There are {} particles in the initial setup",
+  Logger::print_info("number of particles is {}",
                      data.particles.number());
-  // Logger::print_info("There are {} positrons in the initial setup",
-  // data.particles[1].number()); Logger::print_info("There are {} ions
-  // in the initial setup", data.particles[2].number());
-  // Logger::print_info("There are
-  // {} photons in the initial setup", data.photons.number());
 
-  // Main simulation loop
   for (uint32_t step = 0; step < env.params().max_steps; step++) {
-    Logger::print_info("At time step {}", step);
-    double time = step * env.params().delta_t;
+    double dt = env.params().delta_t;
+    // double dt = 0.0;
+    double time = step * dt;
+    Logger::print_info("At timestep {}, time = {}", step, time);
 
-    if (step % env.params().data_interval == 0) {
-      //   double factor = 1.0 / env.args().data_interval();
-      //   data.B.multiplyBy(factor);
-      //   data.Rho_avg[0].multiplyBy(factor);
-      //   data.Rho_avg[1].multiplyBy(factor);
-      //   data.J_avg[0].multiplyBy(factor);
-      //   data.J_avg[1].multiplyBy(factor);
-      env.exporter().WriteOutput(step, time);
-      //   data.B.initialize();
-      //   data.Rho_avg[0].initialize();
-      //   data.Rho_avg[1].initialize();
-      //   data.J_avg[0].initialize();
-      //   data.J_avg[1].initialize();
+    Scalar omega = 0.0;
+    if (time <= 10.0) {
+      omega = env.params().omega *
+              square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
+    } else {
+      omega = env.params().omega;
     }
 
-    sim.step(data, step);
-    // data.Rho_avg[0].addBy(data.Rho[0]);
-    // data.Rho_avg[1].addBy(data.Rho[1]);
-    // data.J_avg[0].addBy(data.J_s[0]);
-    // data.J_avg[1].addBy(data.J_s[1]);
+    // Output data
+    if ((step % env.params().data_interval) == 0) {
+      diag.collect_diagnostics(data);
+      dynamic_cast<const Grid_LogSph*>(&env.local_grid())
+          ->compute_flux(flux, data.B, env.B_bg());
+      // Logger::print_info("Finished computing flux");
+
+      exporter.WriteOutput(step, time);
+      exporter.writeXMF(step, time);
+      rad.get_ph_events().initialize();
+      rad.get_pair_events().initialize();
+
+      Logger::print_info("Finished output!");
+    }
+
+    // Inject particles
+    timer::stamp();
+    if (step % 5 == 0)
+      ptc_updater.inject_ptc(data, 2, 0.0, 0.0, 0.0, 1000.0, omega);
+
+    ptc_updater.update_particles(data, dt);
+    ptc_updater.handle_boundary(data);
+    auto t_ptc = timer::get_duration_since_stamp("us");
+    Logger::print_info("Ptc Update took {}us", t_ptc);
+
+    timer::stamp();
+    field_solver.update_fields(data.E, data.B, data.J, dt, time);
+
+    field_solver.boundary_conditions(data, omega);
+    // field_solver.boundary_conditions(data, 0.0);
+    auto t_field = timer::get_duration_since_stamp("us");
+    Logger::print_info("Field Update took {}us", t_field);
+
+    // Create photons and pairs
+    rad.emit_photons(data);
+    rad.produce_pairs(data);
+
+    if (step % env.params().sort_frequency == 0 && step != 0) {
+      timer::stamp();
+      data.particles.sort_by_cell();
+      data.photons.sort_by_cell();
+      auto t_sort = timer::get_duration_since_stamp("us");
+      Logger::print_info("Ptc sort took {}us", t_sort);
+    }
+
+    // if (step == 1) {
+    //   int c1 = dist(gen);
+    //   int c2 = dist(gen);
+    //   float x1 = dist_f(gen);
+    //   float x2 = dist_f(gen);
+    //   for (int n = 0; n < 1; n++) {
+    //     data.photons.append({x1, x2, 0.0f}, {1.0f, 1.0f, 0.0f}, -0.01,
+    //                         mesh.get_idx(c1, c2), 10000.0);
+    //     // data.photons.append({x1, x2, 0.0f}, {-100.0f, -100.0f, 0.0f},
+    //     //                     -0.01, mesh.get_idx(c1, c2), 100.0);
+    //   }
+    // }
+    // if (step == 100 || step == 200) {
+    //   int c1 = dist(gen);
+    //   int c2 = dist(gen);
+    //   float x1 = dist_f(gen);
+    //   float x2 = dist_f(gen);
+    //   for (int n = 0; n < 1000; n++) {
+    //     data.particles.append(
+    //         {x1, x2, 0.0f}, {100.0f, 100.0f, 0.0f},
+    //         mesh.get_idx(c1, c2), ParticleType::electron, 100.0);
+    //     data.particles.append(
+    //         {x1, x2, 0.0f}, {-100.0f, -100.0f, 0.0f},
+    //         mesh.get_idx(c1, c2), ParticleType::positron, 100.0);
+    //   }
+    // }
   }
   return 0;
 }
