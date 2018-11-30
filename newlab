@@ -1,6 +1,9 @@
 #!/bin/bash
 name=$1
-if [[ -d $name ]]; then
+if [ -z $name ]; then
+    echo "Need a lab name."
+    exit 1
+elif [[ -d $name ]]; then
     echo "ERROR: $name already exists."
     exit 1
 else
@@ -38,18 +41,31 @@ printf "%s\n" \
     "#!/bin/bash"\
     "# This script works only under the current directory."\
     "opt=\$1"\
+    "lab_dir=$Lab_Path"\
     ""\
-    "if [ \$opt = \"cmake\" ]; then"\
+    "if [ ! -z \$opt ] && [ \$opt = \"cmake\" ]; then"\
     "    # Run cmake with the correct definition of LAB_ROOT_DIR"\
     "    cd build"\
     "    shift"\
-    "    cmake ../../.. -DLAB_ROOT_DIR=$Lab_Path -Dbuild_tests=OFF \$@"\
-    "elif [ \$opt = \"build\" ]; then"\
+    "    cmake ../../.. -DLAB_ROOT_DIR=\$lab_dir -Dbuild_tests=OFF \$@"\
+    "elif [ ! -z \$opt ] && [ \$opt = \"build\" ]; then"\
     "    cd build"\
     "    make"\
-    "elif [ \$opt = \"clean\" ]; then"\
+    "elif [ ! -z \$opt ] && [ \$opt = \"clean\" ]; then"\
     "    cd build"\
-    "    make clean"\
+    "    if [ -f \"Makefile\" ]; then"\
+    "        make clean"\
+    "    fi"\
+    "    rm -rf ./*"\
+    "else"\
+    "    # Argument not supplied, or just followed by cmake arguments, run"\
+    "    # cmake if the build dir does not contain a makefile"\
+    "    cd build"\
+    "    if [ -f \"Makefile\" ]; then"\
+    "        make"\
+    "    else"\
+    "        cmake ../../.. -DLAB_ROOT_DIR=\$lab_dir -Dbuild_tests=OFF \$@"\
+    "    fi"\
     "fi"\
     > buick && chmod u+x buick
 
