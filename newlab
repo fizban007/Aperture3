@@ -1,7 +1,7 @@
 #!/bin/bash
 name=$1
 if [ -z $name ]; then
-    echo "Need a lab name."
+    echo "ERROR: Need a lab name."
     exit 1
 elif [[ -d $name ]]; then
     echo "ERROR: $name already exists."
@@ -11,7 +11,8 @@ else
 fi
 
 if [ $? -ne 0 ]; then
-    echo "Lab $name incomplete. Code 0001"
+    # echo "Lab $name incomplete. Code 0001"
+    echo "Error making directory"
     exit 1
 fi
 
@@ -70,14 +71,16 @@ printf "%s\n" \
     > buick && chmod u+x buick
 
 if [ $? -ne 0 ]; then
-    echo "Lab $name incomplete. Code 0002"
+    # echo "Lab $name incomplete. Code 0002"
+    echo "Error creating scripts"
     exit 1
 fi
 
 # create default stuff
 mkdir build lib src
 if [ $? -ne 0 ]; then
-    echo "Lab $name incomplete. Code 0003"
+    # echo "Lab $name incomplete. Code 0003"
+    echo "Error creating the default directories"
     exit 1
 fi
 
@@ -91,9 +94,8 @@ cp ../../bin/config.toml ./
 cp ../../src/main.cpp src/
 
 if [ $? -ne 0 ]; then
-    echo "Lab $name incomplete. Code 0004"
+    echo "Error copying the default initial files"
     exit 1
 fi
 
 echo -e "\e[1mLab $name\e[0m is successfully created."
-# echo -e "Add \e[2m-LAB_DIR=$Lab_Path\e[0m in cmake to activate."
