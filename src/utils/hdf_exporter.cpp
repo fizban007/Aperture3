@@ -24,8 +24,8 @@ using namespace HighFive;
 namespace Aperture {
 
 bool
-copyDir(boost::filesystem::path const& source,
-        boost::filesystem::path const& destination) {
+copyDir(boost::filesystem::path const &source,
+        boost::filesystem::path const &destination) {
   namespace fs = boost::filesystem;
   try {
     // Check whether the function call is valid
@@ -34,18 +34,20 @@ copyDir(boost::filesystem::path const& source,
                 << " does not exist or is not a directory." << '\n';
       return false;
     }
-    if (fs::exists(destination)) {
-      std::cerr << "Destination directory " << destination.string()
-                << " already exists." << '\n';
-      return false;
-    }
+    // if (fs::exists(destination)) {
+    //   std::cerr << "Destination directory " << destination.string()
+    //             << " already exists." << '\n';
+    //   return false;
+    // }
     // Create the destination directory
-    if (!fs::create_directory(destination)) {
-      std::cerr << "Unable to create destination directory"
-                << destination.string() << '\n';
-      return false;
+    if (!fs::exists(destination)) {
+      if (!fs::create_directory(destination)) {
+        std::cerr << "Unable to create destination directory"
+                  << destination.string() << '\n';
+        return false;
+      }
     }
-  } catch (fs::filesystem_error const& e) {
+  } catch (fs::filesystem_error const &e) {
     std::cerr << e.what() << '\n';
     return false;
   }
@@ -61,9 +63,11 @@ copyDir(boost::filesystem::path const& source,
         }
       } else {
         // Found file: Copy
-        fs::copy_file(current, destination / current.filename());
+        fs::copy_file(
+            current, destination / current.filename(),
+            boost::filesystem::copy_option::overwrite_if_exists);
       }
-    } catch (fs::filesystem_error const& e) {
+    } catch (fs::filesystem_error const &e) {
       std::cerr << e.what() << '\n';
     }
   }
@@ -408,7 +412,8 @@ DataExporter::InterpolateFieldValues(fieldoutput<2> &field,
           }
         }
       }
-      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      // for (int i = 0; i < mesh.reduced_dim(0); i +=
+      // downsample_factor) {
       //   field.f[0][mesh.guard[1] - 1]
       //          [i / downsample_factor + mesh.guard[0]] =
       //       (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
@@ -449,7 +454,8 @@ DataExporter::InterpolateFieldValues(fieldoutput<2> &field,
           }
         }
       }
-      // for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      // for (int i = 0; i < mesh.reduced_dim(0); i +=
+      // downsample_factor) {
       //   field.f[0][mesh.guard[1] - 1]
       //          [i / downsample_factor + mesh.guard[0]] =
       //       (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
