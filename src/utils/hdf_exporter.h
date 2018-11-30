@@ -113,6 +113,7 @@ class DataExporter {
   void createDirectories();
   bool checkDirectories();
   void copyConfigFile();
+  void copySrc();
 
  private:
   std::string
