@@ -43,7 +43,7 @@ printf "%s\n" \
     "    # Run cmake with the correct definition of LAB_ROOT_DIR"\
     "    cd build"\
     "    shift"\
-    "    cmake ../../.. -DLAB_ROOT_DIR=$Lab_Path \$@"\
+    "    cmake ../../.. -DLAB_ROOT_DIR=$Lab_Path -Dbuild_tests=OFF \$@"\
     "elif [ \$opt = \"build\" ]; then"\
     "    cd build"\
     "    make"\
