@@ -1,0 +1,29 @@
+#!/bin/bash
+# This script works only under the current directory.
+opt=$1
+lab_dir=/home/alex/Projects/Aperture3D/labs/magnetar
+
+if [ ! -z $opt ] && [ $opt = "cmake" ]; then
+    # Run cmake with the correct definition of LAB_ROOT_DIR
+    cd build
+    shift
+    cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
+elif [ ! -z $opt ] && [ $opt = "build" ]; then
+    cd build
+    make
+elif [ ! -z $opt ] && [ $opt = "clean" ]; then
+    cd build
+    if [ -f "Makefile" ]; then
+        make clean
+    fi
+    rm -rf ./*
+else
+    # Argument not supplied, or just followed by cmake arguments, run
+    # cmake if the build dir does not contain a makefile
+    cd build
+    if [ -f "Makefile" ]; then
+        make
+    else
+        cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
+    fi
+fi
