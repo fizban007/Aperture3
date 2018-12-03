@@ -87,7 +87,7 @@ fi
 printf "%s\n" \
        "set(LAB_SHADOWS \"\")"\
        "set(LAB_NAME \"$name\")"\
-       "list(APPEND LAB_SHADOWS \"main.cpp\")"\
+       "#list(APPEND LAB_SHADOWS \"main.cpp\")"\
        > src/CMakeLists.txt
 
 cp ../../bin/config.toml ./
