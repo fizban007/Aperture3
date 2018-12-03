@@ -18,8 +18,10 @@ if(LAB_ROOT_DIR)
   #   set(Lab_User_Control_Found YES)
   # endif()
   # list(REMOVE_ITEM shadows "UserControl.cpp")
+  if (shadows)
+    message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following shadowed${ColorReset}")
+  endif()
   set(Lab_Aperture_src ${shadows})
-  message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following shadowed${ColorReset}")
   foreach(ARG ${LAB_SHADOWS})
       message("${Yellow}    ${ARG}${ColorReset}")
   endforeach()
@@ -163,20 +165,22 @@ if(LAB_ROOT_DIR)
   set_target_properties(aperture PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${LAB_ROOT_DIR})
 
-  add_custom_target( LABREVIEW ALL
-    ${CMAKE_COMMAND} -E cmake_echo_color --yellow "The following are shadowed by LAB ${LAB_NAME}")
+  if (shadows)
+    add_custom_target( LABREVIEW ALL
+      ${CMAKE_COMMAND} -E cmake_echo_color --yellow "The following are shadowed by LAB ${LAB_NAME}")
 
-  #TODO: display shadowed headers also
-  foreach(ARG ${Lab_Aperture_src})
-    add_custom_command(TARGET LABREVIEW POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    ${ARG}")
-  endforeach()
-  if(Lab_User_Control_Found)
-    add_custom_command(TARGET LABREVIEW POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    UserControl.cpp")
+    #TODO: display shadowed headers also
+    foreach(ARG ${Lab_Aperture_src})
+      add_custom_command(TARGET LABREVIEW POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    ${ARG}")
+    endforeach()
+    # if(Lab_User_Control_Found)
+    #   add_custom_command(TARGET LABREVIEW POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --yellow "    UserControl.cpp")
+    # endif()
+
+    add_dependencies( LABREVIEW aperture )
   endif()
-
-  add_dependencies( LABREVIEW aperture )
 else()
   add_custom_target( LABREVIEW ALL
     ${CMAKE_COMMAND} -E cmake_echo_color --yellow "NO lab is invoked")
