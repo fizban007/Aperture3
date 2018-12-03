@@ -44,6 +44,9 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     uint32_t cell = ptc.cell[tid];
     // Skip empty particles
     if (cell == MAX_CELL) continue;
+    auto flag = ptc.flag[tid];
+    int sp = get_ptc_type(flag);
+    if (sp == (int)ParticleType::ion) continue;
     int c1 = dev_mesh.get_c1(cell);
 
     // Skip photon emission when outside given radius
