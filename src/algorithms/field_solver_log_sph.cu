@@ -269,30 +269,36 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
               cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    (*ptrAddr(e3, (dev_mesh.guard[1] - 1) * e3.pitch +
-                      i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(e3, i, dev_mesh.guard[1] - 1)) = 0.0f;
     // (*ptrAddr(
     //     e1, (dev_mesh.guard[1] - 1) * e1.pitch + i * sizeof(Scalar)))
     //     = *ptrAddr(e1, dev_mesh.guard[1] * e1.pitch + i *
     //     sizeof(Scalar));
-    // (*ptrAddr(b3, (dev_mesh.guard[1] - 1) * b3.pitch +
-    //                   i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(b1, (dev_mesh.guard[1] - 1) * b1.pitch +
-    //                   i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(
-        b3, (dev_mesh.guard[1] - 1) * b3.pitch + i * sizeof(Scalar))) =
-        *ptrAddr(b3, dev_mesh.guard[1] * b3.pitch + i * sizeof(Scalar));
-    (*ptrAddr(
-        e2, (dev_mesh.guard[1] - 1) * e2.pitch + i * sizeof(Scalar))) =
-        -*ptrAddr(e2,
-                  dev_mesh.guard[1] * e2.pitch + i * sizeof(Scalar));
+    (*ptrAddr(e2, i, dev_mesh.guard[1] - 1)) =
+        -*ptrAddr(e2, i, dev_mesh.guard[1]);
+
+    (*ptrAddr(b3, i, dev_mesh.guard[1] - 1)) =
+        *ptrAddr(b3, i, dev_mesh.guard[1]);
+    (*ptrAddr(b2, i, dev_mesh.guard[1] - 1)) = 0.0f;
+    (*ptrAddr(b1, i, dev_mesh.guard[1] - 1)) =
+        *ptrAddr(b1, i, dev_mesh.guard[1]);
+
     // (*ptrAddr(e3, dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar)))
     // =
     //     0.0f;
 
-    (*ptrAddr(e3,
-              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
-                  i * sizeof(Scalar))) = 0.0f;
+    // (*ptrAddr(e3,
+    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
+    //               i * sizeof(Scalar))) = 0.0f;
+    (*ptrAddr(e3, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1)) = 0.0f;
+    (*ptrAddr(e2, i, dev_mesh.dims[1] - dev_mesh.guard[1])) =
+        -*ptrAddr(e2, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
+
+    (*ptrAddr(b3, i, dev_mesh.dims[1] - dev_mesh.guard[1])) =
+        *ptrAddr(b3, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
+    (*ptrAddr(b2, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1)) = 0.0f;
+    (*ptrAddr(b1, i, dev_mesh.dims[1] - dev_mesh.guard[1])) =
+        *ptrAddr(b1, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
     // (*ptrAddr(e1,
     //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e1.pitch +
     //               i * sizeof(Scalar))) =
@@ -306,16 +312,18 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
     // (*ptrAddr(b1,
     //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
     //               i * sizeof(Scalar))) = 0.0f;
-    (*ptrAddr(b3, (dev_mesh.dims[1] - dev_mesh.guard[1]) * b3.pitch +
-                      i * sizeof(Scalar))) =
-        *ptrAddr(b3,
-                 (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
-                     i * sizeof(Scalar));
-    (*ptrAddr(e2, (dev_mesh.dims[1] - dev_mesh.guard[1]) * e2.pitch +
-                      i * sizeof(Scalar))) =
-        -*ptrAddr(
-            e2, (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch +
-                    i * sizeof(Scalar));
+    // (*ptrAddr(b3, (dev_mesh.dims[1] - dev_mesh.guard[1]) * b3.pitch +
+    //                   i * sizeof(Scalar))) =
+    //     *ptrAddr(b3,
+    //              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
+    //              b3.pitch +
+    //                  i * sizeof(Scalar));
+    // (*ptrAddr(e2, (dev_mesh.dims[1] - dev_mesh.guard[1]) * e2.pitch +
+    //                   i * sizeof(Scalar))) =
+    //     -*ptrAddr(
+    //         e2, (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch
+    //         +
+    //                 i * sizeof(Scalar));
   }
 }
 
