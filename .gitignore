@@ -1,3 +1,5 @@
+.cproject
+.project
 *.png
 *.mp4
 *.ipynb
@@ -8,3 +10,10 @@ Data
 ninja
 compile_commands.json
 .cquery_cached_index
+aperture
+delrun
+*.nvvp
+GPATH
+GRTAGS
+GTAGS
+ID
