@@ -1,3 +1,4 @@
+// #include "cuda/cudaUtility.h"
 #include "utils/hdf_exporter.h"
 #include "data/grid_log_sph.h"
 #include "fmt/core.h"
@@ -6,6 +7,8 @@
 // #include "config_file.h"
 #include "commandline_args.h"
 #include "nlohmann/json.hpp"
+#include "sim_data.h"
+#include "sim_environment.h"
 #include "sim_params.h"
 // #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
@@ -17,6 +20,8 @@
 #include <highfive/H5DataSpace.hpp>
 #include <highfive/H5File.hpp>
 #include <time.h>
+
+#include "visit_struct/visit_struct.hpp"
 
 using json = nlohmann::json;
 using namespace HighFive;
@@ -75,20 +80,26 @@ copyDir(boost::filesystem::path const &source,
 }
 // DataExporter::DataExporter() {}
 
-DataExporter::DataExporter(const SimParams &params,
-                           const std::string &dir,
-                           const std::string &prefix, int downsample)
-    : outputDirectory(dir),
-      filePrefix(prefix),
-      m_params(params),
-      downsample_factor(downsample) {
+// DataExporter::DataExporter(const SimParams &params,
+//                            const std::string &dir,
+//                            const std::string &prefix, int downsample)
+DataExporter::DataExporter(Environment &env, SimData &data,
+                           uint32_t &timestep)
+    : outputDirectory(env.params().data_dir),
+      filePrefix("data"),
+      m_params(env.params()),
+      downsample_factor(env.params().downsample) {
+  auto &dir = env.params().data_dir;
+  auto &params = env.params();
+  auto downsample = params.downsample;
+
   boost::filesystem::path rootPath(dir.c_str());
   boost::system::error_code returnedError;
 
   boost::filesystem::create_directories(rootPath, returnedError);
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
-  copyConfigFile();
-  copySrc();
+  // copyConfigFile();
+  // copySrc();
 
   // Setup the grid
   if (params.coord_system == "Cartesian") {
@@ -935,18 +946,260 @@ DataExporter::writeXMFTail(std::ofstream &fs) {
 }
 
 void
-DataExporter::writeXMF(int step, double time) {
+DataExporter::writeXMF(uint32_t step, double time) {
   if (!xmf.is_open()) {
     xmf.open(outputDirectory + "data.xmf");
+  }
+  if (step == 0) {
     writeXMFHead(xmf);
     writeXMFStep(xmf, step, time);
     writeXMFTail(xmf);
   } else {
-    long pos = xmf.tellp();
-    xmf.seekp(pos - 26);
+    // long pos = xmf.tellp();
+    xmf.seekp(-26, std::ios_base::end);
     writeXMFStep(xmf, step, time);
     writeXMFTail(xmf);
   }
+}
+
+void
+DataExporter::writeSnapshot(Environment &env, SimData &data,
+                            uint32_t timestep) {
+  File snapshotfile(
+      // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
+      fmt::format("{}snapshot.h5", outputDirectory).c_str(),
+      File::ReadWrite | File::Create | File::Truncate);
+
+  // Write background fields from environment
+  size_t grid_size = data.E.grid().size();
+  env.E_bg().sync_to_host();
+  DataSet data_bg_E1 =
+      snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
+  data_bg_E1.write(env.E_bg().data(0).data());
+  DataSet data_bg_E2 =
+      snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(grid_size));
+  data_bg_E2.write(env.E_bg().data(1).data());
+  DataSet data_bg_E3 =
+      snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
+  data_bg_E3.write(env.E_bg().data(2).data());
+  env.B_bg().sync_to_host();
+  DataSet data_bg_B1 =
+      snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
+  data_bg_B1.write(env.B_bg().data(0).data());
+  DataSet data_bg_B2 =
+      snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(grid_size));
+  data_bg_B2.write(env.B_bg().data(1).data());
+  DataSet data_bg_B3 =
+      snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(grid_size));
+  data_bg_B3.write(env.B_bg().data(2).data());
+
+  // Write sim data
+  // Write field values
+  data.E.sync_to_host();
+  DataSet data_E1 =
+      snapshotfile.createDataSet<Scalar>("E1", DataSpace(grid_size));
+  data_E1.write(data.E.data(0).data());
+  DataSet data_E2 =
+      snapshotfile.createDataSet<Scalar>("E2", DataSpace(grid_size));
+  data_E2.write(data.E.data(1).data());
+  DataSet data_E3 =
+      snapshotfile.createDataSet<Scalar>("E3", DataSpace(grid_size));
+  data_E3.write(data.E.data(2).data());
+  data.B.sync_to_host();
+  DataSet data_B1 =
+      snapshotfile.createDataSet<Scalar>("B1", DataSpace(grid_size));
+  data_B1.write(data.B.data(0).data());
+  DataSet data_B2 =
+      snapshotfile.createDataSet<Scalar>("B2", DataSpace(grid_size));
+  data_B2.write(data.B.data(1).data());
+  DataSet data_B3 =
+      snapshotfile.createDataSet<Scalar>("B3", DataSpace(grid_size));
+  data_B3.write(data.B.data(2).data());
+  data.J.sync_to_host();
+  DataSet data_J1 =
+      snapshotfile.createDataSet<Scalar>("J1", DataSpace(grid_size));
+  data_J1.write(data.J.data(0).data());
+  DataSet data_J2 =
+      snapshotfile.createDataSet<Scalar>("J2", DataSpace(grid_size));
+  data_J2.write(data.J.data(1).data());
+  DataSet data_J3 =
+      snapshotfile.createDataSet<Scalar>("J3", DataSpace(grid_size));
+  data_J3.write(data.J.data(2).data());
+
+  for (int i = 0; i < data.num_species; i++) {
+    data.Rho[i].sync_to_host();
+    DataSet data_Rho = snapshotfile.createDataSet<Scalar>(
+        fmt::format("Rho{}", i), DataSpace(grid_size));
+    data_Rho.write(data.Rho[i].data().data());
+  }
+  DataSet data_devId = snapshotfile.createDataSet<int>(
+      "devId", DataSpace::From(data.devId));
+  data_devId.write(data.devId);
+
+  // Write particle data
+  size_t ptcNum = data.particles.number();
+  DataSet data_ptcNum = snapshotfile.createDataSet<size_t>(
+      "ptcNum", DataSpace::From(ptcNum));
+  data_ptcNum.write(ptcNum);
+  Logger::print_info("Writing {} particles to snapshot", ptcNum);
+
+  size_t phNum = data.photons.number();
+  DataSet data_phNum = snapshotfile.createDataSet<size_t>(
+      "phNum", DataSpace::From(phNum));
+  data_phNum.write(phNum);
+  Logger::print_info("Writing {} photons to snapshot", phNum);
+
+  std::vector<double> buffer(std::max(ptcNum, phNum));
+  visit_struct::for_each(
+      data.particles.data(),
+      [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
+        typedef
+            typename std::remove_reference<decltype(*x)>::type x_type;
+        DataSet ptc_data = snapshotfile.createDataSet<x_type>(
+            fmt::format("ptc_{}", name), DataSpace(ptcNum));
+        cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
+                   cudaMemcpyDeviceToHost);
+        ptc_data.write(reinterpret_cast<x_type *>(buffer.data()));
+      });
+  visit_struct::for_each(
+      data.photons.data(),
+      [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
+        typedef
+            typename std::remove_reference<decltype(*x)>::type x_type;
+        DataSet ph_data = snapshotfile.createDataSet<x_type>(
+            fmt::format("ph_{}", name), DataSpace(phNum));
+        cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
+                   cudaMemcpyDeviceToHost);
+        ph_data.write(reinterpret_cast<x_type *>(buffer.data()));
+      });
+
+  // Write current simulation timestep and other info
+  DataSet data_timestep = snapshotfile.createDataSet<uint32_t>(
+      "timestep", DataSpace::From(timestep));
+  data_timestep.write(timestep);
+}
+
+void
+DataExporter::load_from_snapshot(Environment &env, SimData &data,
+                                 uint32_t &timestep) {
+  File snapshotfile(
+      // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
+      fmt::format("{}snapshot.h5", outputDirectory).c_str(),
+      File::ReadOnly);
+
+  size_t grid_size = data.E.grid().size();
+  size_t ptcNum, phNum;
+  int devId;
+
+  // Read the scalars first
+  DataSet data_timestep = snapshotfile.getDataSet("timestep");
+  data_timestep.read(timestep);
+  DataSet data_ptcNum = snapshotfile.getDataSet("ptcNum");
+  data_ptcNum.read(ptcNum);
+  DataSet data_phNum = snapshotfile.getDataSet("phNum");
+  data_phNum.read(phNum);
+  DataSet data_devId = snapshotfile.getDataSet("devId");
+  data_devId.read(devId);
+
+  // Read particle data
+  std::vector<double> buffer(std::max(ptcNum, phNum));
+  data.particles.set_num(ptcNum);
+  data.photons.set_num(phNum);
+
+  visit_struct::for_each(
+      data.particles.data(),
+      [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
+        typedef
+            typename std::remove_reference<decltype(*x)>::type x_type;
+        DataSet ptc_data =
+            snapshotfile.getDataSet(fmt::format("ptc_{}", name));
+        ptc_data.read(reinterpret_cast<x_type *>(buffer.data()));
+        cudaMemcpy(x, buffer.data(), ptcNum * sizeof(x_type),
+                   cudaMemcpyHostToDevice);
+      });
+  visit_struct::for_each(
+      data.photons.data(),
+      [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
+        typedef
+            typename std::remove_reference<decltype(*x)>::type x_type;
+        DataSet ph_data =
+            snapshotfile.getDataSet(fmt::format("ph_{}", name));
+        ph_data.read(reinterpret_cast<x_type *>(buffer.data()));
+        cudaMemcpy(x, buffer.data(), phNum * sizeof(x_type),
+                   cudaMemcpyHostToDevice);
+      });
+
+  // Read field data
+  DataSet data_bg_B1 = snapshotfile.getDataSet("bg_B1");
+  data_bg_B1.read(env.B_bg().data(0).data());
+  DataSet data_bg_B2 = snapshotfile.getDataSet("bg_B2");
+  data_bg_B2.read(env.B_bg().data(1).data());
+  DataSet data_bg_B3 = snapshotfile.getDataSet("bg_B3");
+  data_bg_B3.read(env.B_bg().data(2).data());
+  DataSet data_bg_E1 = snapshotfile.getDataSet("bg_E1");
+  data_bg_E1.read(env.E_bg().data(0).data());
+  DataSet data_bg_E2 = snapshotfile.getDataSet("bg_E2");
+  data_bg_E2.read(env.E_bg().data(1).data());
+  DataSet data_bg_E3 = snapshotfile.getDataSet("bg_E3");
+  data_bg_E3.read(env.E_bg().data(2).data());
+
+  env.B_bg().sync_to_device();
+  env.E_bg().sync_to_device();
+
+  DataSet data_B1 = snapshotfile.getDataSet("B1");
+  data_B1.read(data.B.data(0).data());
+  DataSet data_B2 = snapshotfile.getDataSet("B2");
+  data_B2.read(data.B.data(1).data());
+  DataSet data_B3 = snapshotfile.getDataSet("B3");
+  data_B3.read(data.B.data(2).data());
+  DataSet data_E1 = snapshotfile.getDataSet("E1");
+  data_E1.read(data.E.data(0).data());
+  DataSet data_E2 = snapshotfile.getDataSet("E2");
+  data_E2.read(data.E.data(1).data());
+  DataSet data_E3 = snapshotfile.getDataSet("E3");
+  data_E3.read(data.E.data(2).data());
+  DataSet data_J1 = snapshotfile.getDataSet("J1");
+  data_J1.read(data.J.data(0).data());
+  DataSet data_J2 = snapshotfile.getDataSet("J2");
+  data_J2.read(data.J.data(1).data());
+  DataSet data_J3 = snapshotfile.getDataSet("J3");
+  data_J3.read(data.J.data(2).data());
+  data.B.sync_to_device();
+  data.E.sync_to_device();
+  data.J.sync_to_device();
+
+  for (int i = 0; i < data.num_species; i++) {
+    DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
+    data_rho.read(data.Rho[i].data().data());
+    data.Rho[i].sync_to_device();
+  }
+}
+
+void
+DataExporter::prepareXMFrestart(uint32_t restart_step, int data_interval) {
+  boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
+  boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
+  boost::filesystem::remove(xmf_bak);
+  boost::filesystem::rename(xmf_file, xmf_bak);
+
+  std::ifstream xmf_in;
+  xmf_in.open(xmf_bak.c_str());
+
+  xmf.open(xmf_file.c_str());
+
+  int n = -1;
+  int num_outputs = restart_step / data_interval;
+  std::string line;
+  while (std::getline(xmf_in, line)) {
+    if (line == "<Grid Name=\"quadmesh\" Type=\"Uniform\">")
+      n += 1;
+    if (n > num_outputs)
+      break;
+    xmf << line << std::endl;
+  }
+  writeXMFTail(xmf);
+  
+  xmf_in.close();
 }
 
 // Explicit instantiation of templates
