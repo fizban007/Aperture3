@@ -2,12 +2,13 @@
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
+#include "data/grid_1dGR.h"
+#include "data/grid_log_sph.h"
 #include "fmt/format.h"
 #include <memory>
-#include "data/grid_log_sph.h"
-#include "data/grid_1dGR.h"
 // #include "data/detail/grid_impl.hpp"
 #include "sim_data.h"
+#include <boost/filesystem.hpp>
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -26,27 +27,52 @@ Environment::Environment(int* argc, char*** argv)
     exit(0);
   }
 
-  setup_env(m_params.conf_file);
-}
-
-Environment::Environment(const std::string& conf_file)
-    : m_generator(), m_dist(0.0, 1.0) {
-  setup_env(conf_file);
-}
-
-Environment::~Environment() {}
-
-void
-Environment::setup_env(const std::string& conf_file) {
-  m_params.conf_file = conf_file;
   // Read in the input file
   try {
-    m_conf_file.parse_file(conf_file, m_params);
+    m_conf_file.parse_file(m_params.conf_file, m_params);
   } catch (exceptions::file_not_found& e) {
     Logger::err("Config file not found, exiting");
     exit(0);
   }
 
+  // Look at the output directory to see if we are restarting from a
+  // snapshot
+  boost::filesystem::path snapshotPath(m_params.data_dir);
+  snapshotPath /= "snapshot.h5";
+  Logger::print_info("Snapshot path is {}", snapshotPath.string());
+  boost::filesystem::path config_path(m_params.data_dir);
+  config_path /= "config.toml";
+  if (boost::filesystem::exists(snapshotPath) &&
+      boost::filesystem::exists(config_path)) {
+    // Reading from a snapshot, use the config file in data output path
+    // instead
+    Logger::print_info(
+        "**** Found a snapshot file, reading its config instead!");
+    m_params.conf_file = config_path.string();
+    m_params.is_restart = true;
+  }
+
+  setup_env();
+}
+
+Environment::Environment(const std::string& conf_file)
+    : m_generator(), m_dist(0.0, 1.0) {
+  m_params.conf_file = conf_file;
+  // Read in the input file
+  try {
+    m_conf_file.parse_file(m_params.conf_file, m_params);
+  } catch (exceptions::file_not_found& e) {
+    Logger::err("Config file not found, exiting");
+    exit(0);
+  }
+
+  setup_env();
+}
+
+Environment::~Environment() {}
+
+void
+Environment::setup_env() {
   // SimParamsBase* h_params = &m_params;
 
   // Copy the parameters to cuda constant memory

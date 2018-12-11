@@ -21,6 +21,7 @@ struct SimData {
   VectorField<Scalar> E;
   VectorField<Scalar> B;
   VectorField<Scalar> J;
+  ScalarField<Scalar> flux;
   std::vector<ScalarField<Scalar>> Rho;
   std::vector<ScalarField<Scalar>> Rho_avg;
   std::vector<ScalarField<Scalar>> J_s;

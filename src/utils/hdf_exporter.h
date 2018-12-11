@@ -19,6 +19,8 @@ namespace Aperture {
 class ConfigFile;
 class CommandArgs;
 struct SimParams;
+class Environment;
+struct SimData;
 
 template <typename T>
 struct dataset {
@@ -68,8 +70,7 @@ struct fieldoutput {
 class DataExporter {
  public:
   // DataExporter();
-  DataExporter(const SimParams& params, const std::string& dir,
-               const std::string& prefix, int downsample = 1);
+  DataExporter(Environment& env, SimData& data, uint32_t& timestep);
 
   ~DataExporter();
 
@@ -109,11 +110,15 @@ class DataExporter {
   void writeXMFHead(std::ofstream& fs);
   void writeXMFStep(std::ofstream& fs, int step, double time);
   void writeXMFTail(std::ofstream& fs);
-  void writeXMF(int step, double time);
+  void writeXMF(uint32_t step, double time);
+  void prepareXMFrestart(uint32_t restart_step, int data_interval);
   void createDirectories();
   bool checkDirectories();
   void copyConfigFile();
   void copySrc();
+
+  void writeSnapshot(Environment& env, SimData& data, uint32_t timestep);
+  void load_from_snapshot(Environment& env, SimData& data, uint32_t& timestep);
 
  private:
   std::string

@@ -86,9 +86,13 @@ class Environment {
   void check_dev_mesh(Quadmesh& mesh);
   void check_dev_params(SimParams& params);
 
+  // void save_snapshot(SimData& data);
+  // void load_snapshot(SimData& data);
+  void load_from_snapshot(const std::string& snapshot_file);
+
  private:
   // Environment() {}
-  void setup_env(const std::string& conf_file);
+  void setup_env();
 
   CommandArgs m_args;
   SimParams m_params;

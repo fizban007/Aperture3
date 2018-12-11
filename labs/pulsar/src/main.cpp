@@ -17,12 +17,55 @@ using namespace Aperture;
 
 int
 main(int argc, char* argv[]) {
+  uint32_t step = 0;
+
   // Construct the simulation environment
   Environment env(&argc, &argv);
 
   // Allocate simulation data
   SimData data(env);
 
+  // Initialize data exporter
+  // DataExporter exporter(env.params(),
+  //                       env.params().data_dir + "2d_weak_pulsar",
+  //                       "data", env.params().downsample);
+  DataExporter exporter(env, data, step);
+  
+  if (env.params().is_restart) {
+    exporter.load_from_snapshot(env, data, step);
+    exporter.prepareXMFrestart(step, env.params().data_interval);
+    step += 1;
+  } else {
+    exporter.copyConfigFile();
+    exporter.copySrc();
+    exporter.WriteGrid();
+
+    // Setup initial conditions
+    Scalar B0 = env.params().B0;
+    auto& mesh = env.grid().mesh();
+    data.E.initialize();
+    data.B.initialize();
+    data.B.initialize(0, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+                           Scalar r = exp(x1);
+                           // return 2.0 * B0 * cos(x2) / (r * r * r);
+                           return B0 * cos(x2) *
+                               (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
+                                1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
+                               (r * mesh.delta[0]);
+                         });
+    data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
+                           Scalar r = exp(x1);
+                           // return B0 * sin(x2) / (r * r * r);
+                           return B0 *
+                               (cos(x2 - 0.5 * mesh.delta[1]) -
+                                cos(x2 + 0.5 * mesh.delta[1])) /
+                               (r * r * r * mesh.delta[1]);
+                         });
+    data.B.sync_to_device();
+    // Put the initial condition to the background
+    env.init_bg_fields(data);
+
+  }
   // Initialize the field solver
   FieldSolver_LogSph field_solver(
       *dynamic_cast<const Grid_LogSph*>(&env.grid()));
@@ -33,40 +76,8 @@ main(int argc, char* argv[]) {
   // Initialize radiation module
   RadiationTransferPulsar rad(env);
 
-  // Initialize data exporter
-  DataExporter exporter(env.params(),
-                        env.params().data_dir + "2d_weak_pulsar",
-                        "data", env.params().downsample);
-  Logger::print_info("{}", env.params().downsample);
-  exporter.WriteGrid();
+  // Setup data export and diagnostics
   AdditionalDiagnostics diag(env);
-
-  Scalar B0 = env.params().B0;
-  auto& mesh = env.grid().mesh();
-  data.E.initialize();
-  data.B.initialize();
-  data.B.initialize(0, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
-    Scalar r = exp(x1);
-    // return 2.0 * B0 * cos(x2) / (r * r * r);
-    return B0 * cos(x2) *
-           (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
-            1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
-           (r * mesh.delta[0]);
-  });
-  data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
-    Scalar r = exp(x1);
-    // return B0 * sin(x2) / (r * r * r);
-    return B0 *
-           (cos(x2 - 0.5 * mesh.delta[1]) -
-            cos(x2 + 0.5 * mesh.delta[1])) /
-           (r * r * r * mesh.delta[1]);
-  });
-  data.B.sync_to_device();
-  // Put the initial condition to the background
-  env.init_bg_fields(data);
-
-  ScalarField<Scalar> flux(env.grid());
-  flux.initialize();
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);
   exporter.AddField("B_bg", env.B_bg());
@@ -74,7 +85,7 @@ main(int argc, char* argv[]) {
   exporter.AddField("Rho_e", data.Rho[0]);
   exporter.AddField("Rho_p", data.Rho[1]);
   exporter.AddField("Rho_i", data.Rho[2]);
-  exporter.AddField("flux", flux, false);
+  exporter.AddField("flux", data.flux, false);
   exporter.AddField("divE", field_solver.get_divE());
   exporter.AddField("divB", field_solver.get_divB());
   exporter.AddField("photon_produced", rad.get_ph_events());
@@ -87,27 +98,8 @@ main(int argc, char* argv[]) {
   exporter.AddField("num_p", diag.get_ptc_num(1));
   exporter.AddField("num_i", diag.get_ptc_num(2));
 
-  // Initialize a bunch of particles
-  std::default_random_engine gen;
-  std::uniform_int_distribution<int> dist(200, 300);
-  std::uniform_real_distribution<float> dist_f(0.0, 1.0);
-  uint32_t N = 0;
-  for (uint32_t i = 0; i < N; i++) {
-    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 100.0f, 0.0f},
-                          // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(4, 512), ParticleType::electron,
-                          1000.0);
-    // }
-    // for (uint32_t i = 0; i < N; i++) {
-    data.particles.append({0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 0.0f},
-                          // mesh.get_idx(dist(gen), dist(gen)),
-                          mesh.get_idx(4, 512), ParticleType::positron,
-                          1000.0);
-  }
-  Logger::print_info("number of particles is {}",
-                     data.particles.number());
-
-  for (uint32_t step = 0; step < env.params().max_steps; step++) {
+  // Main simulation loop
+  for (; step < env.params().max_steps; step++) {
     double dt = env.params().delta_t;
     // double dt = 0.0;
     double time = step * dt;
@@ -125,7 +117,7 @@ main(int argc, char* argv[]) {
     if ((step % env.params().data_interval) == 0) {
       diag.collect_diagnostics(data);
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
-          ->compute_flux(flux, data.B, env.B_bg());
+          ->compute_flux(data.flux, data.B, env.B_bg());
       // Logger::print_info("Finished computing flux");
 
       exporter.WriteOutput(step, time);
@@ -138,19 +130,20 @@ main(int argc, char* argv[]) {
 
     // Inject particles
     timer::stamp();
-    if (step % 10 == 0)
-      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 1000.0, omega);
+    if (step % 5 == 0)
+      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 400.0, omega);
 
+    // Update particles (push and deposit)
     ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
+    // Update field values and handle field boundary conditions
     timer::stamp();
     field_solver.update_fields(data.E, data.B, data.J, dt, time);
-
     field_solver.boundary_conditions(data, omega);
-    // field_solver.boundary_conditions(data, 0.0);
+    
     auto t_field = timer::get_duration_since_stamp("us");
     Logger::print_info("Field Update took {}us", t_field);
 
@@ -166,32 +159,12 @@ main(int argc, char* argv[]) {
       Logger::print_info("Ptc sort took {}us", t_sort);
     }
 
-    // if (step == 1) {
-    //   int c1 = dist(gen);
-    //   int c2 = dist(gen);
-    //   float x1 = dist_f(gen);
-    //   float x2 = dist_f(gen);
-    //   for (int n = 0; n < 1; n++) {
-    //     data.photons.append({x1, x2, 0.0f}, {1.0f, 1.0f, 0.0f}, -0.01,
-    //                         mesh.get_idx(c1, c2), 10000.0);
-    //     // data.photons.append({x1, x2, 0.0f}, {-100.0f, -100.0f, 0.0f},
-    //     //                     -0.01, mesh.get_idx(c1, c2), 100.0);
-    //   }
-    // }
-    // if (step == 100 || step == 200) {
-    //   int c1 = dist(gen);
-    //   int c2 = dist(gen);
-    //   float x1 = dist_f(gen);
-    //   float x2 = dist_f(gen);
-    //   for (int n = 0; n < 1000; n++) {
-    //     data.particles.append(
-    //         {x1, x2, 0.0f}, {100.0f, 100.0f, 0.0f},
-    //         mesh.get_idx(c1, c2), ParticleType::electron, 100.0);
-    //     data.particles.append(
-    //         {x1, x2, 0.0f}, {-100.0f, -100.0f, 0.0f},
-    //         mesh.get_idx(c1, c2), ParticleType::positron, 100.0);
-    //   }
-    // }
+    if (step % 5000 == 0 && step > 0) {
+      timer::stamp();
+      exporter.writeSnapshot(env, data, step);
+      auto t_snapshot = timer::get_duration_since_stamp("ms");
+      Logger::print_info("Snapshot took {}ms", t_snapshot);
+    }
   }
   return 0;
 }
