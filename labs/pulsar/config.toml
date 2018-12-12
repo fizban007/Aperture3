@@ -101,3 +101,11 @@ coord_system = "LogSpherical"
 random_seed = 3333
 
 downsample = 2
+
+max_steps = 500000
+
+data_interval = 100
+
+snapshot_interval = 5000
+
+sort_interval = 10

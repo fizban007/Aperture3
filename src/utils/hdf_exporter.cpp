@@ -1190,12 +1190,17 @@ DataExporter::prepareXMFrestart(uint32_t restart_step, int data_interval) {
   int n = -1;
   int num_outputs = restart_step / data_interval;
   std::string line;
+  bool in_step = false;
   while (std::getline(xmf_in, line)) {
-    if (line == "<Grid Name=\"quadmesh\" Type=\"Uniform\">")
+    if (line == "<Grid Name=\"quadmesh\" Type=\"Uniform\">") {
       n += 1;
-    if (n > num_outputs)
-      break;
+      in_step = true;
+    }
     xmf << line << std::endl;
+    if (line == "</Grid>")
+      in_step = false;
+    if (n >= num_outputs && !in_step)
+      break;
   }
   writeXMFTail(xmf);
   

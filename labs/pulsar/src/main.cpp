@@ -32,6 +32,7 @@ main(int argc, char* argv[]) {
   DataExporter exporter(env, data, step);
   
   if (env.params().is_restart) {
+    Logger::print_info("This is a restart");
     exporter.load_from_snapshot(env, data, step);
     exporter.prepareXMFrestart(step, env.params().data_interval);
     step += 1;
@@ -99,11 +100,11 @@ main(int argc, char* argv[]) {
   exporter.AddField("num_i", diag.get_ptc_num(2));
 
   // Main simulation loop
-  for (; step < env.params().max_steps; step++) {
+  for (; step <= env.params().max_steps; step++) {
     double dt = env.params().delta_t;
-    // double dt = 0.0;
     double time = step * dt;
-    Logger::print_info("At timestep {}, time = {}", step, time);
+
+    Logger::print_info("=== At timestep {}, time = {} ===", step, time);
 
     Scalar omega = 0.0;
     if (time <= 10.0) {
@@ -151,7 +152,7 @@ main(int argc, char* argv[]) {
     rad.emit_photons(data);
     rad.produce_pairs(data);
 
-    if (step % env.params().sort_frequency == 0 && step != 0) {
+    if (step % env.params().sort_interval == 0 && step != 0) {
       timer::stamp();
       data.particles.sort_by_cell();
       data.photons.sort_by_cell();
@@ -159,7 +160,7 @@ main(int argc, char* argv[]) {
       Logger::print_info("Ptc sort took {}us", t_sort);
     }
 
-    if (step % 5000 == 0 && step > 0) {
+    if (step % env.params().snapshot_interval == 0 && step > 0) {
       timer::stamp();
       exporter.writeSnapshot(env, data, step);
       auto t_snapshot = timer::get_duration_since_stamp("ms");
