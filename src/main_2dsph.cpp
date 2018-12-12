@@ -155,7 +155,7 @@ main(int argc, char* argv[]) {
     rad.emit_photons(data);
     rad.produce_pairs(data);
 
-    if (step % env.params().sort_frequency == 0 && step != 0) {
+    if (step % env.params().sort_interval == 0 && step != 0) {
       timer::stamp();
       data.particles.sort_by_cell();
       data.photons.sort_by_cell();

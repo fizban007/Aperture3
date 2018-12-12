@@ -102,7 +102,8 @@ struct SimParams : public SimParamsBase {
 
   int random_seed = 4321;
   int downsample = 1;
-  int sort_frequency = 20;
+  int sort_interval = 20;
+  int snapshot_interval = 1000;
   bool is_restart = false;
 };
 

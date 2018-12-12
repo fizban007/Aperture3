@@ -158,6 +158,14 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                              .value_or(defaults.random_seed);
     params.downsample =
         sim_table->get_as<int>("downsample").value_or(defaults.downsample);
+    params.max_steps =
+        sim_table->get_as<int64_t>("max_steps").value_or(defaults.max_steps);
+    params.data_interval =
+        sim_table->get_as<int>("data_interval").value_or(defaults.data_interval);
+    params.snapshot_interval =
+        sim_table->get_as<int>("snapshot_interval").value_or(defaults.snapshot_interval);
+    params.sort_interval =
+        sim_table->get_as<int>("sort_interval").value_or(defaults.sort_interval);
   }
 
   compute_derived_quantities(params);
