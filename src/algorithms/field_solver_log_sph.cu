@@ -343,7 +343,7 @@ outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
       (*ptrAddr(e2, offset)) *= lambda;
       (*ptrAddr(e3, offset)) *= lambda;
       // (*ptrAddr(b1, offset)) *= lambda;
-      (*ptrAddr(b2, offset)) *= lambda;
+      // (*ptrAddr(b2, offset)) *= lambda;
       (*ptrAddr(b3, offset)) *= lambda;
     }
   }

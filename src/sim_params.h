@@ -27,6 +27,8 @@ struct SimParamsBase {
 
   bool gravity_on = false;
   Scalar gravity = 0.0;
+  bool rad_cooling_on = false;
+  Scalar rad_cooling_coef = 1.0;
 
   // std::array<std::string, 6> boundary_conditions;
   bool periodic_boundary[3] = {false};

@@ -132,6 +132,18 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       }
 
+      if (dev_params.rad_cooling_on) {
+        Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
+        Scalar pp1 = p1 - B1 * pdotB / tt;
+        Scalar pp2 = p2 - B2 * pdotB / tt;
+        Scalar pp3 = p3 - B3 * pdotB / tt;
+        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3) / (q_over_m * q_over_m);
+
+        p1 -= pp1 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
+        p2 -= pp2 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
+        p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
+      }
+
       // printf("gamma after is %f\n", gamma);
       // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
       // ptc.p3[idx]);

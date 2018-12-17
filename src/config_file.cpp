@@ -73,6 +73,12 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                              .value_or(defaults.gravity_on);
   params.gravity = config->get_as<double>("gravity")
                              .value_or(defaults.gravity);
+  params.rad_cooling_on = config->get_as<bool>("rad_cooling_on")
+      .value_or(defaults.rad_cooling_on);
+  params.rad_cooling_coef = config->get_as<double>("rad_cooling_coef")
+      .value_or(defaults.rad_cooling_coef);
+
+
   params.track_percent = config->get_as<double>("track_percent")
                              .value_or(defaults.track_percent);
   params.gamma_thr =
