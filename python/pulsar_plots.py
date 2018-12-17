@@ -163,7 +163,7 @@ class Plots:
             cbar_ax1[i].tick_params(labelsize=tick_size)
             fig.colorbar(lower_plots[i], orientation='horizontal', cax=cbar_ax1[i])
 
-        time_txt = plt.text(-0.1, 1.15, 'Time = {}'.format(step * conf['delta_t']),
+        time_txt = plt.text(-0.1, 1.15, 'Time = {:.2f}'.format(step * conf['delta_t']),
             horizontalalignment='left',
             verticalalignment='center',
             transform = axes[0,0].transAxes,
@@ -192,8 +192,13 @@ else:
 plots = Plots(data_dir, data_interval)
 
 agents = 7
-chunksize = ((steps // data_interval) + agents - 1) // agents
 
-steps_to_plot = range(0, steps, data_interval)
+steps_to_plot = list(range(0, steps, data_interval))
+for step in steps_to_plot:
+    plotfile = Path("plots/%06d.png" % (step // plots.data_interval))
+    if plotfile.exists():
+        steps_to_plot.remove(step)
+chunksize = (len(steps_to_plot) + agents - 1) // agents
+
 with Pool(processes=agents) as pool:
     pool.map(plots.make_plot, steps_to_plot, chunksize)
