@@ -27,6 +27,7 @@ struct SimParamsBase {
 
   bool gravity_on = false;
   Scalar gravity = 0.0;
+  Scalar compactness = 0.5;
   bool rad_cooling_on = false;
   Scalar rad_cooling_coef = 1.0;
 

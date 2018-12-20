@@ -111,7 +111,8 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
       auto c = ptc.cell[tid];
       Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
-      Scalar lph = min(10.0f, 0.016f * (1.0f / std::sin(theta) - 1.0f));
+      Scalar lph = min(10.0f, 0.03f * (1.0f / std::sin(theta) - 1.0f) +
+                                  dev_params.photon_path);
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       // if (std::abs(Eph) < dev_params.E_ph_min) continue;
@@ -121,7 +122,8 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       Scalar u = rng();
       // Scalar path =
       //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * std::sqrt(-2.0f * std::log(u));
+      // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
+      Scalar path = lph * (0.5f + 0.5f * u);
       if (path > dev_params.r_cutoff) continue;
       // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;
@@ -174,9 +176,10 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     }
 
     // Get the B field at the current location
-    // Scalar B1v = interp(b1, photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b001));
-    // Scalar B2v = interp(b2, photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b010));
-    // Scalar B3v = interp(b3, photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b100));
+    // Scalar B1v = interp(b1, photons.x1[tid], photons.x2[tid], c1, c2,
+    // Stagger(0b001)); Scalar B2v = interp(b2, photons.x1[tid],
+    // photons.x2[tid], c1, c2, Stagger(0b010)); Scalar B3v = interp(b3,
+    // photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b100));
 
     if (photons.path_left[tid] <= 0.0f) {
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
@@ -230,7 +233,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
       ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
-      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e], ptc.x2[offset_e], ptc.x3[offset_e]);
+      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
+      // ptc.x2[offset_e], ptc.x3[offset_e]);
 
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;

@@ -26,9 +26,6 @@ main(int argc, char* argv[]) {
   SimData data(env);
 
   // Initialize data exporter
-  // DataExporter exporter(env.params(),
-  //                       env.params().data_dir + "2d_weak_pulsar",
-  //                       "data", env.params().downsample);
   DataExporter exporter(env, data, step);
   
   if (env.params().is_restart) {
@@ -131,8 +128,8 @@ main(int argc, char* argv[]) {
 
     // Inject particles
     timer::stamp();
-    if (step % 5 == 0)
-      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 400.0, omega);
+    if (step % 1 == 0)
+      ptc_updater.inject_ptc(data, 4, 0.0, 0.0, 0.0, 2000.0, omega);
 
     // Update particles (push and deposit)
     ptc_updater.update_particles(data, dt);

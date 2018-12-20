@@ -69,15 +69,16 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                              .value_or(defaults.trace_photons);
   // params.use_bg_fields = config->get_as<bool>("use_bg_fields")
   //                            .value_or(defaults.use_bg_fields);
-  params.gravity_on = config->get_as<bool>("gravity_on")
-                             .value_or(defaults.gravity_on);
-  params.gravity = config->get_as<double>("gravity")
-                             .value_or(defaults.gravity);
+  params.gravity_on =
+      config->get_as<bool>("gravity_on").value_or(defaults.gravity_on);
+  params.gravity =
+      config->get_as<double>("gravity").value_or(defaults.gravity);
+  params.compactness = config->get_as<double>("compactness")
+                           .value_or(defaults.compactness);
   params.rad_cooling_on = config->get_as<bool>("rad_cooling_on")
-      .value_or(defaults.rad_cooling_on);
+                              .value_or(defaults.rad_cooling_on);
   params.rad_cooling_coef = config->get_as<double>("rad_cooling_coef")
-      .value_or(defaults.rad_cooling_coef);
-
+                                .value_or(defaults.rad_cooling_coef);
 
   params.track_percent = config->get_as<double>("track_percent")
                              .value_or(defaults.track_percent);
@@ -107,13 +108,13 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.damping_coef = config->get_as<double>("damping_coef")
                             .value_or(defaults.damping_coef);
   params.E_secondary = config->get_as<double>("E_secondary")
-                            .value_or(defaults.E_secondary);
-  params.r_cutoff = config->get_as<double>("r_cutoff")
-                            .value_or(defaults.r_cutoff);
-  params.omega = config->get_as<double>("omega")
-                            .value_or(defaults.omega);
+                           .value_or(defaults.E_secondary);
+  params.r_cutoff =
+      config->get_as<double>("r_cutoff").value_or(defaults.r_cutoff);
+  params.omega =
+      config->get_as<double>("omega").value_or(defaults.omega);
   params.damping_length = config->get_as<uint64_t>("damping_length")
-                            .value_or(defaults.damping_length);
+                              .value_or(defaults.damping_length);
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
@@ -162,16 +163,17 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
             .value_or(defaults.algorithm_ptc_move);
     params.random_seed = sim_table->get_as<int>("random_seed")
                              .value_or(defaults.random_seed);
-    params.downsample =
-        sim_table->get_as<int>("downsample").value_or(defaults.downsample);
-    params.max_steps =
-        sim_table->get_as<int64_t>("max_steps").value_or(defaults.max_steps);
-    params.data_interval =
-        sim_table->get_as<int>("data_interval").value_or(defaults.data_interval);
+    params.downsample = sim_table->get_as<int>("downsample")
+                            .value_or(defaults.downsample);
+    params.max_steps = sim_table->get_as<int64_t>("max_steps")
+                           .value_or(defaults.max_steps);
+    params.data_interval = sim_table->get_as<int>("data_interval")
+                               .value_or(defaults.data_interval);
     params.snapshot_interval =
-        sim_table->get_as<int>("snapshot_interval").value_or(defaults.snapshot_interval);
-    params.sort_interval =
-        sim_table->get_as<int>("sort_interval").value_or(defaults.sort_interval);
+        sim_table->get_as<int>("snapshot_interval")
+            .value_or(defaults.snapshot_interval);
+    params.sort_interval = sim_table->get_as<int>("sort_interval")
+                               .value_or(defaults.sort_interval);
   }
 
   compute_derived_quantities(params);
