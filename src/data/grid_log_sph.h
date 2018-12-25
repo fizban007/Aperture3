@@ -28,11 +28,11 @@ class Grid_LogSph : public Grid
                     VectorField<Scalar>& B_bg) const;
 
  private:
-  MultiArray<Scalar> m_l1_e, m_l2_e, m_l3_e;
-  MultiArray<Scalar> m_l1_b, m_l2_b, m_l3_b;
-  MultiArray<Scalar> m_A1_e, m_A2_e, m_A3_e;
-  MultiArray<Scalar> m_A1_b, m_A2_b, m_A3_b;
-  MultiArray<Scalar> m_dV;
+  multi_array_dev<Scalar> m_l1_e, m_l2_e, m_l3_e;
+  multi_array_dev<Scalar> m_l1_b, m_l2_b, m_l3_b;
+  multi_array_dev<Scalar> m_A1_e, m_A2_e, m_A3_e;
+  multi_array_dev<Scalar> m_A1_b, m_A2_b, m_A3_b;
+  multi_array_dev<Scalar> m_dV;
 }; // ----- end of class Grid_LogSph : public Grid -----
 
 
