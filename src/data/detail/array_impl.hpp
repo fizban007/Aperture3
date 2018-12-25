@@ -5,7 +5,6 @@
 #include "cuda_runtime.h"
 #include "data/array.h"
 #include "utils/logger.h"
-#include "utils/memory.h"
 #include <algorithm>
 #include <thrust/device_ptr.h>
 #include <thrust/fill.h>

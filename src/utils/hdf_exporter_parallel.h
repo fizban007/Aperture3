@@ -49,7 +49,7 @@ class DataExporterParallel {
   void AddArray(const std::string& name, VectorField<T>& field,
                 int component);
   template <typename T>
-  void AddArray(const std::string& name, MultiArray<T>& field);
+  void AddArray(const std::string& name, multi_array_dev<T>& field);
 
   void AddParticleArray(const std::string& name, const Particles& ptc);
   void AddParticleArray(const std::string& name, const Photons& ptc);

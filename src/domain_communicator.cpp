@@ -4,15 +4,15 @@
 
 #define INSTANTIATE_FUNCTIONS(type)                                  \
   template void DomainCommunicator::get_guard_cells_leftright<type>( \
-      int dir, MultiArray<type>& array, CommTags leftright,          \
+      int dir, multi_array_dev<type>& array, CommTags leftright,          \
       const Grid& grid);                                             \
   template void DomainCommunicator::put_guard_cells_leftright<type>( \
-      int dir, MultiArray<type>& array, CommTags leftright,          \
+      int dir, multi_array_dev<type>& array, CommTags leftright,          \
       const Grid& grid, int component);                              \
   template void DomainCommunicator::get_guard_cells<type>(           \
-      MultiArray<type> & array, const Grid& grid);                   \
+      multi_array_dev<type> & array, const Grid& grid);                   \
   template void DomainCommunicator::put_guard_cells<type>(           \
-      MultiArray<type> & array, const Grid& grid, int component)
+      multi_array_dev<type> & array, const Grid& grid, int component)
 
 using namespace Aperture;
 
@@ -42,7 +42,7 @@ DomainCommunicator::~DomainCommunicator() {}
 template <typename T>
 void
 DomainCommunicator::get_guard_cells_leftright(int dir,
-                                              MultiArray<T>& array,
+                                              multi_array_dev<T>& array,
                                               CommTags leftright,
                                               const Grid& grid) {
   if (dir >= 3 || dir < 0)
@@ -127,7 +127,7 @@ DomainCommunicator::get_guard_cells_leftright(int dir,
 template <typename T>
 void
 DomainCommunicator::put_guard_cells_leftright(int dir,
-                                              MultiArray<T>& array,
+                                              multi_array_dev<T>& array,
                                               CommTags leftright,
                                               const Grid& grid,
                                               int stagger) {
@@ -214,7 +214,7 @@ DomainCommunicator::put_guard_cells_leftright(int dir,
 
 template <typename T>
 void
-DomainCommunicator::get_guard_cells(MultiArray<T>& array,
+DomainCommunicator::get_guard_cells(multi_array_dev<T>& array,
                                     const Aperture::Grid& grid) {
   for (unsigned int i = 0; i < grid.dim(); i++) {
     get_guard_cells_leftright(i, array, CommTags::left, grid);
@@ -224,7 +224,7 @@ DomainCommunicator::get_guard_cells(MultiArray<T>& array,
 
 template <typename T>
 void
-DomainCommunicator::put_guard_cells(MultiArray<T>& array,
+DomainCommunicator::put_guard_cells(multi_array_dev<T>& array,
                                     const Aperture::Grid& grid,
                                     int stagger) {
   for (unsigned int i = 0; i < grid.dim(); i++) {

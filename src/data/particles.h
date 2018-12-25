@@ -27,11 +27,11 @@ class Particles : public ParticleBase<single_particle_t> {
 
   // void resize(std::size_t max_num);
   // void initialize();
-  // void copyFrom(const Particles& other, std::size_t num, std::size_t
+  // void copy_from(const Particles& other, std::size_t num, std::size_t
   // src_pos = 0, std::size_t dest_pos = 0); void erase(std::size_t pos,
   // std::size_t amount = 1);
 
-  // void copyFrom(const std::vector<single_particle_t>& buffer,
+  // void copy_from(const std::vector<single_particle_t>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0); void copyToBuffer(std::vector<single_particle_t>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
