@@ -13,8 +13,8 @@ class field_solver
   typedef vector_field<Scalar> vfield_t;
   typedef scalar_field<Scalar> sfield_t;
 
-  field_solver();
-  virtual ~field_solver();
+  field_solver() {}
+  virtual ~field_solver() {}
 
   virtual void update_fields(sim_data& data, double dt,
                              double time = 0.0) = 0;
