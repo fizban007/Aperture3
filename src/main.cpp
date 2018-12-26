@@ -17,6 +17,7 @@ using namespace Aperture;
 
 int
 main(int argc, char* argv[]) {
+  uint32_t step = 0;
   // Construct the simulation environment
   Environment env(&argc, &argv);
 
@@ -34,9 +35,9 @@ main(int argc, char* argv[]) {
   RadiationTransferPulsar rad(env);
 
   // Initialize data exporter
-  DataExporter exporter(env.params(),
-                        env.params().data_dir + "2d_weak_pulsar",
-                        "data", env.params().downsample);
+  DataExporter exporter(env, data, step);
+                        // env.params().data_dir + "2d_weak_pulsar",
+                        // "data", env.params().downsample);
   Logger::print_info("{}", env.params().downsample);
   exporter.WriteGrid();
   AdditionalDiagnostics diag(env);
@@ -104,7 +105,7 @@ main(int argc, char* argv[]) {
   Logger::print_info("number of particles is {}",
                      data.particles.number());
 
-  for (uint32_t step = 0; step < env.params().max_steps; step++) {
+  for (; step < env.params().max_steps; step++) {
     double dt = env.params().delta_t;
     // double dt = 0.0;
     double time = step * dt;

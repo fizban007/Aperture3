@@ -2,7 +2,7 @@
 #define _DOMAIN_COMMUNICATOR_H_
 
 #include "data/fields.h"
-#include "data/multi_array.h"
+#include "data/multi_array_dev.h"
 #include "data/particle_base.h"
 #include "sim_environment.h"
 
@@ -10,7 +10,7 @@ namespace Aperture {
 
 class DomainCommunicator {
  public:
-  typedef MultiArray<double> array_t;
+  typedef multi_array_dev<double> array_t;
   typedef VectorField<Scalar> vec_field_t;
   typedef ScalarField<Scalar> sca_field_t;
 
@@ -24,21 +24,21 @@ class DomainCommunicator {
   void get_guard_cells(vec_field_t& field);
   void get_guard_cells(sca_field_t& field);
   template <typename T>
-  void get_guard_cells(MultiArray<T>& array, const Grid& grid);
+  void get_guard_cells(multi_array_dev<T>& array, const Grid& grid);
 
   void put_guard_cells(vec_field_t& field);
   void put_guard_cells(sca_field_t& field);
   template <typename T>
-  void put_guard_cells(MultiArray<T>& array, const Grid& grid,
+  void put_guard_cells(multi_array_dev<T>& array, const Grid& grid,
                        int stagger = 0);
 
  private:
   template <typename T>
-  void get_guard_cells_leftright(int dir, MultiArray<T>& array,
+  void get_guard_cells_leftright(int dir, multi_array_dev<T>& array,
                                  CommTags leftright, const Grid& grid);
 
   template <typename T>
-  void put_guard_cells_leftright(int dir, MultiArray<T>& array,
+  void put_guard_cells_leftright(int dir, multi_array_dev<T>& array,
                                  CommTags leftright, const Grid& grid,
                                  int stagger = 0);
 

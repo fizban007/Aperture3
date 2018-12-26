@@ -8,7 +8,6 @@
 #include <vector>
 // #include <functional>
 #include "constant_defs.h"
-#include "data/multi_array.h"
 #include "data/quadmesh.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"

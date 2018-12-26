@@ -397,8 +397,8 @@ FieldSolver_FFE_Cyl::~FieldSolver_FFE_Cyl() {}
 void
 FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
                                    double omega) {
-  m_Erk.copyFrom(data.E);
-  m_Brk.copyFrom(data.B);
+  m_Erk.copy_from(data.E);
+  m_Brk.copy_from(data.B);
   // Apply Low Storage RK4 method here:
   for (int n = 0; n < 4; n++) {
     // timer::stamp();
@@ -435,7 +435,7 @@ FieldSolver_FFE_Cyl::update_field_substep(vfield_t& E_out,
   // m_tmp2.initialize();
   m_Etmp.initialize();
   m_Etmp.set_field_type(FieldType::E);
-  // m_Etmp2.copyFrom(E_in);
+  // m_Etmp2.copy_from(E_in);
   // m_Etmp2.set_field_type(FieldType::E);
 
   // timer::stamp();
@@ -466,7 +466,7 @@ FieldSolver_FFE_Cyl::update_field_substep(vfield_t& E_out,
   // m_Etmp.interpolate_from_center(E_out);
   // cudaDeviceSynchronize();
   // timer::show_duration_since_stamp("Interpolate and add", "ms");
-  E_out.copyFrom(m_Etmp2);
+  E_out.copy_from(m_Etmp2);
 }
 
 void

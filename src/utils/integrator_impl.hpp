@@ -63,23 +63,23 @@ field_integrator<Metric>::load_file(const silo_file& file) {
     m_J.set_field_type(FieldType::E);
 
     if (file.find_var("E1"))
-      m_E.data(0).copyFrom(file.get_multi_var("E1"));
+      m_E.data(0).copy_from(file.get_multi_var("E1"));
     if (file.find_var("E2"))
-      m_E.data(1).copyFrom(file.get_multi_var("E2"));
+      m_E.data(1).copy_from(file.get_multi_var("E2"));
     if (file.find_var("E3"))
-      m_E.data(2).copyFrom(file.get_multi_var("E3"));
+      m_E.data(2).copy_from(file.get_multi_var("E3"));
     if (file.find_var("B1"))
-      m_B.data(0).copyFrom(file.get_multi_var("B1"));
+      m_B.data(0).copy_from(file.get_multi_var("B1"));
     if (file.find_var("B2"))
-      m_B.data(1).copyFrom(file.get_multi_var("B2"));
+      m_B.data(1).copy_from(file.get_multi_var("B2"));
     if (file.find_var("B3"))
-      m_B.data(2).copyFrom(file.get_multi_var("B3"));
+      m_B.data(2).copy_from(file.get_multi_var("B3"));
     if (file.find_var("J1"))
-      m_J.data(0).copyFrom(file.get_multi_var("J1"));
+      m_J.data(0).copy_from(file.get_multi_var("J1"));
     if (file.find_var("J2"))
-      m_J.data(1).copyFrom(file.get_multi_var("J2"));
+      m_J.data(1).copy_from(file.get_multi_var("J2"));
     if (file.find_var("J3"))
-      m_J.data(2).copyFrom(file.get_multi_var("J3"));
+      m_J.data(2).copy_from(file.get_multi_var("J3"));
   }
 }
 

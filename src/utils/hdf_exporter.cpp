@@ -200,7 +200,7 @@ bool DataExporter::checkDirectories() {
 
 // template <typename T>
 // void
-// DataExporter::AddArray(const std::string &name, MultiArray<T> &array)
+// DataExporter::AddArray(const std::string &name, multi_array_dev<T> &array)
 // {
 //   int ndims = array.dim();
 //   int *dims = new int[ndims];

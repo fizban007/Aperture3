@@ -220,36 +220,29 @@ interp_from_center_2d(cudaPitchedPtr v1, cudaPitchedPtr v2,
 
 }  // namespace Kernels
 
-void
-FieldBase::check_grid_extent(const Extent& ext1,
-                             const Extent& ext2) const {
-  if (ext1 != ext2)
-    throw std::invalid_argument("Field grids don't match!");
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 //  Scalar Field Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-ScalarField<T>::ScalarField() : FieldBase(), m_array() {}
+ScalarField<T>::ScalarField() : field_base(), m_array() {}
 
 template <typename T>
 ScalarField<T>::ScalarField(const grid_type& grid, Stagger stagger)
-    : FieldBase(grid), m_array(grid.extent()), m_stagger(stagger) {
+    : field_base(grid), m_array(grid.extent()), m_stagger(stagger) {
   // std::cout << grid.extent() << std::endl;
   m_stagger = Stagger(0b111);
 }
 
 template <typename T>
 ScalarField<T>::ScalarField(const self_type& field)
-    : FieldBase(*field.m_grid),
+    : field_base(*field.m_grid),
       m_array(field.m_array),
       m_stagger(field.m_stagger) {}
 
 template <typename T>
 ScalarField<T>::ScalarField(self_type&& field)
-    : FieldBase(*field.m_grid),
+    : field_base(*field.m_grid),
       m_array(std::move(field.m_array)),
       m_stagger(field.m_stagger) {}
 
@@ -272,12 +265,12 @@ ScalarField<T>::assign(data_type value) {
 
 template <typename T>
 void
-ScalarField<T>::copyFrom(const self_type& field) {
+ScalarField<T>::copy_from(const self_type& field) {
   /// We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
-  m_array.copyFrom(field.m_array);
+  m_array.copy_from(field.m_array);
 }
 
 template <typename T>
@@ -458,7 +451,7 @@ ScalarField<T>::interpolate(const Vec3<int>& c,
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-VectorField<T>::VectorField() : FieldBase(), m_array() {
+VectorField<T>::VectorField() : field_base(), m_array() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // Default initialize to face-centered
     m_stagger[i] = Stagger(0b000);
@@ -468,7 +461,7 @@ VectorField<T>::VectorField() : FieldBase(), m_array() {
 }
 
 template <typename T>
-VectorField<T>::VectorField(const grid_type& grid) : FieldBase(grid) {
+VectorField<T>::VectorField(const grid_type& grid) : field_base(grid) {
   m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
@@ -483,7 +476,7 @@ VectorField<T>::VectorField(const grid_type& grid) : FieldBase(grid) {
 
 template <typename T>
 VectorField<T>::VectorField(const self_type& field)
-    : FieldBase(*field.m_grid),
+    : field_base(*field.m_grid),
       m_array(field.m_array),
       m_stagger(field.m_stagger),
       m_type(field.m_type) {
@@ -492,7 +485,7 @@ VectorField<T>::VectorField(const self_type& field)
 
 template <typename T>
 VectorField<T>::VectorField(self_type&& field)
-    : FieldBase(*field.m_grid),
+    : field_base(*field.m_grid),
       m_array(std::move(field.m_array)),
       m_stagger(field.m_stagger),
       m_type(field.m_type) {
@@ -627,13 +620,13 @@ VectorField<T>::assign(const VectorField<T>& field, T q) {
 
 template <typename T>
 void
-VectorField<T>::copyFrom(const self_type& field) {
+VectorField<T>::copy_from(const self_type& field) {
   /// We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_array[i].copyFrom(field.m_array[i]);
+    m_array[i].copy_from(field.m_array[i]);
   }
 }
 

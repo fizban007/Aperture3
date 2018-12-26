@@ -60,7 +60,7 @@ FieldSolver_FiniteDiff::compute_B_update(vfield &B, const vfield &E,
                                          const vfield &J, double dt) {
   const int num_expansion = 5;
   // Assuming B, E, and J are already communicated
-  m_B_old.copyFrom(B);
+  m_B_old.copy_from(B);
   m_dB.assign(0.0);
   if (std::abs(m_beta) > EPS) {
     compute_laplacian(B, m_dB, m_bc->bound_start(), m_bc->bound_ext(),
@@ -79,7 +79,7 @@ FieldSolver_FiniteDiff::compute_B_update(vfield &B, const vfield &E,
 
   if (m_comm_callback_vfield != nullptr) m_comm_callback_vfield(B);
 
-  m_dB.copyFrom(B);
+  m_dB.copy_from(B);
   double factor = dt * dt * m_alpha * m_alpha;
   for (int j = 0; j < num_expansion; j++) {
     m_dB.multiplyBy(factor);

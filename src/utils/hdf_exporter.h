@@ -62,7 +62,7 @@ struct fieldoutput {
   std::string name;
   std::string type;
   // ScalarField<T>* field;
-  FieldBase* field;
+  field_base* field;
   std::vector<boost::multi_array<float, n>> f;
   bool sync;
 };
@@ -86,7 +86,7 @@ class DataExporter {
   void AddArray(const std::string& name, VectorField<T>& field,
                 int component);
   template <typename T>
-  void AddArray(const std::string& name, MultiArray<T>& field);
+  void AddArray(const std::string& name, multi_array_dev<T>& field);
 
   template <typename T>
   void AddField(const std::string& name, ScalarField<T>& field, bool sync = true);

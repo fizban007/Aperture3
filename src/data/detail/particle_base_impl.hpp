@@ -4,10 +4,10 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
+#include "cuda/memory.h"
 #include "data/particle_base.h"
 #include "utils/for_each_arg.hpp"
 #include "utils/logger.h"
-#include "utils/memory.h"
 #include "utils/timer.h"
 
 #include <thrust/binary_search.h>
