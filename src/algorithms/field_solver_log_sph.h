@@ -1,12 +1,12 @@
 #ifndef _FIELD_SOLVER_LOG_SPH_H_
 #define _FIELD_SOLVER_LOG_SPH_H_
 
-#include "field_solver.h"
+#include "field_solver_dev.h"
 #include "data/grid_log_sph.h"
 
 namespace Aperture {
 
-class FieldSolver_LogSph : public FieldSolver {
+class FieldSolver_LogSph : public FieldSolverDev {
  public:
   FieldSolver_LogSph(const Grid_LogSph& g);
   virtual ~FieldSolver_LogSph();

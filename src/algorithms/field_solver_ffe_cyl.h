@@ -1,11 +1,11 @@
 #ifndef _FIELD_SOLVER_FFE_CYL_H_
 #define _FIELD_SOLVER_FFE_CYL_H_
 
-#include "field_solver.h"
+#include "field_solver_dev.h"
 
 namespace Aperture {
 
-class FieldSolver_FFE_Cyl : public FieldSolver {
+class FieldSolver_FFE_Cyl : public FieldSolverDev {
  public:
   FieldSolver_FFE_Cyl(const Grid& g);
   virtual ~FieldSolver_FFE_Cyl();

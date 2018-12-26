@@ -2,14 +2,15 @@
 #define _FIELD_SOLVER_DEFAULT_H_
 
 #include "field_solver.h"
+#include "data/grid.h"
 
 namespace Aperture {
 
-class FieldSolver_Default : public FieldSolver {
+class field_solver_default : public field_solver {
  public:
-  FieldSolver_Default(const Grid& g);
-  virtual ~FieldSolver_Default();
-  virtual void update_fields(SimData& data, double dt,
+  field_solver_default(const Grid& g);
+  virtual ~field_solver_default();
+  virtual void update_fields(sim_data& data, double dt,
                              double time = 0.0) override;
   void update_fields(vfield_t& E, vfield_t& B, const vfield_t& J,
                      double dt, double time = 0.0);
@@ -20,12 +21,9 @@ class FieldSolver_Default : public FieldSolver {
                         const vfield_t& J, double dt);
   void compute_B_update(vfield_t& B, const vfield_t& E, double dt);
 
-  virtual void set_background_j(const vfield_t& J) override;
-
  private:
   vfield_t m_dE, m_dB;
-  vfield_t m_background_j;
-};  // ----- end of class FieldSolver_Default : public FieldSolver -----
+};  // ----- end of class field_solver_default : public field_solver -----
 
 }  // namespace Aperture
 

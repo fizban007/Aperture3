@@ -28,8 +28,8 @@ PICSim::PICSim(Environment& env) : m_env(env) {
         new FieldSolver_FFE(m_env.local_grid()));
   } else {
     // Fall back to default field solver
-    m_field_solver = std::unique_ptr<FieldSolver_Default>(
-        new FieldSolver_Default(m_env.local_grid()));
+    m_field_solver = std::unique_ptr<FieldSolver_FFE>(
+        new FieldSolver_FFE(m_env.local_grid()));
   }
   // TODO: select particle mover type according to config
   // int interp_order = m_env.conf().interpolation_order;

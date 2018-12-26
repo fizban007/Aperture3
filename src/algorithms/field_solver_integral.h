@@ -1,12 +1,12 @@
 #ifndef _FIELD_SOLVER_INTEGRAL_H_
 #define _FIELD_SOLVER_INTEGRAL_H_
 
-#include "field_solver.h"
+#include "field_solver_dev.h"
 #include <vector>
 
 namespace Aperture {
 
-class FieldSolver_Integral : public FieldSolver {
+class FieldSolver_Integral : public FieldSolverDev {
  public:
   FieldSolver_Integral(const Grid& g, const Grid& g_dual);
   virtual ~FieldSolver_Integral();
