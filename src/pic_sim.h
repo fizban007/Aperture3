@@ -2,7 +2,7 @@
 #define _PIC_SIM_H_
 
 // #include "current_depositer.h"
-#include "field_solver.h"
+#include "field_solver_dev.h"
 // #include "particle_pusher.h"
 #include "ptc_updater.h"
 #include "sim_data_dev.h"
@@ -24,7 +24,7 @@ class PICSim {
 
   void step(SimData& data, uint32_t step);
 
-  FieldSolver& field_solver() { return *m_field_solver; }
+  FieldSolverDev& field_solver() { return *m_field_solver; }
   // ParticlePusher& ptc_pusher() { return *m_pusher; }
   // CurrentDepositer& current_depositer() { return *m_depositer; }
   PtcUpdater& ptc_updater() { return *m_ptc_updater; }
@@ -37,7 +37,7 @@ class PICSim {
   // std::unique_ptr<ParticlePusher> m_pusher;
   // std::unique_ptr<CurrentDepositer> m_depositer;
   std::unique_ptr<PtcUpdater> m_ptc_updater;
-  std::unique_ptr<FieldSolver> m_field_solver;
+  std::unique_ptr<FieldSolverDev> m_field_solver;
   // std::unique_ptr<InverseCompton> m_inverse_compton;
   // std::unique_ptr<DomainCommunicator> m_comm;
 };  // ----- end of class PICSim -----

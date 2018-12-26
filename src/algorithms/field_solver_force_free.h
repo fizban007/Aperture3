@@ -1,11 +1,11 @@
 #ifndef _FIELD_SOLVER_FORCE_FREE_H_
 #define _FIELD_SOLVER_FORCE_FREE_H_
 
-#include "field_solver.h"
+#include "field_solver_dev.h"
 
 namespace Aperture {
 
-class FieldSolver_FFE : public FieldSolver {
+class FieldSolver_FFE : public FieldSolverDev {
  public:
   FieldSolver_FFE(const Grid& g);
   virtual ~FieldSolver_FFE();

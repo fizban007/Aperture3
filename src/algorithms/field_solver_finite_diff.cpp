@@ -1,5 +1,5 @@
 #include "data/detail/multi_array_utils.hpp"
-#include "field_solver.h"
+#include "field_solver_dev.h"
 
 using namespace Aperture;
 
