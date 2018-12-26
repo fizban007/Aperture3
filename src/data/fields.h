@@ -4,51 +4,22 @@
 #include "constant_defs.h"
 #include "data/enum_types.h"
 #include "data/grid.h"
-#include "data/multi_array.h"
+#include "data/multi_array_dev.h"
 #include "data/stagger.h"
 #include "data/typedefs.h"
+#include "data/field_base.h"
 #include <array>
 // #include "initial_conditions/initial_condition.h"
 
 namespace Aperture {
 
-/// This is the base class for fields living on a grid. It maintains a
-/// \ref grid object and caches its linear size. It also implements a
-/// function to check whether two grid extents are the same.
-class FieldBase {
- public:
-  /// Default constructor, initialize an empty grid and zero grid size.
-  FieldBase() : m_grid(nullptr), m_grid_size(0) {}
-
-  /// Main constructor, initializes the grid according to a given \ref
-  /// grid object.
-  FieldBase(const Grid &grid)
-      : m_grid(&grid), m_grid_size(grid.size()) {}
-
-  /// Destructor. No need to destruct anything since we didn't
-  /// allocate dynamic memory. However it is useful to declare this as
-  /// virtual since we need to derive from this class.
-  virtual ~FieldBase() {}
-
-  // Accessor methods for everything
-  const Grid &grid() const { return *m_grid; }
-  int grid_size() const { return m_grid_size; }
-  Extent extent() const { return m_grid->extent(); }
-
- protected:
-  const Grid *m_grid;   ///< Grid that this field is defined on
-  int m_grid_size = 0;  //!< Cache the grid size for easier retrieval
-
-  void check_grid_extent(const Extent &ext1, const Extent &ext2) const;
-};  // ----- end of class field_base -----
-
 /// Class for a scalar field with one component.
 template <typename T>
-class ScalarField : public FieldBase {
+class ScalarField : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
-  typedef MultiArray<T> array_type;
+  typedef multi_array_dev<T> array_type;
   typedef ScalarField<T> self_type;
 
   // Constructors and destructor
@@ -64,7 +35,7 @@ class ScalarField : public FieldBase {
   void initialize(const Func &f);
 
   void assign(data_type value);
-  void copyFrom(const self_type &field);
+  void copy_from(const self_type &field);
   self_type &operator=(const self_type &field);
   self_type &operator=(self_type &&field);
 
@@ -114,11 +85,11 @@ class ScalarField : public FieldBase {
 };  // ----- end of class scalar_field -----
 
 template <typename T>
-class VectorField : public FieldBase {
+class VectorField : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
-  typedef MultiArray<T> array_type;
+  typedef multi_array_dev<T> array_type;
   typedef VectorField<T> self_type;
 
   /// Constructors and Destructor
@@ -142,7 +113,7 @@ class VectorField : public FieldBase {
   void assign(data_type value, int n);
   void assign(data_type value);
   void assign(const VectorField<T>& field, T q);
-  void copyFrom(const self_type &field);
+  void copy_from(const self_type &field);
 
   void resize(const grid_type &grid);
   // void init_array_ptrs();
