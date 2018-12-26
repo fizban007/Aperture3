@@ -5,6 +5,8 @@
 #include "utils/logger.h"
 #include "utils/memory.h"
 
+#define ALIGNMENT 64
+
 namespace Aperture {
 
 template <typename T>
@@ -70,28 +72,42 @@ template <typename T>
 void
 multi_array<T>::alloc_mem(const Extent& ext) {
   if (_data != nullptr) free_mem();
-  // TODO: Finish aligned allocation and generating the pitch
+  // Want to align data to 64 byte boundaries
+  size_t pitch = ext.width() * sizeof(T);
+  if (pitch % ALIGNMENT > 0)
+    pitch = (pitch / ALIGNMENT + 1) * ALIGNMENT;
+  _pitch = pitch;
+  // Compute new _size
+  _size = _pitch * ext.height() * ext.depth();
+  // Allocate new _size with alignment
+  _data = aligned_malloc(_size, ALIGNMENT);
 }
 
 template <typename T>
 void
 multi_array<T>::free_mem() {
-  // TODO: Finish alignd memory free
+  aligned_free(_data);
 }
 
 template <typename T>
 void
 multi_array<T>::copy_from(const self_type& other) {
-  assert(_size == other._size);
-  // TODO: Finish array copy
+  assert(_size == other._size && _pitch == other._pitch);
+  memcpy(_data, other._data, _size);
 }
 
 template <typename T>
 void
 multi_array<T>::assign(const data_type& value) {
-  // std::fill_n(_data, _size, value);
   // TODO: Since we will be using pitched 3d arrays, we need a new
   // method to fill the array
+  for (int k = 0; k < _extent.depth(); k++) {
+    for (int j = 0; j < _extent.height(); j++) {
+      T* row = (T*)((char*)_data + j * _pitch +
+                    k * _pitch * _extent.height());
+      std::fill_n(row, _extent.width(), value);
+    }
+  }
 }
 
 template <typename T>
