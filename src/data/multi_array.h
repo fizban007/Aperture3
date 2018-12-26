@@ -86,20 +86,24 @@ class multi_array {
     return *((ptr_type)((char*)_data + offset));
   }
 
-  /// Linearized indexing operator, read only
-  const data_type& operator[](int idx) const {
-    int x = idx % _extent.width();
-    int y = (idx / _extent.width()) % _extent.height();
-    int z = (idx / (_extent.width() * _extent.height()));
-    return operator()(x, y, z);
+  /// Linearized indexing operator, read only. @param offset gives the
+  /// offset in number of bytes
+  const data_type& operator[](size_t offset) const {
+    // int x = idx % _extent.width();
+    // int y = (idx / _extent.width()) % _extent.height();
+    // int z = (idx / (_extent.width() * _extent.height()));
+    // return operator()(x, y, z);
+    return *((ptr_type)((char*)_data + offset));
   }
 
-  /// Linearized indexing operator, read and write
-  data_type& operator[](int idx) {
-    int x = idx % _extent.width();
-    int y = (idx / _extent.width()) % _extent.height();
-    int z = (idx / (_extent.width() * _extent.height()));
-    return operator()(x, y, z);
+  /// Linearized indexing operator, read and write. @param offset gives
+  /// the offset in number of bytes
+  data_type& operator[](size_t offset) {
+    // int x = idx % _extent.width();
+    // int y = (idx / _extent.width()) % _extent.height();
+    // int z = (idx / (_extent.width() * _extent.height()));
+    // return operator()(x, y, z);
+    return *((ptr_type)((char*)_data + offset));
   }
 
   /// Copying the entire content from another vector

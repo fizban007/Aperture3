@@ -17,10 +17,21 @@ TEST_CASE("Initialize and Using MultiArray", "[MultiArray]") {
 
   a.assign(2.0f);
 
-  // REQUIRE(a(259, ) == 2.0f);
+  // Subscripting works
   for (int j = 0; j < Y; j++) {
     for (int i = 0; i < X; i++) {
       REQUIRE(a(i, j) == 2.0f);
     }
   }
+}
+
+TEST_CASE("Using offset directly", "[MultiArray]") {
+  int N1 = 260, N2 = 310;
+
+  multi_array<float> a(N1, N2);
+  a.assign(1.0f);
+
+  a(100, 200) = 3.0f;
+
+  REQUIRE(a[100 * sizeof(float) + 200 * a.pitch()] == 3.0f);
 }
