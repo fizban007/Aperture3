@@ -1,5 +1,5 @@
 #include "cuda/cudaUtility.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 
 namespace Aperture {
 

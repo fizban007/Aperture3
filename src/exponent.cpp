@@ -3,7 +3,7 @@
 #include "pic_sim.h"
 #include "radiation/inverse_compton_power_law.h"
 #include "radiation/radiation_transfer.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"

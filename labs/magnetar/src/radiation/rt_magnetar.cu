@@ -10,7 +10,7 @@
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
 #include "radiation/rt_magnetar.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"

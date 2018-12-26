@@ -9,7 +9,7 @@
 #include <string>
 // #include "data/domain_info.h"
 #include "data/grid.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "utils/hdf_exporter.h"
 // #include "metrics.h"
 // #include "utils/data_exporter.h"

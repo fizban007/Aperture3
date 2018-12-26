@@ -1,8 +1,8 @@
-#ifndef _SIM_DATA_H_
-#define _SIM_DATA_H_
+#ifndef _SIM_DATA_DEV_H_
+#define _SIM_DATA_DEV_H_
 
 #include "data/enum_types.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/grid.h"
 #include "data/particles.h"
 // #include "data/photons.h"
@@ -36,4 +36,4 @@ struct SimData {
 
 }  // namespace Aperture
 
-#endif  // _SIM_DATA_H_
+#endif  // _SIM_DATA_DEV_H_
