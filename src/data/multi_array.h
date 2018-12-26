@@ -61,30 +61,28 @@ class multi_array {
 
   /// Vector indexing operator, read only
   const data_type& operator()(int x, int y = 0, int z = 0) const {
-    size_t offset = x + y * _pitch +
-              z * _pitch * _extent.height();
+    size_t offset = x * sizeof(T) + (y + z * _extent.height()) * _pitch;
     return *((ptr_type)((char*)_data + offset));
   }
 
   /// Vector indexing operator, read and write
   data_type& operator()(int x, int y = 0, int z = 0) {
-    size_t offset = x + y * _pitch +
-              z * _pitch * _extent.height();
+    size_t offset = x * sizeof(T) + (y + z * _extent.height()) * _pitch;
     return *((ptr_type)((char*)_data + offset));
   }
 
   /// Vector indexing operator using an @ref Index object, read only
   const data_type& operator()(const Index& index) const {
-    size_t offset = index.x + index.y * _pitch +
-              index.z * _pitch * _extent.height();
+    size_t offset = index.x * sizeof(T) +
+                    (index.y + index.z * _extent.height()) * _pitch;
     return *((ptr_type)((char*)_data + offset));
   }
 
   /// Vector indexing operator using an @ref Index object, read and
   /// write
   data_type& operator()(const Index& index) {
-    size_t offset = index.x + index.y * _pitch +
-              index.z * _pitch * _extent.height();
+    size_t offset = index.x * sizeof(T) +
+                    (index.y + index.z * _extent.height()) * _pitch;
     return *((ptr_type)((char*)_data + offset));
   }
 
@@ -135,18 +133,18 @@ class multi_array {
   const Extent& extent() const { return _extent; }
 
   /// Direct access to the encapsulated pointer
-  T* data() { return _data; }
-  const T* data() const { return _data; }
+  void* data() { return _data; }
+  const void* data() const { return _data; }
 
  private:
   void find_dim();
 
-  ptr_type _data;        ///< Pointer to the data stored on the host
+  void* _data;  ///< Pointer to the data stored on the host
 
   Extent _extent;  ///< Extent of the array in all dimensions
-  size_t _size;       ///< Total size of the array
+  size_t _size;    ///< Total size of the array
   int _dim;        ///< Dimension of the array
-  size_t _pitch;      ///< Pitch of the first dimension, in # of bytes
+  size_t _pitch;   ///< Pitch of the first dimension, in # of bytes
 
 };  // ----- end of class multi_array -----
 
