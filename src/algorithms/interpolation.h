@@ -4,7 +4,7 @@
 #include <cmath>
 #include <utility>
 // #include "cuda/cuda_control.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/stagger.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"

@@ -2,7 +2,7 @@
 #include "cuda/constant_mem_func.h"
 #include "data/particles.h"
 #include "radiation/rt_pulsar.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/timer.h"

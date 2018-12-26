@@ -1,7 +1,7 @@
 #ifndef _ADDITIONAL_DIAGNOSTICS_H_
 #define _ADDITIONAL_DIAGNOSTICS_H_
 
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include <vector>
 
 namespace Aperture {

@@ -4,7 +4,7 @@
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 #include "sim_environment.h"
 #include "utils/interpolation.cuh"
 #include "utils/logger.h"

@@ -1,7 +1,7 @@
 #ifndef _DOMAIN_COMMUNICATOR_H_
 #define _DOMAIN_COMMUNICATOR_H_
 
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/multi_array_dev.h"
 #include "data/particle_base.h"
 #include "sim_environment.h"

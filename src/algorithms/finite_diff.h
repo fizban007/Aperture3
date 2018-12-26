@@ -1,7 +1,7 @@
 #ifndef _FINITE_DIFF_H_
 #define _FINITE_DIFF_H_
 
-#include "data/fields.h"
+#include "data/fields_dev.h"
 
 namespace Aperture {
 

@@ -25,6 +25,7 @@ set(tests_src
   # "test_stagger.cpp"
   "test_particles.cpp"
   "test_multi_array.cpp"
+  "test_fields.cpp"
   # "test_finite_diff.cpp"
   # "test_ffe.cpp" "test_ffe2d.cpp"
   # "test_IC_PL.cpp"

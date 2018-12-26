@@ -2,7 +2,7 @@
 #define _RADIATION_TRANSFER_PULSAR_H_
 
 #include "data/array.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/typedefs.h"
 
 namespace Aperture {

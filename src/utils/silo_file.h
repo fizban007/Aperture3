@@ -1,7 +1,7 @@
 #ifndef _SILO_FILE_H_
 #define _SILO_FILE_H_
 
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/multi_array_dev.h"
 #include "data/vec3.h"
 #include <array>

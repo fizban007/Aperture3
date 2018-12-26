@@ -1,5 +1,5 @@
 #include <memory>
-#include "sim_data.h"
+#include "sim_data_dev.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
 #include "cuda/constant_mem_func.h"

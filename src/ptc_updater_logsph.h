@@ -2,7 +2,7 @@
 #define _PTC_UPDATER_LOGSPH_H_
 
 #include "data/grid_log_sph.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "ptc_updater.h"
 
 namespace Aperture {

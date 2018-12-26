@@ -2,7 +2,7 @@
 #define _GRID_LOG_SPH_H_
 
 #include "data/grid.h"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 
 namespace Aperture {
 

@@ -2,7 +2,7 @@
 #define _CURRENT_DEPOSITER_H_
 
 #include "data/callbacks.h"
-#include "sim_data.h"
+#include "sim_data_dev.h"
 
 namespace Aperture {
 

@@ -1,7 +1,7 @@
 #include "constant_defs.h"
 #include "cuda/cudaUtility.h"
 #include "data/detail/multi_array_utils.hpp"
-#include "data/fields.h"
+#include "data/fields_dev.h"
 #include "data/fields_utils.h"
 
 namespace Aperture {
