@@ -8,7 +8,8 @@ sim_data::sim_data(const Environment& e)
       E(env.local_grid()),
       B(env.local_grid()),
       J(env.local_grid()),
-      flux(env.local_grid())
+      flux(env.local_grid()),
+      particles(env.params().max_ptc_number)
 {
   B.set_field_type(FieldType::B);
 

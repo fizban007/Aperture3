@@ -32,7 +32,7 @@ class particles_t : public particle_base<single_particle_t>
               uint32_t flag = 0);
   void compute_energies();
 
-  using base_class::compute_spectrum;
+  // using base_class::compute_spectrum;
   void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
                         std::vector<uint32_t>& nums, ParticleFlag flag);
 

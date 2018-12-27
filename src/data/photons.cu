@@ -44,13 +44,13 @@ append_ptc(photon_data data, size_t num, Vec3<Pos_t> x, Vec3<Scalar> p,
 Photons::Photons() {}
 
 Photons::Photons(std::size_t max_num)
-    : particle_base<single_photon_t>(max_num) {}
+    : particle_base_dev<single_photon_t>(max_num) {}
 
 Photons::Photons(const Environment& env)
-    : particle_base<single_photon_t>(env.params().max_photon_number) {}
+    : particle_base_dev<single_photon_t>(env.params().max_photon_number) {}
 
 Photons::Photons(const SimParams& params)
-    : particle_base<single_photon_t>(params.max_photon_number) {}
+    : particle_base_dev<single_photon_t>(params.max_photon_number) {}
 
 Photons::~Photons() {}
 

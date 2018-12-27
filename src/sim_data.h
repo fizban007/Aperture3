@@ -3,6 +3,7 @@
 
 #include "data/enum_types.h"
 #include "data/fields.h"
+#include "data/particles.h"
 #include <vector>
 
 namespace Aperture {
@@ -24,7 +25,7 @@ struct sim_data
   // std::vector<scalar_field<Scalar>> J_s;
   scalar_field<Scalar> flux;
 
-  // particles_t particles;
+  particles_t particles;
   // photons_t photons;
   int num_species;
   double time = 0.0;

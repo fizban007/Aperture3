@@ -3,7 +3,7 @@
 
 #include "constant_defs.h"
 #include "data/grid.h"
-#include "data/particle_base.h"
+#include "data/particle_base_dev.h"
 #include "utils/util_functions.h"
 #include <cstdlib>
 #include <string>
@@ -14,9 +14,9 @@ namespace Aperture {
 
 struct SimParams;
 
-class Particles : public particle_base<single_particle_t> {
+class Particles : public particle_base_dev<single_particle_t> {
  public:
-  typedef particle_base<single_particle_t> BaseClass;
+  typedef particle_base_dev<single_particle_t> BaseClass;
   typedef particle_data DataClass;
   Particles();
   Particles(std::size_t max_num);
@@ -106,7 +106,7 @@ class Particles : public particle_base<single_particle_t> {
   std::vector<Index_t> m_partition;
 
   // std::vector<Index_t> m_index;
-};  // ----- end of class Particles : public particle_base -----
+};  // ----- end of class Particles : public particle_base_dev -----
 
 }  // namespace Aperture
 

@@ -34,9 +34,9 @@ main(int argc, char *argv[]) {
 
   // These are debug output
   // std::cout << data.particles.size() << std::endl;
-  // std::cout << data.particles[0].numMax() << std::endl;
+  // std::cout << data.particles[0].size() << std::endl;
   // std::cout << data.particles[0].number() << std::endl;
-  // std::cout << data.photons.numMax() << std::endl;
+  // std::cout << data.photons.size() << std::endl;
   // std::cout << data.photons.number() << std::endl;
 
   // std::cout << data.E.grid_size() << std::endl;

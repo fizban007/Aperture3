@@ -19,7 +19,7 @@ TEST_CASE("Initializing and Adding particles", "[Particles]") {
   Particles ptc(N);
 
   CHECK(ptc.number() == 0);
-  CHECK(ptc.numMax() == N);
+  CHECK(ptc.size() == N);
 
   ptc.append({0.5, 0.0, 0.0}, {1.0, 0.0, 0.0}, 100, ParticleType::electron);
   ptc.append({0.2, 0.0, 0.0}, {1.0, 0.0, 0.0}, 200, ParticleType::electron);

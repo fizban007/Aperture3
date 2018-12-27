@@ -4,47 +4,32 @@
 #include "data/enum_types.h"
 #include "data/grid.h"
 #include "data/particle_data.h"
+#include "data/particle_interface.h"
 #include <cstddef>
 #include <vector>
 
 namespace Aperture {
 
-///  Base class for particle storage classes. The only thing this
-///  class does is to maintain a maximum number of particles in the
-///  storage buffer, as well as the current particle number that is
-///  filled (non-empty). It is the duty of the derived class to
-///  specify what to store in the particle array and how to store
-///  them. Both the CPU particle buffer and the GPU particle buffer
-///  derive from this class.
+////////////////////////////////////////////////////////////////////////////////
+///  Base class for particle storage on CPU memory. 
+////////////////////////////////////////////////////////////////////////////////
 template <typename ParticleClass>
-class particle_base {
+class particle_base : public particle_interface {
  protected:
   typedef typename particle_array_type<ParticleClass>::type array_type;
 
-  std::size_t m_numMax;  ///< Maximum number of particles in the array
-  /// @brief The current number of particles in the array.
-  /// @accessors #number(), #setNum()
-  std::size_t m_number;
-
-  void* m_tmp_data_ptr;
   array_type m_data;
-  Index_t* m_index;
-  // std::vector<Index_t> m_index, m_index_bak;
-  // bool m_sorted;
+  std::vector<Index_t> m_index;
+  std::vector<Index_t> m_partition;
 
  public:
-  /// Default constructor, initializing everything to 0 and `sorted` to
-  /// `true`
-  // particle_base() : m_numMax(0), m_number(0), m_sorted(true) {}
+  /// Default constructor, initializing everything to 0 and set pointers
+  /// to nullptr
   particle_base();
 
   /// Main constructor, initializing the max number to a given value
   /// and current number to zero.
-  ///
   /// @param max_num Target maximum number.
-  ///
-  // particle_base(size_t max_num) : m_numMax(max_num), m_number(0),
-  // m_sorted(true) {}
   explicit particle_base(std::size_t max_num);
 
   particle_base(const particle_base<ParticleClass>& other);
@@ -52,9 +37,6 @@ class particle_base {
 
   /// Virtual destructor because we need to derive from this class.
   virtual ~particle_base();
-
-  void alloc_mem(std::size_t max_num);
-  void free_mem();
 
   void resize(std::size_t max_num);
   void initialize();
@@ -76,28 +58,13 @@ class particle_base {
 
   // void compute_tile_num();
   // void sort_by_tile();
-  void sort_by_cell();
-  void rearrange_arrays(const std::string& skip);
-  // void move_tile();
-  // After rearrange, the index array will all be -1
-  // void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
-  // void rearrange_arrays(std::vector<Index_t>& index, std::size_t num
-  // = 0); void rearrange_copy(std::vector<Index_t>& index, std::size_t
-  // num = 0); template <typename T> void rearrange_single_array(T*
-  // array, std::vector<Index_t>& index, std::size_t num = 0); Partition
-  // according to a grid configuration, sort the particles into the bulk
-  // part, and those that needs to be communicated out. After partition,
-  // the given array partition becomes the starting position of each
-  // partition in the particle array void
-  // partition(std::vector<Index_t>& partitions, const Grid& grid);
-  // Partition for communication, as well as sorting the particles into
-  // tiles, with a given tile size. Tiles have the same size in every
-  // direction available void partition_and_sort(std::vector<Index_t>&
-  // partitions, const Grid& grid, int tile_size);
+  void sort_by_cell(const Grid& grid);
+  // void rearrange_arrays(const std::string& skip);
+
   void clear_guard_cells();
 
-  void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
-                        std::vector<uint32_t>& nums);
+  // void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
+  //                       std::vector<uint32_t>& nums);
 
   // void sync_to_device(int deviceId = 0);
   // void sync_to_host();
@@ -105,32 +72,19 @@ class particle_base {
   // Accessor methods
   array_type& data() { return m_data; }
   const array_type& data() const { return m_data; }
-  void* tmp_data() { return m_tmp_data_ptr; };
-  const void* tmp_data() const { return m_tmp_data_ptr; };
 
+  /// Test if a given position in the particle array is empty
   bool is_empty(Index_t pos) const {
     // Note we need to assume any particle array type has a member
     // called "cell"
     return (m_data.cell[pos] == MAX_CELL);
   }
-  /// @return Returns the value of the current number of particles
-  std::size_t number() const { return m_number; }
 
-  /// @return Returns the maximum number of particles
-  std::size_t numMax() const { return m_numMax; }
+ protected:
+  void alloc_mem(std::size_t max_num, std::size_t alignment = 64);
+  void free_mem();
 
-  /// Set the current number of particles in the array to a given value
-  ///
-  /// @param num New number of particles in the array
-  ///
-  void set_num(size_t num) { m_number = num; }
-
-  /// Set the array to be sorted.
-  // void sorted() { m_sorted = true; }
-
-  /// Set `sorted` to be false.
-  // void scrambled() { m_sorted = false; }
-
+  void rearrange_arrays();
 };  // ----- end of class particle_base -----
 
 }  // namespace Aperture

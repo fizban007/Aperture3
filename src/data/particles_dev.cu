@@ -39,24 +39,24 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
 
 }  // namespace Kernels
 
-template class particle_base<single_particle_t>;
-template class particle_base<single_photon_t>;
+template class particle_base_dev<single_particle_t>;
+template class particle_base_dev<single_photon_t>;
 
 Particles::Particles() {}
 
 Particles::Particles(std::size_t max_num)
-    : particle_base<single_particle_t>(max_num) {}
+    : particle_base_dev<single_particle_t>(max_num) {}
 
 // Particles::Particles(const Environment& env, ParticleType type)
 Particles::Particles(const SimParams& params)
-    : particle_base<single_particle_t>(
+    : particle_base_dev<single_particle_t>(
           (std::size_t)params.max_ptc_number) {}
 
 Particles::Particles(const Particles& other)
-    : particle_base<single_particle_t>(other) {}
+    : particle_base_dev<single_particle_t>(other) {}
 
 Particles::Particles(Particles&& other)
-    : particle_base<single_particle_t>(std::move(other)) {}
+    : particle_base_dev<single_particle_t>(std::move(other)) {}
 
 Particles::~Particles() {}
 
@@ -64,7 +64,7 @@ Particles::~Particles() {}
 // Particles::put(std::size_t pos, const Vec3<Pos_t>& x,
 //                const Vec3<Scalar>& p, int cell, ParticleType type,
 //                Scalar weight, uint32_t flag) {
-//   if (pos >= m_numMax)
+//   if (pos >= m_size)
 //     throw std::runtime_error(
 //         "Trying to insert particle beyond the end of the array.
 //         Resize " "it first!");

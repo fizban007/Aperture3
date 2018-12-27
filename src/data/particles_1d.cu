@@ -27,7 +27,7 @@ Particles_1D::~Particles_1D() {}
 void
 Particles_1D::put(std::size_t pos, Pos_t x1, Scalar p1, int cell,
                   ParticleType type, Scalar weight, uint32_t flag) {
-  if (pos >= m_numMax)
+  if (pos >= m_size)
     throw std::runtime_error(
         "Trying to insert particle beyond the end of the array. Resize "
         "it first!");

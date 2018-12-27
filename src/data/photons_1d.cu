@@ -24,7 +24,7 @@ Photons_1D::~Photons_1D() {}
 void
 Photons_1D::put(std::size_t pos, Pos_t x1, Scalar p1, Scalar path_left,
                 int cell, Scalar weight, uint32_t flag) {
-  if (pos >= m_numMax)
+  if (pos >= m_size)
     throw std::runtime_error(
         "Trying to insert particle beyond the end of the array. Resize "
         "it first!");
