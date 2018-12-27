@@ -9,10 +9,10 @@ namespace Aperture {
 
 struct SimParams;
 
-class particles_t : public ParticleBase<single_particle_t>
+class particles_t : public particle_base<single_particle_t>
 {
  public:
-  typedef ParticleBase<single_particle_t> base_class;
+  typedef particle_base<single_particle_t> base_class;
   typedef particle_data data_class;
   
   particles_t();
@@ -56,7 +56,7 @@ class particles_t : public ParticleBase<single_particle_t>
 
  private:
   
-}; // ----- end of class particles_t : public ParticleBase<single_particle_t> -----
+}; // ----- end of class particles_t : public particle_base<single_particle_t> -----
 
 
 }

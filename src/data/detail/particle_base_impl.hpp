@@ -19,7 +19,7 @@
 namespace Aperture {
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::ParticleBase()
+particle_base<ParticleClass>::particle_base()
     : m_numMax(0),
       m_number(0),
       m_tmp_data_ptr(nullptr),
@@ -29,7 +29,7 @@ ParticleBase<ParticleClass>::ParticleBase()
 }
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::ParticleBase(std::size_t max_num)
+particle_base<ParticleClass>::particle_base(std::size_t max_num)
     : m_numMax(max_num), m_number(0) {
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num);
@@ -45,8 +45,8 @@ ParticleBase<ParticleClass>::ParticleBase(std::size_t max_num)
 }
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::ParticleBase(
-    const ParticleBase<ParticleClass>& other) {
+particle_base<ParticleClass>::particle_base(
+    const particle_base<ParticleClass>& other) {
   std::size_t n = other.m_numMax;
   m_numMax = n;
   m_number = other.m_number;
@@ -64,8 +64,8 @@ ParticleBase<ParticleClass>::ParticleBase(
 }
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::ParticleBase(
-    ParticleBase<ParticleClass>&& other) {
+particle_base<ParticleClass>::particle_base(
+    particle_base<ParticleClass>&& other) {
   m_numMax = other.m_numMax;
   m_number = other.m_number;
   // m_sorted = other.m_sorted;
@@ -86,7 +86,7 @@ ParticleBase<ParticleClass>::ParticleBase(
 }
 
 template <typename ParticleClass>
-ParticleBase<ParticleClass>::~ParticleBase() {
+particle_base<ParticleClass>::~particle_base() {
   free_mem();
   // free_cuda()(m_index);
   // free_cuda()(m_tmp_data_ptr);
@@ -94,7 +94,7 @@ ParticleBase<ParticleClass>::~ParticleBase() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::alloc_mem(std::size_t max_num) {
+particle_base<ParticleClass>::alloc_mem(std::size_t max_num) {
   // alloc_struct_of_arrays(m_data, max_num);
   visit_struct::for_each(m_data, [max_num](const char* name, auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
@@ -106,7 +106,7 @@ ParticleBase<ParticleClass>::alloc_mem(std::size_t max_num) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::free_mem() {
+particle_base<ParticleClass>::free_mem() {
   visit_struct::for_each(m_data, [](const char* name, auto& x) {
     if (x != nullptr) {
       aligned_free(x);
@@ -117,14 +117,14 @@ ParticleBase<ParticleClass>::free_mem() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::initialize() {
+particle_base<ParticleClass>::initialize() {
   erase(0, m_numMax);
   m_number = 0;
 }
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::resize(std::size_t max_num) {
+particle_base<ParticleClass>::resize(std::size_t max_num) {
   m_numMax = max_num;
   if (m_number > max_num) m_number = max_num;
   free_mem();
@@ -145,7 +145,7 @@ ParticleBase<ParticleClass>::resize(std::size_t max_num) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::erase(std::size_t pos,
+particle_base<ParticleClass>::erase(std::size_t pos,
                                    std::size_t amount) {
   if (pos + amount > m_numMax) amount = m_numMax - pos;
   std::cout << "Erasing from " << pos << " for " << amount
@@ -158,7 +158,7 @@ ParticleBase<ParticleClass>::erase(std::size_t pos,
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::put(Index_t pos,
+// particle_base<ParticleClass>::put(Index_t pos,
 //                                  const ParticleClass& part) {
 //   if (pos >= m_numMax)
 //     throw std::runtime_error(
@@ -171,7 +171,7 @@ ParticleBase<ParticleClass>::erase(std::size_t pos,
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::swap(Index_t pos, ParticleClass& part) {
+// particle_base<ParticleClass>::swap(Index_t pos, ParticleClass& part) {
 //   ParticleClass p_tmp = m_data[pos];
 //   if (pos >= m_numMax)
 //     throw std::runtime_error(
@@ -190,15 +190,15 @@ ParticleBase<ParticleClass>::erase(std::size_t pos,
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::append(const ParticleClass& part) {
+// particle_base<ParticleClass>::append(const ParticleClass& part) {
 //   // put(m_number, x, p, cell, flag);
 //   put(m_number, part);
 // }
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::copy_from(
-    const ParticleBase<ParticleClass>& other, std::size_t num,
+particle_base<ParticleClass>::copy_from(
+    const particle_base<ParticleClass>& other, std::size_t num,
     std::size_t src_pos, std::size_t dest_pos) {
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_numMax) num = m_numMax - dest_pos;
@@ -212,13 +212,13 @@ ParticleBase<ParticleClass>::copy_from(
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::compute_tile_num() {
+// particle_base<ParticleClass>::compute_tile_num() {
 //   compute_tile(m_data.tile, m_data.cell, m_number);
 // }
 
 // template <typename ParticleClass>
 // void
-// ParticleBase<ParticleClass>::sort_by_tile() {
+// particle_base<ParticleClass>::sort_by_tile() {
 //   // First compute the tile number according to current cell id
 //   compute_tile(m_data.tile, m_data.cell, m_number);
 
@@ -247,7 +247,7 @@ ParticleBase<ParticleClass>::copy_from(
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::sort_by_cell() {
+particle_base<ParticleClass>::sort_by_cell() {
   // Generate particle index array
   // auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
   // auto ptr_idx = thrust::device_pointer_cast(m_index);
@@ -276,7 +276,7 @@ ParticleBase<ParticleClass>::sort_by_cell() {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
+particle_base<ParticleClass>::rearrange_arrays(const std::string& skip) {
   const uint32_t padding = 100;
   auto ptc = ParticleClass();
   // for_each_arg_with_name(
@@ -288,13 +288,13 @@ ParticleBase<ParticleClass>::rearrange_arrays(const std::string& skip) {
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::clear_guard_cells() {
+particle_base<ParticleClass>::clear_guard_cells() {
   // erase_ptc_in_guard_cells(m_data.cell, m_number);
 }
 
 template <typename ParticleClass>
 void
-ParticleBase<ParticleClass>::compute_spectrum(
+particle_base<ParticleClass>::compute_spectrum(
     int num_bins, std::vector<Scalar>& energies,
     std::vector<uint32_t>& nums) {
   // // Assume the particle energies have been computed

@@ -18,7 +18,7 @@ class DomainCommunicator {
   ~DomainCommunicator();
 
   template <typename ParticleClass>
-  void send_recv_particles(ParticleBase<ParticleClass>& particles,
+  void send_recv_particles(particle_base<ParticleClass>& particles,
                            const Grid& grid);
 
   void get_guard_cells(vec_field_t& field);
@@ -44,25 +44,25 @@ class DomainCommunicator {
 
   template <typename ParticleClass>
   void send_particles_directional(
-      ParticleBase<ParticleClass>& particles, const Grid& grid,
+      particle_base<ParticleClass>& particles, const Grid& grid,
       int direction);
 
   // These are helper functions that discriminate which communication
   // buffer to get according to data array type
   std::array<std::vector<single_particle_t>, NUM_PTC_BUFFERS>&
-  get_buffer(const ParticleBase<single_particle_t>& particles) {
+  get_buffer(const particle_base<single_particle_t>& particles) {
     return m_ptc_buffers;
   };
   std::array<std::vector<single_photon_t>, NUM_PTC_BUFFERS>& get_buffer(
-      const ParticleBase<single_photon_t>& particles) {
+      const particle_base<single_photon_t>& particles) {
     return m_photon_buffers;
   };
   std::array<int, NUM_PTC_BUFFERS>& get_buffer_num(
-      const ParticleBase<single_particle_t>& particles) {
+      const particle_base<single_particle_t>& particles) {
     return m_ptc_buf_num;
   }
   std::array<int, NUM_PTC_BUFFERS>& get_buffer_num(
-      const ParticleBase<single_photon_t>& particles) {
+      const particle_base<single_photon_t>& particles) {
     return m_photon_buf_num;
   }
 

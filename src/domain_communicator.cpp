@@ -262,7 +262,7 @@ DomainCommunicator::put_guard_cells(sca_field_t& field) {
 template <typename ParticleClass>
 void
 DomainCommunicator::send_recv_particles(
-    ParticleBase<ParticleClass>& particles,
+    particle_base<ParticleClass>& particles,
     const Aperture::Grid& grid) {}
 
 INSTANTIATE_FUNCTIONS(double);
@@ -272,8 +272,8 @@ INSTANTIATE_FUNCTIONS(unsigned int);
 INSTANTIATE_FUNCTIONS(char);
 
 template void DomainCommunicator::send_recv_particles<
-    single_particle_t>(ParticleBase<single_particle_t>& particles,
+    single_particle_t>(particle_base<single_particle_t>& particles,
                        const Aperture::Grid& grid);
 template void DomainCommunicator::send_recv_particles<single_photon_t>(
-    ParticleBase<single_photon_t>& particles,
+    particle_base<single_photon_t>& particles,
     const Aperture::Grid& grid);
