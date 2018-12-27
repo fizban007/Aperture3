@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "cuda/cudarng.h"
-#include "data/particles.h"
+#include "data/particles_dev.h"
 #include "data/photons.h"
 #include "radiation/inverse_compton_dummy.h"
 #include "radiation/inverse_compton_power_law.h"

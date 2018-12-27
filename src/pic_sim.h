@@ -4,7 +4,7 @@
 // #include "current_depositer.h"
 #include "field_solver_dev.h"
 // #include "particle_pusher.h"
-#include "ptc_updater.h"
+#include "ptc_updater_dev.h"
 #include "sim_data_dev.h"
 #include "sim_environment.h"
 #include <memory>
@@ -27,7 +27,7 @@ class PICSim {
   FieldSolverDev& field_solver() { return *m_field_solver; }
   // ParticlePusher& ptc_pusher() { return *m_pusher; }
   // CurrentDepositer& current_depositer() { return *m_depositer; }
-  PtcUpdater& ptc_updater() { return *m_ptc_updater; }
+  PtcUpdaterDev& ptc_updater() { return *m_ptc_updater; }
   // InverseCompton& inverse_compton() { return *m_inverse_compton; }
 
  private:
@@ -36,7 +36,7 @@ class PICSim {
   // modules
   // std::unique_ptr<ParticlePusher> m_pusher;
   // std::unique_ptr<CurrentDepositer> m_depositer;
-  std::unique_ptr<PtcUpdater> m_ptc_updater;
+  std::unique_ptr<PtcUpdaterDev> m_ptc_updater;
   std::unique_ptr<FieldSolverDev> m_field_solver;
   // std::unique_ptr<InverseCompton> m_inverse_compton;
   // std::unique_ptr<DomainCommunicator> m_comm;

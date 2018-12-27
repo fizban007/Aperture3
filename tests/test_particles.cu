@@ -1,4 +1,4 @@
-#include "data/particles.h"
+#include "data/particles_dev.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
 #include <cuda.h>

@@ -3,34 +3,23 @@
 
 namespace Aperture {
 
-struct SimData;
+struct sim_data;
 class Environment;
 
-struct fields_data {
-  cudaPitchedPtr E1, E2, E3;
-  cudaPitchedPtr B1, B2, B3;
-  cudaPitchedPtr J1, J2, J3;
-  cudaPitchedPtr* Rho;
-};
-
-class PtcUpdater {
+class ptc_updater
+{
  public:
-  PtcUpdater(const Environment& env);
-  virtual ~PtcUpdater();
+  ptc_updater(const Environment& env) : m_env(env) {}
+  virtual ~ptc_updater() {}
 
-  virtual void update_particles(SimData& data, double dt);
-  virtual void handle_boundary(SimData& data);
+  virtual void update_particles(sim_data& data, double dt) = 0;
+  virtual void handle_boundary(sim_data& data) = 0;
 
  protected:
-  void initialize_dev_fields(SimData& data);
-  
   const Environment& m_env;
+}; // ----- end of class ptc_updater -----
 
-  fields_data m_dev_fields;
-  Extent m_extent;
-  bool m_fields_initialized;
-};  // ----- end of class PtcUpdater -----
 
-}  // namespace Aperture
+}
 
 #endif  // _PTC_UPDATER_H_
