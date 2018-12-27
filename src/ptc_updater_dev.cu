@@ -2,7 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "data/detail/multi_array_utils.hpp"
-#include "ptc_updater.h"
+#include "ptc_updater_dev.h"
 #include "ptc_updater_helper.cuh"
 #include "sim_data_dev.h"
 #include "sim_environment.h"
@@ -384,7 +384,7 @@ update_particles_1d(particle_data ptc, size_t num, const Scalar *E1,
 
 }  // namespace Kernels
 
-PtcUpdater::PtcUpdater(const Environment &env) : m_env(env) {
+PtcUpdaterDev::PtcUpdaterDev(const Environment &env) : m_env(env) {
   m_extent = m_env.grid().extent();
   // FIXME: select the correct device?
   CudaSafeCall(cudaMallocManaged(
@@ -393,13 +393,13 @@ PtcUpdater::PtcUpdater(const Environment &env) : m_env(env) {
   m_fields_initialized = false;
 }
 
-PtcUpdater::~PtcUpdater() {
+PtcUpdaterDev::~PtcUpdaterDev() {
   // FIXME: select the correct device
   CudaSafeCall(cudaFree(m_dev_fields.Rho));
 }
 
 void
-PtcUpdater::initialize_dev_fields(SimData &data) {
+PtcUpdaterDev::initialize_dev_fields(SimData &data) {
   if (!m_fields_initialized) {
     m_dev_fields.E1 = data.E.ptr(0);
     m_dev_fields.E2 = data.E.ptr(1);
@@ -418,7 +418,7 @@ PtcUpdater::initialize_dev_fields(SimData &data) {
 }
 
 void
-PtcUpdater::update_particles(SimData &data, double dt) {
+PtcUpdaterDev::update_particles(SimData &data, double dt) {
   Logger::print_info("Updating particles");
   // Track the right fields
   initialize_dev_fields(data);
@@ -449,7 +449,7 @@ PtcUpdater::update_particles(SimData &data, double dt) {
 }
 
 void
-PtcUpdater::handle_boundary(SimData &data) {
+PtcUpdaterDev::handle_boundary(SimData &data) {
   erase_ptc_in_guard_cells(data.particles.data().cell,
                            data.particles.number());
 }

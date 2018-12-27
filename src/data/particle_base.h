@@ -99,8 +99,8 @@ class ParticleBase {
   void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
                         std::vector<uint32_t>& nums);
 
-  void sync_to_device(int deviceId = 0);
-  void sync_to_host();
+  // void sync_to_device(int deviceId = 0);
+  // void sync_to_host();
 
   // Accessor methods
   array_type& data() { return m_data; }
@@ -135,6 +135,6 @@ class ParticleBase {
 
 }  // namespace Aperture
 
-// #include "data/detail/particle_base_impl.hpp"
+// #include "data/detail/particle_base_impl_dev.hpp"
 
 #endif  // _PARTICLE_BASE_H_

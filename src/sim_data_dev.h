@@ -4,7 +4,7 @@
 #include "data/enum_types.h"
 #include "data/fields_dev.h"
 #include "data/grid.h"
-#include "data/particles.h"
+#include "data/particles_dev.h"
 // #include "data/photons.h"
 #include "sim_environment.h"
 

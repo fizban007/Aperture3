@@ -1,5 +1,5 @@
 #include "algorithms/field_solver_default.h"
-#include "ptc_updater.h"
+#include "ptc_updater_dev.h"
 #include "sim_data_dev.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -17,7 +17,7 @@ main(int argc, char* argv[]) {
   SimData data(env);
 
   // Initialize components of the simulator
-  PtcUpdater ptc_updater(env);
+  PtcUpdaterDev ptc_updater(env);
   FieldSolver_Default field_solver(env.grid());
 
   // Apply initial conditions

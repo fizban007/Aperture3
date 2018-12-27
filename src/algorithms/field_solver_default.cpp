@@ -1,6 +1,7 @@
 #include "algorithms/field_solver_default.h"
 #include "omp.h"
 #include "sim_data.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -12,7 +13,20 @@ field_solver_default::~field_solver_default() {}
 void
 field_solver_default::update_fields(vfield_t& E, vfield_t& B,
                                     const vfield_t& J, double dt,
-                                    double time) {}
+                                    double time) {
+  Logger::print_info("Updating fields");
+  auto& mesh = E.grid().mesh();
+
+  if (mesh.dim() == 3) {
+    compute_B_update(B, E, dt);
+
+    compute_E_update(E, B, J, dt);
+
+    // compute_divs
+
+    // Communicate
+  }
+}
 
 void
 field_solver_default::update_fields(sim_data& data, double dt,

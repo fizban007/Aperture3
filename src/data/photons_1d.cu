@@ -1,4 +1,4 @@
-#include "data/detail/particle_base_impl.hpp"
+#include "data/detail/particle_base_impl_dev.hpp"
 #include "data/photons_1d.h"
 #include "sim_params.h"
 

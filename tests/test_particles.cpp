@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "cuda/constant_mem_func.h"
-#include "data/particles.h"
+#include "data/particles_dev.h"
 #include "radiation/rt_pulsar.h"
 #include "sim_data_dev.h"
 #include "sim_environment.h"
