@@ -14,9 +14,9 @@ namespace Aperture {
 class Environment;
 struct SimParams;
 
-class Photons : public ParticleBase<single_photon_t> {
+class Photons : public particle_base<single_photon_t> {
  public:
-  typedef ParticleBase<single_photon_t> BaseClass;
+  typedef particle_base<single_photon_t> BaseClass;
   typedef photon_data DataClass;
   Photons();
   Photons(std::size_t max_num);

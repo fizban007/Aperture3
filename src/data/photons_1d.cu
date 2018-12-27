@@ -7,17 +7,17 @@ namespace Aperture {
 Photons_1D::Photons_1D() {}
 
 Photons_1D::Photons_1D(std::size_t max_num)
-    : ParticleBase<single_photon1d_t>(max_num) {}
+    : particle_base<single_photon1d_t>(max_num) {}
 
 Photons_1D::Photons_1D(const SimParams& params)
-    : ParticleBase<single_photon1d_t>(
+    : particle_base<single_photon1d_t>(
           (std::size_t)params.max_ptc_number) {}
 
 Photons_1D::Photons_1D(const Photons_1D& other)
-    : ParticleBase<single_photon1d_t>(other) {}
+    : particle_base<single_photon1d_t>(other) {}
 
 Photons_1D::Photons_1D(Photons_1D&& other)
-    : ParticleBase<single_photon1d_t>(std::move(other)) {}
+    : particle_base<single_photon1d_t>(std::move(other)) {}
 
 Photons_1D::~Photons_1D() {}
 

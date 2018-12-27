@@ -13,9 +13,9 @@ namespace Aperture {
 
 struct SimParams;
 
-class Particles_1D : public ParticleBase<single_particle1d_t> {
+class Particles_1D : public particle_base<single_particle1d_t> {
  public:
-  typedef ParticleBase<single_particle1d_t> BaseClass;
+  typedef particle_base<single_particle1d_t> BaseClass;
   typedef particle1d_data DataClass;
   Particles_1D();
   Particles_1D(std::size_t max_num);
@@ -51,7 +51,7 @@ class Particles_1D : public ParticleBase<single_particle1d_t> {
  private:
   std::vector<Index_t> m_partition;
 };  // ----- end of class Particles_1D : public
-    // ParticleBase<single_particle1d_t> -----
+    // particle_base<single_particle1d_t> -----
 
 }  // namespace Aperture
 

@@ -4,23 +4,23 @@
 
 namespace Aperture {
 
-template class ParticleBase<single_particle1d_t>;
-template class ParticleBase<single_photon1d_t>;
+template class particle_base<single_particle1d_t>;
+template class particle_base<single_photon1d_t>;
 
 Particles_1D::Particles_1D() {}
 
 Particles_1D::Particles_1D(std::size_t max_num)
-    : ParticleBase<single_particle1d_t>(max_num) {}
+    : particle_base<single_particle1d_t>(max_num) {}
 
 Particles_1D::Particles_1D(const SimParams& params)
-    : ParticleBase<single_particle1d_t>(
+    : particle_base<single_particle1d_t>(
           (std::size_t)params.max_ptc_number) {}
 
 Particles_1D::Particles_1D(const Particles_1D& other)
-    : ParticleBase<single_particle1d_t>(other) {}
+    : particle_base<single_particle1d_t>(other) {}
 
 Particles_1D::Particles_1D(Particles_1D&& other)
-    : ParticleBase<single_particle1d_t>(std::move(other)) {}
+    : particle_base<single_particle1d_t>(std::move(other)) {}
 
 Particles_1D::~Particles_1D() {}
 

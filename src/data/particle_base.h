@@ -17,7 +17,7 @@ namespace Aperture {
 ///  them. Both the CPU particle buffer and the GPU particle buffer
 ///  derive from this class.
 template <typename ParticleClass>
-class ParticleBase {
+class particle_base {
  protected:
   typedef typename particle_array_type<ParticleClass>::type array_type;
 
@@ -35,23 +35,23 @@ class ParticleBase {
  public:
   /// Default constructor, initializing everything to 0 and `sorted` to
   /// `true`
-  // ParticleBase() : m_numMax(0), m_number(0), m_sorted(true) {}
-  ParticleBase();
+  // particle_base() : m_numMax(0), m_number(0), m_sorted(true) {}
+  particle_base();
 
   /// Main constructor, initializing the max number to a given value
   /// and current number to zero.
   ///
   /// @param max_num Target maximum number.
   ///
-  // ParticleBase(size_t max_num) : m_numMax(max_num), m_number(0),
+  // particle_base(size_t max_num) : m_numMax(max_num), m_number(0),
   // m_sorted(true) {}
-  explicit ParticleBase(std::size_t max_num);
+  explicit particle_base(std::size_t max_num);
 
-  ParticleBase(const ParticleBase<ParticleClass>& other);
-  ParticleBase(ParticleBase<ParticleClass>&& other);
+  particle_base(const particle_base<ParticleClass>& other);
+  particle_base(particle_base<ParticleClass>&& other);
 
   /// Virtual destructor because we need to derive from this class.
-  virtual ~ParticleBase();
+  virtual ~particle_base();
 
   void alloc_mem(std::size_t max_num);
   void free_mem();
@@ -59,7 +59,7 @@ class ParticleBase {
   void resize(std::size_t max_num);
   void initialize();
   void erase(std::size_t pos, std::size_t amount = 1);
-  void copy_from(const ParticleBase<ParticleClass>& other,
+  void copy_from(const particle_base<ParticleClass>& other,
                  std::size_t num, std::size_t src_pos = 0,
                  std::size_t dest_pos = 0);
   // void copy_from(const std::vector<ParticleClass>& buffer,
@@ -131,7 +131,7 @@ class ParticleBase {
   /// Set `sorted` to be false.
   // void scrambled() { m_sorted = false; }
 
-};  // ----- end of class ParticleBase -----
+};  // ----- end of class particle_base -----
 
 }  // namespace Aperture
 

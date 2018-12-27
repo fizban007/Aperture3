@@ -39,24 +39,24 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
 
 }  // namespace Kernels
 
-template class ParticleBase<single_particle_t>;
-template class ParticleBase<single_photon_t>;
+template class particle_base<single_particle_t>;
+template class particle_base<single_photon_t>;
 
 Particles::Particles() {}
 
 Particles::Particles(std::size_t max_num)
-    : ParticleBase<single_particle_t>(max_num) {}
+    : particle_base<single_particle_t>(max_num) {}
 
 // Particles::Particles(const Environment& env, ParticleType type)
 Particles::Particles(const SimParams& params)
-    : ParticleBase<single_particle_t>(
+    : particle_base<single_particle_t>(
           (std::size_t)params.max_ptc_number) {}
 
 Particles::Particles(const Particles& other)
-    : ParticleBase<single_particle_t>(other) {}
+    : particle_base<single_particle_t>(other) {}
 
 Particles::Particles(Particles&& other)
-    : ParticleBase<single_particle_t>(std::move(other)) {}
+    : particle_base<single_particle_t>(std::move(other)) {}
 
 Particles::~Particles() {}
 
