@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 // #include "data/particles_dev.h"
-#include "data/particle_base.h"
+#include "data/particle_base_dev.h"
 #include "data/quadmesh.h"
 
 namespace Aperture {
@@ -14,9 +14,9 @@ namespace Aperture {
 class Environment;
 struct SimParams;
 
-class Photons : public particle_base<single_photon_t> {
+class Photons : public particle_base_dev<single_photon_t> {
  public:
-  typedef particle_base<single_photon_t> BaseClass;
+  typedef particle_base_dev<single_photon_t> BaseClass;
   typedef photon_data DataClass;
   Photons();
   Photons(std::size_t max_num);
