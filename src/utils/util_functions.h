@@ -5,6 +5,7 @@
 #include "data/enum_types.h"
 #include "data/typedefs.h"
 #include <string>
+#include "cuda_runtime.h"
 
 namespace Aperture {
 

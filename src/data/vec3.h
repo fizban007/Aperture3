@@ -5,7 +5,7 @@
 #include <iostream>
 // #include <mpi.h>
 #include "cuda/cuda_control.h"
-#include "cuda_runtime.h"
+// #include "cuda_runtime.h"
 #include "data/typedefs.h"
 
 namespace Aperture {
