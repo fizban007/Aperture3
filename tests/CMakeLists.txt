@@ -18,11 +18,10 @@ target_link_libraries(test_fd
 add_dependencies(check test_fd)
 
 set(tests_src
-  "test.cpp"
-  # "test_AD.cpp"
-  # "test_config.cpp"
-  # "test_env.cpp"
-  # "test_stagger.cpp"
+  "test.cpp" "test_AD.cpp"
+  "test_config.cpp"
+  "test_env.cpp"
+  "test_stagger.cpp"
   "test_particles.cpp"
   "test_multi_array.cpp"
   "test_fields.cpp"
