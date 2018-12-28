@@ -141,7 +141,7 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
     REQUIRE(results1[i] == Approx(results2[i]));
   }
 
-#ifdef __AVX512__
+#ifdef __AVX512F__
   timer::stamp();
   for (uint32_t i = 0; i < N; i += 16) {
     Vec16ui c;
