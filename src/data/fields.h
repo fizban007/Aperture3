@@ -3,11 +3,12 @@
 
 #include "constant_defs.h"
 #include "data/enum_types.h"
+#include "data/field_base.h"
 #include "data/grid.h"
 #include "data/multi_array.h"
 #include "data/stagger.h"
 #include "data/typedefs.h"
-#include "data/field_base.h"
+// #include "vectorclass.h"
 #include <array>
 // #include "initial_conditions/initial_condition.h"
 
@@ -63,9 +64,7 @@ class scalar_field : public field_base {
   const data_type &operator()(int x, int y = 0, int z = 0) const {
     return m_array(x, y, z);
   }
-  data_type &operator()(const Index &idx) {
-    return m_array(idx);
-  }
+  data_type &operator()(const Index &idx) { return m_array(idx); }
   const data_type &operator()(const Index &idx) const {
     return m_array(idx);
   }
@@ -109,7 +108,7 @@ class vector_field : public field_base {
 
   void assign(data_type value, int n);
   void assign(data_type value);
-  void assign(const vector_field<T>& field, const T& q);
+  void assign(const vector_field<T> &field, const T &q);
   void copy_from(const self_type &field);
 
   void resize(const grid_type &grid);

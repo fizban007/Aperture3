@@ -1,6 +1,8 @@
 #include "catch.hpp"
+#include "algorithms/interpolation.h"
 #include "data/fields.h"
 #include "omp.h"
+#include "data/stagger.h"
 #include "utils/logger.h"
 #include "utils/simd.h"
 #include "utils/timer.h"
@@ -11,6 +13,8 @@
 #include <algorithm>
 
 using namespace Aperture;
+
+#if defined(__AVX2__)
 
 TEST_CASE("avx gather on field", "[avx2]") {
   int N1 = 260, N2 = 290;
@@ -23,7 +27,6 @@ TEST_CASE("avx gather on field", "[avx2]") {
   scalar_field<float> f2(g);
 
   timer::stamp();
-#if defined(__AVX2__)
   for (int j = 0; j < N2; j++) {
     for (int i = 2; i < N1 - 2; i += 8) {
       int offset = i * sizeof(float) + j * data.pitch();
@@ -48,18 +51,18 @@ TEST_CASE("avx gather on field", "[avx2]") {
       _mm256_storeu_ps((float*)((char*)f2.data().data() + offset), vf);
     }
   }
-#endif
   timer::show_duration_since_stamp("vectorized linear interpolation",
                                    "us");
 }
 
 TEST_CASE("avx interpolation on field", "[avx2]") {
+  Logger::print_info("Instruction set is {}", INSTRSET);
+  
   int N1 = 260, N2 = 290, N3 = 260;
   Grid g(N1, N2, N3);
   scalar_field<float> f(g);
   auto& mesh = g.mesh();
 
-  f.assign(2.0f);
   auto& data = f.data();
 
   uint32_t N = 5000000;
@@ -70,10 +73,15 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
   std::vector<float> results1(N);
   std::vector<float> results2(N);
 
+  Stagger st(0b011);
+
   std::default_random_engine gen;
   std::uniform_int_distribution<uint32_t> dist(10, N1 - 10);
   std::uniform_real_distribution<float> dist_f(0.0, 1.0);
 
+  f.initialize([&dist_f, &gen](float x1, float x2, float x3){
+                 return dist_f(gen);
+               });
   for (uint32_t i = 0; i < N; i++) {
     cells[i] = mesh.get_idx(dist(gen), dist(gen), dist(gen));
     x1v[i] = dist_f(gen);
@@ -84,35 +92,13 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
 
   timer::stamp();
   for (uint32_t i = 0; i < N; i += 8) {
-    Vec8ui c;
-    c.load(cells.data() + i);
-    Vec8ui d = c / Divisor_ui(data.width());
-    Vec8ui c1s = c - d * data.width();
-    Vec8ui offsets = c1s * sizeof(float) + d * data.pitch();
-
+    Vec8ui c; c.load(cells.data() + i);
     Vec8f x1; x1.load(x1v.data() + i);
     Vec8f x2; x2.load(x2v.data() + i);
     Vec8f x3; x3.load(x3v.data() + i);
 
-    uint32_t k_off = data.pitch() * data.height();
-    Vec8f f000 = _mm256_i32gather_ps((float*)data.data(), offsets, 1);
-    Vec8f f001 = _mm256_i32gather_ps((float*)data.data(), offsets + sizeof(float), 1);
-    Vec8f f010 = _mm256_i32gather_ps((float*)data.data(), offsets + data.pitch(), 1);
-    Vec8f f011 = _mm256_i32gather_ps((float*)data.data(), offsets + (sizeof(float) + data.pitch()), 1);
-    Vec8f f100 = _mm256_i32gather_ps((float*)data.data(), offsets + k_off, 1);
-    Vec8f f101 = _mm256_i32gather_ps((float*)data.data(), offsets + (k_off + sizeof(float)), 1);
-    Vec8f f110 = _mm256_i32gather_ps((float*)data.data(), offsets + (k_off + data.pitch()), 1);
-    Vec8f f111 = _mm256_i32gather_ps((float*)data.data(), offsets + (k_off + sizeof(float) + data.pitch()), 1);
+    Vec8f f000 = interpolate(data, c, x1, x2, x3, Stagger(0b111));
 
-    f000 = simd::lerp(x3, f000, f100);
-    f010 = simd::lerp(x3, f010, f110);
-    f001 = simd::lerp(x3, f001, f101);
-    f011 = simd::lerp(x3, f011, f111);
-
-    f000 = simd::lerp(x2, f000, f010);
-    f001 = simd::lerp(x2, f001, f011);
-
-    f000 = simd::lerp(x1, f000, f001);
     f000.store(results1.data() + i);
   }
   auto t = timer::get_duration_since_stamp("us");
@@ -131,14 +117,14 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
     float nx1 = 1.0f - x1;
     float nx2 = 1.0f - x2;
     float nx3 = 1.0f - x3;
-    results2[i] = nx1 * nx2 * nx3 * data[offset]
-        + x1 * nx2 * nx3 * data[offset + sizeof(float)]
-        + nx1 * x2 * nx3 * data[offset + data.pitch()]
-        + nx1 * nx2 * x3 * data[offset + k_off]
-        + x1 * x2 * nx3 * data[offset + sizeof(float) + data.pitch()]
-        + x1 * nx2 * x3 * data[offset + sizeof(float) + k_off]
-        + nx1 * x2 * x3 * data[offset + data.pitch() + k_off]
-        + x1 * x2 * x3 * data[offset + sizeof(float) + data.pitch() + k_off];
+    results2[i] = nx1 * nx2 * nx3 * data[offset - sizeof(float) - data.pitch() - k_off]
+        + x1 * nx2 * nx3 * data[offset - data.pitch() - k_off]
+        + nx1 * x2 * nx3 * data[offset - sizeof(float) - k_off]
+        + nx1 * nx2 * x3 * data[offset - sizeof(float) - data.pitch()]
+        + x1 * x2 * nx3 * data[offset - k_off]
+        + x1 * nx2 * x3 * data[offset - data.pitch()]
+        + nx1 * x2 * x3 * data[offset - sizeof(float)]
+        + x1 * x2 * x3 * data[offset];
   }
   t = timer::get_duration_since_stamp("us");
   Logger::print_info(
@@ -187,3 +173,13 @@ TEST_CASE("i32gather_ps", "[avx2]") {
   }
   
 }
+
+TEST_CASE("truncate_to_int", "[vectorclass]") {
+  float x = 0.65;
+  Vec8f v(x);
+  auto vn = truncate_to_int(v + 0.5);
+
+  Logger::print_info("{}", vn[0]);
+}
+
+#endif
