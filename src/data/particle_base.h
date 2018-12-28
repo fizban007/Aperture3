@@ -61,7 +61,7 @@ class particle_base : public particle_interface {
   void sort_by_cell(const Grid& grid);
   // void rearrange_arrays(const std::string& skip);
 
-  void clear_guard_cells();
+  void clear_guard_cells(const Grid& grid);
 
   // void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
   //                       std::vector<uint32_t>& nums);

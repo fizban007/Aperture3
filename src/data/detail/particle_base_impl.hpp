@@ -255,8 +255,14 @@ particle_base<ParticleClass>::rearrange_arrays() {
 
 template <typename ParticleClass>
 void
-particle_base<ParticleClass>::clear_guard_cells() {
+particle_base<ParticleClass>::clear_guard_cells(const Grid& grid) {
   // erase_ptc_in_guard_cells(m_data.cell, m_number);
+#pragma omp simd
+  for (Index_t idx = 0; idx < m_number; idx++) {
+    if (!grid.mesh().is_in_bulk(m_data.cell[idx])) {
+      m_data.cell[idx] = MAX_CELL;
+    }
+  }
 }
 
 // template <typename ParticleClass>
