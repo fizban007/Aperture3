@@ -2,6 +2,7 @@
 #define _MULTIARRAY_H_
 
 #include "data/vec3.h"
+#include "utils/simd.h"
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
@@ -127,6 +128,12 @@ class multi_array {
   /// Get the dimensions of this array
   /// @return Dimension of the multi-array
   int dim() const { return _dim; }
+
+  size_t get_offset(uint32_t idx) const;
+
+#ifdef __AVX2__
+  
+#endif
 
   // Returns various sizes of the array
   int width() const { return _extent.width(); }

@@ -166,6 +166,14 @@ multi_array<T>::find_dim() {
     _dim = 3;
 }
 
+template <typename T>
+size_t
+multi_array<T>::get_offset(uint32_t idx) const {
+  // int tmp = idx / _extent.width();
+  return (idx % _extent.width()) * sizeof(T) +
+         (idx / _extent.width()) * _pitch;
+}
+
 }  // namespace Aperture
 
 #endif  // _MULTI_ARRAY_IMPL_H_
