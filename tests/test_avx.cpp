@@ -1,16 +1,16 @@
-#include "catch.hpp"
 #include "algorithms/interpolation.h"
+#include "catch.hpp"
 #include "data/fields.h"
-#include "omp.h"
 #include "data/stagger.h"
+#include "omp.h"
 #include "utils/logger.h"
 #include "utils/simd.h"
 #include "utils/timer.h"
+#include <algorithm>
 #include <immintrin.h>
 #include <iostream>
 #include <random>
 #include <vector>
-#include <algorithm>
 
 using namespace Aperture;
 
@@ -57,7 +57,7 @@ TEST_CASE("avx gather on field", "[avx2]") {
 
 TEST_CASE("avx interpolation on field", "[avx2]") {
   Logger::print_info("Instruction set is {}", INSTRSET);
-  
+
   int N1 = 260, N2 = 290, N3 = 260;
   Grid g(N1, N2, N3);
   scalar_field<float> f(g);
@@ -79,9 +79,9 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
   std::uniform_int_distribution<uint32_t> dist(10, N1 - 10);
   std::uniform_real_distribution<float> dist_f(0.0, 1.0);
 
-  f.initialize([&dist_f, &gen](float x1, float x2, float x3){
-                 return dist_f(gen);
-               });
+  f.initialize([&dist_f, &gen](float x1, float x2, float x3) {
+    return dist_f(gen);
+  });
   for (uint32_t i = 0; i < N; i++) {
     cells[i] = mesh.get_idx(dist(gen), dist(gen), dist(gen));
     x1v[i] = dist_f(gen);
@@ -92,10 +92,14 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
 
   timer::stamp();
   for (uint32_t i = 0; i < N; i += 8) {
-    Vec8ui c; c.load(cells.data() + i);
-    Vec8f x1; x1.load(x1v.data() + i);
-    Vec8f x2; x2.load(x2v.data() + i);
-    Vec8f x3; x3.load(x3v.data() + i);
+    Vec8ui c;
+    c.load(cells.data() + i);
+    Vec8f x1;
+    x1.load(x1v.data() + i);
+    Vec8f x2;
+    x2.load(x2v.data() + i);
+    Vec8f x3;
+    x3.load(x3v.data() + i);
 
     Vec8f f000 = interpolate(data, c, x1, x2, x3, Stagger(0b111));
 
@@ -106,7 +110,7 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
       "explicit AVX interpolation for {} particles took {}us.", N, t);
 
   timer::stamp();
-// #pragma omp simd
+  // #pragma omp simd
   for (uint32_t i = 0; i < N; i++) {
     uint32_t c = cells[i];
     size_t offset = data.get_offset(c);
@@ -117,15 +121,18 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
     float nx1 = 1.0f - x1;
     float nx2 = 1.0f - x2;
     float nx3 = 1.0f - x3;
-    results2[i] = nx1 * nx2 * nx3 * data[offset - sizeof(float) - data.pitch() - k_off]
-        + x1 * nx2 * nx3 * data[offset - data.pitch() - k_off]
-        + nx1 * x2 * nx3 * data[offset - sizeof(float) - k_off]
-        + nx1 * nx2 * x3 * data[offset - sizeof(float) - data.pitch()]
-        + x1 * x2 * nx3 * data[offset - k_off]
-        + x1 * nx2 * x3 * data[offset - data.pitch()]
-        + nx1 * x2 * x3 * data[offset - sizeof(float)]
-        + x1 * x2 * x3 * data[offset];
+    results2[i] =
+        nx1 * nx2 * nx3 *
+            data[offset - sizeof(float) - data.pitch() - k_off] +
+        x1 * nx2 * nx3 * data[offset - data.pitch() - k_off] +
+        nx1 * x2 * nx3 * data[offset - sizeof(float) - k_off] +
+        nx1 * nx2 * x3 * data[offset - sizeof(float) - data.pitch()] +
+        x1 * x2 * nx3 * data[offset - k_off] +
+        x1 * nx2 * x3 * data[offset - data.pitch()] +
+        nx1 * x2 * x3 * data[offset - sizeof(float)] +
+        x1 * x2 * x3 * data[offset];
   }
+
   t = timer::get_duration_since_stamp("us");
   Logger::print_info(
       "Ordinary interpolation for {} particles took {}us.", N, t);
@@ -133,6 +140,27 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
   for (uint32_t i = 0; i < N; i++) {
     REQUIRE(results1[i] == Approx(results2[i]));
   }
+
+#ifdef __AVX512__
+  timer::stamp();
+  for (uint32_t i = 0; i < N; i += 16) {
+    Vec16ui c;
+    c.load(cells.data() + i);
+    Vec16f x1;
+    x1.load(x1v.data() + i);
+    Vec16f x2;
+    x2.load(x2v.data() + i);
+    Vec16f x3;
+    x3.load(x3v.data() + i);
+
+    Vec16f f000 = interpolate(data, c, x1, x2, x3, Stagger(0b111));
+
+    f000.store(results1.data() + i);
+  }
+  auto t = timer::get_duration_since_stamp("us");
+  Logger::print_info(
+      "AVX512 interpolation for {} particles took {}us.", N, t);
+#endif
 }
 
 TEST_CASE("Vec8ui division", "[vectorclass]") {
@@ -171,7 +199,6 @@ TEST_CASE("i32gather_ps", "[avx2]") {
     }
     std::cout << "\n";
   }
-  
 }
 
 TEST_CASE("truncate_to_int", "[vectorclass]") {
