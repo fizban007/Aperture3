@@ -204,7 +204,7 @@ interpolate(const multi_array<float>& data, const Vec8ui& cells,
 }
 #endif
 
-#ifdef __AVX512__
+#ifdef __AVX512F__
 inline Vec16f
 interpolate(const multi_array<float>& data, const Vec8ui& cells,
             Vec16f x1, Vec16f x2, Vec16f x3, Stagger stagger) {
@@ -224,21 +224,20 @@ interpolate(const multi_array<float>& data, const Vec8ui& cells,
   offsets += nx3 * k_off;
 
   Vec16f f000 = _mm512_i32gather_ps(
-      (float*)data.data(),
-      offsets - (k_off + sizeof(float) + data.pitch()), 1);
-  Vec16f f001 = _mm512_i32gather_ps((float*)data.data(),
-                                   offsets - (k_off + data.pitch()), 1);
+      offsets - (k_off + sizeof(float) + data.pitch()), data.data(), 1);
+  Vec16f f001 = _mm512_i32gather_ps(
+      offsets - (k_off + data.pitch()), data.data(), 1);
   Vec16f f010 = _mm512_i32gather_ps(
-      (float*)data.data(), offsets - (sizeof(float) + k_off), 1);
+      offsets - (sizeof(float) + k_off), data.data(), 1);
   Vec16f f011 =
-      _mm512_i32gather_ps((float*)data.data(), offsets - k_off, 1);
+      _mm512_i32gather_ps(offsets - k_off, data.data(), 1);
   Vec16f f100 = _mm512_i32gather_ps(
-      (float*)data.data(), offsets - (sizeof(float) + data.pitch()), 1);
-  Vec16f f101 = _mm512_i32gather_ps((float*)data.data(),
-                                   offsets - data.pitch(), 1);
-  Vec16f f110 = _mm512_i32gather_ps((float*)data.data(),
-                                   offsets - sizeof(float), 1);
-  Vec16f f111 = _mm512_i32gather_ps((float*)data.data(), offsets, 1);
+      offsets - (sizeof(float) + data.pitch()), data.data(), 1);
+  Vec16f f101 = _mm512_i32gather_ps(
+      offsets - data.pitch(), data.data(), 1);
+  Vec16f f110 = _mm512_i32gather_ps(
+      offsets - sizeof(float), data.data(), 1);
+  Vec16f f111 = _mm512_i32gather_ps(offsets, data.data(), 1);
 
   f000 = simd::lerp(x3, f000, f100);
   f010 = simd::lerp(x3, f010, f110);
