@@ -1,0 +1,32 @@
+# Time step size
+delta_t = 0.001
+
+# Charge of an electron
+q_e = 0.1
+
+# Maximum number of particles per node
+max_ptc_number = 6000000
+
+# Maximum number of photons per node
+max_photon_number = 6000000
+
+# Whether to use periodic boundary condition in each direction
+periodic_boundary = [true, true]
+
+# This section describes the grid parameters. Every parameter is an array with 3
+# elements, describing the number for each dimension. If you wish to disable one
+# dimension, just set N to 1 and guard to 0 on that dimension.
+[Grid]
+# Number of grid points in each direction, excluding guard cells
+N = [260, 260, 260]
+
+# Number of guard cells on each end. Effective number of cells per dimension
+# will be N + 2*guard
+guard = [2, 2, 2]
+
+# Lower limit of the coordinate
+lower = [0.0, 0.0, 0.0]
+
+# Size of the box in each dimension
+size = [1.0, 1.0, 1.0]
+
