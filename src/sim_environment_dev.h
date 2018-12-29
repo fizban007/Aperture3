@@ -1,37 +1,38 @@
-#ifndef _SIM_ENVIRONMENT_H_
-#define _SIM_ENVIRONMENT_H_
+#ifndef _SIM_ENVIRONMENT_DEV_H_
+#define _SIM_ENVIRONMENT_DEV_H_
 
 #include "commandline_args.h"
 #include "config_file.h"
 #include "sim_params.h"
-
 #include <memory>
 #include <random>
 #include <string>
-#include <array>
 // #include "data/domain_info.h"
 #include "data/grid.h"
+#include "data/fields_dev.h"
 #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
 #include "utils/logger.h"
+#include "sim_environment.h"
 
 namespace Aperture {
 
-// struct sim_data;
+struct SimData;
+// class DomainCommunicator;
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
 ////////////////////////////////////////////////////////////////////////////////
-class sim_environment {
+class Environment : public sim_environment {
  public:
-  sim_environment(int* argc, char*** argv);
-  sim_environment(const std::string& conf_file);
-  ~sim_environment();
+  Environment(int* argc, char*** argv);
+  Environment(const std::string& conf_file);
+  ~Environment();
 
   // Remove copy and assignment operators
-  sim_environment(sim_environment const&) = delete;
-  sim_environment& operator=(sim_environment const&) = delete;
+  Environment(Environment const&) = delete;
+  Environment& operator=(Environment const&) = delete;
 
   // void set_initial_condition(SimData& data);
   // void set_initial_condition(SimData& data, const Index& start, const
@@ -42,23 +43,27 @@ class sim_environment {
 
   // void set_initial_condition(InitialCondition* ic);
 
-  void add_output(const std::string& name);
-  // void init_bg_fields(SimData& data);
+  // void add_output(const std::string& name);
+  void init_bg_fields(SimData& data);
 
-  float gen_rand() { return m_dist(m_generator); }
+  // float gen_rand() { return m_dist(m_generator); }
 
   // data access methods
-  const CommandArgs& args() const { return m_args; }
-  SimParams& params() { return m_params; }
-  const SimParams& params() const { return m_params; }
+  // const CommandArgs& args() const { return m_args; }
+  // const SimParams& conf() const { return m_conf_file.data(); }
+  // SimParams& params() { return m_params; }
+  // const SimParams& params() const { return m_params; }
   // const ConfigFile& conf_file() const { return m_conf_file; }
-  const Grid& grid() const { return *m_grid; }
-  const Grid& local_grid() const { return *m_grid; }
-  const Quadmesh& mesh() const { return m_grid->mesh(); }
-  // VectorField<Scalar>& E_bg() { return m_Ebg; }
-  // VectorField<Scalar>& B_bg() { return m_Bbg; }
+  // const Grid& grid() const { return *m_grid; }
+  // const Grid& local_grid() const { return *m_grid; }
+  // const Quadmesh& mesh() const { return m_grid->mesh(); }
+  VectorField<Scalar>& E_bg() { return m_Ebg; }
+  VectorField<Scalar>& B_bg() { return m_Bbg; }
 
+  // const Grid& local_grid() const { return m_local_grid; }
+  // const Grid& local_grid_dual() const { return m_local_grid_dual; }
   // const Grid& super_grid() const { return m_super_grid; }
+  // const Grid& data_grid() const { return m_data_grid; }
   // MetricType metric_type() const { return m_metric_type; }
 
   // DataExporter& exporter() { return *m_exporter; }
@@ -70,41 +75,20 @@ class sim_environment {
   // m_bc; }
   // // const InitialCondition& initial_condition() const { return
   // *m_ic; }
+  void check_dev_mesh(Quadmesh& mesh);
+  void check_dev_params(SimParams& params);
 
   // void save_snapshot(SimData& data);
   // void load_snapshot(SimData& data);
   void load_from_snapshot(const std::string& snapshot_file);
 
- protected:
-  // sim_environment() {}
+ private:
+  // Environment() {}
   void setup_env();
 
-  CommandArgs m_args;
-  SimParams m_params;
-  ConfigFile m_conf_file;
+  VectorField<Scalar> m_Ebg;
+  VectorField<Scalar> m_Bbg;
+};  // ----- end of class Environment -----
+}  // namespace Aperture
 
-  std::unique_ptr<Grid> m_grid;
-  // Grid m_local_grid, m_local_grid_dual;
-  // Grid m_super_grid;
-  // Grid m_data_grid, m_data_super_grid;
-  // MetricType m_metric_type;
-
-  // DomainInfo m_domain_info;
-  // BoundaryConditions m_bc;
-  // VectorField<Scalar> m_Ebg;
-  // VectorField<Scalar> m_Bbg;
-
-  // std::unique_ptr<MPIComm> m_comm;
-  // std::unique_ptr<DataExporter> m_exporter;
-  // std::unique_ptr<InitialCondition> m_ic;
-  std::default_random_engine m_generator;
-  std::uniform_real_distribution<float> m_dist;
-  std::array<float, 8> m_charges;
-  std::array<float, 8> m_masses;
-
-};  // ----- end of class sim_environment -----
-
-
-}
-
-#endif  // _SIM_ENVIRONMENT_H_
+#endif  // _SIM_ENVIRONMENT_DEV_H_

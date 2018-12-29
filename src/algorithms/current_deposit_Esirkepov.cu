@@ -2,7 +2,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "data/detail/multi_array_utils.hpp"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/util_functions.h"
 #include <iostream>
 #include <thrust/device_ptr.h>

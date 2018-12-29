@@ -1,121 +1,44 @@
-#include "sim_environment.h"
-// #include "cuda/constant_mem.h"
-// #include "cuda/constant_mem_func.h"
-// #include "cuda/cudaUtility.h"
-// #include "data/grid_1dGR.h"
-// #include "data/grid_log_sph.h"
-#include "fmt/format.h"
-#include <memory>
+#include "sim_environment_dev.h"
+#include "cuda/constant_mem.h"
+#include "cuda/constant_mem_func.h"
+#include "cuda/cudaUtility.h"
+#include "data/grid_1dGR.h"
+#include "data/grid_log_sph.h"
 // #include "data/detail/grid_impl.hpp"
-#include "sim_data.h"
-#include <boost/filesystem.hpp>
+#include "sim_data_dev.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
 
-// sim_environment&
-sim_environment::sim_environment(int* argc, char*** argv)
-    : m_generator(), m_dist(0.0, 1.0) {
-  // m_comm = std::make_unique<MPIComm>(argc, argv);
-
-  // Read in command line configuration
-  // Handle the case of wrong command line arguments, exit gracefully
-  try {
-    m_args.read_args(*argc, *argv, m_params);
-  } catch (exceptions::program_option_terminate& e) {
-    exit(0);
-  }
-
-  // Read in the input file
-  try {
-    m_conf_file.parse_file(m_params.conf_file, m_params);
-  } catch (exceptions::file_not_found& e) {
-    Logger::err("Config file not found, exiting");
-    exit(0);
-  }
-
-  // Look at the output directory to see if we are restarting from a
-  // snapshot
-  boost::filesystem::path snapshotPath(m_params.data_dir);
-  snapshotPath /= "snapshot.h5";
-  Logger::print_info("Snapshot path is {}", snapshotPath.string());
-  boost::filesystem::path config_path(m_params.data_dir);
-  config_path /= "config.toml";
-  if (boost::filesystem::exists(snapshotPath) &&
-      boost::filesystem::exists(config_path)) {
-    // Reading from a snapshot, use the config file in data output path
-    // instead
-    Logger::print_info(
-        "**** Found a snapshot file, reading its config instead!");
-    m_params.conf_file = config_path.string();
-    m_params.is_restart = true;
-  }
-
+// Environment&
+Environment::Environment(int* argc, char*** argv)
+    : sim_environment(argc, argv) {
   setup_env();
 }
 
-sim_environment::sim_environment(const std::string& conf_file)
-    : m_generator(), m_dist(0.0, 1.0) {
-  m_params.conf_file = conf_file;
-  // Read in the input file
-  try {
-    m_conf_file.parse_file(m_params.conf_file, m_params);
-  } catch (exceptions::file_not_found& e) {
-    Logger::err("Config file not found, exiting");
-    exit(0);
-  }
-
+Environment::Environment(const std::string& conf_file)
+    : sim_environment(conf_file) {
   setup_env();
 }
 
-sim_environment::~sim_environment() {}
+Environment::~Environment() {}
 
 void
-sim_environment::setup_env() {
-  // SimParamsBase* h_params = &m_params;
+Environment::setup_env() {
+  sim_environment::setup_env();
 
-  // Copy the parameters to cuda constant memory
-  // cudaMemcpyToSymbol(dev_params, (void*)&m_params,
-  // sizeof(SimParamsBase)); CudaCheckError();
-  // init_dev_params(m_params);
-
-  // Setup the grid
-  if (m_params.coord_system == "Cartesian") {
-    m_grid.reset(new Grid());
-  // } else if (m_params.coord_system == "LogSpherical") {
-  //   m_grid.reset(new Grid_LogSph());
-  } else {
-    m_grid.reset(new Grid());
-  }
-  m_grid->init(m_params);
-  std::cout << "Grid dimension is " << m_grid->dim() << std::endl;
-  if (m_grid->mesh().delta[0] < m_params.delta_t) {
-    std::cerr << "Grid spacing should be larger than delta_t! Aborting!"
-              << std::endl;
-    abort();
-  }
-  // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1]
-  // << std::endl; std::cout << "size of quadmesh is " <<
-  // sizeof(Quadmesh) << std::endl; cudaMemcpyToSymbol(dev_mesh,
-  // (void*)m_grid.mesh_ptr(), sizeof(Quadmesh)); CudaCheckError();
-  // init_dev_mesh(*(m_grid->mesh_ptr()));
+  init_dev_params(m_params);
+  init_dev_mesh(*(m_grid->mesh_ptr()));
 
   // Initialize the background fields
-  // if (m_params.use_bg_fields) {
-  //   m_Ebg = VectorField<Scalar>(*m_grid);
-  //   m_Bbg = VectorField<Scalar>(*m_grid);
-  //   init_dev_bg_fields(m_Ebg, m_Bbg);
-  // }
-
-  // Setup particle charges and masses
-  for (int i = 0; i < 8; i++) {
-    m_charges[i] = m_params.q_e;
-    m_masses[i] = m_params.q_e;
+  if (m_params.use_bg_fields) {
+    m_Ebg = VectorField<Scalar>(*m_grid);
+    m_Bbg = VectorField<Scalar>(*m_grid);
+    init_dev_bg_fields(m_Ebg, m_Bbg);
   }
-  m_charges[(int)ParticleType::electron] *= -1.0;
-  m_masses[(int)ParticleType::ion] *= m_params.ion_mass;
-  // init_dev_charges(charges);
-  // init_dev_masses(masses);
+
+  init_dev_charges(m_charges.data());
+  init_dev_masses(m_masses.data());
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -148,17 +71,10 @@ sim_environment::setup_env() {
   // Initialize logger for future use
   // Logger::init(m_comm->world().rank(), m_conf_file.data().log_lvl,
   // m_conf_file.data().log_file);
-  Logger::init(0, m_params.log_lvl, m_params.log_file);
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
-
-  Logger::print_info("Setup environment completed.");
-  Logger::print_info("Each particle is worth {} bytes",
-                     particle_data::size);
-  Logger::print_info("Each photon is worth {} bytes",
-                     photon_data::size);
 }
 // void
-// sim_environment::setup_domain(int num_nodes) {
+// Environment::setup_domain(int num_nodes) {
 //   int ndims = m_super_grid.dim();
 
 //   //   if (total_dims > 1)
@@ -178,7 +94,7 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::setup_domain(int dimx, int dimy, int dimz) {
+// Environment::setup_domain(int dimx, int dimy, int dimz) {
 //   // First create Cartesian rank group
 //   bool periodic[3];
 //   for (int i = 0; i < 3; i++) {
@@ -285,7 +201,7 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::set_initial_condition(InitialCondition* ic) {
+// Environment::set_initial_condition(InitialCondition* ic) {
 //   if (m_ic == nullptr)
 //     m_ic.reset(ic);
 //   else
@@ -293,11 +209,11 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::set_initial_condition(SimData& data, const Index& start,
+// Environment::set_initial_condition(SimData& data, const Index& start,
 // const Extent& extent) {}
 
 // void
-// sim_environment::add_fieldBC(fieldBC *bc) {
+// Environment::add_fieldBC(fieldBC *bc) {
 //   // Only add boundary condition if the node is at boundary
 //   int pos = static_cast<int>(bc->pos());
 //   if (m_domain_info.is_boundary[pos]) {
@@ -307,12 +223,12 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::add_ptcBC(ptcBC* bc) {
+// Environment::add_ptcBC(ptcBC* bc) {
 //   m_bc.add_ptcBC(bc);
 // }
 
 // void
-// sim_environment::setup_local_grid(Grid &local_grid, const Grid
+// Environment::setup_local_grid(Grid &local_grid, const Grid
 // &super_grid, const DomainInfo& info) {
 //   local_grid = super_grid;
 //   auto& local_mesh = local_grid.mesh();
@@ -349,7 +265,7 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::apply_initial_condition(SimData &data) {
+// Environment::apply_initial_condition(SimData &data) {
 //   Logger::print_info("Applying initial condition");
 //   if (m_ic == nullptr) {
 //     Logger::print_err("No initial condition set yet!");
@@ -373,5 +289,28 @@ sim_environment::setup_env() {
 //   m_ic->set_data(data);
 //   m_bc.initialize(*this, data);
 // }
+
+void
+Environment::check_dev_mesh(Quadmesh& mesh) {
+  get_dev_mesh(mesh);
+}
+
+void
+Environment::check_dev_params(SimParams& params) {
+  get_dev_params(params);
+}
+
+void
+Environment::init_bg_fields(SimData& data) {
+  m_Ebg = data.E;
+  m_Bbg = data.B;
+  m_Ebg.sync_to_host();
+  m_Bbg.sync_to_host();
+
+  data.E.assign(0.0);
+  data.B.assign(0.0);
+  data.E.sync_to_host();
+  data.B.sync_to_host();
+}
 
 }  // namespace Aperture

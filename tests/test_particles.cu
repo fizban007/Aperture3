@@ -8,7 +8,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "catch.hpp"
 #include "cub/cub.cuh"
 

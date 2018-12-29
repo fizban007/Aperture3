@@ -8,7 +8,7 @@
 #include "commandline_args.h"
 #include "nlohmann/json.hpp"
 #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "sim_params.h"
 // #include <H5Cpp.h>
 #define BOOST_NO_CXX11_SCOPED_ENUMS

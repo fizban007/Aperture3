@@ -3,7 +3,7 @@
 #include "cuda/cudaUtility.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 
 namespace Aperture {
 

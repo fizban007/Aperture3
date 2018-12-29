@@ -1,5 +1,5 @@
 #include <cstring>
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "catch.hpp"
 
 using namespace Aperture;

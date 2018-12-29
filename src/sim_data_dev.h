@@ -6,7 +6,7 @@
 #include "data/grid.h"
 #include "data/particles_dev.h"
 // #include "data/photons.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 
 namespace Aperture {
 

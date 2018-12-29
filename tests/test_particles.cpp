@@ -2,7 +2,7 @@
 #include "data/particles.h"
 #include "data/grid.h"
 // #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include <random>

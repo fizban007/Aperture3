@@ -11,7 +11,7 @@
 // #include "radiation/curvature_instant.h"
 #include "radiation/rt_magnetar.h"
 #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <thrust/device_ptr.h>
