@@ -12,6 +12,7 @@ class ptc_updater_default : public ptc_updater
   virtual ~ptc_updater_default();
 
   virtual void update_particles(sim_data& data, double dt) override;
+  void update_particles_slow(sim_data& data, double dt);
   virtual void handle_boundary(sim_data& data) override;
 
 }; // ----- end of class ptc_updater_default : public ptc_updater -----

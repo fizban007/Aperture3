@@ -60,14 +60,15 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       Vec8f pm1 = p1 + E1;
       Vec8f pm2 = p2 + E2;
       Vec8f pm3 = p3 + E3;
-      Vec8f gamma = sqrt(pm1*pm1 + pm2*pm2 + pm3*pm3 + 1.0f);
+      Vec8f gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3 + 1.0f);
 
       gamma.store_a(ptc.data().E + idx);
 
       Vec8f pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
       Vec8f pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
       Vec8f pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
-      Vec8f t2p1 = (B1*B1 + B2*B2 + B3*B3) / (gamma*gamma) + 1.0f;
+      Vec8f t2p1 =
+          (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
 
       p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
       p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
@@ -76,10 +77,11 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       p1.store_a(ptc.data().p1 + idx);
       p2.store_a(ptc.data().p2 + idx);
       p3.store_a(ptc.data().p3 + idx);
+    }
 #else
     for (size_t idx = 0; idx < ptc.number(); idx++) {
-#endif
     }
+#endif
 
     // TODO: Current deposit
 
@@ -87,8 +89,61 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
   }
 }
 
-#if defined(__AVX2__)
-#endif
+void
+ptc_updater_default::update_particles_slow(sim_data &data, double dt) {
+  auto &ptc = data.particles;
+#pragma omp simd
+  for (Index_t idx = 0; idx < ptc.number(); idx++) {
+    // Interpolate field values to particle position
+    uint32_t c = ptc.data().cell[idx];
+    Scalar x1 = ptc.data().x1[idx];
+    Scalar x2 = ptc.data().x2[idx];
+    Scalar x3 = ptc.data().x3[idx];
+
+    float q_over_m = dt * 0.5f;
+
+    Scalar E1 =
+        data.E.data(0).interpolate(c, x1, x2, x3, data.E.stagger(0));
+    Scalar E2 =
+        data.E.data(1).interpolate(c, x1, x2, x3, data.E.stagger(1));
+    Scalar E3 =
+        data.E.data(2).interpolate(c, x1, x2, x3, data.E.stagger(2));
+    Scalar B1 =
+        data.B.data(0).interpolate(c, x1, x2, x3, data.B.stagger(0));
+    Scalar B2 =
+        data.B.data(1).interpolate(c, x1, x2, x3, data.B.stagger(1));
+    Scalar B3 =
+        data.B.data(2).interpolate(c, x1, x2, x3, data.B.stagger(2));
+
+    Scalar p1 = ptc.data().p1[idx];
+    Scalar p2 = ptc.data().p2[idx];
+    Scalar p3 = ptc.data().p3[idx];
+
+    auto pm1 = p1 + E1;
+    auto pm2 = p2 + E2;
+    auto pm3 = p3 + E3;
+    auto gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3 + 1.0f);
+
+    // gamma.store_a(ptc.data().E + idx);
+    ptc.data().E[idx] = gamma;
+
+    auto pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
+    auto pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
+    auto pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
+    auto t2p1 = (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
+
+    p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
+    p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
+    p3 = E3 + pm3 + (pp1 * B2 - pp2 * B1) / t2p1 * 2.0f;
+
+    // p1.store_a(ptc.data().p1 + idx);
+    // p2.store_a(ptc.data().p2 + idx);
+    // p3.store_a(ptc.data().p3 + idx);
+    ptc.data().p1[idx] = p1;
+    ptc.data().p2[idx] = p2;
+    ptc.data().p3[idx] = p3;
+  }
+}
 
 void
 ptc_updater_default::handle_boundary(sim_data &data) {}

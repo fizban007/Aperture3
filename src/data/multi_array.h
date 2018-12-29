@@ -1,6 +1,7 @@
 #ifndef _MULTIARRAY_H_
 #define _MULTIARRAY_H_
 
+#include "data/stagger.h"
 #include "data/vec3.h"
 #include "utils/simd.h"
 #include <algorithm>
@@ -132,7 +133,7 @@ class multi_array {
   size_t get_offset(uint32_t idx) const;
 
 #ifdef __AVX2__
-  
+
 #endif
 
   // Returns various sizes of the array
@@ -146,6 +147,9 @@ class multi_array {
   /// Direct access to the encapsulated pointer
   void* data() { return _data; }
   const void* data() const { return _data; }
+
+  data_type interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
+                        Stagger stagger) const;
 
  private:
   void find_dim();
