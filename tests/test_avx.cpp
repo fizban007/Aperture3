@@ -157,7 +157,7 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
 
     f000.store(results1.data() + i);
   }
-  auto t = timer::get_duration_since_stamp("us");
+  t = timer::get_duration_since_stamp("us");
   Logger::print_info(
       "AVX512 interpolation for {} particles took {}us.", N, t);
 #endif

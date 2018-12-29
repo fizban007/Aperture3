@@ -206,7 +206,7 @@ interpolate(const multi_array<float>& data, const Vec8ui& cells,
 
 #ifdef __AVX512F__
 inline Vec16f
-interpolate(const multi_array<float>& data, const Vec8ui& cells,
+interpolate(const multi_array<float>& data, const Vec16ui& cells,
             Vec16f x1, Vec16f x2, Vec16f x3, Stagger stagger) {
   Vec16ui d = cells / Divisor_ui(data.width());
   Vec16ui c1s = cells - d * data.width();
