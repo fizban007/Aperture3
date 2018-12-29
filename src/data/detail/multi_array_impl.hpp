@@ -174,6 +174,28 @@ multi_array<T>::get_offset(uint32_t idx) const {
          (idx / _extent.width()) * _pitch;
 }
 
+template <typename T>
+T
+multi_array<T>::interpolate(uint32_t idx, Scalar x1, Scalar x2,
+                            Scalar x3, Stagger stagger) const {
+  size_t offset = get_offset(idx);
+  size_t k_off = _pitch * _extent.height();
+  Scalar nx1 = 1.0f - x1;
+  Scalar nx2 = 1.0f - x2;
+  Scalar nx3 = 1.0f - x3;
+
+  auto& data = *this;
+  return nx1 * nx2 * nx3 *
+             data[offset - sizeof(float) - data.pitch() - k_off] +
+         x1 * nx2 * nx3 * data[offset - data.pitch() - k_off] +
+         nx1 * x2 * nx3 * data[offset - sizeof(float) - k_off] +
+         nx1 * nx2 * x3 * data[offset - sizeof(float) - data.pitch()] +
+         x1 * x2 * nx3 * data[offset - k_off] +
+         x1 * nx2 * x3 * data[offset - data.pitch()] +
+         nx1 * x2 * x3 * data[offset - sizeof(float)] +
+         x1 * x2 * x3 * data[offset];
+}
+
 }  // namespace Aperture
 
 #endif  // _MULTI_ARRAY_IMPL_H_

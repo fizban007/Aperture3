@@ -37,4 +37,11 @@ TEST_CASE("Particle Push", "[ptc_update]") {
   auto t = timer::get_duration_since_stamp("us");
   Logger::print_info(
       "Boris push for {} particles took {}us.", N, t);
+
+  timer::stamp();
+
+  pusher.update_particles_slow(data, 0.001);
+  t = timer::get_duration_since_stamp("us");
+  Logger::print_info(
+      "Naive Boris push for {} particles took {}us.", N, t);
 }
