@@ -954,26 +954,26 @@ void DataExporter::writeSnapshot(Environment &env, SimData &data,
 
   // Write background fields from environment
   size_t grid_size = data.E.grid().size();
-  env.E_bg().sync_to_host();
+  data.Ebg.sync_to_host();
   DataSet data_bg_E1 =
       snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
-  data_bg_E1.write(env.E_bg().data(0).data());
+  data_bg_E1.write(data.Ebg.data(0).data());
   DataSet data_bg_E2 =
       snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(grid_size));
-  data_bg_E2.write(env.E_bg().data(1).data());
+  data_bg_E2.write(data.Ebg.data(1).data());
   DataSet data_bg_E3 =
       snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
-  data_bg_E3.write(env.E_bg().data(2).data());
-  env.B_bg().sync_to_host();
+  data_bg_E3.write(data.Ebg.data(2).data());
+  data.Bbg.sync_to_host();
   DataSet data_bg_B1 =
       snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
-  data_bg_B1.write(env.B_bg().data(0).data());
+  data_bg_B1.write(data.Bbg.data(0).data());
   DataSet data_bg_B2 =
       snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(grid_size));
-  data_bg_B2.write(env.B_bg().data(1).data());
+  data_bg_B2.write(data.Bbg.data(1).data());
   DataSet data_bg_B3 =
       snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(grid_size));
-  data_bg_B3.write(env.B_bg().data(2).data());
+  data_bg_B3.write(data.Bbg.data(2).data());
 
   // Write sim data
   // Write field values
@@ -1103,20 +1103,20 @@ void DataExporter::load_from_snapshot(Environment &env, SimData &data,
 
   // Read field data
   DataSet data_bg_B1 = snapshotfile.getDataSet("bg_B1");
-  data_bg_B1.read(env.B_bg().data(0).data());
+  data_bg_B1.read(data.Bbg.data(0).data());
   DataSet data_bg_B2 = snapshotfile.getDataSet("bg_B2");
-  data_bg_B2.read(env.B_bg().data(1).data());
+  data_bg_B2.read(data.Bbg.data(1).data());
   DataSet data_bg_B3 = snapshotfile.getDataSet("bg_B3");
-  data_bg_B3.read(env.B_bg().data(2).data());
+  data_bg_B3.read(data.Bbg.data(2).data());
   DataSet data_bg_E1 = snapshotfile.getDataSet("bg_E1");
-  data_bg_E1.read(env.E_bg().data(0).data());
+  data_bg_E1.read(data.Ebg.data(0).data());
   DataSet data_bg_E2 = snapshotfile.getDataSet("bg_E2");
-  data_bg_E2.read(env.E_bg().data(1).data());
+  data_bg_E2.read(data.Ebg.data(1).data());
   DataSet data_bg_E3 = snapshotfile.getDataSet("bg_E3");
-  data_bg_E3.read(env.E_bg().data(2).data());
+  data_bg_E3.read(data.Ebg.data(2).data());
 
-  env.B_bg().sync_to_device();
-  env.E_bg().sync_to_device();
+  data.Bbg.sync_to_device();
+  data.Ebg.sync_to_device();
 
   DataSet data_B1 = snapshotfile.getDataSet("B1");
   data_B1.read(data.B.data(0).data());

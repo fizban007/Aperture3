@@ -27,6 +27,9 @@ struct SimData {
   std::vector<ScalarField<Scalar>> J_s;
   std::vector<ScalarField<Scalar>> J_avg;
 
+  VectorField<Scalar> Ebg;
+  VectorField<Scalar> Bbg;
+
   Particles particles;
   Photons photons;
   int num_species;

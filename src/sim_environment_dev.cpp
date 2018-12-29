@@ -30,13 +30,6 @@ Environment::setup_env() {
   init_dev_params(m_params);
   init_dev_mesh(*(m_grid->mesh_ptr()));
 
-  // Initialize the background fields
-  if (m_params.use_bg_fields) {
-    m_Ebg = VectorField<Scalar>(*m_grid);
-    m_Bbg = VectorField<Scalar>(*m_grid);
-    init_dev_bg_fields(m_Ebg, m_Bbg);
-  }
-
   init_dev_charges(m_charges.data());
   init_dev_masses(m_masses.data());
 
@@ -302,15 +295,22 @@ Environment::check_dev_params(SimParams& params) {
 
 void
 Environment::init_bg_fields(SimData& data) {
-  m_Ebg = data.E;
-  m_Bbg = data.B;
-  m_Ebg.sync_to_host();
-  m_Bbg.sync_to_host();
+  // Initialize the background fields
+  if (m_params.use_bg_fields) {
+    data.Ebg = VectorField<Scalar>(*m_grid);
+    data.Bbg = VectorField<Scalar>(*m_grid);
+    init_dev_bg_fields(data.Ebg, data.Bbg);
 
-  data.E.assign(0.0);
-  data.B.assign(0.0);
-  data.E.sync_to_host();
-  data.B.sync_to_host();
+    data.Ebg = data.E;
+    data.Bbg = data.B;
+    data.Ebg.sync_to_host();
+    data.Bbg.sync_to_host();
+
+    data.E.assign(0.0);
+    data.B.assign(0.0);
+    data.E.sync_to_host();
+    data.B.sync_to_host();
+  }
 }
 
 }  // namespace Aperture

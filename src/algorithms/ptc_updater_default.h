@@ -8,7 +8,7 @@ namespace Aperture {
 class ptc_updater_default : public ptc_updater
 {
  public:
-  ptc_updater_default(const Environment& env);
+  ptc_updater_default(const sim_environment& env);
   virtual ~ptc_updater_default();
 
   virtual void update_particles(sim_data& data, double dt) override;

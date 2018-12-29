@@ -7,7 +7,7 @@
 
 namespace Aperture {
 
-ptc_updater_default::ptc_updater_default(const Environment &env)
+ptc_updater_default::ptc_updater_default(const sim_environment &env)
     : ptc_updater(env) {}
 
 ptc_updater_default::~ptc_updater_default() {}

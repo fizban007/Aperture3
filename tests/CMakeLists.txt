@@ -27,6 +27,7 @@ set(tests_src
   "test_fields.cpp"
   "test_field_solver.cpp"
   "test_avx.cpp"
+  "test_ptc_update.cpp"
   # "test_finite_diff.cpp"
   # "test_ffe.cpp" "test_ffe2d.cpp"
   # "test_IC_PL.cpp"
