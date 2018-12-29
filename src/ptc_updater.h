@@ -4,19 +4,19 @@
 namespace Aperture {
 
 struct sim_data;
-class Environment;
+class sim_environment;
 
 class ptc_updater
 {
  public:
-  ptc_updater(const Environment& env) : m_env(env) {}
+  ptc_updater(const sim_environment& env) : m_env(env) {}
   virtual ~ptc_updater() {}
 
   virtual void update_particles(sim_data& data, double dt) = 0;
   virtual void handle_boundary(sim_data& data) = 0;
 
  protected:
-  const Environment& m_env;
+  const sim_environment& m_env;
 }; // ----- end of class ptc_updater -----
 
 

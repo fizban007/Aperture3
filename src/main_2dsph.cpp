@@ -69,7 +69,7 @@ main(int argc, char* argv[]) {
   flux.initialize();
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);
-  exporter.AddField("B_bg", env.B_bg());
+  exporter.AddField("B_bg", data.Bbg);
   exporter.AddField("J", data.J);
   exporter.AddField("Rho_e", data.Rho[0]);
   exporter.AddField("Rho_p", data.Rho[1]);
@@ -122,7 +122,7 @@ main(int argc, char* argv[]) {
     if ((step % env.params().data_interval) == 0) {
       diag.collect_diagnostics(data);
       dynamic_cast<const Grid_LogSph*>(&env.local_grid())
-          ->compute_flux(flux, data.B, env.B_bg());
+          ->compute_flux(flux, data.B, data.Bbg);
       // Logger::print_info("Finished computing flux");
 
       exporter.WriteOutput(step, time);
