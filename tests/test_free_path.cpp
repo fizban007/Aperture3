@@ -1,6 +1,6 @@
 #include "algorithms/functions.h"
 #include "data/photons.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include <iostream>
 #include <fstream>
 #include <random>

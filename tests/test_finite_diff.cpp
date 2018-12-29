@@ -2,7 +2,7 @@
 #include "utils/logger.h"
 #include "cuda/constant_mem_func.h"
 #include "algorithms/finite_diff.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "cuda_runtime.h"
 #include "catch.hpp"
 

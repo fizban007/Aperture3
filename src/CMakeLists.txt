@@ -38,6 +38,7 @@ set(Aperture_src
   "data/detail/particle_data_impl.cpp"
   "commandline_args.cpp" "config_file.cpp"
   "sim_environment.cpp"
+  "sim_environment_dev.cpp"
   "pic_sim.cpp"
   "data/array.cu" "data/multi_array_dev.cu" "data/multi_array.cpp"
   "data/fields_dev.cu" "data/photons.cu"

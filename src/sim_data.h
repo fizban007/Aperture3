@@ -8,16 +8,16 @@
 
 namespace Aperture {
 
-class Environment;
+class sim_environment;
 
 struct sim_data
 {
-  sim_data(const Environment& env);
+  sim_data(const sim_environment& env);
   ~sim_data();
 
-  void initialize(const Environment& env);
+  void initialize(const sim_environment& env);
 
-  const Environment& env;
+  const sim_environment& env;
   vector_field<Scalar> E;
   vector_field<Scalar> B;
   vector_field<Scalar> J;

@@ -5,7 +5,7 @@
 #include "radiation/inverse_compton_dummy.h"
 #include "radiation/inverse_compton_power_law.h"
 #include "radiation/radiation_transfer.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 

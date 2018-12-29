@@ -3,7 +3,7 @@
 
 namespace Aperture {
 
-sim_data::sim_data(const Environment& e)
+sim_data::sim_data(const sim_environment& e)
     : env(e),
       E(env.local_grid()),
       B(env.local_grid()),
@@ -22,6 +22,6 @@ sim_data::sim_data(const Environment& e)
 sim_data::~sim_data() {}
 
 void
-sim_data::initialize(const Environment& env) {}
+sim_data::initialize(const sim_environment& env) {}
 
 }

@@ -5,7 +5,7 @@
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
 #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/interpolation.cuh"
 #include "utils/logger.h"
 #include "utils/util_functions.h"

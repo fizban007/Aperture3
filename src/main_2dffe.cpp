@@ -1,6 +1,6 @@
 #include "algorithms/field_solver_ffe_cyl.h"
 #include "sim_data_dev.h"
-#include "sim_environment.h"
+#include "sim_environment_dev.h"
 #include "utils/hdf_exporter.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
