@@ -5,10 +5,10 @@ delta_t = 0.001
 q_e = 0.1
 
 # Maximum number of particles per node
-max_ptc_number = 6000000
+max_ptc_number = 11000000
 
 # Maximum number of photons per node
-max_photon_number = 6000000
+max_photon_number = 11000000
 
 # Whether to use periodic boundary condition in each direction
 periodic_boundary = [true, true]

@@ -29,17 +29,19 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       Vec8f x3;
       x3.load_a(ptc.data().x3 + idx);
 
+      Vec8ui sp;
+
       float q_over_m = dt * 0.5f;
 
       Vec8f E1 = interpolate(data.E.data(0), c, x1, x2, x3,
                              data.E.stagger(0)) *
-                 q_over_m;
+                 q_over_m * 2.0f;
       Vec8f E2 = interpolate(data.E.data(1), c, x1, x2, x3,
                              data.E.stagger(1)) *
-                 q_over_m;
+                 q_over_m * 2.0f;
       Vec8f E3 = interpolate(data.E.data(2), c, x1, x2, x3,
                              data.E.stagger(2)) *
-                 q_over_m;
+                 q_over_m * 2.0f;
       Vec8f B1 = interpolate(data.B.data(0), c, x1, x2, x3,
                              data.B.stagger(0)) *
                  q_over_m;
@@ -56,23 +58,47 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       p2.load_a(ptc.data().p2 + idx);
       Vec8f p3;
       p3.load_a(ptc.data().p3 + idx);
+      Vec8f gamma;
+      gamma.load_a(ptc.data().E + idx);
 
-      Vec8f pm1 = p1 + E1;
-      Vec8f pm2 = p2 + E2;
-      Vec8f pm3 = p3 + E3;
-      Vec8f gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3 + 1.0f);
+      Vec8f up1 = p1 + E1 + (p2 * B3 - p3 * B2) / gamma;
+      Vec8f up2 = p2 + E2 + (p3 * B1 - p1 * B3) / gamma;
+      Vec8f up3 = p3 + E3 + (p1 * B2 - p2 * B1) / gamma;
+
+      Vec8f tt = mul_add(B1, B1, mul_add(B2, B2, B3 * B3));
+      Vec8f ut = mul_add(up1, B1, mul_add(up2, B2, up3 * B3));
+
+      Vec8f sigma = mul_add(
+          up1, up1,
+          mul_add(up2, up2, mul_add(up3, up3, Vec8f(1.0f) - tt)));
+      Vec8f inv_gamma2 =
+          Vec8f(2.0f) /
+          (sigma +
+           sqrt(mul_add(sigma, sigma, mul_add(ut, ut, tt) * 4.0f)));
+      Vec8f s = Vec8f(1.0f) / mul_add(inv_gamma2, tt, Vec8f(1.0f));
+      gamma = Vec8f(1.0f) / sqrt(inv_gamma2);
 
       gamma.store_a(ptc.data().E + idx);
 
-      Vec8f pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
-      Vec8f pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
-      Vec8f pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
-      Vec8f t2p1 =
-          (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
+      p1 = s * (mul_add(B1 * ut, inv_gamma2, up1) + (up2 * B3 - up3 * B2) / gamma);
+      p2 = s * (mul_add(B2 * ut, inv_gamma2, up2) + (up3 * B1 - up1 * B3) / gamma);
+      p3 = s * (mul_add(B3 * ut, inv_gamma2, up3) + (up1 * B2 - up2 * B1) / gamma);
+      // Vec8f pm1 = p1 + E1;
+      // Vec8f pm2 = p2 + E2;
+      // Vec8f pm3 = p3 + E3;
+      // Vec8f gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3 + 1.0f);
 
-      p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
-      p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
-      p3 = E3 + pm3 + (pp1 * B2 - pp2 * B1) / t2p1 * 2.0f;
+      // gamma.store_a(ptc.data().E + idx);
+
+      // Vec8f pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
+      // Vec8f pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
+      // Vec8f pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
+      // Vec8f t2p1 =
+      //     (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
+
+      // p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
+      // p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
+      // p3 = E3 + pm3 + (pp1 * B2 - pp2 * B1) / t2p1 * 2.0f;
 
       p1.store_a(ptc.data().p1 + idx);
       p2.store_a(ptc.data().p2 + idx);

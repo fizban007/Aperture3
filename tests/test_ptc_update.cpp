@@ -21,7 +21,7 @@ TEST_CASE("Particle Push", "[ptc_update]") {
 
   auto& mesh = data.E.grid().mesh();
 
-  const uint32_t N = 5000000;
+  const uint32_t N = 10000000;
   for (uint32_t i = 0; i < N; i++) {
     data.particles.append({dist_f(gen), dist_f(gen), dist_f(gen)},
                           {0.0, 0.0, 0.0},
