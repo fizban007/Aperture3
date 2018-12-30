@@ -28,6 +28,7 @@ TEST_CASE("Particle Push", "[ptc_update]") {
                           mesh.get_idx(dist(gen), dist(gen), dist(gen)),
                           ParticleType::electron);
   }
+  data.particles.sort_by_cell(env.grid());
 
   ptc_updater_default pusher(env);
 
