@@ -2370,6 +2370,19 @@ static inline Vec8d gather8d(void const * a) {
 
 /*****************************************************************************
 *
+*          Gather functions with variable indices
+*
+*****************************************************************************/
+static inline Vec16f gather(float* data, const Vec16ui& offsets, int scale) {
+  return _mm512_i32gather_ps(offsets, data, scale);
+}
+
+static inline Vec8d gather(double* data, const Vec8uq& offsets, int scale) {
+  return _mm512_i64gather_pd(offsets, data, scale);
+}
+
+/*****************************************************************************
+*
 *          Vector scatter functions
 *
 ******************************************************************************
