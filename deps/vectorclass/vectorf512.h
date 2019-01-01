@@ -398,7 +398,7 @@ public:
     // You may use load_a instead of load if you are certain that p points to an address
     // divisible by 32.
     Vec16f & maskload_a(float const * p, const Vec16ib &mask) {
-        ymm = _mm512_maskload_ps(p, _mm512_movepi32_mask((__m512i)mask));
+        zmm = _mm512_maskz_load_ps(mask, (void const*)p);
         return *this;
     }
     // Member function to store into array (unaligned)
@@ -415,7 +415,7 @@ public:
     // You may use store_a instead of store if you are certain that p points to an address
     // divisible by 64.
     void maskstore_a(float * p, const Vec16ib &mask) const {
-        _mm512_maskstore_ps(p, _mm512_movepi32_mask((__m512i)mask), zmm);
+        _mm512_mask_store_ps(p, mask, zmm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec16f & load_partial(int n, float const * p) {
@@ -2439,6 +2439,11 @@ static inline void scatter(Vec8d const & data, double * array) {
 static inline void scatter(Vec16i const & index, uint32_t limit, Vec16f const & data, float * array) {
     Vec16fb mask = Vec16ui(index) < limit;
     _mm512_mask_i32scatter_ps(array, mask, index, data, 4);
+}
+
+static inline void scatter(Vec16i const & index, Vec16f const & data, char * array) {
+    // Vec16fb mask = Vec16ui(index) < limit;
+    _mm512_i32scatter_ps(array, index, data, 1);
 }
 
 static inline void scatter(Vec8q const & index, uint32_t limit, Vec8d const & data, double * array) {

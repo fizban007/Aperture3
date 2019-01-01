@@ -36,6 +36,16 @@ struct to_signed<Vec4uq> {
   typedef Vec4q type;
 };
 
+template <>
+struct to_signed<Vec16ui> {
+  typedef Vec16i type;
+};
+
+template <>
+struct to_signed<Vec8uq> {
+  typedef Vec8q type;
+};
+
 }  // namespace simd
 
 }  // namespace Aperture

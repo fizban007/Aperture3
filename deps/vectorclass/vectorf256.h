@@ -3280,6 +3280,18 @@ static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & da
 #endif
 }
 
+static inline void scatter(Vec8i const & index, Vec8f const & data, char * array) {
+#if defined (__AVX512VL__)
+    _mm256_i32scatter_ps(array, index, data, 1);
+#elif defined (__AVX512F__)
+    _mm512_i32scatter_ps(array, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 1);
+#else
+    for (int i = 0; i < 8; i++) {
+      *(float*)(array + index[i]) = data[i];
+    }
+#endif
+}
+
 static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & data, char * array) {
 #if defined (__AVX512VL__)
     __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));

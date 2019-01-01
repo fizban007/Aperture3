@@ -752,13 +752,13 @@ public:
         return *this;
     }
     // Member function to load from array, aligned by 64, masked
-    Vec16i & maskload_a(void const * p, __m512i mask) {
-      zmm = _mm512_maskz_load_epi32(_mm512_movepi32_mask(mask), p);
+    Vec16i & maskload_a(void const * p, const Vec16ib &mask) {
+      zmm = _mm512_maskz_load_epi32(mask, p);
         return *this;
     }
     // Store into an array, aligned by 64, masked
-    void maskstore_a(int* p, __m512i mask) {
-      _mm512_mask_store_epi32((void*)p, _mm512_movepi32_mask(mask), zmm);
+    void maskstore_a(int* p, const Vec16ib &mask) {
+      _mm512_mask_store_epi32((void*)p, mask, zmm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec16i & load_partial(int n, void const * p) {
