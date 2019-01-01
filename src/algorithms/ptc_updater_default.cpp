@@ -21,19 +21,21 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
   auto &ptc = data.particles;
   auto &mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {
-    int vec_width = 8;
+//    int vec_width = 8;
 #if defined ( __AVX512F__ ) || defined ( __AVX512__ )
     typedef Vec16ui Vec_ui_type;
     typedef Vec16i Vec_i_type;
     typedef Vec16ib Vec_ib_type;
     typedef Vec16f Vec_f_type;
-    vec_width = 16;
+    constexpr int vec_width = 16;
 #elif defined ( __AVX2__ )
     typedef Vec8ui Vec_ui_type;
     typedef Vec8i Vec_i_type;
     typedef Vec8ib Vec_ib_type;
     typedef Vec8f Vec_f_type;
-    vec_width = 8;
+    constexpr int vec_width = 8;
+#else
+    constexpr int vec_width = 8;
 #endif
     for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
       // Interpolate field values to particle position
@@ -57,8 +59,8 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       // Find q_over_m of the current particle species
       Vec_ui_type flag;
       flag.maskload_a((int *)(ptc.data().flag + idx), empty_mask);
-      auto sp = get_ptc_type(flag);
-      Vec_f_type q_over_m = lookup<8>(sp, m_env.q_over_m());
+      Vec_i_type sp = get_ptc_type(flag);
+      Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
 
       Vec_f_type E1 = interpolate_3d(data.E.data(0), offsets, x1, x2, x3,
                                 data.E.stagger(0)) *
@@ -160,7 +162,7 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       // Deposit current
       Vec_f_type weight;
       weight.maskload_a(ptc.data().weight + idx, empty_mask);
-      weight *= -lookup<8>(sp, m_env.charges());
+      weight *= -lookup<vec_width>(sp, m_env.charges());
 
       Vec_i_type k_0 = select(dc3 == -1, Vec_i_type(-2), Vec_i_type(-1));
       Vec_i_type j_0 = select(dc2 == -1, Vec_i_type(-2), Vec_i_type(-1));
@@ -198,9 +200,9 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
             //     data.Rho[sp[n]].data()[off[n]] -= weight[n]*sx1[n]*sy1[n]*sz1[n];
             //   }
             // }
-            scatter(off, ptc.number(), djx, (char*)data.J.data(0).data());
-            scatter(off, ptc.number(), djy[i], (char*)data.J.data(1).data());
-            scatter(off, ptc.number(), djz[i + 3*j], (char*)data.J.data(2).data());
+            scatter(off, djx, (char*)data.J.data(0).data());
+            scatter(off, djy[i], (char*)data.J.data(1).data());
+            scatter(off, djz[i + 3*j], (char*)data.J.data(2).data());
           }
         }
       }

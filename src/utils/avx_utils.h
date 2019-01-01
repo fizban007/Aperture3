@@ -8,8 +8,8 @@ namespace Aperture {
 // Get an integer representing particle type from a given flag
 template <typename VUI>
 inline typename simd::to_signed<VUI>::type
-get_ptc_type(VUI flag) {
-  return (typename simd::to_signed<VUI>::type)(flag >> 29);
+get_ptc_type(const VUI& flag) {
+  return (typename simd::to_signed<VUI>::type)(flag >> (uint32_t)29);
 }
 
 
