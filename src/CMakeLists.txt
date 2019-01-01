@@ -51,6 +51,7 @@ set(Aperture_src
   "algorithms/field_solver_default.cpp"
   "algorithms/field_solver_log_sph.cu"
   "algorithms/ptc_updater_default.cpp"
+  # "algorithms/interpolation.cpp"
   # "algorithms/ptc_pusher_constE.cu"
   # "algorithms/ptc_pusher_beadonwire.cu"
   # "algorithms/ptc_pusher_geodesic.cpp"

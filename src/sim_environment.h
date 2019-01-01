@@ -58,6 +58,10 @@ class sim_environment {
   // VectorField<Scalar>& E_bg() { return m_Ebg; }
   // VectorField<Scalar>& B_bg() { return m_Bbg; }
 
+  const float* charges() const { return m_charges.data(); }
+  const float* masses() const { return m_masses.data(); }
+  const float* q_over_m() const { return m_q_over_m.data(); }
+
   // const Grid& super_grid() const { return m_super_grid; }
   // MetricType metric_type() const { return m_metric_type; }
 
@@ -101,6 +105,7 @@ class sim_environment {
   std::uniform_real_distribution<float> m_dist;
   std::array<float, 8> m_charges;
   std::array<float, 8> m_masses;
+  std::array<float, 8> m_q_over_m;
 
 };  // ----- end of class sim_environment -----
 

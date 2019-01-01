@@ -114,6 +114,9 @@ sim_environment::setup_env() {
   }
   m_charges[(int)ParticleType::electron] *= -1.0;
   m_masses[(int)ParticleType::ion] *= m_params.ion_mass;
+  for (int i = 0; i < 8; i++) {
+    m_q_over_m[i] = m_charges[i] / m_masses[i];
+  }
   // init_dev_charges(charges);
   // init_dev_masses(masses);
 

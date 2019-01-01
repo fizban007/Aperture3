@@ -1,6 +1,7 @@
 #include "additional_diagnostics.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/ptr_util.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "sim_data_dev.h"
 #include "sim_environment_dev.h"

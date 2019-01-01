@@ -6,7 +6,7 @@
 #include "data/stagger.h"
 #include "data/typedefs.h"
 #include "data/vec3.h"
-#include "utils/simd.h"
+// #include "utils/simd.h"
 #include <algorithm>
 #include <immintrin.h>
 #include <iomanip>
@@ -383,19 +383,19 @@ struct Quadmesh {
     return idx / (dims[0] * dims[1]);
   }
 
-#if defined(__AVX2__) && (defined(__ICC) || defined(__INTEL_COMPILER))
-  simd::v8i get_c1(simd::v8i n) const {
-    return _mm256_rem_epi32(n, _mm256_set1_epi32(dims[0]));
-  }
+// #if defined(__AVX2__) && (defined(__ICC) || defined(__INTEL_COMPILER))
+//   simd::v8i get_c1(simd::v8i n) const {
+//     return _mm256_rem_epi32(n, _mm256_set1_epi32(dims[0]));
+//   }
 
-  simd::v8i get_c2(simd::v8i n) const {
-    return _mm256_rem_epi32(_mm256_div_epi32(n, _mm256_set1_epi32(dims[0])) , _mm256_set1_epi32(dims[1]));
-  }
+//   simd::v8i get_c2(simd::v8i n) const {
+//     return _mm256_rem_epi32(_mm256_div_epi32(n, _mm256_set1_epi32(dims[0])) , _mm256_set1_epi32(dims[1]));
+//   }
 
-  simd::v8i get_c3(simd::v8i n) const {
-    return _mm256_div_epi32(n, _mm256_set1_epi32(dims[0] * dims[1]));
-  }
-#endif
+//   simd::v8i get_c3(simd::v8i n) const {
+//     return _mm256_div_epi32(n, _mm256_set1_epi32(dims[0] * dims[1]));
+//   }
+// #endif
 
 
   HD_INLINE Vec3<int> get_cell_3d(int idx) const {

@@ -3,7 +3,7 @@
 
 #include "data/stagger.h"
 #include "data/vec3.h"
-#include "utils/simd.h"
+// #include "utils/simd.h"
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
@@ -131,10 +131,6 @@ class multi_array {
   int dim() const { return _dim; }
 
   size_t get_offset(uint32_t idx) const;
-
-#ifdef __AVX2__
-
-#endif
 
   // Returns various sizes of the array
   int width() const { return _extent.width(); }

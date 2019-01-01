@@ -3,6 +3,7 @@
 #include "data/fields.h"
 #include "data/stagger.h"
 #include "omp.h"
+#include "utils/avx_interp.hpp"
 #include "utils/logger.h"
 #include "utils/simd.h"
 #include "utils/timer.h"
@@ -101,7 +102,12 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
     Vec8f x3;
     x3.load(x3v.data() + i);
 
-    Vec8f f000 = interpolate(data, c, x1, x2, x3, Stagger(0b111));
+    Vec8ib empty_mask = (c != Vec8ui(MAX_CELL));
+    Vec8ui d = select(~empty_mask, Vec8ui(1 + mesh.dims[1]),
+                      c / Divisor_ui(mesh.dims[0]));
+    Vec8ui c1s = select(~empty_mask, Vec8ui(1), c - d * mesh.dims[0]);
+    Vec8ui offsets = c1s * sizeof(float) + d * data.pitch();
+    Vec8f f000 = interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
 
     f000.store(results1.data() + i);
   }
@@ -153,13 +159,18 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
     Vec16f x3;
     x3.load(x3v.data() + i);
 
-    Vec16f f000 = interpolate(data, c, x1, x2, x3, Stagger(0b111));
+    Vec16ib empty_mask = (c != Vec16ui(MAX_CELL));
+    Vec16ui d = select(~empty_mask, Vec16ui(1 + mesh.dims[1]),
+                      c / Divisor_ui(mesh.dims[0]));
+    Vec16ui c1s = select(~empty_mask, Vec16ui(1), c - d * mesh.dims[0]);
+    Vec16ui offsets = c1s * sizeof(float) + d * data.pitch();
+    Vec16f f000 = interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
 
     f000.store(results1.data() + i);
   }
   t = timer::get_duration_since_stamp("us");
-  Logger::print_info(
-      "AVX512 interpolation for {} particles took {}us.", N, t);
+  Logger::print_info("AVX512 interpolation for {} particles took {}us.",
+                     N, t);
 #endif
 }
 

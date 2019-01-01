@@ -584,6 +584,13 @@ public:
         ymm = _mm256_load_ps(p);
         return *this;
     }
+    // Member function to load from array, aligned by 32, masked
+    // You may use load_a instead of load if you are certain that p points to an address
+    // divisible by 32.
+    Vec8f & maskload_a(float const * p, const Vec8ib &mask) {
+        ymm = _mm256_maskload_ps(p, mask);
+        return *this;
+    }
     // Member function to store into array (unaligned)
     void store(float * p) const {
         _mm256_storeu_ps(p, ymm);
@@ -593,6 +600,10 @@ public:
     // divisible by 32.
     void store_a(float * p) const {
         _mm256_store_ps(p, ymm);
+    }
+    // Member function to store into array, aligned by 32, masked
+    void maskstore_a(float * p, const Vec8ib &mask) {
+        _mm256_maskstore_ps(p, mask, ymm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec8f & load_partial(int n, float const * p) {
@@ -3157,6 +3168,7 @@ static inline Vec4d lookup(Vec4q const & index, double const * table) {
     return Vec4d(table[index2[0]],table[index2[1]],table[index2[2]],table[index2[3]]);
 #endif
 }
+
 #endif  // VECTORI256_H
 
 /*****************************************************************************
@@ -3175,6 +3187,21 @@ template <int i0, int i1, int i2, int i3>
 static inline Vec4d gather4d(void const * a) {
     return reinterpret_d(gather4q<i0, i1, i2, i3>(a));
 }
+
+/*****************************************************************************
+*
+*          Gather functions with variable indices
+*
+*****************************************************************************/
+#if INSTRSET >= 8 && VECTORI256_H > 1 // AVX2
+static inline Vec8f gather(float* data, const Vec8ui& offsets, int scale) {
+  return _mm256_i32gather_ps(data, offsets, scale);
+}
+
+static inline Vec4d gather(double* data, const Vec4uq& offsets, int scale) {
+  return _mm256_i64gather_pd(data, offsets, scale);
+}
+#endif
 
 /*****************************************************************************
 *
@@ -3249,6 +3276,21 @@ static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & da
 #else
     for (int i = 0; i < 8; i++) {
         if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
+    }
+#endif
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & data, char * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
+    _mm256_mask_i32scatter_ps(array, mask, index, data, 1);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
+    _mm512_mask_i32scatter_ps(array, mask, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 1);
+#else
+    for (int i = 0; i < 8; i++) {
+      if (uint32_t(index[i]) < limit) *(float*)(array + index[i]) = data[i];
     }
 #endif
 }
