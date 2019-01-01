@@ -1827,6 +1827,13 @@ public:
         ymm = _mm256_load_si256((__m256i const*)p);
         return *this;
     }
+    // Member function to load from array, aligned by 32
+    // You may use load_a instead of load if you are certain that p points to an address
+    // divisible by 32, but there is hardly any speed advantage of load_a on modern processors
+    Vec8i & maskload_a(int const * p, __m256i mask) {
+        ymm = _mm256_maskload_epi32(p, mask);
+        return *this;
+    }
     // Partial load. Load n elements and set the rest to 0
     Vec8i & load_partial(int n, void const * p) {
         if (n <= 0) {
@@ -1842,6 +1849,10 @@ public:
             load(p);
         }
         return *this;
+    }
+    // Member function to store into array, aligned by 32, masked
+    void maskstore_a(int* p, __m256i mask) const {
+        _mm256_maskstore_epi32(p, mask, ymm);
     }
     // Partial store. Store n elements
     void store_partial(int n, void * p) const {
@@ -2322,6 +2333,10 @@ public:
         ymm = _mm256_load_si256((__m256i const*)p);
         return *this;
     }
+    // // Member function to store into array, aligned by 32, masked
+    // void maskstore_a(uint32_t* p, __m256i mask) const {
+    //     _mm256_maskstore_epi32(p, mask, ymm);
+    // }
     // Member function to change a single element in vector
     // Note: This function is inefficient. Use load function if changing more than one element
     Vec8ui const & insert(uint32_t index, uint32_t value) {

@@ -1,6 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
+#include "cuda/ptr_util.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
