@@ -394,6 +394,13 @@ public:
         zmm = _mm512_load_ps(p);
         return *this;
     }
+    // Member function to load from array, aligned by 64, masked
+    // You may use load_a instead of load if you are certain that p points to an address
+    // divisible by 32.
+    Vec16f & maskload_a(float const * p, const Vec16ib &mask) {
+        ymm = _mm512_maskload_ps(p, mask);
+        return *this;
+    }
     // Member function to store into array (unaligned)
     void store(float * p) const {
         _mm512_storeu_ps(p, zmm);
@@ -403,6 +410,12 @@ public:
     // divisible by 64.
     void store_a(float * p) const {
         _mm512_store_ps(p, zmm);
+    }
+    // Member function to store into array, aligned by 64, masked
+    // You may use store_a instead of store if you are certain that p points to an address
+    // divisible by 64.
+    void maskstore_a(float * p, const Vec16ib &mask) const {
+        _mm512_maskstore_ps(p, mask, zmm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec16f & load_partial(int n, float const * p) {
