@@ -38,7 +38,7 @@ interpolate_3d(const multi_array<Float>& data, VI offsets, VF x1,
   VF f010 =
       gather((float*)data.data(), offsets - (sizeof(float) + k_off), 1);
   VF f011 =
-      _mm256_i32gather_ps((float*)data.data(), offsets - k_off, 1);
+      gather((float*)data.data(), offsets - k_off, 1);
   VF f100 = gather((float*)data.data(),
                    offsets - (sizeof(float) + data.pitch()), 1);
   VF f101 = gather((float*)data.data(), offsets - data.pitch(), 1);
