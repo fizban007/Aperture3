@@ -398,7 +398,7 @@ public:
     // You may use load_a instead of load if you are certain that p points to an address
     // divisible by 32.
     Vec16f & maskload_a(float const * p, const Vec16ib &mask) {
-        ymm = _mm512_maskload_ps(p, mask);
+        ymm = _mm512_maskload_ps(p, _mm512_movepi32_mask((__m512i)mask));
         return *this;
     }
     // Member function to store into array (unaligned)
@@ -415,7 +415,7 @@ public:
     // You may use store_a instead of store if you are certain that p points to an address
     // divisible by 64.
     void maskstore_a(float * p, const Vec16ib &mask) const {
-        _mm512_maskstore_ps(p, mask, zmm);
+        _mm512_maskstore_ps(p, _mm512_movepi32_mask((__m512i)mask), zmm);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec16f & load_partial(int n, float const * p) {
