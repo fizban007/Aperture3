@@ -220,4 +220,17 @@ TEST_CASE("truncate_to_int", "[vectorclass]") {
   Logger::print_info("{}", vn[0]);
 }
 
+TEST_CASE("testing simd_buffer", "[simd]") {
+  int N1 = 10, N2 = 8, N3 = 20;
+  Grid g(N1, N2, N3);
+  multi_array<simd::simd_buffer> array(g.extent());
+
+  Logger::print_info("simd_buffer multi_array has pitch {}", array.pitch());
+  Logger::print_info("simd_buffer has size {}", sizeof(simd::simd_buffer));
+
+  array.assign(simd::simd_buffer{1.0f});
+
+  REQUIRE(array(5, 3, 3).x[3] == 1.0f);
+}
+
 #endif

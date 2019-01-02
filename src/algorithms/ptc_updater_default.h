@@ -2,6 +2,8 @@
 #define _PTC_UPDATER_DEFAULT_H_
 
 #include "ptc_updater.h"
+#include "data/multi_array.h"
+#include "utils/simd.h"
 
 namespace Aperture {
 
@@ -19,6 +21,10 @@ class ptc_updater_default : public ptc_updater {
   // void esirkepov_deposit(sim_data& data, double dt);
   virtual void handle_boundary(sim_data& data) override;
 
+ private:
+  multi_array<simd::simd_buffer> m_j1;
+  multi_array<simd::simd_buffer> m_j2;
+  multi_array<simd::simd_buffer> m_j3;
 };  // ----- end of class ptc_updater_default : public ptc_updater -----
 
 }  // namespace Aperture

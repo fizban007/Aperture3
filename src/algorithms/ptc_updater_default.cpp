@@ -11,32 +11,25 @@
 namespace Aperture {
 
 ptc_updater_default::ptc_updater_default(const sim_environment &env)
-    : ptc_updater(env) {}
+    : ptc_updater(env),
+      m_j1(env.grid().extent()),
+      m_j2(env.grid().extent()),
+      m_j3(env.grid().extent()) {}
 
 ptc_updater_default::~ptc_updater_default() {}
 
 void
 ptc_updater_default::update_particles(sim_data &data, double dt) {
+  using namespace simd;
+  m_j1.assign(simd_buffer{0.0});
+  m_j2.assign(simd_buffer{0.0});
+  m_j3.assign(simd_buffer{0.0});
+
   // TODO: Push photons as well
   auto &ptc = data.particles;
   auto &mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {
-//    int vec_width = 8;
-#if defined(__AVX512F__) || defined(__AVX512__)
-    typedef Vec16ui Vec_ui_type;
-    typedef Vec16i Vec_i_type;
-    typedef Vec16ib Vec_ib_type;
-    typedef Vec16f Vec_f_type;
-    constexpr int vec_width = 16;
-#elif defined(__AVX2__)
-    typedef Vec8ui Vec_ui_type;
-    typedef Vec8i Vec_i_type;
-    typedef Vec8ib Vec_ib_type;
-    typedef Vec8f Vec_f_type;
-    constexpr int vec_width = 8;
-#else
-    constexpr int vec_width = 8;
-#endif
+    //    int vec_width = 8;
     for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
       // Interpolate field values to particle position
       Vec_ui_type c;
@@ -170,28 +163,39 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
         for (int j = 0; j < 3; j++) {
           auto sy0 = interp_1(-x2 + j_0 + float(j + 1));
           auto sy1 = interp_1(-new_x2 + j_0 + float(j + 1));
-          size_t j_offset = (j + k_offset) * data.J.data(0).pitch();
+          size_t j_offset = (j + k_offset) * m_j1.pitch();
 
           Vec_f_type djx(0.0f);
           for (int i = 0; i < 3; i++) {
             auto sx0 = interp_1(-x1 + i_0 + float(i + 1));
             auto sx1 = interp_1(-new_x1 + i_0 + float(i + 1));
 
-            Vec_ui_type off = offsets + (i * sizeof(Scalar) + j_offset);
+            Vec_ui_type off = offsets + (i * sizeof(simd_buffer) + j_offset);
+            off += Vec8i(0, 1, 2, 3, 4, 5, 6, 7) * sizeof(Scalar);
+
             int ij = i + 3 * j;
             djx +=
                 select(empty_mask,
                        movement3d(sx0, sx1, sy0, sy1, sz0, sz1), 0.0f);
+            Vec_f_type j1 = gather((float *)m_j1.data(), off, 1);
+            j1 += djx;
+            scatter(off, j1, (char*)m_j1.data());
 
             djy[i] +=
                 select(empty_mask,
                        movement3d(sy0, sy1, sz0, sz1, sx0, sx1), 0.0f);
+            Vec_f_type j2 = gather((float *)m_j2.data(), off, 1);
+            j2 += djy[i];
+            scatter(off, j2, (char*)m_j2.data());
 
             djz[ij] +=
                 select(empty_mask,
                        movement3d(sz0, sz1, sx0, sx1, sy0, sy1), 0.0f);
+            Vec_f_type j3 = gather((float *)m_j3.data(), off, 1);
+            j3 += djz[ij];
+            scatter(off, j3, (char*)m_j3.data());
 
-            Vec_f_type s1 = sx1 * sy1 * sz1;
+            // Vec_f_type s1 = sx1 * sy1 * sz1;
 
             // for (int n = 0; n < vec_width; n++) {
             //   auto target = off[n];
@@ -230,19 +234,19 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
             //   1); rho = if_add(sp == n, rho, s1); scatter(off, rho,
             //   (char *)data.Rho[n].data().data());
             // }
-#pragma omp simd
-            for (int n = 0; n < vec_width; n++) {
-              size_t offset = off[n];
-              data.J.data(0)[offset] += djx[n];
-              data.J.data(1)[offset] += djy[i][n];
-              data.J.data(2)[offset] += djz[ij][n];
-              if (sp[n] == 0)
-                data.Rho[0].data()[offset] += s1[n];
-              else if (sp[n] == 1)
-                data.Rho[1].data()[offset] += s1[n];
-              else if (sp[n] == 2)
-                data.Rho[2].data()[offset] += s1[n];
-            }
+// #pragma omp simd
+//             for (int n = 0; n < vec_width; n++) {
+//               size_t offset = off[n];
+//               data.J.data(0)[offset] += djx[n];
+//               data.J.data(1)[offset] += djy[i][n];
+//               data.J.data(2)[offset] += djz[ij][n];
+//               if (sp[n] == 0)
+//                 data.Rho[0].data()[offset] += s1[n];
+//               else if (sp[n] == 1)
+//                 data.Rho[1].data()[offset] += s1[n];
+//               else if (sp[n] == 2)
+//                 data.Rho[2].data()[offset] += s1[n];
+//             }
           }
         }
       }

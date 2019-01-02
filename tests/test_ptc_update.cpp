@@ -28,16 +28,20 @@ TEST_CASE("Particle Push", "[ptc_update]") {
                           mesh.get_idx(dist(gen), dist(gen), dist(gen)),
                           ParticleType::electron);
   }
+  timer::stamp();
   data.particles.sort_by_cell(env.grid());
+  auto t = timer::get_duration_since_stamp("us");
+  Logger::print_info(
+      "Sorting {} particles took {}us.", N, t);
 
   ptc_updater_default pusher(env);
 
   timer::stamp();
 
   pusher.update_particles(data, 0.001);
-  auto t = timer::get_duration_since_stamp("us");
+  t = timer::get_duration_since_stamp("us");
   Logger::print_info(
-      "Boris push for {} particles took {}us.", N, t);
+      "Complete update for {} particles took {}us.", N, t);
 
   timer::stamp();
 
