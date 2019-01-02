@@ -3286,9 +3286,16 @@ static inline void scatter(Vec8i const & index, Vec8f const & data, char * array
 #elif defined (__AVX512F__)
     _mm512_i32scatter_ps(array, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 1);
 #else
-    for (int i = 0; i < 8; i++) {
-      *(float*)(array + index[i]) = data[i];
-    }
+    // for (int i = 0; i < 8; i++) {
+    *(float*)(array + index[0]) = data[0];
+    *(float*)(array + index[1]) = data[1];
+    *(float*)(array + index[2]) = data[2];
+    *(float*)(array + index[3]) = data[3];
+    *(float*)(array + index[4]) = data[4];
+    *(float*)(array + index[5]) = data[5];
+    *(float*)(array + index[6]) = data[6];
+    *(float*)(array + index[7]) = data[7];
+    // }
 #endif
 }
 
