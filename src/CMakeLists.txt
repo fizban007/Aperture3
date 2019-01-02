@@ -39,34 +39,13 @@ set(Aperture_src
   "commandline_args.cpp" "config_file.cpp"
   "sim_environment.cpp"
   "sim_environment_dev.cpp"
-  "pic_sim.cpp"
-  "data/array.cu" "data/multi_array_dev.cu" "data/multi_array.cpp"
-  "data/fields_dev.cu" "data/photons.cu"
-  "data/fields.cpp"
-  "data/particles_dev.cu" "data/particles.cpp"
-  # "data/particles_1d.cu"
-  "data/photons.cu"
-  # "data/photons_1d.cu"
-  "data/fields_utils.cu"
-  "algorithms/field_solver_default.cpp"
-  "algorithms/field_solver_log_sph.cu"
-  "algorithms/ptc_updater_default.cpp"
-  # "algorithms/interpolation.cpp"
-  # "algorithms/ptc_pusher_constE.cu"
-  # "algorithms/ptc_pusher_beadonwire.cu"
-  # "algorithms/ptc_pusher_geodesic.cpp"
-  "sim_data_dev.cu"
   "sim_data.cpp"
-  "additional_diagnostics.cu"
-  "ptc_updater_dev.cu" "ptc_updater_logsph.cu"
-  "cuda/constant_mem.cu" "cuda/kernels.cu"
-  # "radiation/radiation_transfer.cu"
-  "radiation/rt_pulsar.cu"
-  # "algorithms/current_deposit_Esirkepov.cu"
-  "algorithms/finite_diff.cu"
-  # "algorithms/field_solver_force_free.cu"
-  # "algorithms/field_solver_ffe_cyl.cu"
-  )
+  "pic_sim.cpp"
+  "data/multi_array.cpp"
+  "data/fields.cpp"
+  "data/particles.cpp"
+  "algorithms/field_solver_default.cpp"
+  "algorithms/ptc_updater_default.cpp")
 
 # modify Aperture_src using
 if(LAB_ROOT_DIR)
@@ -76,9 +55,38 @@ if(LAB_ROOT_DIR)
   endforeach()
 endif()
 
-# add_library(Aperture ${Aperture_src})
-add_cuda_target(Aperture ${Aperture_src})
-target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
+add_library(Aperture ${Aperture_src})
+target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
+
+if (CMAKE_CUDA_COMPILER)
+  set(Aperture_cuda_src
+    "data/fields_utils.cu"
+    "algorithms/field_solver_log_sph.cu"
+    # "data/particles_1d.cu"
+    # "data/photons_1d.cu"
+    # "algorithms/interpolation.cpp"
+    # "algorithms/ptc_pusher_constE.cu"
+    # "algorithms/ptc_pusher_beadonwire.cu"
+    # "algorithms/ptc_pusher_geodesic.cpp"
+    "sim_data_dev.cu"
+    "data/photons.cu"
+    "data/particles_dev.cu"
+    "data/fields_dev.cu" "data/photons.cu"
+    "additional_diagnostics.cu"
+    "ptc_updater_dev.cu" "ptc_updater_logsph.cu"
+    "cuda/constant_mem.cu" "cuda/kernels.cu"
+    # "radiation/radiation_transfer.cu"
+    "radiation/rt_pulsar.cu"
+    # "algorithms/current_deposit_Esirkepov.cu"
+    "algorithms/finite_diff.cu"
+    "data/array.cu" "data/multi_array_dev.cu"
+    # "algorithms/field_solver_force_free.cu"
+    # "algorithms/field_solver_ffe_cyl.cu"
+    )
+
+  add_cuda_target(Aperture_cuda ${Aperture_cuda_src})
+  target_link_libraries(Aperture_cuda ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
+endif()
 
 # set(AperCuda_src
 #   "utils/logger.cpp" "utils/timer.cpp" "utils/hdf_exporter.cpp"
@@ -160,6 +168,9 @@ else()
   message("${Yellow}Using default main.cpp${ColorReset}")
   add_executable(aperture "main.cpp")
   target_link_libraries(aperture Aperture)
+endif()
+if (CMAKE_CUDA_COMPILER)
+  target_link_libraries(aperture Aperture_cuda)
 endif()
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)
