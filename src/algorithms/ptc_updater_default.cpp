@@ -22,13 +22,13 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
   auto &mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {
 //    int vec_width = 8;
-#if defined ( __AVX512F__ ) || defined ( __AVX512__ )
+#if defined(__AVX512F__) || defined(__AVX512__)
     typedef Vec16ui Vec_ui_type;
     typedef Vec16i Vec_i_type;
     typedef Vec16ib Vec_ib_type;
     typedef Vec16f Vec_f_type;
     constexpr int vec_width = 16;
-#elif defined ( __AVX2__ )
+#elif defined(__AVX2__)
     typedef Vec8ui Vec_ui_type;
     typedef Vec8i Vec_i_type;
     typedef Vec8ib Vec_ib_type;
@@ -45,9 +45,11 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       // particles
       Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
       Vec_ui_type d = select(~empty_mask, Vec_ui_type(1 + mesh.dims[1]),
-                    c / Divisor_ui(mesh.dims[0]));
-      Vec_ui_type c1s = select(~empty_mask, Vec_ui_type(1), c - d * mesh.dims[0]);
-      Vec_ui_type offsets = c1s * sizeof(float) + d * data.E.data(0).pitch();
+                             c / Divisor_ui(mesh.dims[0]));
+      Vec_ui_type c1s =
+          select(~empty_mask, Vec_ui_type(1), c - d * mesh.dims[0]);
+      Vec_ui_type offsets =
+          c1s * sizeof(float) + d * data.E.data(0).pitch();
 
       Vec_f_type x1;
       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
@@ -62,24 +64,24 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       Vec_i_type sp = get_ptc_type(flag);
       Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
 
-      Vec_f_type E1 = interpolate_3d(data.E.data(0), offsets, x1, x2, x3,
-                                data.E.stagger(0)) *
-                 q_over_m * 2.0f;
-      Vec_f_type E2 = interpolate_3d(data.E.data(1), offsets, x1, x2, x3,
-                                data.E.stagger(1)) *
-                 q_over_m * 2.0f;
-      Vec_f_type E3 = interpolate_3d(data.E.data(2), offsets, x1, x2, x3,
-                                data.E.stagger(2)) *
-                 q_over_m * 2.0f;
-      Vec_f_type B1 = interpolate_3d(data.B.data(0), offsets, x1, x2, x3,
-                                data.B.stagger(0)) *
-                 q_over_m;
-      Vec_f_type B2 = interpolate_3d(data.B.data(1), offsets, x1, x2, x3,
-                                data.B.stagger(1)) *
-                 q_over_m;
-      Vec_f_type B3 = interpolate_3d(data.B.data(2), offsets, x1, x2, x3,
-                                data.B.stagger(2)) *
-                 q_over_m;
+      Vec_f_type E1 = interpolate_3d(data.E.data(0), offsets, x1, x2,
+                                     x3, data.E.stagger(0)) *
+                      q_over_m * 2.0f;
+      Vec_f_type E2 = interpolate_3d(data.E.data(1), offsets, x1, x2,
+                                     x3, data.E.stagger(1)) *
+                      q_over_m * 2.0f;
+      Vec_f_type E3 = interpolate_3d(data.E.data(2), offsets, x1, x2,
+                                     x3, data.E.stagger(2)) *
+                      q_over_m * 2.0f;
+      Vec_f_type B1 = interpolate_3d(data.B.data(0), offsets, x1, x2,
+                                     x3, data.B.stagger(0)) *
+                      q_over_m;
+      Vec_f_type B2 = interpolate_3d(data.B.data(1), offsets, x1, x2,
+                                     x3, data.B.stagger(1)) *
+                      q_over_m;
+      Vec_f_type B3 = interpolate_3d(data.B.data(2), offsets, x1, x2,
+                                     x3, data.B.stagger(2)) *
+                      q_over_m;
 
       Vec_f_type p1;
       p1.maskload_a(ptc.data().p1 + idx, empty_mask);
@@ -105,7 +107,8 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
           Vec_f_type(2.0f) /
           (sigma +
            sqrt(mul_add(sigma, sigma, mul_add(ut, ut, tt) * 4.0f)));
-      Vec_f_type s = Vec_f_type(1.0f) / mul_add(inv_gamma2, tt, Vec_f_type(1.0f));
+      Vec_f_type s =
+          Vec_f_type(1.0f) / mul_add(inv_gamma2, tt, Vec_f_type(1.0f));
       gamma = Vec_f_type(1.0f) / sqrt(inv_gamma2);
 
       gamma.maskstore_a(ptc.data().E + idx, empty_mask);
@@ -119,7 +122,8 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       // Vec_f_type pm1 = p1 + E1;
       // Vec_f_type pm2 = p2 + E2;
       // Vec_f_type pm3 = p3 + E3;
-      // Vec_f_type gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3 + 1.0f);
+      // Vec_f_type gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3
+      // + 1.0f);
 
       // gamma.store_a(ptc.data().E + idx);
 
@@ -151,8 +155,9 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       new_x2 -= to_float(dc2);
       new_x3 -= to_float(dc3);
 
-      Vec_ui_type new_c = Vec_ui_type(Vec_i_type(c) + dc1 + dc2 * mesh.dims[0] +
-                            dc3 * (mesh.dims[0] * mesh.dims[1]));
+      Vec_ui_type new_c =
+          Vec_ui_type(Vec_i_type(c) + dc1 + dc2 * mesh.dims[0] +
+                      dc3 * (mesh.dims[0] * mesh.dims[1]));
       new_c.maskstore_a((int *)(ptc.data().cell + idx), empty_mask);
 
       new_x1.maskstore_a(ptc.data().x1 + idx, empty_mask);
@@ -164,22 +169,26 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
       weight.maskload_a(ptc.data().weight + idx, empty_mask);
       weight *= -lookup<vec_width>(sp, m_env.charges());
 
-      Vec_i_type k_0 = select(dc3 == -1, Vec_i_type(-2), Vec_i_type(-1));
-      Vec_i_type j_0 = select(dc2 == -1, Vec_i_type(-2), Vec_i_type(-1));
-      Vec_i_type i_0 = select(dc1 == -1, Vec_i_type(-2), Vec_i_type(-1));
+      Vec_i_type k_0 =
+          select(dc3 == -1, Vec_i_type(-2), Vec_i_type(-1));
+      Vec_i_type j_0 =
+          select(dc2 == -1, Vec_i_type(-2), Vec_i_type(-1));
+      Vec_i_type i_0 =
+          select(dc1 == -1, Vec_i_type(-2), Vec_i_type(-1));
       Vec_f_type djz[3 * 3] = {Vec_f_type(0.0f)};
 
       for (int k = 0; k < 3; k++) {
         auto sz0 = interp_1(-x3 + to_float(k_0) + float(k + 1));
-        auto sz1 = interp_1(-new_x3 + to_float(k_0 - dc3) + float(k + 1));
+        auto sz1 =
+            interp_1(-new_x3 + to_float(k_0 - dc3) + float(k + 1));
         int k_offset = k * mesh.dims[1];
 
         Vec_f_type djy[3] = {Vec_f_type(0.0f)};
         for (int j = 0; j < 3; j++) {
           auto sy0 = interp_1(-x2 + to_float(j_0) + float(j + 1));
-          auto sy1 = interp_1(-new_x2 + to_float(j_0 - dc2) + float(j + 1));
-          size_t j_offset =
-              (j + k_offset) * data.J.data(0).pitch();
+          auto sy1 =
+              interp_1(-new_x2 + to_float(j_0 - dc2) + float(j + 1));
+          size_t j_offset = (j + k_offset) * data.J.data(0).pitch();
 
           Vec_f_type djx(0.0f);
           for (int i = 0; i < 3; i++) {
@@ -188,33 +197,37 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
                 interp_1(-new_x1 + to_float(i_0 - dc1) + float(i + 1));
 
             Vec_ui_type off = offsets + (i * sizeof(Scalar) + j_offset);
-            djx += movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
-            djy[i] += movement3d(sy0, sy1, sz0, sz1, sx0, sx1);
-            djz[i + 3*j] += movement3d(sz0, sz1, sx0, sx1, sy0, sy1);
+            djx +=
+                select(empty_mask,
+                       movement3d(sx0, sx1, sy0, sy1, sz0, sz1), 0.0f);
+            djy[i] +=
+                select(empty_mask,
+                       movement3d(sy0, sy1, sz0, sz1, sx0, sx1), 0.0f);
+            djz[i + 3 * j] +=
+                select(empty_mask,
+                       movement3d(sz0, sz1, sx0, sx1, sy0, sy1), 0.0f);
             Vec_f_type s1 = sx1 * sy1 * sz1;
 
-            // for (int n = 0; n < 8; n++) {
-            //   if (empty_mask[n]) {
-            //     data.J.data(0)[off[n] + sizeof(Scalar)] += weight[n] * djx[n];
-            //     data.J.data(1)[off[n] + data.J.data(1).pitch()] += weight[n] * djy[i][n];
-            //     data.J.data(2)[off[n] + data.J.data(1).pitch() * mesh.dims[1]] += weight[n] * djz[i+3*j][n];
-            //     data.Rho[sp[n]].data()[off[n]] -= weight[n]*sx1[n]*sy1[n]*sz1[n];
-            //   }
-            // }
-            scatter(off, empty_mask, djx, (char*)data.J.data(0).data());
-            scatter(off, empty_mask, djy[i], (char*)data.J.data(1).data());
-            scatter(off, empty_mask, djz[i + 3*j], (char*)data.J.data(2).data());
-            for (int n = 0; n < m_env.params().num_species; n++) {
-              scatter(off, empty_mask && (sp == n), s1, (char*)data.Rho[n].data().data());
+            scatter(off, djx, (char *)data.J.data(0).data());
+            scatter(off, djy[i], (char *)data.J.data(1).data());
+            scatter(off, djz[i + 3 * j], (char *)data.J.data(2).data());
+
+            scatter(off, (sp == 0), s1,
+                    (char *)data.Rho[0].data().data());
+            scatter(off, (sp == 1), s1,
+                    (char *)data.Rho[1].data().data());
+            if (m_env.params().num_species > 2) {
+              scatter(off, (sp == 2), s1,
+                      (char *)data.Rho[2].data().data());
             }
           }
         }
       }
     }
-// #else
-//     for (size_t idx = 0; idx < ptc.number(); idx++) {
-//     }
-// #endif
+    // #else
+    //     for (size_t idx = 0; idx < ptc.number(); idx++) {
+    //     }
+    // #endif
   }
 }
 

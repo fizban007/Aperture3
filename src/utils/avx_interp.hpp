@@ -60,7 +60,7 @@ template <typename VF>
 VF
 interp_1(VF dx) {
   auto abs_dx = abs(dx);
-  return max(1.0f - abs_dx, VF(0.0f));
+  return max(1.0 - abs_dx, VF(0.0));
 }
 
 }  // namespace Aperture
