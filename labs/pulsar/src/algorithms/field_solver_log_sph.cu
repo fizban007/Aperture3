@@ -3,6 +3,7 @@
 #include "algorithms/finite_diff.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/ptr_util.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "data/field_data.h"
 #include "data/fields_utils.h"

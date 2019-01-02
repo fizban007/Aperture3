@@ -3,7 +3,7 @@
 // #include "cuda/constant_mem_func.h"
 // #include "cuda/cudaUtility.h"
 // #include "data/grid_1dGR.h"
-// #include "data/grid_log_sph.h"
+#include "data/grid_log_sph.h"
 #include "fmt/format.h"
 #include <memory>
 // #include "data/detail/grid_impl.hpp"
@@ -82,8 +82,8 @@ sim_environment::setup_env() {
   // Setup the grid
   if (m_params.coord_system == "Cartesian") {
     m_grid.reset(new Grid());
-  // } else if (m_params.coord_system == "LogSpherical") {
-  //   m_grid.reset(new Grid_LogSph());
+  } else if (m_params.coord_system == "LogSpherical") {
+    m_grid.reset(new Grid_LogSph());
   } else {
     m_grid.reset(new Grid());
   }
