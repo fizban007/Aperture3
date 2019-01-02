@@ -191,6 +191,7 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
             djx += movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
             djy[i] += movement3d(sy0, sy1, sz0, sz1, sx0, sx1);
             djz[i + 3*j] += movement3d(sz0, sz1, sx0, sx1, sy0, sy1);
+            Vec_f_type s1 = sx1 * sy1 * sz1;
 
             // for (int n = 0; n < 8; n++) {
             //   if (empty_mask[n]) {
@@ -200,9 +201,12 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
             //     data.Rho[sp[n]].data()[off[n]] -= weight[n]*sx1[n]*sy1[n]*sz1[n];
             //   }
             // }
-            scatter(off, djx, (char*)data.J.data(0).data());
-            scatter(off, djy[i], (char*)data.J.data(1).data());
-            scatter(off, djz[i + 3*j], (char*)data.J.data(2).data());
+            scatter(off, empty_mask, djx, (char*)data.J.data(0).data());
+            scatter(off, empty_mask, djy[i], (char*)data.J.data(1).data());
+            scatter(off, empty_mask, djz[i + 3*j], (char*)data.J.data(2).data());
+            for (int n = 0; n < m_env.params().num_species; n++) {
+              scatter(off, empty_mask && (sp == n), s1, (char*)data.Rho[n].data().data());
+            }
           }
         }
       }

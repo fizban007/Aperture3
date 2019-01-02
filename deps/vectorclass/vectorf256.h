@@ -3292,17 +3292,17 @@ static inline void scatter(Vec8i const & index, Vec8f const & data, char * array
 #endif
 }
 
-static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & data, char * array) {
+static inline void scatter(Vec8i const & index, const Vec8ib& mask, Vec8f const & data, char * array) {
 #if defined (__AVX512VL__)
-    __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
-    _mm256_mask_i32scatter_ps(array, mask, index, data, 1);
+    // __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
+    _mm256_mask_i32scatter_ps(array, _m256_movepi32_mask(mask), index, data, 1);
 #elif defined (__AVX512F__)
     // 16 bit mask. upper 8 bits are (0<0) = false
-    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
-    _mm512_mask_i32scatter_ps(array, mask, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 1);
+    // __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
+    _mm512_mask_i32scatter_ps(array, _m256_movepi32_mask(mask), _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 1);
 #else
     for (int i = 0; i < 8; i++) {
-      if (uint32_t(index[i]) < limit) *(float*)(array + index[i]) = data[i];
+      if (mask[i]) *(float*)(array + index[i]) = data[i];
     }
 #endif
 }
