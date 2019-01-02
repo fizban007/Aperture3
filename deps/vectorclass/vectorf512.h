@@ -2446,6 +2446,11 @@ static inline void scatter(Vec16i const & index, Vec16f const & data, char * arr
     _mm512_i32scatter_ps(array, index, data, 1);
 }
 
+static inline void scatter(Vec16i const & index, const Vec16ib &mask, Vec16f const & data, char * array) {
+    // Vec16fb mask = Vec16ui(index) < limit;
+    _mm512_mask_i32scatter_ps(array, index, mask, data, 1);
+}
+
 static inline void scatter(Vec8q const & index, uint32_t limit, Vec8d const & data, double * array) {
     Vec8db mask = Vec8uq(index) < uint64_t(limit);
     _mm512_mask_i64scatter_pd(array, mask, index, data, 8);
