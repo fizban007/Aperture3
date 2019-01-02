@@ -202,7 +202,7 @@ TEST_CASE("i32gather_ps", "[avx2]") {
   auto& data = f.data();
 
   for (int j = 0; j < N2; j++) {
-    Vec8ui c1s(0, 1, 2, 3, 4, 5, 6, 7);
+    Vec8ui c1s(0, 0, 2, 2, 4, 4, 6, 6);
     Vec8ui offsets = c1s * sizeof(float) + j * data.pitch();
     Vec8f f000 = _mm256_i32gather_ps((float*)data.data(), offsets, 1);
     for (int i = 0; i < 8; i++) {
