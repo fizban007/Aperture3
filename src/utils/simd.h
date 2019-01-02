@@ -2,6 +2,7 @@
 #define _SIMD_H_
 
 #include <immintrin.h>
+#include "data/typedefs.h"
 #define MAX_VECTOR_SIZE 512
 #include "vectorclass.h"
 
@@ -9,9 +10,26 @@ namespace Aperture {
 
 namespace simd {
 
-typedef __m256 v8f;
-typedef __m256i v8i;
-typedef __m256d v4d;
+#if !defined(USE_DOUBLE) && \
+    (defined(__AVX512F__) || defined(__AVX512__))
+typedef Vec16ui Vec_ui_type;
+typedef Vec16i Vec_i_type;
+typedef Vec16ib Vec_ib_type;
+typedef Vec16f Vec_f_type;
+constexpr int vec_width = 16;
+#elif !defined(USE_DOUBLE) && defined(__AVX2__)
+typedef Vec8ui Vec_ui_type;
+typedef Vec8i Vec_i_type;
+typedef Vec8ib Vec_ib_type;
+typedef Vec8f Vec_f_type;
+constexpr int vec_width = 8;
+#else
+typedef uint32_t Vec_ui_type;
+typedef int Vec_i_type;
+typedef bool Vec_ib_type;
+typedef float Vec_f_type;
+constexpr int vec_width = 1;
+#endif
 
 template <typename VF>
 inline VF
@@ -19,6 +37,42 @@ lerp(const VF& x, const VF& a, const VF& b) {
   VF r = b - a;
   r *= x;
   return r + a;
+}
+
+struct simd_buffer {
+  Scalar x[vec_width] = {};
+
+  simd_buffer() {}
+  
+  simd_buffer(Scalar v) {
+    for (int i = 0; i < vec_width; i++)
+      x[i] = v;
+  }
+
+  simd_buffer operator*(Scalar v) const {
+    simd_buffer buf;
+    for (int i = 0; i < vec_width; i++)
+      buf.x[i] *= v;
+    return buf;
+  }
+
+  simd_buffer operator+(const simd_buffer& buf) const {
+    simd_buffer result;
+    for (int i = 0; i < vec_width; i++)
+      result.x[i] = buf.x[i] + x[i];
+    return result;
+  }
+
+  simd_buffer& operator=(Scalar f) {
+    for (int i = 0; i < vec_width; i++)
+      x[i] = f;
+    return *this;
+  }
+};
+
+inline simd_buffer
+operator*(Scalar v, const simd_buffer& buffer) {
+  return buffer * v;
 }
 
 template <typename T>
