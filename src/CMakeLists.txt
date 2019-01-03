@@ -50,7 +50,7 @@ set(Aperture_src
   "algorithms/ptc_updater_default.cpp"
   )
 
-# modify Aperture_src using
+# modify Aperture_src using the files in the lab
 if(LAB_ROOT_DIR)
   foreach(ARG ${Lab_Aperture_src})
     list(REMOVE_ITEM Aperture_src ${ARG})
@@ -66,27 +66,31 @@ if (CMAKE_CUDA_COMPILER)
     "data/fields_utils.cu"
     "algorithms/field_solver_log_sph.cu"
     "data/grid_log_sph.cpp"
-    # "data/particles_1d.cu"
-    # "data/photons_1d.cu"
-    # "algorithms/interpolation.cpp"
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
     # "algorithms/ptc_pusher_geodesic.cpp"
     "cu_sim_data.cu"
     "data/photons.cu"
     "data/particles_dev.cu"
-    "data/fields_dev.cu" "data/photons.cu"
+    "data/fields_dev.cu"
+    "data/photons.cu"
     "additional_diagnostics.cu"
-    "ptc_updater_dev.cu" "ptc_updater_logsph.cu"
-    "cuda/constant_mem.cu" "cuda/kernels.cu"
-    # "radiation/radiation_transfer.cu"
+    "ptc_updater_dev.cu"
+    "ptc_updater_logsph.cu"
+    "cuda/constant_mem.cu"
+    "cuda/kernels.cu"
     "radiation/rt_pulsar.cu"
-    # "algorithms/current_deposit_Esirkepov.cu"
     "algorithms/finite_diff.cu"
-    "data/array.cu" "data/cu_multi_array.cu"
-    # "algorithms/field_solver_force_free.cu"
-    # "algorithms/field_solver_ffe_cyl.cu"
+    "data/array.cu"
+    "data/cu_multi_array.cu"
     )
+
+  if(LAB_ROOT_DIR)
+    foreach(ARG ${Lab_cuAperture_src})
+      list(REMOVE_ITEM cuAperture_src ${ARG})
+      list(APPEND cuAperture_src "${LAB_ROOT_DIR}/src/${ARG}")
+    endforeach()
+  endif()
 
   add_cuda_target(cuAperture ${cuAperture_src})
   target_link_libraries(cuAperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})

@@ -17,8 +17,8 @@ class ptc_updater_default : public ptc_updater {
   // Reference implementation for benchmarking purposes
   void update_particles_slow(sim_data& data, double dt);
 
-  // void vay_push(sim_data& data, double dt);
-  // void esirkepov_deposit(sim_data& data, double dt);
+  void push(sim_data& data, double dt);
+  void esirkepov_deposit(sim_data& data, double dt);
   virtual void handle_boundary(sim_data& data) override;
 
  private:
