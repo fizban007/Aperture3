@@ -185,6 +185,7 @@ ptc_updater_default::esirkepov_deposit(sim_data& data, double dt) {
   auto& ptc = data.particles;
   auto& mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {
+#pragma omp simd
     for (size_t idx = 0; idx < ptc.number(); idx++) {
       uint32_t c = ptc.data().cell[idx];
       if (c == MAX_CELL) continue;
