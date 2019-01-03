@@ -92,7 +92,7 @@ DataExporterParallel::AddArray(const std::string &name,
 template <typename T>
 void
 DataExporterParallel::AddArray(const std::string &name,
-                               VectorField<T> &field, int component) {
+                               cu_vector_field<T> &field, int component) {
   AddArray(name, field.data(component));
 }
 
@@ -275,8 +275,8 @@ template void DataExporterParallel::AddArray<double>(
     const std::string &name, multi_array_dev<double> &array);
 
 template void DataExporterParallel::AddArray<float>(
-    const std::string &name, VectorField<float> &field, int component);
+    const std::string &name, cu_vector_field<float> &field, int component);
 
 template void DataExporterParallel::AddArray<double>(
-    const std::string &name, VectorField<double> &field, int component);
+    const std::string &name, cu_vector_field<double> &field, int component);
 }  // namespace Aperture

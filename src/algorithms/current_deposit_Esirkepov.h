@@ -9,8 +9,8 @@ class Environment;
 
 class CurrentDepositer_Esirkepov : public CurrentDepositer {
  public:
-  typedef VectorField<Scalar> vfield;
-  typedef ScalarField<Scalar> sfield;
+  typedef cu_vector_field<Scalar> vfield;
+  typedef cu_scalar_field<Scalar> sfield;
 
   CurrentDepositer_Esirkepov(const Environment& env);
   virtual ~CurrentDepositer_Esirkepov();

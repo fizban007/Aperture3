@@ -64,26 +64,26 @@ PICSim::PICSim(Environment& env) : m_env(env) {
 
   // Register communication callbacks
   // m_depositer->register_current_callback(
-  //     [this](VectorField<Scalar>& j) { m_comm->put_guard_cells(j);
+  //     [this](cu_vector_field<Scalar>& j) { m_comm->put_guard_cells(j);
   //     });
 
   // m_depositer->register_rho_callback(
-  //     [this](ScalarField<Scalar>& rho) {
+  //     [this](cu_scalar_field<Scalar>& rho) {
   //     m_comm->put_guard_cells(rho); });
 
   // m_field_solver->register_comm_callback(
-  //     [this](VectorField<Scalar>& f) -> void {
+  //     [this](cu_vector_field<Scalar>& f) -> void {
   //     m_comm->get_guard_cells(f); });
 
   // m_field_solver->register_comm_callback(
-  //     [this](ScalarField<Scalar>& f) -> void {
+  //     [this](cu_scalar_field<Scalar>& f) -> void {
   //     m_comm->get_guard_cells(f); });
 
   // auto &comm = *m_comm;
-  // std::function<void(VectorField<Scalar>&)> vcall =
-  // [&comm](VectorField<Scalar>& f) -> void { comm.get_guard_cells(f);
+  // std::function<void(cu_vector_field<Scalar>&)> vcall =
+  // [&comm](cu_vector_field<Scalar>& f) -> void { comm.get_guard_cells(f);
   // }; m_field_solver->register_comm_callback(std::bind(
-  //     static_cast<void(DomainCommunicator::*)(VectorField<Scalar>&)>(&DomainCommunicator::get_guard_cells),
+  //     static_cast<void(DomainCommunicator::*)(cu_vector_field<Scalar>&)>(&DomainCommunicator::get_guard_cells),
   //     &comm));
   // m_field_solver->register_communicator(m_comm.get());
 

@@ -22,7 +22,7 @@ using namespace Aperture;
 using namespace HighFive;
 
 void
-compute_flux(ScalarField<Scalar>& flux, VectorField<Scalar>& B) {
+compute_flux(cu_scalar_field<Scalar>& flux, cu_vector_field<Scalar>& B) {
   // B.sync_to_host(1);
   flux.initialize();
   flux.sync_to_host();
@@ -69,7 +69,7 @@ main(int argc, char* argv[]) {
   DataExporter exporter(env.params(), "./ffe_cyl/", "data", 2);
   exporter.WriteGrid();
 
-  ScalarField<Scalar> flux(env.grid());
+  cu_scalar_field<Scalar> flux(env.grid());
 
   exporter.AddField("B", data.B);
   exporter.AddField("E", data.E);

@@ -21,16 +21,16 @@ class FieldSolver_FFE : public FieldSolverDev {
   virtual void set_background_j(const vfield_t& j) override {}
 
  private:
-  void ffe_edotb(ScalarField<Scalar>& result,
-                 const VectorField<Scalar>& E,
-                 const VectorField<Scalar>& B, Scalar q = 1.0);
-  void ffe_j(VectorField<Scalar>& result,
-             const ScalarField<Scalar>& tmp_f,
-             const VectorField<Scalar>& E, const VectorField<Scalar>& B,
+  void ffe_edotb(cu_scalar_field<Scalar>& result,
+                 const cu_vector_field<Scalar>& E,
+                 const cu_vector_field<Scalar>& B, Scalar q = 1.0);
+  void ffe_j(cu_vector_field<Scalar>& result,
+             const cu_scalar_field<Scalar>& tmp_f,
+             const cu_vector_field<Scalar>& E, const cu_vector_field<Scalar>& B,
              Scalar q = 1.0);
-  void ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
-              const VectorField<Scalar>& E,
-              const VectorField<Scalar>& B, Scalar dt);
+  void ffe_dE(cu_vector_field<Scalar>& Eout, cu_vector_field<Scalar>& J,
+              const cu_vector_field<Scalar>& E,
+              const cu_vector_field<Scalar>& B, Scalar dt);
 
   // sfield_t m_sf;
   vfield_t m_Etmp, m_Btmp;

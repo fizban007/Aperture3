@@ -484,7 +484,7 @@ compute_grad(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
 }  // namespace Kernels
 
 void
-curl(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+curl(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
      Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -499,7 +499,7 @@ curl(VectorField<Scalar>& result, const VectorField<Scalar>& u,
 }
 
 void
-curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
          Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -513,7 +513,7 @@ curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u,
   CudaCheckError();
 }
 
-// void curl_add(VectorField<Scalar>& result, const VectorField<Scalar>&
+// void curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>&
 // u, Scalar q) {
 //   auto& grid = u.grid();
 //   auto& mesh = grid.mesh();
@@ -570,7 +570,7 @@ curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u,
 // }
 
 void
-div(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
+div(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
     Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -590,7 +590,7 @@ div(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
 }
 
 void
-div_add(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
+div_add(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
         Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -627,7 +627,7 @@ div_add(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
 }
 
 void
-grad(VectorField<Scalar>& result, const ScalarField<Scalar>& u,
+grad(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& u,
      Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -647,7 +647,7 @@ grad(VectorField<Scalar>& result, const ScalarField<Scalar>& u,
 }
 
 void
-grad_add(VectorField<Scalar>& result, const ScalarField<Scalar>& u,
+grad_add(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& u,
          Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();

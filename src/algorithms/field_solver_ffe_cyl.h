@@ -21,11 +21,11 @@ class FieldSolver_FFE_Cyl : public FieldSolverDev {
   virtual void set_background_j(const vfield_t& j) override {}
 
  private:
-  void ffe_dE(VectorField<Scalar>& Eout, VectorField<Scalar>& J,
-              const VectorField<Scalar>& E,
-              const VectorField<Scalar>& B, Scalar dt);
-  void ffe_reduceE(VectorField<Scalar>& E_center, const VectorField<Scalar>& E,
-                   const VectorField<Scalar>& B);
+  void ffe_dE(cu_vector_field<Scalar>& Eout, cu_vector_field<Scalar>& J,
+              const cu_vector_field<Scalar>& E,
+              const cu_vector_field<Scalar>& B, Scalar dt);
+  void ffe_reduceE(cu_vector_field<Scalar>& E_center, const cu_vector_field<Scalar>& E,
+                   const cu_vector_field<Scalar>& B);
 
   // sfield_t m_sf;
   vfield_t m_Etmp, m_Etmp2;

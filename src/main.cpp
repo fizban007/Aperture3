@@ -66,7 +66,7 @@ main(int argc, char* argv[]) {
   // Put the initial condition to the background
   env.init_bg_fields(data);
 
-  ScalarField<Scalar> flux(env.grid());
+  cu_scalar_field<Scalar> flux(env.grid());
   flux.initialize();
   exporter.AddField("E", data.E);
   exporter.AddField("B", data.B);

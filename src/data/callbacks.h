@@ -8,11 +8,11 @@
 
 namespace Aperture {
 
-typedef std::function<void(VectorField<Scalar>&)> vfield_comm_callback;
+typedef std::function<void(cu_vector_field<Scalar>&)> vfield_comm_callback;
 
-typedef std::function<void(ScalarField<Scalar>&)> sfield_comm_callback;
+typedef std::function<void(cu_scalar_field<Scalar>&)> sfield_comm_callback;
 
-typedef std::function<void(VectorField<Scalar>&, VectorField<Scalar>&,
+typedef std::function<void(cu_vector_field<Scalar>&, cu_vector_field<Scalar>&,
                            double)>
     fieldBC_callback;
 

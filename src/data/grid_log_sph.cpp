@@ -143,9 +143,9 @@ Grid_LogSph::get_mesh_ptrs() const {
 }
 
 void
-Grid_LogSph::compute_flux(ScalarField<Scalar>& flux,
-                          VectorField<Scalar>& B,
-                          VectorField<Scalar>& B_bg) const {
+Grid_LogSph::compute_flux(cu_scalar_field<Scalar>& flux,
+                          cu_vector_field<Scalar>& B,
+                          cu_vector_field<Scalar>& B_bg) const {
   flux.initialize();
   flux.sync_to_host();
   B.sync_to_host();

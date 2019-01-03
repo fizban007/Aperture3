@@ -53,7 +53,7 @@ struct dataset {
 // template <typename T, int n>
 // struct vfieldoutput {
 //   std::string name;
-//   VectorField<T>* field;
+//   cu_vector_field<T>* field;
 //   boost::multi_array<float, n> f1;
 //   boost::multi_array<float, n> f2;
 //   boost::multi_array<float, n> f3;
@@ -111,15 +111,15 @@ class hdf_exporter {
   // void AddArray(const std::string& name, double* data, int* dims,
   //               int ndims);
   // template <typename T>
-  // void AddArray(const std::string& name, VectorField<T>& field,
+  // void AddArray(const std::string& name, cu_vector_field<T>& field,
   //               int component);
   // template <typename T>
   // void AddArray(const std::string& name, multi_array_dev<T>& field);
 
   // template <typename T>
-  // void AddField(const std::string& name, ScalarField<T>& field, bool
+  // void AddField(const std::string& name, cu_scalar_field<T>& field, bool
   // sync = true); template <typename T> void AddField(const
-  // std::string& name, VectorField<T>& field, bool sync = true);
+  // std::string& name, cu_vector_field<T>& field, bool sync = true);
 
   // template <typename T>
   // void InterpolateFieldValues(fieldoutput<2>& field, int components,

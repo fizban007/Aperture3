@@ -356,7 +356,7 @@ lower_z_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
 }  // namespace Kernels
 
 void
-curl_add_2d(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+curl_add_2d(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
             Scalar q) {
   auto& mesh = u.grid().mesh();
 
@@ -470,10 +470,10 @@ FieldSolver_FFE_Cyl::update_field_substep(vfield_t& E_out,
 }
 
 void
-FieldSolver_FFE_Cyl::ffe_dE(VectorField<Scalar>& Eout,
-                            VectorField<Scalar>& J,
-                            const VectorField<Scalar>& E,
-                            const VectorField<Scalar>& B, Scalar dt) {
+FieldSolver_FFE_Cyl::ffe_dE(cu_vector_field<Scalar>& Eout,
+                            cu_vector_field<Scalar>& J,
+                            const cu_vector_field<Scalar>& E,
+                            const cu_vector_field<Scalar>& B, Scalar dt) {
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
@@ -488,9 +488,9 @@ FieldSolver_FFE_Cyl::ffe_dE(VectorField<Scalar>& Eout,
 }
 
 void
-FieldSolver_FFE_Cyl::ffe_reduceE(VectorField<Scalar>& E_center,
-                                 const VectorField<Scalar>& E,
-                                 const VectorField<Scalar>& B) {
+FieldSolver_FFE_Cyl::ffe_reduceE(cu_vector_field<Scalar>& E_center,
+                                 const cu_vector_field<Scalar>& E,
+                                 const cu_vector_field<Scalar>& B) {
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 

@@ -10,10 +10,10 @@ using namespace Aperture;
 class FFETests {
  protected:
   Environment env;
-  VectorField<Scalar> E, B;
-  VectorField<Scalar> E_out, B_out, J_out;
+  cu_vector_field<Scalar> E, B;
+  cu_vector_field<Scalar> E_out, B_out, J_out;
       // , u_comp;
-  // ScalarField<Scalar> f;
+  // cu_scalar_field<Scalar> f;
   const Quadmesh& mesh;
   FieldSolver_FFE solver;
 

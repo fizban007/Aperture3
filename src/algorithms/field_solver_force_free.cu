@@ -336,9 +336,9 @@ FieldSolver_FFE::update_field_substep(vfield_t& E_out, vfield_t& B_out,
 }
 
 void
-FieldSolver_FFE::ffe_edotb(ScalarField<Scalar>& result,
-                           const VectorField<Scalar>& E,
-                           const VectorField<Scalar>& B, Scalar q) {
+FieldSolver_FFE::ffe_edotb(cu_scalar_field<Scalar>& result,
+                           const cu_vector_field<Scalar>& E,
+                           const cu_vector_field<Scalar>& B, Scalar q) {
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
@@ -352,10 +352,10 @@ FieldSolver_FFE::ffe_edotb(ScalarField<Scalar>& result,
 }
 
 void
-FieldSolver_FFE::ffe_j(VectorField<Scalar>& result,
-                       const ScalarField<Scalar>& tmp_f,
-                       const VectorField<Scalar>& E,
-                       const VectorField<Scalar>& B, Scalar q) {
+FieldSolver_FFE::ffe_j(cu_vector_field<Scalar>& result,
+                       const cu_scalar_field<Scalar>& tmp_f,
+                       const cu_vector_field<Scalar>& E,
+                       const cu_vector_field<Scalar>& B, Scalar q) {
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 
@@ -370,10 +370,10 @@ FieldSolver_FFE::ffe_j(VectorField<Scalar>& result,
 }
 
 void
-FieldSolver_FFE::ffe_dE(VectorField<Scalar>& Eout,
-                        VectorField<Scalar>& J,
-                        const VectorField<Scalar>& E,
-                        const VectorField<Scalar>& B, Scalar dt) {
+FieldSolver_FFE::ffe_dE(cu_vector_field<Scalar>& Eout,
+                        cu_vector_field<Scalar>& J,
+                        const cu_vector_field<Scalar>& E,
+                        const cu_vector_field<Scalar>& B, Scalar dt) {
   auto& grid = E.grid();
   auto& mesh = grid.mesh();
 

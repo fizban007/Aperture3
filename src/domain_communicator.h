@@ -11,8 +11,8 @@ namespace Aperture {
 class DomainCommunicator {
  public:
   typedef multi_array_dev<double> array_t;
-  typedef VectorField<Scalar> vec_field_t;
-  typedef ScalarField<Scalar> sca_field_t;
+  typedef cu_vector_field<Scalar> vec_field_t;
+  typedef cu_scalar_field<Scalar> sca_field_t;
 
   DomainCommunicator(Environment& env);
   ~DomainCommunicator();

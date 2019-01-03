@@ -162,7 +162,7 @@ main(int argc, char *argv[]) {
   }
 
   // Setup the background current
-  VectorField<Scalar> Jb(grid);
+  cu_vector_field<Scalar> Jb(grid);
   for (int i = mesh.guard[0] - 1; i < mesh.dims[0] - mesh.guard[0];
        i++) {
     // x is the staggered position where current is evaluated
