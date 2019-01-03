@@ -1,6 +1,6 @@
 #include "ptc_updater_default.h"
 // #include "algorithms/interpolation.h"
-#include "algorithms/ptc_updater_avx_helper.h"
+// #include "algorithms/ptc_updater_avx_helper.h"
 #include "omp.h"
 #include "sim_data.h"
 #include "sim_environment.h"
@@ -9,6 +9,22 @@
 #include "utils/simd.h"
 
 namespace Aperture {
+
+template <typename VF>
+inline VF
+center2d(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1) {
+  return mul_add(
+             sx1, sy1 * 2.0,
+             mul_add(sx0, sy1, mul_add(sx1, sy0, sx0 * sy0 * 2.0))) *
+         0.1666667;
+}
+
+template <typename VF>
+inline VF
+movement3d(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1,
+           const VF& sz0, const VF& sz1) {
+  return (sz1 - sz0) * center2d(sx0, sx1, sy0, sy1);
+}
 
 ptc_updater_default::ptc_updater_default(const sim_environment &env)
     : ptc_updater(env),
@@ -163,37 +179,39 @@ ptc_updater_default::update_particles(sim_data &data, double dt) {
         for (int j = 0; j < 3; j++) {
           auto sy0 = interp_1(-x2 + j_0 + float(j + 1));
           auto sy1 = interp_1(-new_x2 + j_0 + float(j + 1));
-          size_t j_offset = (j + k_offset) * m_j1.pitch();
+          // size_t j_offset = (j + k_offset) * m_j1.pitch();
+          size_t j_offset = (j + k_offset) * data.J.data(0).pitch();
 
           Vec_f_type djx(0.0f);
           for (int i = 0; i < 3; i++) {
             auto sx0 = interp_1(-x1 + i_0 + float(i + 1));
             auto sx1 = interp_1(-new_x1 + i_0 + float(i + 1));
 
-            Vec_ui_type off = offsets + (i * sizeof(simd_buffer) + j_offset);
-            off += Vec8i(0, 1, 2, 3, 4, 5, 6, 7) * sizeof(Scalar);
+            Vec_ui_type off = offsets + (i * sizeof(Scalar) + j_offset);
+            // Vec_ui_type off = offsets + (i * sizeof(simd_buffer) + j_offset);
+            // off += Vec8i(0, 1, 2, 3, 4, 5, 6, 7) * sizeof(Scalar);
 
             int ij = i + 3 * j;
             djx +=
                 select(empty_mask,
                        movement3d(sx0, sx1, sy0, sy1, sz0, sz1), 0.0f);
-            Vec_f_type j1 = gather((float *)m_j1.data(), off, 1);
-            j1 += djx;
-            scatter(off, j1, (char*)m_j1.data());
+            // Vec_f_type j1 = gather((float *)m_j1.data(), off, 1);
+            // j1 += djx;
+            // scatter(off, j1, (char*)m_j1.data());
 
             djy[i] +=
                 select(empty_mask,
                        movement3d(sy0, sy1, sz0, sz1, sx0, sx1), 0.0f);
-            Vec_f_type j2 = gather((float *)m_j2.data(), off, 1);
-            j2 += djy[i];
-            scatter(off, j2, (char*)m_j2.data());
+            // Vec_f_type j2 = gather((float *)m_j2.data(), off, 1);
+            // j2 += djy[i];
+            // scatter(off, j2, (char*)m_j2.data());
 
             djz[ij] +=
                 select(empty_mask,
                        movement3d(sz0, sz1, sx0, sx1, sy0, sy1), 0.0f);
-            Vec_f_type j3 = gather((float *)m_j3.data(), off, 1);
-            j3 += djz[ij];
-            scatter(off, j3, (char*)m_j3.data());
+            // Vec_f_type j3 = gather((float *)m_j3.data(), off, 1);
+            // j3 += djz[ij];
+            // scatter(off, j3, (char*)m_j3.data());
 
             // Vec_f_type s1 = sx1 * sy1 * sz1;
 

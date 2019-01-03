@@ -3,16 +3,18 @@
 
 // #include <hdf5.h>
 // #include <H5Cpp.h>
-#include "data/fields_dev.h"
+// #include "data/fields_dev.h"
+#include "data/field_base.h"
 #include "data/grid.h"
-#include "data/particles_dev.h"
-#include "data/photons.h"
+#include "data/particle_interface.h"
+// #include "data/particles_dev.h"
+// #include "data/photons.h"
 #include "sim_params.h"
-#include <string>
-#include <vector>
 #include <boost/multi_array.hpp>
 #include <fstream>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace Aperture {
 
@@ -21,6 +23,7 @@ class CommandArgs;
 struct SimParams;
 class Environment;
 struct SimData;
+// class Photons;
 
 template <typename T>
 struct dataset {
@@ -30,22 +33,22 @@ struct dataset {
   T* data;
 };
 
-template <typename Ptc>
-struct ptcoutput {
-  std::string name;
-  const Ptc* ptc;
-  std::vector<float> data_x;
-  std::vector<float> data_p;
-};
+// template <typename Ptc>
+// struct ptcoutput {
+//   std::string name;
+//   const Ptc* ptc;
+//   std::vector<float> data_x;
+//   std::vector<float> data_p;
+// };
 
-template <>
-struct ptcoutput<Photons> {
-  std::string name;
-  const Photons* ptc;
-  std::vector<float> data_x;
-  std::vector<float> data_p;
-  std::vector<float> data_l;
-};
+// template <>
+// struct ptcoutput<Photons> {
+//   std::string name;
+//   const Photons* ptc;
+//   std::vector<float> data_x;
+//   std::vector<float> data_p;
+//   std::vector<float> data_l;
+// };
 
 // template <typename T, int n>
 // struct vfieldoutput {
@@ -61,51 +64,26 @@ template <int n>
 struct fieldoutput {
   std::string name;
   std::string type;
-  // ScalarField<T>* field;
   field_base* field;
   std::vector<boost::multi_array<float, n>> f;
   bool sync;
 };
 
-class DataExporter {
- public:
-  // DataExporter();
-  DataExporter(Environment& env, SimData& data, uint32_t& timestep);
+struct ptcoutput {
+  std::string name;
+  std::string type;
+  particle_interface* ptc;
+};
 
-  ~DataExporter();
+class hdf_exporter {
+ public:
+  // hdf_exporter();
+  hdf_exporter(SimParams& params, uint32_t& timestep);
+  ~hdf_exporter();
 
   void WriteGrid();
-
   void WriteOutput(int timestep, double time);
 
-  void AddArray(const std::string& name, float* data, int* dims,
-                int ndims);
-  void AddArray(const std::string& name, double* data, int* dims,
-                int ndims);
-  template <typename T>
-  void AddArray(const std::string& name, VectorField<T>& field,
-                int component);
-  template <typename T>
-  void AddArray(const std::string& name, multi_array_dev<T>& field);
-
-  template <typename T>
-  void AddField(const std::string& name, ScalarField<T>& field, bool sync = true);
-  template <typename T>
-  void AddField(const std::string& name, VectorField<T>& field, bool sync = true);
-
-  template <typename T>
-  void InterpolateFieldValues(fieldoutput<2>& field, int components, T t);
-  template <typename T>
-  void InterpolateFieldValues(fieldoutput<3>& field, int components, T t);
-
-  void AddParticleArray(const std::string& name, const Particles& ptc);
-  void AddParticleArray(const std::string& name, const Photons& ptc);
-  // void AddParticleArray(const Photons& ptc);
-
-  // void CopyConfig(const std::string& file);
-  // void CopyMain();
-
-  // void setGrid(const Grid& g) { grid = g; }
   void writeConfig(const SimParams& params);
   void writeXMFHead(std::ofstream& fs);
   void writeXMFStep(std::ofstream& fs, int step, double time);
@@ -117,9 +95,45 @@ class DataExporter {
   void copyConfigFile();
   void copySrc();
 
-  void writeSnapshot(Environment& env, SimData& data, uint32_t timestep);
-  void load_from_snapshot(Environment& env, SimData& data, uint32_t& timestep);
+  void add_field_output(const std::string& name,
+                        const std::string& type, int num_components,
+                        field_base* field, int dim, bool sync = false);
+  void add_ptc_output(const std::string& name, const std::string& type,
+                      particle_interface* ptc);
 
+  void writeSnapshot(Environment& env, SimData& data,
+                     uint32_t timestep);
+  void load_from_snapshot(Environment& env, SimData& data,
+                          uint32_t& timestep);
+
+  // void AddArray(const std::string& name, float* data, int* dims,
+  //               int ndims);
+  // void AddArray(const std::string& name, double* data, int* dims,
+  //               int ndims);
+  // template <typename T>
+  // void AddArray(const std::string& name, VectorField<T>& field,
+  //               int component);
+  // template <typename T>
+  // void AddArray(const std::string& name, multi_array_dev<T>& field);
+
+  // template <typename T>
+  // void AddField(const std::string& name, ScalarField<T>& field, bool
+  // sync = true); template <typename T> void AddField(const
+  // std::string& name, VectorField<T>& field, bool sync = true);
+
+  // template <typename T>
+  // void InterpolateFieldValues(fieldoutput<2>& field, int components,
+  // T t); template <typename T> void
+  // InterpolateFieldValues(fieldoutput<3>& field, int components, T t);
+
+  // void AddParticleArray(const std::string& name, const Particles&
+  // ptc); void AddParticleArray(const std::string& name, const Photons&
+  // ptc); void AddParticleArray(const Photons& ptc);
+
+  // void CopyConfig(const std::string& file);
+  // void CopyMain();
+
+  // void setGrid(const Grid& g) { grid = g; }
  private:
   std::string
       outputDirectory;  //!< Sets the directory of all the data files
@@ -136,16 +150,17 @@ class DataExporter {
   // std::vector<vfieldoutput3d<double>> dbVectors3d;
   std::vector<fieldoutput<2>> dbFields2d;
   std::vector<fieldoutput<3>> dbFields3d;
+  std::vector<ptcoutput> dbPtc;
   // meshoutput dbMesh;
 
-  std::vector<ptcoutput<Particles>> dbPtcData;
-  std::vector<ptcoutput<Photons>> dbPhotonData;
+  // std::vector<ptcoutput<Particles>> dbPtcData;
+  // std::vector<ptcoutput<Photons>> dbPhotonData;
 
   // Grid grid;
   std::unique_ptr<Grid> grid;
   int downsample_factor;
   std::ofstream xmf;
-};  // ----- end of class DataExporter -----
+};  // ----- end of class hdf_exporter -----
 
 }  // namespace Aperture
 

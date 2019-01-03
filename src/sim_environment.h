@@ -17,8 +17,6 @@
 
 namespace Aperture {
 
-// struct sim_data;
-
 ////////////////////////////////////////////////////////////////////////////////
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
@@ -33,16 +31,11 @@ class sim_environment {
   sim_environment(sim_environment const&) = delete;
   sim_environment& operator=(sim_environment const&) = delete;
 
-  // void set_initial_condition(SimData& data);
-  // void set_initial_condition(SimData& data, const Index& start, const
-  // Extent& extent); void setup_domain(int num_nodes); void
+  // void setup_domain(int num_nodes); void
   // setup_domain(int dimx, int dimy, int dimz = 1); void
   // setup_local_grid(Grid& local_grid, const Grid& super_grid,
   //                       const DomainInfo& info);
 
-  // void set_initial_condition(InitialCondition* ic);
-
-  void add_output(const std::string& name);
   // void init_bg_fields(SimData& data);
 
   float gen_rand() { return m_dist(m_generator); }
@@ -55,12 +48,13 @@ class sim_environment {
   const Grid& grid() const { return *m_grid; }
   const Grid& local_grid() const { return *m_grid; }
   const Quadmesh& mesh() const { return m_grid->mesh(); }
-  // VectorField<Scalar>& E_bg() { return m_Ebg; }
-  // VectorField<Scalar>& B_bg() { return m_Bbg; }
 
   const float* charges() const { return m_charges.data(); }
   const float* masses() const { return m_masses.data(); }
   const float* q_over_m() const { return m_q_over_m.data(); }
+  float charge(int sp) const { return m_charges[sp]; }
+  float masse(int sp) const { return m_masses[sp]; }
+  float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
   // const Grid& super_grid() const { return m_super_grid; }
   // MetricType metric_type() const { return m_metric_type; }
@@ -95,8 +89,6 @@ class sim_environment {
 
   // DomainInfo m_domain_info;
   // BoundaryConditions m_bc;
-  // VectorField<Scalar> m_Ebg;
-  // VectorField<Scalar> m_Bbg;
 
   // std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;
