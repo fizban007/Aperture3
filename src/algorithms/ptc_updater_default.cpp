@@ -76,7 +76,7 @@ ptc_updater_default::push(sim_data& data, double dt) {
       // particles
       Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
       Vec_ui_type d = select(~empty_mask, Vec_ui_type(1 + mesh.dims[1]),
-                             c / Divisor_ui(mesh.dims[0]));
+                             c / mesh.dims[0]);
       Vec_ui_type c1s =
           select(~empty_mask, Vec_ui_type(1), c - d * mesh.dims[0]);
       Vec_ui_type offsets =
