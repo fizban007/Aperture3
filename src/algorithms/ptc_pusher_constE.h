@@ -14,8 +14,8 @@ class ParticlePusher_ConstE : public ParticlePusher {
   ParticlePusher_ConstE(const Environment& env);
   virtual ~ParticlePusher_ConstE();
 
-  virtual void push(SimData& data, double dt);
-  virtual void handle_boundary(SimData& data);
+  virtual void push(cu_sim_data& data, double dt);
+  virtual void handle_boundary(cu_sim_data& data);
 
  private:
   Scalar m_E;

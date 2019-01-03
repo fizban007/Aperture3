@@ -1,5 +1,5 @@
 #include "pic_sim.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
@@ -30,7 +30,7 @@ main(int argc, char *argv[]) {
   Logger::print_debug("{}", env.params().max_steps);
 
   // Allocate simulation data
-  SimData data(env);
+  cu_sim_data data(env);
 
   // These are debug output
   // std::cout << data.particles.size() << std::endl;

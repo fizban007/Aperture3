@@ -2,7 +2,7 @@
 #define _PARTICLE_PUSHER_H_
 
 // #include "data/callbacks.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 
 namespace Aperture {
 
@@ -15,8 +15,8 @@ class ParticlePusher {
   ParticlePusher() {}
   virtual ~ParticlePusher() {}
 
-  virtual void push(SimData& data, double dt) = 0;
-  virtual void handle_boundary(SimData& data) = 0;
+  virtual void push(cu_sim_data& data, double dt) = 0;
+  virtual void handle_boundary(cu_sim_data& data) = 0;
   // virtual void push(Particles& particles, const vfield_t& E, const
   // vfield_t& B, double dt) = 0;
 

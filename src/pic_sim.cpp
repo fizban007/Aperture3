@@ -94,7 +94,7 @@ PICSim::PICSim(Environment& env) : m_env(env) {
 PICSim::~PICSim() {}
 
 void
-PICSim::loop(Aperture::SimData& data, uint32_t steps,
+PICSim::loop(Aperture::cu_sim_data& data, uint32_t steps,
              uint32_t data_freq) {
   for (uint32_t n = 0; n < steps; n++) {
     // Do stuff
@@ -103,7 +103,7 @@ PICSim::loop(Aperture::SimData& data, uint32_t steps,
 }
 
 void
-PICSim::step(Aperture::SimData& data, uint32_t step) {
+PICSim::step(Aperture::cu_sim_data& data, uint32_t step) {
   double dt = m_env.params().delta_t;
   // Particle push, move, and photon move are all handled here
   // m_pusher->push(data, dt);

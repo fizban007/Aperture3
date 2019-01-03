@@ -6,7 +6,7 @@
 #include "radiation/curvature_instant.h"
 // #include "radiation/radiation_transfer.h"
 #include "radiation/rt_pulsar.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -21,7 +21,7 @@ main(int argc, char* argv[]) {
   Environment env(&argc, &argv);
 
   // Allocate simulation data
-  SimData data(env);
+  cu_sim_data data(env);
 
   // Initialize the field solver
   FieldSolver_LogSph field_solver(

@@ -5,7 +5,7 @@
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater_dev.h"
 #include "ptc_updater_helper.cuh"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/interpolation.cuh"
 #include "utils/logger.h"
@@ -400,7 +400,7 @@ PtcUpdaterDev::~PtcUpdaterDev() {
 }
 
 void
-PtcUpdaterDev::initialize_dev_fields(SimData &data) {
+PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
   if (!m_fields_initialized) {
     m_dev_fields.E1 = data.E.ptr(0);
     m_dev_fields.E2 = data.E.ptr(1);
@@ -419,7 +419,7 @@ PtcUpdaterDev::initialize_dev_fields(SimData &data) {
 }
 
 void
-PtcUpdaterDev::update_particles(SimData &data, double dt) {
+PtcUpdaterDev::update_particles(cu_sim_data &data, double dt) {
   Logger::print_info("Updating particles");
   // Track the right fields
   initialize_dev_fields(data);
@@ -450,7 +450,7 @@ PtcUpdaterDev::update_particles(SimData &data, double dt) {
 }
 
 void
-PtcUpdaterDev::handle_boundary(SimData &data) {
+PtcUpdaterDev::handle_boundary(cu_sim_data &data) {
   erase_ptc_in_guard_cells(data.particles.data().cell,
                            data.particles.number());
 }

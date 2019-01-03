@@ -485,7 +485,7 @@ FieldSolver_LogSph::~FieldSolver_LogSph() {
 }
 
 void
-FieldSolver_LogSph::update_fields(SimData& data, double dt,
+FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
                                   double time) {
   update_fields(data.E, data.B, data.J, dt, time);
 }
@@ -533,7 +533,7 @@ void
 FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 
 void
-FieldSolver_LogSph::boundary_conditions(SimData& data, double omega) {
+FieldSolver_LogSph::boundary_conditions(cu_sim_data& data, double omega) {
   // Logger::print_info("omega is {}", omega);
   Kernels::stellar_boundary<<<32, 256>>>(
       data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
@@ -552,7 +552,7 @@ FieldSolver_LogSph::boundary_conditions(SimData& data, double omega) {
 }
 
 void
-FieldSolver_LogSph::clean_divergence(SimData& data) {
+FieldSolver_LogSph::clean_divergence(cu_sim_data& data) {
   init_dev_rho(data);
   m_phi_e.initialize();
 
@@ -575,7 +575,7 @@ FieldSolver_LogSph::clean_divergence(SimData& data) {
 }
 
 void
-FieldSolver_LogSph::init_dev_rho(SimData& data) {
+FieldSolver_LogSph::init_dev_rho(cu_sim_data& data) {
   if (!m_rho_initialized) {
     if (m_dev_rho == nullptr) {
       CudaSafeCall(cudaMallocManaged(

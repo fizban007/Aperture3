@@ -22,7 +22,7 @@ ParticlePusher_Mapping::ParticlePusher_Mapping(int interp_order)
 ParticlePusher_Mapping::~ParticlePusher_Mapping() {}
 
 void
-ParticlePusher_Mapping::push(Aperture::SimData &data, double dt) {
+ParticlePusher_Mapping::push(Aperture::cu_sim_data &data, double dt) {
   for (unsigned int i = 0; i < data.particles.size(); i++) {
     push(data.particles[i], data.E, data.B, dt);
   }

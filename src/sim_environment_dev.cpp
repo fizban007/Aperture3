@@ -5,7 +5,7 @@
 #include "data/grid_1dGR.h"
 #include "data/grid_log_sph.h"
 // #include "data/detail/grid_impl.hpp"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -202,7 +202,7 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::set_initial_condition(SimData& data, const Index& start,
+// Environment::set_initial_condition(cu_sim_data& data, const Index& start,
 // const Extent& extent) {}
 
 // void
@@ -258,7 +258,7 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::apply_initial_condition(SimData &data) {
+// Environment::apply_initial_condition(cu_sim_data &data) {
 //   Logger::print_info("Applying initial condition");
 //   if (m_ic == nullptr) {
 //     Logger::print_err("No initial condition set yet!");
@@ -294,7 +294,7 @@ Environment::check_dev_params(SimParams& params) {
 }
 
 void
-Environment::init_bg_fields(SimData& data) {
+Environment::init_bg_fields(cu_sim_data& data) {
   // Initialize the background fields
   if (m_params.use_bg_fields) {
     data.Ebg = cu_vector_field<Scalar>(*m_grid);

@@ -15,7 +15,7 @@ class CurrentDepositer_Esirkepov : public CurrentDepositer {
   CurrentDepositer_Esirkepov(const Environment& env);
   virtual ~CurrentDepositer_Esirkepov();
 
-  virtual void deposit(SimData& data, double dt);
+  virtual void deposit(cu_sim_data& data, double dt);
   void normalize_current(const vfield& I, vfield& J);
   void normalize_density(const sfield& Q, sfield& rho, sfield& V);
   void normalize_velocity(const sfield& rho, sfield& V);

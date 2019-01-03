@@ -1,16 +1,16 @@
 #ifndef _MULTI_ARRAY_ITER_IMPL_H_
 #define _MULTI_ARRAY_ITER_IMPL_H_
 
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 
 namespace Aperture {
 
 template <typename T>
 template <bool isConst>
-class multi_array_dev<T>::const_nonconst_iterator {
+class cu_multi_array<T>::const_nonconst_iterator {
  public:
   // Typedefs for easier writing and const/nonconst switch
-  typedef multi_array_dev<T> array_type;
+  typedef cu_multi_array<T> array_type;
   typedef const_nonconst_iterator<isConst> self_type;
   typedef Index index_type;
   typedef T data_type;

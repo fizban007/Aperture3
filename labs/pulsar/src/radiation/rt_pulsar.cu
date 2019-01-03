@@ -11,7 +11,7 @@
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
 #include "radiation/rt_pulsar.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
@@ -299,7 +299,7 @@ RadiationTransferPulsar::~RadiationTransferPulsar() {
 }
 
 void
-RadiationTransferPulsar::emit_photons(SimData& data) {
+RadiationTransferPulsar::emit_photons(cu_sim_data& data) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
@@ -348,7 +348,7 @@ RadiationTransferPulsar::emit_photons(SimData& data) {
 }
 
 void
-RadiationTransferPulsar::produce_pairs(SimData& data) {
+RadiationTransferPulsar::produce_pairs(cu_sim_data& data) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
   m_posInBlock.assign_dev(0, photons.number());

@@ -79,7 +79,7 @@ DataExporterParallel::AddArray(const std::string &name, double *data,
 template <typename T>
 void
 DataExporterParallel::AddArray(const std::string &name,
-                               multi_array_dev<T> &array) {
+                               cu_multi_array<T> &array) {
   int ndims = array.dim();
   int *dims = new int[ndims];
   for (int i = 0; i < ndims; i++) dims[i] = array.extent()[i];
@@ -269,10 +269,10 @@ DataExporterParallel::writeConfig(const ConfigFile &config,
 
 // Explicit instantiation of templates
 template void DataExporterParallel::AddArray<float>(
-    const std::string &name, multi_array_dev<float> &array);
+    const std::string &name, cu_multi_array<float> &array);
 
 template void DataExporterParallel::AddArray<double>(
-    const std::string &name, multi_array_dev<double> &array);
+    const std::string &name, cu_multi_array<double> &array);
 
 template void DataExporterParallel::AddArray<float>(
     const std::string &name, cu_vector_field<float> &field, int component);

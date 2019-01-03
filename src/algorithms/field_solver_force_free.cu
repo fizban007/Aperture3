@@ -297,7 +297,7 @@ FieldSolver_FFE::FieldSolver_FFE(const Grid& g)
 FieldSolver_FFE::~FieldSolver_FFE() {}
 
 void
-FieldSolver_FFE::update_fields(SimData& data, double dt, double time) {}
+FieldSolver_FFE::update_fields(cu_sim_data& data, double dt, double time) {}
 
 void
 FieldSolver_FFE::compute_J(vfield_t& J, const vfield_t& E,

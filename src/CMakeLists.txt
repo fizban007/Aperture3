@@ -68,7 +68,7 @@ if (CMAKE_CUDA_COMPILER)
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
     # "algorithms/ptc_pusher_geodesic.cpp"
-    "sim_data_dev.cu"
+    "cu_sim_data.cu"
     "data/photons.cu"
     "data/particles_dev.cu"
     "data/fields_dev.cu" "data/photons.cu"
@@ -79,7 +79,7 @@ if (CMAKE_CUDA_COMPILER)
     "radiation/rt_pulsar.cu"
     # "algorithms/current_deposit_Esirkepov.cu"
     "algorithms/finite_diff.cu"
-    "data/array.cu" "data/multi_array_dev.cu"
+    "data/array.cu" "data/cu_multi_array.cu"
     # "algorithms/field_solver_force_free.cu"
     # "algorithms/field_solver_ffe_cyl.cu"
     )

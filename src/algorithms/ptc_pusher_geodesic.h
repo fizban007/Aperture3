@@ -17,7 +17,7 @@ class ParticlePusher_Geodesic : public ParticlePusher {
   ParticlePusher_Geodesic(const Environment& env);
   virtual ~ParticlePusher_Geodesic();
 
-  virtual void push(SimData& data, double dt);
+  virtual void push(cu_sim_data& data, double dt);
 
   void lorentz_push(Particles& particles, Index_t idx, double x,
                     const cu_vector_field<Scalar>& E,
@@ -32,7 +32,7 @@ class ParticlePusher_Geodesic : public ParticlePusher {
                      const Quadmesh& mesh, double dt);
 #endif  // __AVX2__
 
-  void handle_boundary(SimData& data);
+  void handle_boundary(cu_sim_data& data);
   // void set_interp_order(int order);
 
   void extra_force(Particles& particles, Index_t idx, double x,

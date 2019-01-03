@@ -69,7 +69,7 @@ FieldSolver_Default::update_fields(vfield_t &E, vfield_t &B,
 }
 
 void
-FieldSolver_Default::update_fields(Aperture::SimData &data, double dt,
+FieldSolver_Default::update_fields(Aperture::cu_sim_data &data, double dt,
                                    double time) {
   update_fields(data.E, data.B, data.J, dt, time);
 }

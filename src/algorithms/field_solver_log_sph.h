@@ -10,7 +10,7 @@ class FieldSolver_LogSph : public FieldSolverDev {
  public:
   FieldSolver_LogSph(const Grid_LogSph& g);
   virtual ~FieldSolver_LogSph();
-  virtual void update_fields(SimData& data, double dt,
+  virtual void update_fields(cu_sim_data& data, double dt,
                              double time = 0.0) override;
   void update_fields(vfield_t& E, vfield_t& B, const vfield_t& J,
                      double dt, double time = 0.0);
@@ -21,9 +21,9 @@ class FieldSolver_LogSph : public FieldSolverDev {
                         const vfield_t& J, double dt);
   void compute_B_update(vfield_t& B, const vfield_t& E, double dt);
   virtual void set_background_j(const vfield_t& J) override;
-  void boundary_conditions(SimData& data, double omega);
-  void clean_divergence(SimData& data);
-  void init_dev_rho(SimData& data);
+  void boundary_conditions(cu_sim_data& data, double omega);
+  void clean_divergence(cu_sim_data& data);
+  void init_dev_rho(cu_sim_data& data);
 
   sfield_t& get_divE() { return m_divE; }
   sfield_t& get_divB() { return m_divB; }

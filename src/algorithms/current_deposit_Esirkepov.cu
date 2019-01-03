@@ -74,7 +74,7 @@ CurrentDepositer_Esirkepov::CurrentDepositer_Esirkepov(
 CurrentDepositer_Esirkepov::~CurrentDepositer_Esirkepov() {}
 
 void
-CurrentDepositer_Esirkepov::deposit(SimData& data, double dt) {
+CurrentDepositer_Esirkepov::deposit(cu_sim_data& data, double dt) {
   Logger::print_detail("Depositing current");
   auto& part = data.particles;
   auto& grid = data.E.grid();

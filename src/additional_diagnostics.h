@@ -6,7 +6,7 @@
 
 namespace Aperture {
 
-struct SimData;
+struct cu_sim_data;
 class Environment;
 
 class AdditionalDiagnostics
@@ -15,7 +15,7 @@ class AdditionalDiagnostics
   AdditionalDiagnostics(const Environment& env);
   ~AdditionalDiagnostics();
 
-  void collect_diagnostics(const SimData& data);
+  void collect_diagnostics(const cu_sim_data& data);
 
   cu_scalar_field<Scalar>& get_ph_num() { return m_ph_num; }
   cu_scalar_field<Scalar>& get_gamma(int n) { return m_gamma[n]; }

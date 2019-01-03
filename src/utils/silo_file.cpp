@@ -198,9 +198,9 @@ silo_file::get_domain_size(int sizes[3]) const {
   }
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_quad_var(const std::string& varname) const {
-  multi_array_dev<float> result;
+  cu_multi_array<float> result;
   if (m_numRanks != 1 || m_isMultimesh) {
     fmt::print(stderr,
                "We have multimesh instead of quadmesh, use "
@@ -240,9 +240,9 @@ silo_file::get_quad_var(const std::string& varname) const {
   return result;
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_quad_var(const std::string& varname, int rank) const {
-  multi_array_dev<float> result;
+  cu_multi_array<float> result;
   if (rank < 0 || rank > m_numRanks) {
     fmt::print(stderr, "Unavailable rank!");
     return result;
@@ -282,9 +282,9 @@ silo_file::get_quad_var(const std::string& varname, int rank) const {
   return result;
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_multi_var(const std::string& varname) const {
-  multi_array_dev<float> result;
+  cu_multi_array<float> result;
   if (!m_isMultimesh) {
     return get_quad_var(varname);
   }
@@ -346,9 +346,9 @@ silo_file::get_multi_var(const std::string& varname) const {
   return result;
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_multi_mesh(int comp) const {
-  multi_array_dev<float> result(m_dims[0], m_dims[1], m_dims[2]);
+  cu_multi_array<float> result(m_dims[0], m_dims[1], m_dims[2]);
 
   int sizes[3] = {m_domainSize[0], m_domainSize[1], m_domainSize[2]};
   if (sizes[0] > 1) sizes[0] += m_guard[0] * 2;
@@ -378,9 +378,9 @@ silo_file::get_multi_mesh(int comp) const {
   return result;
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_coord_array(int dir) const {
-  multi_array_dev<float> result(m_dims[0], m_dims[1], m_dims[2]);
+  cu_multi_array<float> result(m_dims[0], m_dims[1], m_dims[2]);
   Grid g(m_grid_conf);
   // select_metric(g.setup_metric, parse_metric(metric), g);
   auto mesh = g.mesh();
@@ -404,9 +404,9 @@ silo_file::get_coord_array(int dir) const {
   return result;
 }
 
-multi_array_dev<float>
+cu_multi_array<float>
 silo_file::get_raw_array(const std::string& varname) const {
-  multi_array_dev<float> result;
+  cu_multi_array<float> result;
 
   // First query whether the variable is present in the database
   if (DBInqVarExists(m_dbfile, varname.c_str()) == 0) {

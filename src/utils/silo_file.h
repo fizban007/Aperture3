@@ -2,7 +2,7 @@
 #define _SILO_FILE_H_
 
 #include "data/fields_dev.h"
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 #include "data/vec3.h"
 #include <array>
 #include <silo.h>
@@ -24,15 +24,15 @@ class silo_file {
   void get_dims(int dims[3]) const;
   void get_domain_size(int sizes[3]) const;
 
-  multi_array_dev<float> get_multi_var(const std::string& varname) const;
-  multi_array_dev<float> get_multi_mesh(int comp) const;
-  multi_array_dev<float> get_quad_var(const std::string& varname, int group,
+  cu_multi_array<float> get_multi_var(const std::string& varname) const;
+  cu_multi_array<float> get_multi_mesh(int comp) const;
+  cu_multi_array<float> get_quad_var(const std::string& varname, int group,
                                  int rank) const;
-  multi_array_dev<float> get_quad_var(const std::string& varname,
+  cu_multi_array<float> get_quad_var(const std::string& varname,
                                  int rank) const;
-  multi_array_dev<float> get_quad_var(const std::string& varname) const;
-  multi_array_dev<float> get_coord_array(int dir) const;
-  multi_array_dev<float> get_raw_array(const std::string& varname) const;
+  cu_multi_array<float> get_quad_var(const std::string& varname) const;
+  cu_multi_array<float> get_coord_array(int dir) const;
+  cu_multi_array<float> get_raw_array(const std::string& varname) const;
 
   bool find_var(const std::string& varname) const;
   bool is_multimesh() const { return m_isMultimesh; }

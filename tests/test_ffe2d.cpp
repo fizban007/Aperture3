@@ -1,5 +1,5 @@
 #include <memory>
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
 #include "cuda/constant_mem_func.h"
@@ -13,7 +13,7 @@ class FFETests2D {
   Environment env;
   cu_vector_field<Scalar> E, B;
   cu_vector_field<Scalar> E_out, B_out, J_out;
-  SimData data;
+  cu_sim_data data;
       // , u_comp;
   // cu_scalar_field<Scalar> f;
   const Quadmesh& mesh;

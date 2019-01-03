@@ -2,7 +2,7 @@
 #include "cuda/constant_mem_func.h"
 #include "data/particles_dev.h"
 #include "radiation/rt_pulsar.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -146,7 +146,7 @@ TEST_CASE("Sorting random particles", "[Particles]") {
 TEST_CASE("Making photons", "[Particles]") {
   Environment env("test_particles.toml");
   auto& mesh = env.grid().mesh();
-  SimData data(env);
+  cu_sim_data data(env);
   RadiationTransferPulsar rad(env);
 
   for (int i = 0; i < 1000; i++) {
@@ -167,7 +167,7 @@ TEST_CASE("Making photons", "[Particles]") {
 TEST_CASE("Fine testing pair creation", "[Particles]") {
   Environment env("test_particles.toml");
   auto& mesh = env.grid().mesh();
-  SimData data(env);
+  cu_sim_data data(env);
   RadiationTransferPulsar rad(env);
 
   std::vector<uint32_t> cell_ptr(10);

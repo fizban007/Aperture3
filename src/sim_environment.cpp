@@ -296,7 +296,7 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::set_initial_condition(SimData& data, const Index& start,
+// sim_environment::set_initial_condition(cu_sim_data& data, const Index& start,
 // const Extent& extent) {}
 
 // void
@@ -352,7 +352,7 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::apply_initial_condition(SimData &data) {
+// sim_environment::apply_initial_condition(cu_sim_data &data) {
 //   Logger::print_info("Applying initial condition");
 //   if (m_ic == nullptr) {
 //     Logger::print_err("No initial condition set yet!");

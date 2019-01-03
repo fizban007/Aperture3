@@ -121,7 +121,7 @@ FieldSolver_FiniteDiff::update_fields(vfield &E, vfield &B,
 }
 
 void
-FieldSolver_FiniteDiff::update_fields(Aperture::SimData &data,
+FieldSolver_FiniteDiff::update_fields(Aperture::cu_sim_data &data,
                                       double dt, double time) {}
 
 void

@@ -5,7 +5,7 @@
 #include "field_solver_dev.h"
 // #include "particle_pusher.h"
 #include "ptc_updater_dev.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include <memory>
 #include <stddef.h>
@@ -19,10 +19,10 @@ class PICSim {
   PICSim(Environment& env);
   virtual ~PICSim();
 
-  void loop(SimData& data, uint32_t steps = 100000,
+  void loop(cu_sim_data& data, uint32_t steps = 100000,
             uint32_t data_interval = 100);
 
-  void step(SimData& data, uint32_t step);
+  void step(cu_sim_data& data, uint32_t step);
 
   FieldSolverDev& field_solver() { return *m_field_solver; }
   // ParticlePusher& ptc_pusher() { return *m_pusher; }

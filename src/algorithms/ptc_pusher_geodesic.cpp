@@ -66,7 +66,7 @@ ParticlePusher_Geodesic::ParticlePusher_Geodesic(
 ParticlePusher_Geodesic::~ParticlePusher_Geodesic() {}
 
 void
-ParticlePusher_Geodesic::push(SimData& data, double dt) {
+ParticlePusher_Geodesic::push(cu_sim_data& data, double dt) {
   Logger::print_info("In particle pusher");
   auto& grid = data.E.grid();
   auto& mesh = grid.mesh();
@@ -228,7 +228,7 @@ ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
 }
 
 void
-ParticlePusher_Geodesic::handle_boundary(SimData& data) {
+ParticlePusher_Geodesic::handle_boundary(cu_sim_data& data) {
   auto& mesh = data.E.grid().mesh();
   for (auto& ptc : data.particles) {
     if (ptc.number() > 0) {
