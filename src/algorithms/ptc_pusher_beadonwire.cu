@@ -168,7 +168,7 @@ ParticlePusher_BeadOnWire::ParticlePusher_BeadOnWire(
 ParticlePusher_BeadOnWire::~ParticlePusher_BeadOnWire() {}
 
 void
-ParticlePusher_BeadOnWire::push(SimData& data, double dt) {
+ParticlePusher_BeadOnWire::push(cu_sim_data& data, double dt) {
   Logger::print_info("Pushing Particles");
   auto& grid = data.E.grid();
   auto& mesh = grid.mesh();
@@ -218,7 +218,7 @@ ParticlePusher_BeadOnWire::lorentz_push(Particles& particles,
 }
 
 void
-ParticlePusher_BeadOnWire::handle_boundary(SimData& data) {
+ParticlePusher_BeadOnWire::handle_boundary(cu_sim_data& data) {
   auto& mesh = data.E.grid().mesh();
   auto& ptc = data.particles;
   if (ptc.number() > 0) {

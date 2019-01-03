@@ -3,7 +3,7 @@
 
 namespace Aperture {
 
-struct SimData;
+struct cu_sim_data;
 class Environment;
 
 struct fields_data {
@@ -18,11 +18,11 @@ class PtcUpdaterDev {
   PtcUpdaterDev(const Environment& env);
   virtual ~PtcUpdaterDev();
 
-  virtual void update_particles(SimData& data, double dt);
-  virtual void handle_boundary(SimData& data);
+  virtual void update_particles(cu_sim_data& data, double dt);
+  virtual void handle_boundary(cu_sim_data& data);
 
  protected:
-  void initialize_dev_fields(SimData& data);
+  void initialize_dev_fields(cu_sim_data& data);
   
   const Environment& m_env;
 

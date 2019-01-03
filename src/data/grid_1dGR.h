@@ -34,9 +34,9 @@ class Grid_1dGR : public Grid {
   const_mesh_ptrs get_mesh_ptrs() const;
 
  private:
-  multi_array_dev<Scalar> m_D1, m_D2, m_D3;
-  multi_array_dev<Scalar> m_A, m_alpha_grr, m_angle;
-  multi_array_dev<Scalar> m_a2;
+  cu_multi_array<Scalar> m_D1, m_D2, m_D3;
+  cu_multi_array<Scalar> m_A, m_alpha_grr, m_angle;
+  cu_multi_array<Scalar> m_a2;
 };  // ----- end of class Grid_1dGR : public Grid -----
 
 }  // namespace Aperture

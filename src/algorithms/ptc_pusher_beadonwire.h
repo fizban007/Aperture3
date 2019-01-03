@@ -17,13 +17,13 @@ class ParticlePusher_BeadOnWire : public ParticlePusher {
   ParticlePusher_BeadOnWire(const Environment& env);
   virtual ~ParticlePusher_BeadOnWire();
 
-  virtual void push(SimData& data, double dt);
+  virtual void push(cu_sim_data& data, double dt);
 
   void lorentz_push(Particles& particles, const cu_vector_field<Scalar>& E,
                     const cu_vector_field<Scalar>& B, double dt);
   void move_ptc(Particles& particles, const Grid& grid, double dt);
   void move_photons(Photons& photons, const Grid& grid, double dt);
-  void handle_boundary(SimData& data);
+  void handle_boundary(cu_sim_data& data);
   // void set_interp_order(int order);
 
   void extra_force(Particles& particles, Index_t idx, double x,

@@ -1,4 +1,4 @@
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 #include "data/detail/multi_array_utils.hpp"
 #include <cuda_runtime.h>
 #include <iostream>
@@ -27,7 +27,7 @@ using namespace Aperture;
 // }
 
 struct Data {
-  multi_array_dev<Scalar> a, b, c;
+  cu_multi_array<Scalar> a, b, c;
   size_t size, memSize;
 
   Data(int x, int y = 1, int z = 1) :

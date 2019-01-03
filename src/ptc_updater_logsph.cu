@@ -5,7 +5,7 @@
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/interpolation.cuh"
 #include "utils/logger.h"
@@ -602,7 +602,7 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 }
 
 void
-PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
+PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt) {
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
@@ -647,7 +647,7 @@ PtcUpdaterLogSph::update_particles(SimData &data, double dt) {
 }
 
 void
-PtcUpdaterLogSph::handle_boundary(SimData &data) {
+PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   data.particles.clear_guard_cells();
   data.photons.clear_guard_cells();
 
@@ -657,7 +657,7 @@ PtcUpdaterLogSph::handle_boundary(SimData &data) {
 }
 
 void
-PtcUpdaterLogSph::inject_ptc(SimData &data, int inj_per_cell, Scalar p1,
+PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell, Scalar p1,
                              Scalar p2, Scalar p3, Scalar w,
                              Scalar omega) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(

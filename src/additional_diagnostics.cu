@@ -3,7 +3,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/ptr_util.h"
 #include "data/detail/multi_array_utils.hpp"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 
 namespace Aperture {
@@ -83,7 +83,7 @@ AdditionalDiagnostics::~AdditionalDiagnostics() {
 }
 
 void
-AdditionalDiagnostics::collect_diagnostics(const SimData& data) {
+AdditionalDiagnostics::collect_diagnostics(const cu_sim_data& data) {
   m_ph_num.initialize();
   for (int i = 0; i < m_env.params().num_species; i++) {
     m_gamma[i].initialize();

@@ -395,7 +395,7 @@ FieldSolver_FFE_Cyl::FieldSolver_FFE_Cyl(const Grid& g)
 FieldSolver_FFE_Cyl::~FieldSolver_FFE_Cyl() {}
 
 void
-FieldSolver_FFE_Cyl::update_fields(SimData& data, double dt,
+FieldSolver_FFE_Cyl::update_fields(cu_sim_data& data, double dt,
                                    double omega) {
   m_Erk.copy_from(data.E);
   m_Brk.copy_from(data.B);
@@ -504,7 +504,7 @@ FieldSolver_FFE_Cyl::ffe_reduceE(cu_vector_field<Scalar>& E_center,
 }
 
 void
-FieldSolver_FFE_Cyl::handle_boundary(SimData& data, Scalar omega,
+FieldSolver_FFE_Cyl::handle_boundary(cu_sim_data& data, Scalar omega,
                                      Scalar dt) {
   auto& grid = data.E.grid();
   auto& mesh = grid.mesh();

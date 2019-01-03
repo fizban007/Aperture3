@@ -4,7 +4,7 @@
 #include "constant_defs.h"
 #include "data/enum_types.h"
 #include "data/grid.h"
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 #include "data/stagger.h"
 #include "data/typedefs.h"
 #include "data/field_base.h"
@@ -19,7 +19,7 @@ class cu_scalar_field : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
-  typedef multi_array_dev<T> array_type;
+  typedef cu_multi_array<T> array_type;
   typedef cu_scalar_field<T> self_type;
 
   // Constructors and destructor
@@ -89,7 +89,7 @@ class cu_vector_field : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
-  typedef multi_array_dev<T> array_type;
+  typedef cu_multi_array<T> array_type;
   typedef cu_vector_field<T> self_type;
 
   /// Constructors and Destructor

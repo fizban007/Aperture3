@@ -10,14 +10,14 @@ class FieldSolver_FFE_Cyl : public FieldSolverDev {
   FieldSolver_FFE_Cyl(const Grid& g);
   virtual ~FieldSolver_FFE_Cyl();
 
-  virtual void update_fields(SimData& data, double dt,
+  virtual void update_fields(cu_sim_data& data, double dt,
                              double omega = 0.0) override;
 
   void compute_J(vfield_t& J, const vfield_t& E, const vfield_t& B);
   void update_field_substep(vfield_t& E_out, vfield_t& B_out,
                             vfield_t& J_out, const vfield_t& E_in,
                             const vfield_t& B_in, Scalar omega, Scalar dt);
-  void handle_boundary(SimData& data, Scalar omega, Scalar dt);
+  void handle_boundary(cu_sim_data& data, Scalar omega, Scalar dt);
   virtual void set_background_j(const vfield_t& j) override {}
 
  private:

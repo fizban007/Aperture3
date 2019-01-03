@@ -34,7 +34,7 @@ FieldSolver_Integral::update_fields(vfield_t &E, vfield_t &B,
 }
 
 void
-FieldSolver_Integral::update_fields(Aperture::SimData &data, double dt,
+FieldSolver_Integral::update_fields(Aperture::cu_sim_data &data, double dt,
                                     double time) {
   update_fields(data.E, data.B, data.J, dt, time);
   data.B.addBy(data.E);

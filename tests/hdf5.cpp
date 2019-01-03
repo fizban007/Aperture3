@@ -1,5 +1,5 @@
 #include "highfive/H5File.hpp"
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 #include <vector>
 #include <stdexcept>
 #include <mpi.h>
@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-  multi_array_dev<float> arr(10);
+  cu_multi_array<float> arr(10);
   arr.assign((float)mpi_rank);
   try {
     HF::File file("test.h5", HF::File::ReadWrite | HF::File::Create | HF::File::Truncate,

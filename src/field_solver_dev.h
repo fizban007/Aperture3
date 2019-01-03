@@ -6,7 +6,7 @@
 // #include "boundary_conditions.h"
 #include "data/callbacks.h"
 #include "data/fields_dev.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 
 namespace Aperture {
 
@@ -18,7 +18,7 @@ class FieldSolverDev {
   FieldSolverDev() {}
   virtual ~FieldSolverDev() {}
 
-  virtual void update_fields(SimData& data, double dt,
+  virtual void update_fields(cu_sim_data& data, double dt,
                              double time = 0.0) = 0;
 
   virtual void set_background_j(const vfield_t& j) = 0;

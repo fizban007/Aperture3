@@ -48,7 +48,7 @@ ParticlePusher_ConstE::ParticlePusher_ConstE(const Environment& env) {
 ParticlePusher_ConstE::~ParticlePusher_ConstE() {}
 
 void
-ParticlePusher_ConstE::push(SimData& data, double dt) {
+ParticlePusher_ConstE::push(cu_sim_data& data, double dt) {
   auto& ptc = data.particles.data();
   auto& photons = data.photons.data();
   Kernels::lorentz_push<<<512, 512>>>(ptc, m_E, dt,
@@ -61,7 +61,7 @@ ParticlePusher_ConstE::push(SimData& data, double dt) {
 }
 
 void
-ParticlePusher_ConstE::handle_boundary(SimData& data) {
+ParticlePusher_ConstE::handle_boundary(cu_sim_data& data) {
   
 }
 

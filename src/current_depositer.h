@@ -2,7 +2,7 @@
 #define _CURRENT_DEPOSITER_H_
 
 #include "data/callbacks.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 
 namespace Aperture {
 
@@ -11,7 +11,7 @@ class CurrentDepositer {
   CurrentDepositer() {}
   virtual ~CurrentDepositer() {}
 
-  virtual void deposit(SimData& data, double dt) = 0;
+  virtual void deposit(cu_sim_data& data, double dt) = 0;
 
   // void set_interp_order(int n) { m_interp = n; }
   void register_current_callback(const vfield_comm_callback& callback) {

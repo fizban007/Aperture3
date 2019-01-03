@@ -17,7 +17,7 @@
 
 namespace Aperture {
 
-struct SimData;
+struct cu_sim_data;
 // class DomainCommunicator;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,8 +34,8 @@ class Environment : public sim_environment {
   Environment(Environment const&) = delete;
   Environment& operator=(Environment const&) = delete;
 
-  // void set_initial_condition(SimData& data);
-  // void set_initial_condition(SimData& data, const Index& start, const
+  // void set_initial_condition(cu_sim_data& data);
+  // void set_initial_condition(cu_sim_data& data, const Index& start, const
   // Extent& extent); void setup_domain(int num_nodes); void
   // setup_domain(int dimx, int dimy, int dimz = 1); void
   // setup_local_grid(Grid& local_grid, const Grid& super_grid,
@@ -44,7 +44,7 @@ class Environment : public sim_environment {
   // void set_initial_condition(InitialCondition* ic);
 
   // void add_output(const std::string& name);
-  void init_bg_fields(SimData& data);
+  void init_bg_fields(cu_sim_data& data);
 
   // float gen_rand() { return m_dist(m_generator); }
 
@@ -78,8 +78,8 @@ class Environment : public sim_environment {
   void check_dev_mesh(Quadmesh& mesh);
   void check_dev_params(SimParams& params);
 
-  // void save_snapshot(SimData& data);
-  // void load_snapshot(SimData& data);
+  // void save_snapshot(cu_sim_data& data);
+  // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
 
  private:

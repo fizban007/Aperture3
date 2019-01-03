@@ -36,7 +36,7 @@ class sim_environment {
   // setup_local_grid(Grid& local_grid, const Grid& super_grid,
   //                       const DomainInfo& info);
 
-  // void init_bg_fields(SimData& data);
+  // void init_bg_fields(cu_sim_data& data);
 
   float gen_rand() { return m_dist(m_generator); }
 
@@ -69,8 +69,8 @@ class sim_environment {
   // // const InitialCondition& initial_condition() const { return
   // *m_ic; }
 
-  // void save_snapshot(SimData& data);
-  // void load_snapshot(SimData& data);
+  // void save_snapshot(cu_sim_data& data);
+  // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
 
  protected:

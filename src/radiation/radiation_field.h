@@ -1,7 +1,7 @@
 #ifndef _RADIATION_FIELD_H_
 #define _RADIATION_FIELD_H_
 
-#include "data/multi_array_dev.h"
+#include "data/cu_multi_array.h"
 #include "data/typedefs.h"
 
 namespace Aperture {
@@ -16,14 +16,14 @@ class RadiationField {
 
   void advect(Scalar dt);
 
-  multi_array_dev<Scalar>& data() { return m_data; }
-  const multi_array_dev<Scalar>& data() { return m_data; }
+  cu_multi_array<Scalar>& data() { return m_data; }
+  const cu_multi_array<Scalar>& data() { return m_data; }
   Scalar* ptr() { return m_data.data(); }
   const Scalar* ptr() { return m_data.data(); }
 
  private:
   const Environment& m_env;
-  multi_array_dev<Scalar> m_data;
+  cu_multi_array<Scalar> m_data;
 };  // ----- end of class RadiationField -----
 
 }  // namespace Aperture

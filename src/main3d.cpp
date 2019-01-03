@@ -1,6 +1,6 @@
 #include "algorithms/field_solver_default.h"
 #include "ptc_updater_dev.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -14,7 +14,7 @@ main(int argc, char* argv[]) {
   Environment env(&argc, &argv);
 
   // Allocate simulation data
-  SimData data(env);
+  cu_sim_data data(env);
 
   // Initialize components of the simulator
   PtcUpdaterDev ptc_updater(env);

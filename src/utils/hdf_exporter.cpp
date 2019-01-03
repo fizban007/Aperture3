@@ -8,7 +8,7 @@
 // #include "config_file.h"
 #include "commandline_args.h"
 #include "nlohmann/json.hpp"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "sim_params.h"
 // #include <H5Cpp.h>
@@ -684,7 +684,7 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 }
 
 void
-hdf_exporter::writeSnapshot(Environment &env, SimData &data,
+hdf_exporter::writeSnapshot(Environment &env, cu_sim_data &data,
                             uint32_t timestep) {
   File snapshotfile(
       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
@@ -801,7 +801,7 @@ hdf_exporter::writeSnapshot(Environment &env, SimData &data,
 }
 
 void
-hdf_exporter::load_from_snapshot(Environment &env, SimData &data,
+hdf_exporter::load_from_snapshot(Environment &env, cu_sim_data &data,
                                  uint32_t &timestep) {
   File snapshotfile(
       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
@@ -957,7 +957,7 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 
 // template <typename T>
 // void
-// DataExporter::AddArray(const std::string &name, multi_array_dev<T>
+// DataExporter::AddArray(const std::string &name, cu_multi_array<T>
 // &array)
 // {
 //   int ndims = array.dim();

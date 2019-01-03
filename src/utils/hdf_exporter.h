@@ -22,7 +22,7 @@ class ConfigFile;
 class CommandArgs;
 struct SimParams;
 class Environment;
-struct SimData;
+struct cu_sim_data;
 // class Photons;
 
 template <typename T>
@@ -101,9 +101,9 @@ class hdf_exporter {
   void add_ptc_output(const std::string& name, const std::string& type,
                       particle_interface* ptc);
 
-  void writeSnapshot(Environment& env, SimData& data,
+  void writeSnapshot(Environment& env, cu_sim_data& data,
                      uint32_t timestep);
-  void load_from_snapshot(Environment& env, SimData& data,
+  void load_from_snapshot(Environment& env, cu_sim_data& data,
                           uint32_t& timestep);
 
   // void AddArray(const std::string& name, float* data, int* dims,
@@ -114,7 +114,7 @@ class hdf_exporter {
   // void AddArray(const std::string& name, cu_vector_field<T>& field,
   //               int component);
   // template <typename T>
-  // void AddArray(const std::string& name, multi_array_dev<T>& field);
+  // void AddArray(const std::string& name, cu_multi_array<T>& field);
 
   // template <typename T>
   // void AddField(const std::string& name, cu_scalar_field<T>& field, bool

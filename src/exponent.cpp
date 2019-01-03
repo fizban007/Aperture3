@@ -3,7 +3,7 @@
 #include "pic_sim.h"
 #include "radiation/inverse_compton_power_law.h"
 #include "radiation/radiation_transfer.h"
-#include "sim_data_dev.h"
+#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
@@ -21,7 +21,7 @@ using namespace HighFive;
 
 template <typename Rad>
 double
-measure_exp(SimData& data, PICSim& sim, Environment& env, Rad& rad,
+measure_exp(cu_sim_data& data, PICSim& sim, Environment& env, Rad& rad,
             double E) {
   Scalar dt = env.params().delta_t;
   env.params().constE = E;
@@ -157,7 +157,7 @@ main(int argc, char* argv[]) {
   Logger::print_info("e_min is {}", env.params().e_min);
 
   // Allocate simulation data
-  SimData data(env);
+  cu_sim_data data(env);
 
   // Initialize simulator
   PICSim sim(env);
