@@ -5,11 +5,11 @@
 #include "config_file.h"
 #include "sim_params.h"
 
+#include <array>
 #include <memory>
 #include <random>
 #include <string>
-#include <array>
-// #include "data/domain_info.h"
+#include "data/domain_info.h"
 #include "data/grid.h"
 #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
@@ -31,12 +31,10 @@ class sim_environment {
   sim_environment(sim_environment const&) = delete;
   sim_environment& operator=(sim_environment const&) = delete;
 
-  // void setup_domain(int num_nodes); void
-  // setup_domain(int dimx, int dimy, int dimz = 1); void
-  // setup_local_grid(Grid& local_grid, const Grid& super_grid,
-  //                       const DomainInfo& info);
-
-  // void init_bg_fields(cu_sim_data& data);
+  void setup_domain(int num_nodes);
+  void setup_domain(int dimx, int dimy, int dimz = 1);
+  void setup_local_grid(Grid& local_grid, const Grid& super_grid,
+                        const domain_info& info);
 
   float gen_rand() { return m_dist(m_generator); }
 
@@ -87,7 +85,7 @@ class sim_environment {
   // Grid m_data_grid, m_data_super_grid;
   // MetricType m_metric_type;
 
-  // DomainInfo m_domain_info;
+  domain_info m_domain_info;
   // BoundaryConditions m_bc;
 
   // std::unique_ptr<MPIComm> m_comm;
@@ -101,7 +99,6 @@ class sim_environment {
 
 };  // ----- end of class sim_environment -----
 
-
-}
+}  // namespace Aperture
 
 #endif  // _SIM_ENVIRONMENT_H_

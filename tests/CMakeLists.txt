@@ -18,7 +18,8 @@ target_link_libraries(test_fd
 add_dependencies(check test_fd)
 
 set(tests_src
-  "test.cpp" "test_AD.cpp"
+  "test.cpp"
+  "test_AD.cpp"
   "test_config.cpp"
   "test_env.cpp"
   "test_stagger.cpp"
@@ -53,7 +54,7 @@ if (CMAKE_CUDA_COMPILER)
   add_cuda_executable(test_cuda)
   set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
-    PUBLIC Aperture_cuda
+    PUBLIC cuAperture
     PUBLIC Aperture)
   add_custom_target(run_cuda_tests
     COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
