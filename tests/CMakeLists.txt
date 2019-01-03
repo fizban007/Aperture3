@@ -9,14 +9,6 @@ add_custom_target(check)
 # add_executable(test_free_path "test_free_path.cpp")
 # target_link_libraries(test_free_path ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt Aperture)
 
-set(test_fd_src
-  "test.cpp" "test_finite_diff.cpp")
-add_executable(test_fd ${test_fd_src})
-target_link_libraries(test_fd
-  PUBLIC cuAperture
-  PUBLIC Aperture)
-add_dependencies(check test_fd)
-
 set(tests_src
   "test.cpp"
   # "test_AD.cpp"
@@ -47,6 +39,14 @@ add_dependencies(check run_tests)
 
 # if(CUDA_FOUND)
 if (CMAKE_CUDA_COMPILER)
+  set(test_fd_src
+    "test.cpp" "test_finite_diff.cpp")
+  add_executable(test_fd ${test_fd_src})
+  target_link_libraries(test_fd
+    PUBLIC cuAperture
+    PUBLIC Aperture)
+  add_dependencies(check test_fd)
+
   set(test_cuda_src
     "test.cu" "test_multiarray.cu")
   # "test_pair_creation.cu")

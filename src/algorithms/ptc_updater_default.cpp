@@ -56,7 +56,7 @@ ptc_updater_default::update_particles(sim_data& data, double dt) {
 
   // TODO: Push photons as well
   push(data, dt);
-  // esirkepov_deposit(data, dt);
+  esirkepov_deposit(data, dt);
 }
 
 void
