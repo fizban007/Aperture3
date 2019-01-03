@@ -9,7 +9,7 @@
 
 namespace Aperture {
 
-struct DomainInfo {
+struct domain_info {
  public:
   int dim = 1;
   int rank = 0;
@@ -29,7 +29,7 @@ struct DomainInfo {
 
   // std::vector<std::vector<std::vector<int>>>
   //     rank_map;  ///< Rank map of the domain decomposition
-  ProcessState state = ProcessState::idle;
+  // ProcessState state = ProcessState::idle;
 };  // ----- end of class domain_info -----
 }  // namespace Aperture
 

@@ -82,8 +82,8 @@ sim_environment::setup_env() {
   // Setup the grid
   if (m_params.coord_system == "Cartesian") {
     m_grid.reset(new Grid());
-  } else if (m_params.coord_system == "LogSpherical") {
-    m_grid.reset(new Grid_LogSph());
+  // } else if (m_params.coord_system == "LogSpherical") {
+  //   m_grid.reset(new Grid_LogSph());
   } else {
     m_grid.reset(new Grid());
   }

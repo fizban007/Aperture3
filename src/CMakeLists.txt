@@ -30,22 +30,25 @@ else()
 endif()
 
 set(Aperture_src
-  "utils/logger.cpp" "utils/timer.cpp"
-  "utils/hdf_exporter.cpp"
+  "utils/logger.cpp"
+  "utils/timer.cpp"
   "utils/mpi_helper.cpp"
   "utils/memory.cpp"
-  "data/grid.cpp" "data/grid_log_sph.cpp"
+  "data/grid.cpp"
+  "data/multi_array.cpp"
+  "data/fields.cpp"
   "data/detail/particle_data_impl.cpp"
-  "commandline_args.cpp" "config_file.cpp"
+  "data/particles.cpp"
+  "utils/hdf_exporter.cpp"
+  "commandline_args.cpp"
+  "config_file.cpp"
   "sim_environment.cpp"
   "sim_environment_dev.cpp"
   "sim_data.cpp"
   "pic_sim.cpp"
-  "data/multi_array.cpp"
-  "data/fields.cpp"
-  "data/particles.cpp"
   "algorithms/field_solver_default.cpp"
-  "algorithms/ptc_updater_default.cpp")
+  "algorithms/ptc_updater_default.cpp"
+  )
 
 # modify Aperture_src using
 if(LAB_ROOT_DIR)
@@ -59,9 +62,10 @@ add_library(Aperture ${Aperture_src})
 target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
 
 if (CMAKE_CUDA_COMPILER)
-  set(Aperture_cuda_src
+  set(cuAperture_src
     "data/fields_utils.cu"
     "algorithms/field_solver_log_sph.cu"
+    "data/grid_log_sph.cpp"
     # "data/particles_1d.cu"
     # "data/photons_1d.cu"
     # "algorithms/interpolation.cpp"
@@ -84,8 +88,8 @@ if (CMAKE_CUDA_COMPILER)
     # "algorithms/field_solver_ffe_cyl.cu"
     )
 
-  add_cuda_target(Aperture_cuda ${Aperture_cuda_src})
-  target_link_libraries(Aperture_cuda ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
+  add_cuda_target(cuAperture ${cuAperture_src})
+  target_link_libraries(cuAperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
 endif()
 
 # set(AperCuda_src
@@ -170,7 +174,7 @@ else()
   target_link_libraries(aperture Aperture)
 endif()
 if (CMAKE_CUDA_COMPILER)
-  target_link_libraries(aperture Aperture_cuda)
+  target_link_libraries(aperture cuAperture)
 endif()
 # add_executable(aperture3D "main3D.cpp")
 # target_link_libraries(aperture3D Pulsar)
