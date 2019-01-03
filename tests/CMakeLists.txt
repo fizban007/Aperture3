@@ -13,17 +13,17 @@ set(test_fd_src
   "test.cpp" "test_finite_diff.cpp")
 add_executable(test_fd ${test_fd_src})
 target_link_libraries(test_fd
-  # PUBLIC AperCuda
+  PUBLIC cuAperture
   PUBLIC Aperture)
 add_dependencies(check test_fd)
 
 set(tests_src
   "test.cpp"
-  "test_AD.cpp"
-  "test_config.cpp"
-  "test_env.cpp"
+  # "test_AD.cpp"
+  # "test_config.cpp"
+  # "test_env.cpp"
   "test_stagger.cpp"
-  "test_particles.cpp"
+  # "test_particles.cpp"
   "test_multi_array.cpp"
   "test_fields.cpp"
   "test_field_solver.cpp"
@@ -63,5 +63,5 @@ if (CMAKE_CUDA_COMPILER)
   add_dependencies(check run_cuda_tests)
 endif()
 
-add_executable(test_parse "test_parse.cpp")
-target_link_libraries(test_parse Aperture)
+# add_executable(test_parse "test_parse.cpp")
+# target_link_libraries(test_parse Aperture)

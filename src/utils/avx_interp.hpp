@@ -57,10 +57,17 @@ interpolate_3d(const multi_array<Float>& data, VI offsets, VF x1,
 }
 
 template <typename VF>
-VF
+inline VF
 interp_1(VF dx) {
   auto abs_dx = abs(dx);
   return max(1.0 - abs_dx, VF(0.0));
+}
+
+template <>
+inline float
+interp_1<float>(float dx) {
+  auto abs_dx = std::abs(dx);
+  return std::max(1.0f - abs_dx, 0.0f);
 }
 
 }  // namespace Aperture
