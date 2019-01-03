@@ -45,21 +45,22 @@ add_custom_target(run_tests
 add_dependencies(check run_tests)
 
 # if(CUDA_FOUND)
-set(test_cuda_src
-  "test.cu" "test_multiarray.cu")
+if (CMAKE_CUDA_COMPILER)
+  set(test_cuda_src
+    "test.cu" "test_multiarray.cu")
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
-add_cuda_executable(test_cuda)
-set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
-target_link_libraries(test_cuda
-  # PUBLIC AperCuda
-  PUBLIC Aperture)
-add_custom_target(run_cuda_tests
-  COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
-  DEPENDS test_cuda
-  WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-add_dependencies(check run_cuda_tests)
-# endif()
+  add_cuda_executable(test_cuda)
+  set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
+  target_link_libraries(test_cuda
+    PUBLIC Aperture_cuda
+    PUBLIC Aperture)
+  add_custom_target(run_cuda_tests
+    COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
+    DEPENDS test_cuda
+    WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+  add_dependencies(check run_cuda_tests)
+endif()
 
 add_executable(test_parse "test_parse.cpp")
 target_link_libraries(test_parse Aperture)
