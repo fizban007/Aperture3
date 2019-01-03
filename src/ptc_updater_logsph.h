@@ -22,7 +22,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  ScalarField<double> m_J1, m_J2;
+  cu_scalar_field<double> m_J1, m_J2;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture

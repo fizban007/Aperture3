@@ -196,8 +196,8 @@ ParticlePusher_Geodesic::move_ptc(Particles& particles, Index_t idx,
 void
 ParticlePusher_Geodesic::lorentz_push(Particles& particles, Index_t idx,
                                       double x,
-                                      const VectorField<Scalar>& E,
-                                      const VectorField<Scalar>& B,
+                                      const cu_vector_field<Scalar>& E,
+                                      const cu_vector_field<Scalar>& B,
                                       double dt) {
   auto& ptc = particles.data();
   if (E.grid().dim() == 1) {

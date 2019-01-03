@@ -5,24 +5,24 @@
 
 namespace Aperture {
 
-void curl_add(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+void curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
               Scalar q = 1.0);
-void curl(VectorField<Scalar>& result, const VectorField<Scalar>& u,
+void curl(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
           Scalar q = 1.0);
-void div_add(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
+void div_add(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
              Scalar q = 1.0);
-void div(ScalarField<Scalar>& result, const VectorField<Scalar>& u,
+void div(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
          Scalar q = 1.0);
-void grad_add(VectorField<Scalar>& result, const ScalarField<Scalar>& f,
+void grad_add(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& f,
               Scalar q = 1.0);
-void grad(VectorField<Scalar>& result, const ScalarField<Scalar>& f,
+void grad(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& f,
           Scalar q = 1.0);
-// void ffe_edotb(ScalarField<Scalar>& result, const
-// VectorField<Scalar>& E,
-//                const VectorField<Scalar>& B, Scalar q = 1.0);
-// void ffe_j(VectorField<Scalar>& result, const ScalarField<Scalar>&
+// void ffe_edotb(cu_scalar_field<Scalar>& result, const
+// cu_vector_field<Scalar>& E,
+//                const cu_vector_field<Scalar>& B, Scalar q = 1.0);
+// void ffe_j(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>&
 // tmp_f,
-//            const VectorField<Scalar>& E, const VectorField<Scalar>&
+//            const cu_vector_field<Scalar>& E, const cu_vector_field<Scalar>&
 //            B, Scalar q = 1.0);
 }  // namespace Aperture
 

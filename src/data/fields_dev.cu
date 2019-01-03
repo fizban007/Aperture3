@@ -225,47 +225,47 @@ interp_from_center_2d(cudaPitchedPtr v1, cudaPitchedPtr v2,
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-ScalarField<T>::ScalarField() : field_base(), m_array() {}
+cu_scalar_field<T>::cu_scalar_field() : field_base(), m_array() {}
 
 template <typename T>
-ScalarField<T>::ScalarField(const grid_type& grid, Stagger stagger)
+cu_scalar_field<T>::cu_scalar_field(const grid_type& grid, Stagger stagger)
     : field_base(grid), m_array(grid.extent()), m_stagger(stagger) {
   // std::cout << grid.extent() << std::endl;
   m_stagger = Stagger(0b111);
 }
 
 template <typename T>
-ScalarField<T>::ScalarField(const self_type& field)
+cu_scalar_field<T>::cu_scalar_field(const self_type& field)
     : field_base(*field.m_grid),
       m_array(field.m_array),
       m_stagger(field.m_stagger) {}
 
 template <typename T>
-ScalarField<T>::ScalarField(self_type&& field)
+cu_scalar_field<T>::cu_scalar_field(self_type&& field)
     : field_base(*field.m_grid),
       m_array(std::move(field.m_array)),
       m_stagger(field.m_stagger) {}
 
 template <typename T>
-ScalarField<T>::~ScalarField() {}
+cu_scalar_field<T>::~cu_scalar_field() {}
 
 template <typename T>
 void
-ScalarField<T>::initialize() {
+cu_scalar_field<T>::initialize() {
   // Assign the field to zero, whatever 0 corresponds to for type #T
   m_array.assign_dev(static_cast<T>(0));
 }
 
 template <typename T>
 void
-ScalarField<T>::assign(data_type value) {
+cu_scalar_field<T>::assign(data_type value) {
   // Assign a uniform value to the array
   m_array.assign_dev(value);
 }
 
 template <typename T>
 void
-ScalarField<T>::copy_from(const self_type& field) {
+cu_scalar_field<T>::copy_from(const self_type& field) {
   /// We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
@@ -274,8 +274,8 @@ ScalarField<T>::copy_from(const self_type& field) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::operator=(const self_type& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::operator=(const self_type& field) {
   this->m_grid = field.m_grid;
   this->m_grid_size = field.m_grid_size;
   m_array = field.m_array;
@@ -283,8 +283,8 @@ ScalarField<T>::operator=(const self_type& field) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::operator=(self_type&& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::operator=(self_type&& field) {
   this->m_grid = field.m_grid;
   this->m_grid_size = field.m_grid_size;
   m_array = std::move(field.m_array);
@@ -293,15 +293,15 @@ ScalarField<T>::operator=(self_type&& field) {
 
 template <typename T>
 void
-ScalarField<T>::resize(const Grid& grid) {
+cu_scalar_field<T>::resize(const Grid& grid) {
   this->m_grid = &grid;
   this->m_grid_size = grid.size();
   m_array.resize(grid.extent(), m_array.devId());
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::multiplyBy(data_type value) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::multiplyBy(data_type value) {
   // detail::map_multi_array(m_array.begin(), this -> m_grid ->
   // extent(), detail::Op_MultConst<T>(value));
   dim3 blockSize(8, 8, 8);
@@ -313,8 +313,8 @@ ScalarField<T>::multiplyBy(data_type value) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::multiplyBy(const ScalarField<T>& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::multiplyBy(const cu_scalar_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -330,8 +330,8 @@ ScalarField<T>::multiplyBy(const ScalarField<T>& field) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::addBy(data_type value) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::addBy(data_type value) {
   // detail::map_multi_array(m_array.begin(), this -> m_grid ->
   // extent(), detail::Op_PlusConst<T>(value));
   dim3 blockSize(8, 8, 8);
@@ -343,8 +343,8 @@ ScalarField<T>::addBy(data_type value) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::addBy(const ScalarField<T>& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::addBy(const cu_scalar_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -360,8 +360,8 @@ ScalarField<T>::addBy(const ScalarField<T>& field) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::subtractBy(data_type value) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::subtractBy(data_type value) {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
   // detail::map_multi_array(m_array.begin(), this -> m_grid ->
@@ -373,8 +373,8 @@ ScalarField<T>::subtractBy(data_type value) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::subtractBy(const ScalarField<T>& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::subtractBy(const cu_scalar_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -390,8 +390,8 @@ ScalarField<T>::subtractBy(const ScalarField<T>& field) {
 }
 
 template <typename T>
-ScalarField<T>&
-ScalarField<T>::divideBy(const ScalarField<T>& field) {
+cu_scalar_field<T>&
+cu_scalar_field<T>::divideBy(const cu_scalar_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -416,7 +416,7 @@ ScalarField<T>::divideBy(const ScalarField<T>& field) {
 template <typename T>
 // template <int Order>
 T
-ScalarField<T>::interpolate(const Vec3<int>& c,
+cu_scalar_field<T>::interpolate(const Vec3<int>& c,
                             const Vec3<Pos_t>& rel_pos,
                             int order) const {
   Interpolator interp(order);
@@ -451,7 +451,7 @@ ScalarField<T>::interpolate(const Vec3<int>& c,
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-VectorField<T>::VectorField() : field_base(), m_array() {
+cu_vector_field<T>::cu_vector_field() : field_base(), m_array() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // Default initialize to face-centered
     m_stagger[i] = Stagger(0b000);
@@ -461,7 +461,7 @@ VectorField<T>::VectorField() : field_base(), m_array() {
 }
 
 template <typename T>
-VectorField<T>::VectorField(const grid_type& grid) : field_base(grid) {
+cu_vector_field<T>::cu_vector_field(const grid_type& grid) : field_base(grid) {
   m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i] = array_type(grid.extent());
@@ -475,7 +475,7 @@ VectorField<T>::VectorField(const grid_type& grid) : field_base(grid) {
 }
 
 template <typename T>
-VectorField<T>::VectorField(const self_type& field)
+cu_vector_field<T>::cu_vector_field(const self_type& field)
     : field_base(*field.m_grid),
       m_array(field.m_array),
       m_stagger(field.m_stagger),
@@ -484,7 +484,7 @@ VectorField<T>::VectorField(const self_type& field)
 }
 
 template <typename T>
-VectorField<T>::VectorField(self_type&& field)
+cu_vector_field<T>::cu_vector_field(self_type&& field)
     : field_base(*field.m_grid),
       m_array(std::move(field.m_array)),
       m_stagger(field.m_stagger),
@@ -493,13 +493,13 @@ VectorField<T>::VectorField(self_type&& field)
 }
 
 template <typename T>
-VectorField<T>::~VectorField() {
+cu_vector_field<T>::~cu_vector_field() {
   // cudaFree(m_ptrs);
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::operator=(const self_type& other) {
+cu_vector_field<T>&
+cu_vector_field<T>::operator=(const self_type& other) {
   this->m_grid = other.m_grid;
   this->m_grid_size = other.m_grid_size;
   m_array = other.m_array;
@@ -512,8 +512,8 @@ VectorField<T>::operator=(const self_type& other) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::operator=(self_type&& other) {
+cu_vector_field<T>&
+cu_vector_field<T>::operator=(self_type&& other) {
   this->m_grid = other.m_grid;
   this->m_grid_size = other.m_grid_size;
   m_array = std::move(other.m_array);
@@ -527,7 +527,7 @@ VectorField<T>::operator=(self_type&& other) {
 
 template <typename T>
 void
-VectorField<T>::initialize() {
+cu_vector_field<T>::initialize() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i].assign_dev(static_cast<T>(0));
   }
@@ -535,7 +535,7 @@ VectorField<T>::initialize() {
 
 // template <typename T>
 // void
-// VectorField<T>::init_array_ptrs() {
+// cu_vector_field<T>::init_array_ptrs() {
 //   // CudaSafeCall(cudaMallocManaged(&m_ptrs, VECTOR_DIM *
 //   sizeof(T*)));
 
@@ -576,13 +576,13 @@ VectorField<T>::initialize() {
 
 template <typename T>
 void
-VectorField<T>::assign(data_type value, int n) {
+cu_vector_field<T>::assign(data_type value, int n) {
   m_array[n].assign_dev(value);
 }
 
 template <typename T>
 void
-VectorField<T>::assign(data_type value) {
+cu_vector_field<T>::assign(data_type value) {
   for (int i = 0; i < VECTOR_DIM; i++) {
     m_array[i].assign_dev(value);
   }
@@ -590,7 +590,7 @@ VectorField<T>::assign(data_type value) {
 
 template <typename T>
 void
-VectorField<T>::assign(const VectorField<T>& field, T q) {
+cu_vector_field<T>::assign(const cu_vector_field<T>& field, T q) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -620,7 +620,7 @@ VectorField<T>::assign(const VectorField<T>& field, T q) {
 
 template <typename T>
 void
-VectorField<T>::copy_from(const self_type& field) {
+cu_vector_field<T>::copy_from(const self_type& field) {
   /// We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
@@ -632,7 +632,7 @@ VectorField<T>::copy_from(const self_type& field) {
 
 template <typename T>
 void
-VectorField<T>::resize(const Grid& grid) {
+cu_vector_field<T>::resize(const Grid& grid) {
   this->m_grid = &grid;
   this->m_grid_size = grid.size();
   for (int i = 0; i < VECTOR_DIM; i++) {
@@ -641,8 +641,8 @@ VectorField<T>::resize(const Grid& grid) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::multiplyBy(data_type value) {
+cu_vector_field<T>&
+cu_vector_field<T>::multiplyBy(data_type value) {
   dim3 gridSize(8, 8, 8);
   dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
@@ -657,8 +657,8 @@ VectorField<T>::multiplyBy(data_type value) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::multiplyBy(const ScalarField<T>& field) {
+cu_vector_field<T>&
+cu_vector_field<T>::multiplyBy(const cu_scalar_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -676,8 +676,8 @@ VectorField<T>::multiplyBy(const ScalarField<T>& field) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::addBy(data_type value, int n) {
+cu_vector_field<T>&
+cu_vector_field<T>::addBy(data_type value, int n) {
   // detail::map_multi_array(m_array[n].begin(), this -> m_grid ->
   // extent(),
   //                         detail::Op_PlusConst<T>(value));
@@ -698,8 +698,8 @@ VectorField<T>::addBy(data_type value, int n) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::addBy(const VectorField<T>& field) {
+cu_vector_field<T>&
+cu_vector_field<T>::addBy(const cu_vector_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -728,8 +728,8 @@ VectorField<T>::addBy(const VectorField<T>& field) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::addBy(const VectorField<T>& field, T q) {
+cu_vector_field<T>&
+cu_vector_field<T>::addBy(const cu_vector_field<T>& field, T q) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -758,8 +758,8 @@ VectorField<T>::addBy(const VectorField<T>& field, T q) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::subtractBy(data_type value, int n) {
+cu_vector_field<T>&
+cu_vector_field<T>::subtractBy(data_type value, int n) {
   // detail::map_multi_array(m_array[n].begin(), this -> m_grid ->
   // extent(),
   //                         detail::Op_MinusConst<T>(value));
@@ -772,8 +772,8 @@ VectorField<T>::subtractBy(data_type value, int n) {
 }
 
 template <typename T>
-VectorField<T>&
-VectorField<T>::subtractBy(const VectorField<T>& field) {
+cu_vector_field<T>&
+cu_vector_field<T>::subtractBy(const cu_vector_field<T>& field) {
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 
@@ -794,7 +794,7 @@ VectorField<T>::subtractBy(const VectorField<T>& field) {
 template <typename T>
 // template <int Order>
 Vec3<T>
-VectorField<T>::interpolate(const Vec3<int>& c,
+cu_vector_field<T>::interpolate(const Vec3<int>& c,
                             const Vec3<Pos_t>& rel_pos,
                             int order) const {
   Interpolator interp(order);
@@ -853,7 +853,7 @@ VectorField<T>::interpolate(const Vec3<int>& c,
 
 template <typename T>
 void
-VectorField<T>::interpolate_to_center(self_type& result) {
+cu_vector_field<T>::interpolate_to_center(self_type& result) {
   result.initialize();
   auto& mesh = m_grid->mesh();
 
@@ -869,7 +869,7 @@ VectorField<T>::interpolate_to_center(self_type& result) {
 
 template <typename T>
 void
-VectorField<T>::interpolate_from_center(self_type& result, Scalar q) {
+cu_vector_field<T>::interpolate_from_center(self_type& result, Scalar q) {
   result.initialize();
   auto& mesh = m_grid->mesh();
 
@@ -897,7 +897,7 @@ VectorField<T>::interpolate_from_center(self_type& result, Scalar q) {
 
 template <typename T>
 void
-VectorField<T>::interpolate_from_center_add(self_type& result,
+cu_vector_field<T>::interpolate_from_center_add(self_type& result,
                                             Scalar q) {
   auto& mesh = m_grid->mesh();
 
@@ -926,7 +926,7 @@ VectorField<T>::interpolate_from_center_add(self_type& result,
 
 // template <typename T>
 // void
-// VectorField<T>::recenter(self_type &output) const {
+// cu_vector_field<T>::recenter(self_type &output) const {
 //   check_grid_extent(m_grid -> extent(), output.m_grid -> extent());
 //   output.assign(0.0);
 //   auto& mesh = m_grid -> mesh();
@@ -945,7 +945,7 @@ VectorField<T>::interpolate_from_center_add(self_type& result,
 
 // template <typename T>
 // void
-// VectorField<T>::normalize(FieldNormalization normalization) {
+// cu_vector_field<T>::normalize(FieldNormalization normalization) {
 //   // Nothing to do if the normalization is already correct
 //   if (normalization == m_normalization) return;
 //   // FIXME: This does not seem to respect stagger
@@ -979,8 +979,8 @@ VectorField<T>::interpolate_from_center_add(self_type& result,
 // }
 
 // template <typename T>
-// VectorField<T>&
-// VectorField<T>::convertToFlux() {
+// cu_vector_field<T>&
+// cu_vector_field<T>::convertToFlux() {
 //   for (int k = 0; k < m_grid -> mesh().dims[2]; k++) {
 //     for (int j = 0; j < m_grid -> mesh().dims[1]; j++) {
 //       for (int i = 0; i < m_grid -> mesh().dims[0]; i++) {
@@ -997,8 +997,8 @@ VectorField<T>::interpolate_from_center_add(self_type& result,
 // }
 
 // template <typename T>
-// VectorField<T>&
-// VectorField<T>::convertFromFlux() {
+// cu_vector_field<T>&
+// cu_vector_field<T>::convertFromFlux() {
 //   for (int k = 0; k < m_grid -> mesh().dims[2]; k++) {
 //     for (int j = 0; j < m_grid -> mesh().dims[1]; j++) {
 //       for (int i = 0; i < m_grid -> mesh().dims[0]; i++) {
@@ -1019,7 +1019,7 @@ VectorField<T>::interpolate_from_center_add(self_type& result,
 
 template <typename T>
 void
-VectorField<T>::set_field_type(Aperture::FieldType type) {
+cu_vector_field<T>::set_field_type(Aperture::FieldType type) {
   m_type = type;
   // TODO: If less than 3D, some components do not need to be staggered
   if (type == FieldType::E) {
@@ -1035,7 +1035,7 @@ VectorField<T>::set_field_type(Aperture::FieldType type) {
 
 template <typename T>
 std::array<Stagger, VECTOR_DIM>
-VectorField<T>::stagger_dual() const {
+cu_vector_field<T>::stagger_dual() const {
   auto stagger = m_stagger;
   for (unsigned int i = 0; i < stagger.size(); i++) {
     // Only flip those directions that are inside the grid dimension
@@ -1050,10 +1050,10 @@ VectorField<T>::stagger_dual() const {
 //  Explicit instantiations
 ////////////////////////////////////////////////////////////////////////////////
 
-template class ScalarField<double>;
-template class ScalarField<float>;
+template class cu_scalar_field<double>;
+template class cu_scalar_field<float>;
 
-template class VectorField<double>;
-template class VectorField<float>;
+template class cu_vector_field<double>;
+template class cu_vector_field<float>;
 
 }  // namespace Aperture

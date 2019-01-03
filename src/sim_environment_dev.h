@@ -57,8 +57,8 @@ class Environment : public sim_environment {
   // const Grid& grid() const { return *m_grid; }
   // const Grid& local_grid() const { return *m_grid; }
   // const Quadmesh& mesh() const { return m_grid->mesh(); }
-  // VectorField<Scalar>& E_bg() { return m_Ebg; }
-  // VectorField<Scalar>& B_bg() { return m_Bbg; }
+  // cu_vector_field<Scalar>& E_bg() { return m_Ebg; }
+  // cu_vector_field<Scalar>& B_bg() { return m_Bbg; }
 
   // const Grid& local_grid() const { return m_local_grid; }
   // const Grid& local_grid_dual() const { return m_local_grid_dual; }
@@ -86,8 +86,8 @@ class Environment : public sim_environment {
   // Environment() {}
   void setup_env();
 
-  // VectorField<Scalar> m_Ebg;
-  // VectorField<Scalar> m_Bbg;
+  // cu_vector_field<Scalar> m_Ebg;
+  // cu_vector_field<Scalar> m_Bbg;
 };  // ----- end of class Environment -----
 }  // namespace Aperture
 

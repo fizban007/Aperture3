@@ -8,8 +8,8 @@ namespace Aperture {
 
 class ParticlePusher {
  public:
-  typedef VectorField<Scalar> vfield;
-  typedef ScalarField<Scalar> sfield;
+  typedef cu_vector_field<Scalar> vfield;
+  typedef cu_scalar_field<Scalar> sfield;
   typedef ParticlePusher self_type;
 
   ParticlePusher() {}

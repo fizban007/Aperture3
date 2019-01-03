@@ -11,15 +11,15 @@ namespace Aperture {
 
 template <typename Metric>
 struct field_func {
-  const VectorField<float>& E;
-  const VectorField<float>& B;
-  const VectorField<float>& J;
+  const cu_vector_field<float>& E;
+  const cu_vector_field<float>& B;
+  const cu_vector_field<float>& J;
   Metric g;
   std::string component;
 
-  field_func(const VectorField<float>& Efield,
-             const VectorField<float>& Bfield,
-             const VectorField<float>& Jfield, const Metric& metric,
+  field_func(const cu_vector_field<float>& Efield,
+             const cu_vector_field<float>& Bfield,
+             const cu_vector_field<float>& Jfield, const Metric& metric,
              const std::string& comp)
       : E(Efield), B(Bfield), J(Jfield), g(metric), component(comp) {}
 
@@ -51,7 +51,7 @@ class field_integrator {
 
  private:
   Grid m_grid;
-  VectorField<float> m_E, m_B, m_J;
+  cu_vector_field<float> m_E, m_B, m_J;
   // RungeKutta<double, double> m_rk;
 };  // ----- end of class field_integrator -----
 

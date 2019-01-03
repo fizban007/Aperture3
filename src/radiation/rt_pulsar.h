@@ -20,8 +20,8 @@ class RadiationTransferPulsar {
   void emit_photons(SimData& data);
   void produce_pairs(SimData& data);
 
-  ScalarField<Scalar>& get_pair_events() { return m_pair_events; }
-  ScalarField<Scalar>& get_ph_events() { return m_ph_events; }
+  cu_scalar_field<Scalar>& get_pair_events() { return m_pair_events; }
+  cu_scalar_field<Scalar>& get_ph_events() { return m_ph_events; }
 
  private:
   const Environment& m_env;
@@ -31,8 +31,8 @@ class RadiationTransferPulsar {
   Array<int> m_cumNumPerBlock;
   Array<int> m_posInBlock;
 
-  ScalarField<Scalar> m_pair_events;
-  ScalarField<Scalar> m_ph_events;
+  cu_scalar_field<Scalar> m_pair_events;
+  cu_scalar_field<Scalar> m_ph_events;
 };  // ----- end of class RadiationTransferPulsar -----
 
 }  // namespace Aperture

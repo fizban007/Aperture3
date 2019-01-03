@@ -422,10 +422,10 @@ hdf_exporter::WriteOutput(int timestep, double time) {
   // }
   for (auto &f : dbFields2d) {
     int components = f.f.size();
-    if (f.type == "float")
-      InterpolateFieldValues(f, components, float{});
-    else if (f.type == "double")
-      InterpolateFieldValues(f, components, double{});
+    // if (f.type == "float")
+    //   InterpolateFieldValues(f, components, float{});
+    // else if (f.type == "double")
+    //   InterpolateFieldValues(f, components, double{});
     if (components == 1) {
       DataSet data = datafile.createDataSet<float>(
           f.name, DataSpace::From(f.f[0]));
@@ -971,14 +971,14 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 
 // template <typename T>
 // void
-// DataExporter::AddArray(const std::string &name, VectorField<T>
+// DataExporter::AddArray(const std::string &name, cu_vector_field<T>
 // &field,
 //                        int component) {
 //   AddArray(name, field.data(component));
 // }
 
 // template <typename T>
-// void hdf_exporter::AddField(const std::string &name, ScalarField<T>
+// void hdf_exporter::AddField(const std::string &name, cu_scalar_field<T>
 // &field,
 //                             bool sync) {
 //   auto &mesh = grid->mesh();
@@ -1017,7 +1017,7 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // }
 
 // template <typename T>
-// void hdf_exporter::AddField(const std::string &name, VectorField<T>
+// void hdf_exporter::AddField(const std::string &name, cu_vector_field<T>
 // &field,
 //                             bool sync) {
 //   auto &mesh = grid->mesh();
@@ -1050,9 +1050,9 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // DataExporter::InterpolateFieldValues() {
 //   for (auto &sf : dbScalars3d) {
 //     if (sf.type == 8)
-//       ScalarField<double> *fptr = (ScalarField<double> *)sf.field;
+//       cu_scalar_field<double> *fptr = (cu_scalar_field<double> *)sf.field;
 //     else
-//       ScalarField<float> *fptr = (ScalarField<float> *)sf.field;
+//       cu_scalar_field<float> *fptr = (cu_scalar_field<float> *)sf.field;
 //     if (sf.sync) fptr->sync_to_host();
 //     auto &mesh = fptr->grid().mesh();
 //     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)
@@ -1073,9 +1073,9 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 
 //   for (auto &vf : dbVectors3d) {
 //     if (vf.type == 8)
-//       VectorField<double> *fptr = (VectorField<double> *)vf.field;
+//       cu_vector_field<double> *fptr = (cu_vector_field<double> *)vf.field;
 //     else
-//       VectorField<float> *fptr = (VectorField<float> *)vf.field;
+//       cu_vector_field<float> *fptr = (cu_vector_field<float> *)vf.field;
 //     if (vf.sync) vf.field->sync_to_host();
 //     auto &mesh = vf.field->grid().mesh();
 //     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)
@@ -1165,7 +1165,7 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // components,
 //                                           T t) {
 //   if (components == 1) {
-//     auto fptr = dynamic_cast<ScalarField<T> *>(field.field);
+//     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
 //     if (field.sync)
 //       fptr->sync_to_host();
 //     auto &mesh = fptr->grid().mesh();
@@ -1192,7 +1192,7 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 //       // }
 //     }
 //   } else if (components == 3) {
-//     auto fptr = dynamic_cast<VectorField<T> *>(field.field);
+//     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
 //     if (field.sync)
 //       fptr->sync_to_host();
 //     auto &mesh = fptr->grid().mesh();
@@ -1269,15 +1269,15 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 
 // Explicit instantiation of templates
 // template void hdf_exporter::AddField<double>(const std::string &name,
-//                                              ScalarField<double>
+//                                              cu_scalar_field<double>
 //                                              &array, bool sync);
 // template void hdf_exporter::AddField<double>(const std::string &name,
-//                                              VectorField<double>
+//                                              cu_vector_field<double>
 //                                              &array, bool sync);
 // template void hdf_exporter::AddField<float>(const std::string &name,
-//                                             ScalarField<float>
+//                                             cu_scalar_field<float>
 //                                             &array, bool sync);
 // template void hdf_exporter::AddField<float>(const std::string &name,
-//                                             VectorField<float>
+//                                             cu_vector_field<float>
 //                                             &array, bool sync);
 }  // namespace Aperture

@@ -35,8 +35,8 @@ init_dev_masses(const float masses[8]) {
 }
 
 void
-init_dev_bg_fields(const VectorField<Scalar>& E,
-                   const VectorField<Scalar>& B) {
+init_dev_bg_fields(const cu_vector_field<Scalar>& E,
+                   const cu_vector_field<Scalar>& B) {
   FieldData data;
   data.E1 = E.ptr(0);
   data.E2 = E.ptr(1);

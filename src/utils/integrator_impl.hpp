@@ -55,11 +55,11 @@ field_integrator<Metric>::load_file(const silo_file& file) {
     // TODO: how to pass in metric info
     m_grid.setup_metric(Metric{}, m_grid);
 
-    m_E = VectorField<float>(m_grid);
+    m_E = cu_vector_field<float>(m_grid);
     m_E.set_field_type(FieldType::E);
-    m_B = VectorField<float>(m_grid);
+    m_B = cu_vector_field<float>(m_grid);
     m_B.set_field_type(FieldType::B);
-    m_J = VectorField<float>(m_grid);
+    m_J = cu_vector_field<float>(m_grid);
     m_J.set_field_type(FieldType::E);
 
     if (file.find_var("E1"))

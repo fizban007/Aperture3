@@ -102,8 +102,8 @@ sim_environment::setup_env() {
 
   // Initialize the background fields
   // if (m_params.use_bg_fields) {
-  //   m_Ebg = VectorField<Scalar>(*m_grid);
-  //   m_Bbg = VectorField<Scalar>(*m_grid);
+  //   m_Ebg = cu_vector_field<Scalar>(*m_grid);
+  //   m_Bbg = cu_vector_field<Scalar>(*m_grid);
   //   init_dev_bg_fields(m_Ebg, m_Bbg);
   // }
 

@@ -17,16 +17,16 @@ class AdditionalDiagnostics
 
   void collect_diagnostics(const SimData& data);
 
-  ScalarField<Scalar>& get_ph_num() { return m_ph_num; }
-  ScalarField<Scalar>& get_gamma(int n) { return m_gamma[n]; }
-  ScalarField<Scalar>& get_ptc_num(int n) { return m_ptc_num[n]; }
+  cu_scalar_field<Scalar>& get_ph_num() { return m_ph_num; }
+  cu_scalar_field<Scalar>& get_gamma(int n) { return m_gamma[n]; }
+  cu_scalar_field<Scalar>& get_ptc_num(int n) { return m_ptc_num[n]; }
 
  private:
   const Environment& m_env;
 
-  ScalarField<Scalar> m_ph_num;
-  std::vector<ScalarField<Scalar>> m_gamma;
-  std::vector<ScalarField<Scalar>> m_ptc_num;
+  cu_scalar_field<Scalar> m_ph_num;
+  std::vector<cu_scalar_field<Scalar>> m_gamma;
+  std::vector<cu_scalar_field<Scalar>> m_ptc_num;
 
   cudaPitchedPtr* m_dev_gamma;
   cudaPitchedPtr* m_dev_ptc_num;

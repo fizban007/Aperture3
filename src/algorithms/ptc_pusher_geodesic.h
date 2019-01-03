@@ -20,13 +20,13 @@ class ParticlePusher_Geodesic : public ParticlePusher {
   virtual void push(SimData& data, double dt);
 
   void lorentz_push(Particles& particles, Index_t idx, double x,
-                    const VectorField<Scalar>& E,
-                    const VectorField<Scalar>& B, double dt);
+                    const cu_vector_field<Scalar>& E,
+                    const cu_vector_field<Scalar>& B, double dt);
   void move_ptc(Particles& particles, Index_t idx, double x,
                 const Grid& grid, double dt);
 #ifdef __AVX2__
   void lorentz_push_avx2(particle_data& data, Index_t idx,
-                         const VectorField<Scalar>& E, double dt);
+                         const cu_vector_field<Scalar>& E, double dt);
 
   void move_ptc_avx2(particle_data& data, Index_t idx,
                      const Quadmesh& mesh, double dt);

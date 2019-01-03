@@ -15,19 +15,19 @@ namespace Aperture {
 
 /// Class for a scalar field with one component.
 template <typename T>
-class ScalarField : public field_base {
+class cu_scalar_field : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
   typedef multi_array_dev<T> array_type;
-  typedef ScalarField<T> self_type;
+  typedef cu_scalar_field<T> self_type;
 
   // Constructors and destructor
-  ScalarField();
-  ScalarField(const grid_type &grid, Stagger stagger = Stagger(0));
-  ScalarField(const self_type &field);
-  ScalarField(self_type &&field);
-  virtual ~ScalarField();
+  cu_scalar_field();
+  cu_scalar_field(const grid_type &grid, Stagger stagger = Stagger(0));
+  cu_scalar_field(const self_type &field);
+  cu_scalar_field(self_type &&field);
+  virtual ~cu_scalar_field();
 
   // Core functions
   void initialize();
@@ -43,12 +43,12 @@ class ScalarField : public field_base {
 
   // Arithmetic operations
   self_type &multiplyBy(data_type value);
-  self_type &multiplyBy(const ScalarField<T> &field);
+  self_type &multiplyBy(const cu_scalar_field<T> &field);
   self_type &addBy(data_type value);
-  self_type &addBy(const ScalarField<T> &field);
+  self_type &addBy(const cu_scalar_field<T> &field);
   self_type &subtractBy(data_type value);
-  self_type &subtractBy(const ScalarField<T> &field);
-  self_type &divideBy(const ScalarField<T> &field);
+  self_type &subtractBy(const cu_scalar_field<T> &field);
+  self_type &divideBy(const cu_scalar_field<T> &field);
 
   // template <int Order>
   T interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,
@@ -85,19 +85,19 @@ class ScalarField : public field_base {
 };  // ----- end of class scalar_field -----
 
 template <typename T>
-class VectorField : public field_base {
+class cu_vector_field : public field_base {
  public:
   typedef T data_type;
   typedef Grid grid_type;
   typedef multi_array_dev<T> array_type;
-  typedef VectorField<T> self_type;
+  typedef cu_vector_field<T> self_type;
 
   /// Constructors and Destructor
-  VectorField();
-  VectorField(const grid_type &grid);
-  VectorField(const self_type &field);
-  VectorField(self_type &&field);
-  virtual ~VectorField();
+  cu_vector_field();
+  cu_vector_field(const grid_type &grid);
+  cu_vector_field(const self_type &field);
+  cu_vector_field(self_type &&field);
+  virtual ~cu_vector_field();
 
   self_type &operator=(const self_type &field);
   self_type &operator=(self_type &&field);
@@ -112,7 +112,7 @@ class VectorField : public field_base {
 
   void assign(data_type value, int n);
   void assign(data_type value);
-  void assign(const VectorField<T>& field, T q);
+  void assign(const cu_vector_field<T>& field, T q);
   void copy_from(const self_type &field);
 
   void resize(const grid_type &grid);
@@ -120,12 +120,12 @@ class VectorField : public field_base {
 
   /// Arithmetic operations
   self_type &multiplyBy(data_type value);
-  self_type &multiplyBy(const ScalarField<T> &field);
+  self_type &multiplyBy(const cu_scalar_field<T> &field);
   self_type &addBy(data_type value, int n);
-  self_type &addBy(const VectorField<T> &field);
-  self_type &addBy(const VectorField<T> &field, T q);
+  self_type &addBy(const cu_vector_field<T> &field);
+  self_type &addBy(const cu_vector_field<T> &field, T q);
   self_type &subtractBy(data_type value, int n);
-  self_type &subtractBy(const VectorField<T> &field);
+  self_type &subtractBy(const cu_vector_field<T> &field);
 
   // template <int Order>
   Vec3<T> interpolate(const Vec3<int> &c, const Vec3<Pos_t> &rel_pos,

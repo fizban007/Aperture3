@@ -12,8 +12,8 @@ namespace Aperture {
 
 class FieldSolverDev {
  public:
-  typedef VectorField<Scalar> vfield_t;
-  typedef ScalarField<Scalar> sfield_t;
+  typedef cu_vector_field<Scalar> vfield_t;
+  typedef cu_scalar_field<Scalar> sfield_t;
 
   FieldSolverDev() {}
   virtual ~FieldSolverDev() {}

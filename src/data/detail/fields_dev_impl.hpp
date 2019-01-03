@@ -8,7 +8,7 @@ namespace Aperture {
 template <typename T>
 template <typename Func>
 void
-ScalarField<T>::initialize(const Func& f) {
+cu_scalar_field<T>::initialize(const Func& f) {
   // This way scalar field is always defined in the center of the cell
   for (int k = 0; k < m_grid->extent().depth(); ++k) {
     double x3 = m_grid->mesh().pos(2, k, m_stagger[2]);
@@ -26,7 +26,7 @@ ScalarField<T>::initialize(const Func& f) {
 template <typename T>
 template <typename Func>
 void
-VectorField<T>::initialize(int component, const Func& f) {
+cu_vector_field<T>::initialize(int component, const Func& f) {
   // This way vector field is always defined in the center of the cell
   // face, staggered in the direction of the component
   for (int k = 0; k < m_grid->extent().depth(); ++k) {
@@ -45,7 +45,7 @@ VectorField<T>::initialize(int component, const Func& f) {
 template <typename T>
 template <typename Func>
 void
-VectorField<T>::initialize(const Func& f) {
+cu_vector_field<T>::initialize(const Func& f) {
   initialize(0, [&f](T x1, T x2, T x3) { return f(0, x1, x2, x3); });
   initialize(1, [&f](T x1, T x2, T x3) { return f(1, x1, x2, x3); });
   initialize(2, [&f](T x1, T x2, T x3) { return f(2, x1, x2, x3); });

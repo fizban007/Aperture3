@@ -18,17 +18,17 @@ struct SimData {
   void initialize(const Environment& env);
 
   const Environment& env;
-  VectorField<Scalar> E;
-  VectorField<Scalar> B;
-  VectorField<Scalar> J;
-  ScalarField<Scalar> flux;
-  std::vector<ScalarField<Scalar>> Rho;
-  std::vector<ScalarField<Scalar>> Rho_avg;
-  std::vector<ScalarField<Scalar>> J_s;
-  std::vector<ScalarField<Scalar>> J_avg;
+  cu_vector_field<Scalar> E;
+  cu_vector_field<Scalar> B;
+  cu_vector_field<Scalar> J;
+  cu_scalar_field<Scalar> flux;
+  std::vector<cu_scalar_field<Scalar>> Rho;
+  std::vector<cu_scalar_field<Scalar>> Rho_avg;
+  std::vector<cu_scalar_field<Scalar>> J_s;
+  std::vector<cu_scalar_field<Scalar>> J_avg;
 
-  VectorField<Scalar> Ebg;
-  VectorField<Scalar> Bbg;
+  cu_vector_field<Scalar> Ebg;
+  cu_vector_field<Scalar> Bbg;
 
   Particles particles;
   Photons photons;

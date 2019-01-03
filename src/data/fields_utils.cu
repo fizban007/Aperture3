@@ -7,7 +7,7 @@
 namespace Aperture {
 
 void
-field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u,
+field_add(cu_vector_field<Scalar>& v, const cu_vector_field<Scalar>& u,
           Scalar q) {
   auto& mesh = v.grid().mesh();
   dim3 blockSize(16, 8, 8);
@@ -21,7 +21,7 @@ field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u,
 }
 
 void
-field_add(VectorField<Scalar>& v, const VectorField<Scalar>& u,
-          const ScalarField<Scalar>& q) {}
+field_add(cu_vector_field<Scalar>& v, const cu_vector_field<Scalar>& u,
+          const cu_scalar_field<Scalar>& q) {}
 
 }  // namespace Aperture

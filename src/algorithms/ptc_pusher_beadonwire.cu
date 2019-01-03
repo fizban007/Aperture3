@@ -204,8 +204,8 @@ ParticlePusher_BeadOnWire::move_photons(Photons& photons,
 
 void
 ParticlePusher_BeadOnWire::lorentz_push(Particles& particles,
-                                        const VectorField<Scalar>& E,
-                                        const VectorField<Scalar>& B,
+                                        const cu_vector_field<Scalar>& E,
+                                        const cu_vector_field<Scalar>& B,
                                         double dt) {
   auto& ptc = particles.data();
   auto& grid = E.grid();
