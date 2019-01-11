@@ -36,7 +36,8 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num)
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(
-    const particle_base<ParticleClass>& other) {
+    const particle_base<ParticleClass>& other)
+    : particle_interface(other.m_size) {
   m_size = other.m_size;
   m_number = other.m_number;
 
@@ -46,7 +47,8 @@ particle_base<ParticleClass>::particle_base(
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(
-    particle_base<ParticleClass>&& other) {
+    particle_base<ParticleClass>&& other)
+    : particle_interface(other.m_size) {
   m_size = other.m_size;
   m_number = other.m_number;
 

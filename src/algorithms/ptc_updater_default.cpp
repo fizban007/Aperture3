@@ -70,17 +70,26 @@ ptc_updater_default::push(sim_data& data, double dt) {
     Logger::print_info("vec_width is {}", vec_width);
     for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
       // Interpolate field values to particle position
-      Vec_ui_type c;
+      Vec_idx_type c;
       c.load_a(ptc.data().cell + idx);
       // Mask for empty particles. Do not write results to these
       // particles
-      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
-      Vec_ui_type d = select(~empty_mask, Vec_ui_type(1 + mesh.dims[1]),
-                             c / mesh.dims[0]);
-      Vec_ui_type c1s =
-          select(~empty_mask, Vec_ui_type(1), c - d * mesh.dims[0]);
+      // Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+      auto d = c / mesh.dims[0];
+      auto c1s = c - d * mesh.dims[0];
+      uint32_t empty_offset =
+          1 * sizeof(Scalar) +
+          (1 + mesh.dims[1]) * data.E.data(0).pitch();
+#ifdef USE_DOUBLE
+      Vec_ui_type offsets =
+          extend_low(c1s * sizeof(double) + d * data.E.data(0).pitch());
+      Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
+#else
       Vec_ui_type offsets =
           c1s * sizeof(float) + d * data.E.data(0).pitch();
+      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+#endif
+      offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
       Vec_f_type x1;
       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
@@ -267,8 +276,8 @@ ptc_updater_default::esirkepov_deposit(sim_data& data, double dt) {
       auto dc3 = floor(new_x3);
       new_x3 -= dc3;
 
-      ptc.data().cell[idx] = c + int(dc1) + int(dc2) * mesh.dims[0]
-          + int(dc3) * (mesh.dims[0] * mesh.dims[1]);
+      ptc.data().cell[idx] = c + int(dc1) + int(dc2) * mesh.dims[0] +
+                             int(dc3) * (mesh.dims[0] * mesh.dims[1]);
       ptc.data().x1[idx] = new_x1;
       ptc.data().x2[idx] = new_x2;
       ptc.data().x3[idx] = new_x3;

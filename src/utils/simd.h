@@ -25,12 +25,14 @@ typedef Vec8qb Vec_ib_type;
 typedef Vec8d Vec_f_type;
 constexpr int vec_width = 8;
 #elif !defined(USE_DOUBLE) && defined(__AVX2__)
+typedef Vec8ui Vec_idx_type;
 typedef Vec8ui Vec_ui_type;
 typedef Vec8i Vec_i_type;
 typedef Vec8ib Vec_ib_type;
 typedef Vec8f Vec_f_type;
 constexpr int vec_width = 8;
 #elif defined(USE_DOUBLE) && defined(__AVX2__)
+typedef Vec8ui Vec_idx_type;
 typedef Vec4uq Vec_ui_type;
 typedef Vec4q Vec_i_type;
 typedef Vec4qb Vec_ib_type;
