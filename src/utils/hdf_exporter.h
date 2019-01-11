@@ -21,8 +21,6 @@ namespace Aperture {
 class ConfigFile;
 class CommandArgs;
 struct SimParams;
-class Environment;
-struct cu_sim_data;
 // class Photons;
 
 template <typename T>
@@ -75,11 +73,12 @@ struct ptcoutput {
   particle_interface* ptc;
 };
 
+// template <typename T>
 class hdf_exporter {
  public:
   // hdf_exporter();
   hdf_exporter(SimParams& params, uint32_t& timestep);
-  ~hdf_exporter();
+  virtual ~hdf_exporter();
 
   void WriteGrid();
   void WriteOutput(int timestep, double time);
@@ -101,11 +100,6 @@ class hdf_exporter {
   void add_ptc_output(const std::string& name, const std::string& type,
                       particle_interface* ptc);
 
-  void writeSnapshot(Environment& env, cu_sim_data& data,
-                     uint32_t timestep);
-  void load_from_snapshot(Environment& env, cu_sim_data& data,
-                          uint32_t& timestep);
-
   // void AddArray(const std::string& name, float* data, int* dims,
   //               int ndims);
   // void AddArray(const std::string& name, double* data, int* dims,
@@ -117,8 +111,8 @@ class hdf_exporter {
   // void AddArray(const std::string& name, cu_multi_array<T>& field);
 
   // template <typename T>
-  // void AddField(const std::string& name, cu_scalar_field<T>& field, bool
-  // sync = true); template <typename T> void AddField(const
+  // void AddField(const std::string& name, cu_scalar_field<T>& field,
+  // bool sync = true); template <typename T> void AddField(const
   // std::string& name, cu_vector_field<T>& field, bool sync = true);
 
   // template <typename T>
@@ -134,7 +128,7 @@ class hdf_exporter {
   // void CopyMain();
 
   // void setGrid(const Grid& g) { grid = g; }
- private:
+ protected:
   std::string
       outputDirectory;  //!< Sets the directory of all the data files
   std::string subDirectory;  //!< Sets the directory of current rank
@@ -148,6 +142,7 @@ class hdf_exporter {
   // std::vector<vfieldoutput2d<double>> dbVectors2d;
   // std::vector<sfieldoutput3d<double>> dbScalars3d;
   // std::vector<vfieldoutput3d<double>> dbVectors3d;
+  std::vector<fieldoutput<1>> dbFields1d;
   std::vector<fieldoutput<2>> dbFields2d;
   std::vector<fieldoutput<3>> dbFields3d;
   std::vector<ptcoutput> dbPtc;
