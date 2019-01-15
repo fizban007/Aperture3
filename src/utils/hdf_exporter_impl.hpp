@@ -1,8 +1,9 @@
 // #include "cuda/cudaUtility.h"
 #include "utils/hdf_exporter.h"
-// #include "data/grid_log_sph.h"
+#include "data/grid_log_sph.h"
 // #include "data/photons.h"
 #include "fmt/core.h"
+#include "utils/filesystem.h"
 #include "utils/logger.h"
 #include "utils/type_name.h"
 // #include "config_file.h"
@@ -12,9 +13,6 @@
 // #include "sim_environment_dev.h"
 #include "sim_params.h"
 // #include <H5Cpp.h>
-#define BOOST_NO_CXX11_SCOPED_ENUMS
-#include <boost/filesystem.hpp>
-#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include <fstream>
 
 #define H5_USE_BOOST
@@ -31,63 +29,13 @@ using namespace HighFive;
 
 namespace Aperture {
 
-bool
-copyDir(boost::filesystem::path const &source,
-        boost::filesystem::path const &destination) {
-  namespace fs = boost::filesystem;
-  try {
-    // Check whether the function call is valid
-    if (!fs::exists(source) || !fs::is_directory(source)) {
-      std::cerr << "Source directory " << source.string()
-                << " does not exist or is not a directory." << '\n';
-      return false;
-    }
-    // if (fs::exists(destination)) {
-    //   std::cerr << "Destination directory " << destination.string()
-    //             << " already exists." << '\n';
-    //   return false;
-    // }
-    // Create the destination directory
-    if (!fs::exists(destination)) {
-      if (!fs::create_directory(destination)) {
-        std::cerr << "Unable to create destination directory"
-                  << destination.string() << '\n';
-        return false;
-      }
-    }
-  } catch (fs::filesystem_error const &e) {
-    std::cerr << e.what() << '\n';
-    return false;
-  }
-  // Iterate through the source directory
-  for (fs::directory_iterator file(source);
-       file != fs::directory_iterator(); ++file) {
-    try {
-      fs::path current(file->path());
-      if (fs::is_directory(current)) {
-        // Found directory: Recursion
-        if (!copyDir(current, destination / current.filename())) {
-          return false;
-        }
-      } else {
-        // Found file: Copy
-        fs::copy_file(
-            current, destination / current.filename(),
-            boost::filesystem::copy_option::overwrite_if_exists);
-      }
-    } catch (fs::filesystem_error const &e) {
-      std::cerr << e.what() << '\n';
-    }
-  }
-  return true;
-}
 // hdf_exporter::hdf_exporter() {}
 
 // hdf_exporter::hdf_exporter(const SimParams &params,
 //                            const std::string &dir,
 //                            const std::string &prefix, int downsample)
-hdf_exporter::hdf_exporter(SimParams &params,
-                           uint32_t &timestep)
+template <typename T>
+hdf_exporter<T>::hdf_exporter(SimParams &params, uint32_t &timestep)
     : outputDirectory(params.data_dir),
       filePrefix("data"),
       m_params(params),
@@ -108,7 +56,7 @@ hdf_exporter::hdf_exporter(SimParams &params,
     grid.reset(new Grid());
   } else if (params.coord_system == "LogSpherical") {
     // grid = std::make_shared<Grid_LogSph>();
-    // grid.reset(new Grid_LogSph());
+    grid.reset(new Grid_LogSph());
   } else {
     // grid = std::make_shared<Grid>();
     grid.reset(new Grid());
@@ -123,14 +71,16 @@ hdf_exporter::hdf_exporter(SimParams &params,
   }
 }
 
-hdf_exporter::~hdf_exporter() {}
+template <typename T>
+hdf_exporter<T>::~hdf_exporter() {}
 
+template <typename T>
 void
-hdf_exporter::add_field_output(const std::string &name,
-                               const std::string &type,
-                               int num_components, field_base *field,
-                               int dim, bool sync) {
-  auto &mesh = field->grid().mesh();
+hdf_exporter<T>::add_field_output(const std::string &name,
+                                  const std::string &type,
+                                  int num_components, field_base *field,
+                                  int dim, bool sync) {
+  auto &mesh = grid->mesh();
   if (dim == 3) {
     fieldoutput<3> tempData;
     tempData.name = name;
@@ -189,8 +139,9 @@ hdf_exporter::add_field_output(const std::string &name,
   // }
 }
 
+template <typename T>
 void
-hdf_exporter::createDirectories() {
+hdf_exporter<T>::createDirectories() {
   boost::filesystem::path subPath(outputDirectory);
   boost::filesystem::path logPath(outputDirectory + "log/");
 
@@ -199,8 +150,9 @@ hdf_exporter::createDirectories() {
   boost::filesystem::create_directories(logPath, returnedError);
 }
 
+template <typename T>
 void
-hdf_exporter::copyConfigFile() {
+hdf_exporter<T>::copyConfigFile() {
   std::string path = outputDirectory + "config.toml";
   Logger::print_info("{}", path);
   boost::filesystem::copy_file(
@@ -216,23 +168,26 @@ hdf_exporter::copyConfigFile() {
   }
 }
 
+template <typename T>
 void
-hdf_exporter::copySrc() {
+hdf_exporter<T>::copySrc() {
   boost::filesystem::path src_path("./src");
   boost::filesystem::path dest_path(outputDirectory + "src");
 
   copyDir(src_path, dest_path);
 }
 
+template <typename T>
 bool
-hdf_exporter::checkDirectories() {
+hdf_exporter<T>::checkDirectories() {
   boost::filesystem::path subPath(outputDirectory);
 
   return boost::filesystem::exists(outputDirectory);
 }
 
+template <typename T>
 void
-hdf_exporter::WriteGrid() {
+hdf_exporter<T>::WriteGrid() {
   if (grid->dim() == 3) {
     auto &mesh = grid->mesh();
     boost::multi_array<float, 3> x1_array(
@@ -299,8 +254,9 @@ hdf_exporter::WriteGrid() {
   }
 }
 
+template <typename T>
 void
-hdf_exporter::WriteOutput(int timestep, double time) {
+hdf_exporter<T>::WriteOutput(int timestep, double time) {
   if (!checkDirectories()) createDirectories();
   // InterpolateFieldValues();
   File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
@@ -430,6 +386,12 @@ hdf_exporter::WriteOutput(int timestep, double time) {
     //   InterpolateFieldValues(f, components, float{});
     // else if (f.type == "double")
     //   InterpolateFieldValues(f, components, double{});
+    T *self = static_cast<T *>(this);
+    if (f.type == "float") {
+      self->interpolate_field_values(f, components, float{});
+    } else if (f.type == "double") {
+      self->interpolate_field_values(f, components, double{});
+    }
     if (components == 1) {
       DataSet data = datafile.createDataSet<float>(
           f.name, DataSpace::From(f.f[0]));
@@ -444,8 +406,9 @@ hdf_exporter::WriteOutput(int timestep, double time) {
   }
 }
 
+template <typename T>
 void
-hdf_exporter::writeConfig(const SimParams &params) {
+hdf_exporter<T>::writeConfig(const SimParams &params) {
   if (!checkDirectories()) createDirectories();
   std::string filename = outputDirectory + "config.json";
   auto &c = params;
@@ -479,8 +442,9 @@ hdf_exporter::writeConfig(const SimParams &params) {
   o << std::setw(4) << conf << std::endl;
 }
 
+template <typename T>
 void
-hdf_exporter::writeXMFHead(std::ofstream &fs) {
+hdf_exporter<T>::writeXMFHead(std::ofstream &fs) {
   fs << "<?xml version=\"1.0\" ?>" << std::endl;
   fs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
   fs << "<Xdmf>" << std::endl;
@@ -490,8 +454,10 @@ hdf_exporter::writeXMFHead(std::ofstream &fs) {
      << std::endl;
 }
 
+template <typename T>
 void
-hdf_exporter::writeXMFStep(std::ofstream &fs, int step, double time) {
+hdf_exporter<T>::writeXMFStep(std::ofstream &fs, int step,
+                              double time) {
   std::string dim_str;
   auto &mesh = grid->mesh();
   if (grid->dim() == 3) {
@@ -663,15 +629,17 @@ hdf_exporter::writeXMFStep(std::ofstream &fs, int step, double time) {
   fs << "</Grid>" << std::endl;
 }
 
+template <typename T>
 void
-hdf_exporter::writeXMFTail(std::ofstream &fs) {
+hdf_exporter<T>::writeXMFTail(std::ofstream &fs) {
   fs << "</Grid>" << std::endl;
   fs << "</Domain>" << std::endl;
   fs << "</Xdmf>" << std::endl;
 }
 
+template <typename T>
 void
-hdf_exporter::writeXMF(uint32_t step, double time) {
+hdf_exporter<T>::writeXMF(uint32_t step, double time) {
   if (!xmf.is_open()) {
     xmf.open(outputDirectory + "data.xmf");
   }
@@ -691,31 +659,38 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 // hdf_exporter::writeSnapshot(Environment &env, cu_sim_data &data,
 //                             uint32_t timestep) {
 //   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
-//       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
-//       File::ReadWrite | File::Create | File::Truncate);
+//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
+//       timestep) fmt::format("{}snapshot.h5",
+//       outputDirectory).c_str(), File::ReadWrite | File::Create |
+//       File::Truncate);
 
 //   // Write background fields from environment
 //   size_t grid_size = data.E.grid().size();
 //   data.Ebg.sync_to_host();
 //   DataSet data_bg_E1 =
-//       snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E1",
+//       DataSpace(grid_size));
 //   data_bg_E1.write(data.Ebg.data(0).data());
 //   DataSet data_bg_E2 =
-//       snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E2",
+//       DataSpace(grid_size));
 //   data_bg_E2.write(data.Ebg.data(1).data());
 //   DataSet data_bg_E3 =
-//       snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E3",
+//       DataSpace(grid_size));
 //   data_bg_E3.write(data.Ebg.data(2).data());
 //   data.Bbg.sync_to_host();
 //   DataSet data_bg_B1 =
-//       snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B1",
+//       DataSpace(grid_size));
 //   data_bg_B1.write(data.Bbg.data(0).data());
 //   DataSet data_bg_B2 =
-//       snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B2",
+//       DataSpace(grid_size));
 //   data_bg_B2.write(data.Bbg.data(1).data());
 //   DataSet data_bg_B3 =
-//       snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B3",
+//       DataSpace(grid_size));
 //   data_bg_B3.write(data.Bbg.data(2).data());
 
 //   // Write sim data
@@ -779,7 +754,8 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 //       data.particles.data(),
 //       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ptc_data = snapshotfile.createDataSet<x_type>(
 //             fmt::format("ptc_{}", name), DataSpace(ptcNum));
 //         cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
@@ -790,7 +766,8 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 //       data.photons.data(),
 //       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ph_data = snapshotfile.createDataSet<x_type>(
 //             fmt::format("ph_{}", name), DataSpace(phNum));
 //         cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
@@ -808,9 +785,9 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 // hdf_exporter::load_from_snapshot(Environment &env, cu_sim_data &data,
 //                                  uint32_t &timestep) {
 //   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
-//       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
-//       File::ReadOnly);
+//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
+//       timestep) fmt::format("{}snapshot.h5",
+//       outputDirectory).c_str(), File::ReadOnly);
 
 //   size_t grid_size = data.E.grid().size();
 //   size_t ptcNum, phNum;
@@ -835,7 +812,8 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 //       data.particles.data(),
 //       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ptc_data =
 //             snapshotfile.getDataSet(fmt::format("ptc_{}", name));
 //         ptc_data.read(reinterpret_cast<x_type *>(buffer.data()));
@@ -846,7 +824,8 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 //       data.photons.data(),
 //       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ph_data =
 //             snapshotfile.getDataSet(fmt::format("ph_{}", name));
 //         ph_data.read(reinterpret_cast<x_type *>(buffer.data()));
@@ -894,15 +873,16 @@ hdf_exporter::writeXMF(uint32_t step, double time) {
 //   data.J.sync_to_device();
 
 //   for (int i = 0; i < data.num_species; i++) {
-//     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
-//     data_rho.read(data.Rho[i].data().data());
+//     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}",
+//     i)); data_rho.read(data.Rho[i].data().data());
 //     data.Rho[i].sync_to_device();
 //   }
 // }
 
+template <typename T>
 void
-hdf_exporter::prepareXMFrestart(uint32_t restart_step,
-                                int data_interval) {
+hdf_exporter<T>::prepareXMFrestart(uint32_t restart_step,
+                                   int data_interval) {
   boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
   boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
   boost::filesystem::remove(xmf_bak);
@@ -982,8 +962,8 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // }
 
 // template <typename T>
-// void hdf_exporter::AddField(const std::string &name, cu_scalar_field<T>
-// &field,
+// void hdf_exporter::AddField(const std::string &name,
+// cu_scalar_field<T> &field,
 //                             bool sync) {
 //   auto &mesh = grid->mesh();
 
@@ -1021,8 +1001,8 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // }
 
 // template <typename T>
-// void hdf_exporter::AddField(const std::string &name, cu_vector_field<T>
-// &field,
+// void hdf_exporter::AddField(const std::string &name,
+// cu_vector_field<T> &field,
 //                             bool sync) {
 //   auto &mesh = grid->mesh();
 
@@ -1054,9 +1034,11 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 // DataExporter::InterpolateFieldValues() {
 //   for (auto &sf : dbScalars3d) {
 //     if (sf.type == 8)
-//       cu_scalar_field<double> *fptr = (cu_scalar_field<double> *)sf.field;
+//       cu_scalar_field<double> *fptr = (cu_scalar_field<double>
+//       *)sf.field;
 //     else
-//       cu_scalar_field<float> *fptr = (cu_scalar_field<float> *)sf.field;
+//       cu_scalar_field<float> *fptr = (cu_scalar_field<float>
+//       *)sf.field;
 //     if (sf.sync) fptr->sync_to_host();
 //     auto &mesh = fptr->grid().mesh();
 //     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)
@@ -1077,9 +1059,11 @@ hdf_exporter::prepareXMFrestart(uint32_t restart_step,
 
 //   for (auto &vf : dbVectors3d) {
 //     if (vf.type == 8)
-//       cu_vector_field<double> *fptr = (cu_vector_field<double> *)vf.field;
+//       cu_vector_field<double> *fptr = (cu_vector_field<double>
+//       *)vf.field;
 //     else
-//       cu_vector_field<float> *fptr = (cu_vector_field<float> *)vf.field;
+//       cu_vector_field<float> *fptr = (cu_vector_field<float>
+//       *)vf.field;
 //     if (vf.sync) vf.field->sync_to_host();
 //     auto &mesh = vf.field->grid().mesh();
 //     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)

@@ -73,7 +73,8 @@ struct ptcoutput {
   particle_interface* ptc;
 };
 
-// template <typename T>
+// Using the CRTP to allow base class to access derived class methods
+template <typename DerivedClass>
 class hdf_exporter {
  public:
   // hdf_exporter();

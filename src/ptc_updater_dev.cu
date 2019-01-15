@@ -419,7 +419,7 @@ PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
 }
 
 void
-PtcUpdaterDev::update_particles(cu_sim_data &data, double dt) {
+PtcUpdaterDev::update_particles(cu_sim_data &data, double dt, uint32_t step) {
   Logger::print_info("Updating particles");
   // Track the right fields
   initialize_dev_fields(data);

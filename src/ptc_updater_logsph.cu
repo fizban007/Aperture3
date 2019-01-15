@@ -602,7 +602,7 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 }
 
 void
-PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt) {
+PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt, uint32_t step) {
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {

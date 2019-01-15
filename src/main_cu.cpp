@@ -106,9 +106,8 @@ main(int argc, char* argv[]) {
 
     Scalar omega = 0.0;
     if (time <= 10.0) {
-      // omega = env.params().omega *
-      //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
-      omega = env.params().omega * (time / 10.0);
+      omega = env.params().omega *
+              square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
     } else {
       omega = env.params().omega;
     }
@@ -130,11 +129,11 @@ main(int argc, char* argv[]) {
 
     // Inject particles
     timer::stamp();
-    if (step % 6 == 0)
-      ptc_updater.inject_ptc(data, 2, 0.0, 0.0, 0.0, 100.0, omega);
+    if (step % 10 == 0)
+      ptc_updater.inject_ptc(data, 2, 0.0, 0.0, 0.0, 2000.0, omega);
 
     // Update particles (push and deposit)
-    ptc_updater.update_particles(data, dt, step);
+    ptc_updater.update_particles(data, dt);
     ptc_updater.handle_boundary(data);
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);

@@ -297,8 +297,8 @@ void
 Environment::init_bg_fields(cu_sim_data& data) {
   // Initialize the background fields
   if (m_params.use_bg_fields) {
-    data.Ebg = cu_vector_field<Scalar>(*m_grid);
-    data.Bbg = cu_vector_field<Scalar>(*m_grid);
+    // data.Ebg = cu_vector_field<Scalar>(*m_grid);
+    // data.Bbg = cu_vector_field<Scalar>(*m_grid);
     init_dev_bg_fields(data.Ebg, data.Bbg);
 
     data.Ebg = data.E;
