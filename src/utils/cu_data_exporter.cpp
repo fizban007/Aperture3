@@ -1,11 +1,11 @@
 #include "utils/cu_data_exporter.h"
 #include "constant_defs.h"
 #include "cu_sim_data.h"
-#include "cuda/constant_mem_func.h"
 #include "sim_environment_dev.h"
 #include "sim_params.h"
 #include "utils/hdf_exporter_impl.hpp"
 #include "utils/type_name.h"
+#include <omp.h>
 
 #define H5_USE_BOOST
 
@@ -228,7 +228,6 @@ cu_data_exporter::load_from_snapshot(Environment &env,
 
   data.Bbg.sync_to_device();
   data.Ebg.sync_to_device();
-  init_dev_bg_fields(data.Ebg, data.Bbg);
 
   DataSet data_B1 = snapshotfile.getDataSet("B1");
   data_B1.read(data.B.data(0).data());
@@ -273,7 +272,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
     if (field.sync) fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
-    // #pragma omp simd collapse(2)
+#pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
         field.f[0][j / downsample_factor + mesh.guard[1]]
@@ -299,7 +298,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
     if (field.sync) fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
-    // #pragma omp simd collapse(2)
+#pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
       for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
         field.f[0][j / downsample_factor + mesh.guard[1]]

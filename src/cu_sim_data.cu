@@ -1,5 +1,6 @@
 #include "cuda/cudaUtility.h"
 #include "cu_sim_data.h"
+#include "cuda/constant_mem_func.h"
 
 namespace Aperture {
 
@@ -49,6 +50,7 @@ cu_sim_data::cu_sim_data(const Environment& e, int deviceId)
   Bbg.sync_to_host();
   J.sync_to_host();
   flux.sync_to_host();
+  init_dev_bg_fields(Ebg, Bbg);
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 }
