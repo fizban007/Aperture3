@@ -1,3 +1,4 @@
+#include "cu_sim_data.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
@@ -5,7 +6,6 @@
 #include "data/detail/multi_array_utils.hpp"
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
-#include "cu_sim_data.h"
 #include "sim_environment_dev.h"
 #include "utils/interpolation.cuh"
 #include "utils/logger.h"
@@ -124,7 +124,8 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
           (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
           s;
 
-      // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f, %d\n", p1, p2, p3,
+      // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
+      // %d\n", p1, p2, p3,
       //        gamma, inv_gamma2, dev_params.gravity_on);
       // Add an artificial gravity
       if (dev_params.gravity_on) {
@@ -133,16 +134,20 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       }
 
-      if (dev_params.rad_cooling_on) {
+      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
         Scalar pp1 = p1 - B1 * pdotB / tt;
         Scalar pp2 = p2 - B2 * pdotB / tt;
         Scalar pp3 = p3 - B3 * pdotB / tt;
-        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3) / (q_over_m * q_over_m);
+        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3) /
+                    (q_over_m * q_over_m);
 
-        p1 -= pp1 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
-        p2 -= pp2 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
-        p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) * dev_params.rad_cooling_coef;
+        p1 -= pp1 * (2.0f * dt * pp * tt / 3.0f) *
+              dev_params.rad_cooling_coef;
+        p2 -= pp2 * (2.0f * dt * pp * tt / 3.0f) *
+              dev_params.rad_cooling_coef;
+        p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
+              dev_params.rad_cooling_coef;
       }
 
       // printf("gamma after is %f\n", gamma);
@@ -316,7 +321,7 @@ __launch_bounds__(512, 4)
                                fields_data fields,
                                Grid_LogSph::mesh_ptrs mesh_ptrs,
                                cudaPitchedPtr j1, cudaPitchedPtr j2,
-                               Scalar dt) {
+                               Scalar dt, uint32_t step) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -435,12 +440,14 @@ __launch_bounds__(512, 4)
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
         atomicAdd(ptrAddr(fields.J3, offset),
-                  -weight * v3 * val2 /
-                      *ptrAddr(mesh_ptrs.dV, offset));
+                  -weight * v3 * val2 / *ptrAddr(mesh_ptrs.dV, offset));
 
-        // rho is deposited at the final position
-        Scalar s1 = sx1 * sy1;
-        atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+        // rho is deposited at the final position, only do this if we
+        // are going to output data next step
+        if ((step + 1) % dev_params.data_interval == 0) {
+          Scalar s1 = sx1 * sy1;
+          atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+        }
       }
     }
   }
@@ -489,9 +496,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
-  for (int
-           i = dev_mesh.guard[1] + 1 + id;
-           // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
+  for (int i = dev_mesh.guard[1] + 1 + id;
+       // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
        i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
@@ -614,7 +620,8 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 }
 
 void
-PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt) {
+PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
+                                   uint32_t step) {
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
@@ -634,8 +641,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt) {
       // m_J1.initialize();
       // m_J2.initialize();
       Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
-          data.particles.data(), data.particles.number(),
-          m_dev_fields, m_mesh_ptrs, m_J1.ptr(), m_J2.ptr(), dt);
+          data.particles.data(), data.particles.number(), m_dev_fields,
+          m_mesh_ptrs, m_J1.ptr(), m_J2.ptr(), dt, step);
       CudaCheckError();
       Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
           m_dev_fields, m_mesh_ptrs, dt);
@@ -669,8 +676,8 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
 }
 
 void
-PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell, Scalar p1,
-                             Scalar p2, Scalar p3, Scalar w,
+PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
+                             Scalar p1, Scalar p2, Scalar p3, Scalar w,
                              Scalar omega) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
       data.particles.data(), data.particles.number(), inj_per_cell, p1,

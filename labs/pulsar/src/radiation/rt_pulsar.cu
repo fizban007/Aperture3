@@ -124,7 +124,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // Scalar path =
       //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
       // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * (0.5f + 0.5f * u);
+      Scalar path = lph * (0.01f + 0.99f * u);
       if (path > dev_params.r_cutoff) continue;
       // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;

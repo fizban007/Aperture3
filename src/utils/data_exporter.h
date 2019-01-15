@@ -12,7 +12,7 @@ class scalar_field;
 template <typename T>
 class vector_field;
 
-class data_exporter : public hdf_exporter {
+class data_exporter : public hdf_exporter<data_exporter> {
  public:
   data_exporter(SimParams& params, uint32_t& timestep);
   virtual ~data_exporter();
@@ -27,6 +27,12 @@ class data_exporter : public hdf_exporter {
   void load_from_snapshot(sim_environment& env, sim_data& data,
                           uint32_t& timestep);
 
+  template <typename T>
+  void interpolate_field_values(fieldoutput<1>& field, int components, const T& t);
+  template <typename T>
+  void interpolate_field_values(fieldoutput<2>& field, int components, const T& t);
+  template <typename T>
+  void interpolate_field_values(fieldoutput<3>& field, int components, const T& t);
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 
 }  // namespace Aperture

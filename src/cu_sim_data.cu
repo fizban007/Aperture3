@@ -14,6 +14,8 @@ cu_sim_data::cu_sim_data(const Environment& e, int deviceId)
       E(env.local_grid()),
       B(env.local_grid()),
       J(env.local_grid()),
+      Bbg(env.local_grid()),
+      Ebg(env.local_grid()),
       flux(env.local_grid()),
       particles(env.params()),
       photons(env.params()),
@@ -25,6 +27,8 @@ cu_sim_data::cu_sim_data(const Environment& e, int deviceId)
   B.set_field_type(FieldType::B);
   E.initialize();
   B.initialize();
+  Ebg.initialize();
+  Bbg.initialize();
   J.initialize();
   flux.initialize();
 
@@ -41,6 +45,8 @@ cu_sim_data::cu_sim_data(const Environment& e, int deviceId)
 
   E.sync_to_host();
   B.sync_to_host();
+  Ebg.sync_to_host();
+  Bbg.sync_to_host();
   J.sync_to_host();
   flux.sync_to_host();
   // Wait for GPU to finish before accessing on host

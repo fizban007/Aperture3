@@ -18,7 +18,7 @@ class PtcUpdaterDev {
   PtcUpdaterDev(const Environment& env);
   virtual ~PtcUpdaterDev();
 
-  virtual void update_particles(cu_sim_data& data, double dt);
+  virtual void update_particles(cu_sim_data& data, double dt, uint32_t step = 0);
   virtual void handle_boundary(cu_sim_data& data);
 
  protected:

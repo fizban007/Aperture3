@@ -12,7 +12,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   PtcUpdaterLogSph(const Environment& env);
   virtual ~PtcUpdaterLogSph();
 
-  virtual void update_particles(cu_sim_data& data, double dt);
+  virtual void update_particles(cu_sim_data& data, double dt, uint32_t step = 0);
   virtual void handle_boundary(cu_sim_data& data);
   void inject_ptc(cu_sim_data& data, int inj_per_cell, Scalar p1, Scalar p2,
                   Scalar p3, Scalar w, Scalar omega);

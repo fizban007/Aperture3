@@ -12,7 +12,7 @@ class cu_scalar_field;
 template <typename T>
 class cu_vector_field;
 
-class cu_data_exporter : public hdf_exporter {
+class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
  public:
   cu_data_exporter(SimParams& params, uint32_t& timestep);
   virtual ~cu_data_exporter();
@@ -28,6 +28,13 @@ class cu_data_exporter : public hdf_exporter {
                      uint32_t timestep);
   void load_from_snapshot(Environment& env, cu_sim_data& data,
                           uint32_t& timestep);
+
+  template <typename T>
+  void interpolate_field_values(fieldoutput<1>& field, int components, const T& t);
+  template <typename T>
+  void interpolate_field_values(fieldoutput<2>& field, int components, const T& t);
+  template <typename T>
+  void interpolate_field_values(fieldoutput<3>& field, int components, const T& t);
 
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 
