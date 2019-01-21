@@ -27,23 +27,23 @@ interpolate_3d(const multi_array<Float>& data, VI offsets, VF x1,
   x1 = select((bool)stagger[0], x1, x1 + 0.5 - to_float(nx1));
   x2 = select((bool)stagger[1], x2, x2 + 0.5 - to_float(nx2));
   x3 = select((bool)stagger[2], x3, x3 + 0.5 - to_float(nx3));
-  offsets += nx1 * sizeof(float);
+  offsets += nx1 * sizeof(Float);
   offsets += nx2 * data.pitch();
   offsets += nx3 * k_off;
 
-  VF f000 = gather((float*)data.data(),
-                   offsets - (k_off + sizeof(float) + data.pitch()), 1);
+  VF f000 = gather((Float*)data.data(),
+                   offsets - (k_off + sizeof(Float) + data.pitch()), 1);
   VF f001 =
-      gather((float*)data.data(), offsets - (k_off + data.pitch()), 1);
+      gather((Float*)data.data(), offsets - (k_off + data.pitch()), 1);
   VF f010 =
-      gather((float*)data.data(), offsets - (sizeof(float) + k_off), 1);
+      gather((Float*)data.data(), offsets - (sizeof(Float) + k_off), 1);
   VF f011 =
-      gather((float*)data.data(), offsets - k_off, 1);
-  VF f100 = gather((float*)data.data(),
-                   offsets - (sizeof(float) + data.pitch()), 1);
-  VF f101 = gather((float*)data.data(), offsets - data.pitch(), 1);
-  VF f110 = gather((float*)data.data(), offsets - sizeof(float), 1);
-  VF f111 = gather((float*)data.data(), offsets, 1);
+      gather((Float*)data.data(), offsets - k_off, 1);
+  VF f100 = gather((Float*)data.data(),
+                   offsets - (sizeof(Float) + data.pitch()), 1);
+  VF f101 = gather((Float*)data.data(), offsets - data.pitch(), 1);
+  VF f110 = gather((Float*)data.data(), offsets - sizeof(Float), 1);
+  VF f111 = gather((Float*)data.data(), offsets, 1);
 
   f000 = simd::lerp(x3, f000, f100);
   f010 = simd::lerp(x3, f010, f110);
