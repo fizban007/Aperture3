@@ -302,7 +302,7 @@ __global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
                                fields_data fields,
-                               Grid_LogSph::mesh_ptrs mesh_ptrs,
+                               Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
                                cudaPitchedPtr j1, cudaPitchedPtr j2,
                                Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
@@ -451,7 +451,7 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
 }
 
 __global__ void
-process_j(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs,
+process_j(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
           Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
@@ -525,7 +525,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs) {
+boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t offset_0 =
@@ -582,8 +582,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const Environment &env)
       m_blocksPerGrid(128),
       m_J1(env.local_grid()),
       m_J2(env.local_grid()) {
-  const Grid_LogSph &grid =
-      dynamic_cast<const Grid_LogSph &>(env.grid());
+  const Grid_LogSph_dev &grid =
+      dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;

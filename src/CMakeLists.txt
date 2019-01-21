@@ -44,6 +44,7 @@ set(Aperture_src
   "utils/memory.cpp"
   "utils/filesystem.cpp"
   "data/grid.cpp"
+  "data/grid_log_sph.cpp"
   "data/multi_array.cpp"
   "data/fields.cpp"
   "data/detail/particle_data_impl.cpp"
@@ -74,7 +75,7 @@ if (CMAKE_CUDA_COMPILER)
   set(cuAperture_src
     "data/fields_utils.cu"
     "algorithms/field_solver_log_sph.cu"
-    "data/grid_log_sph.cpp"
+    "data/grid_log_sph_dev.cpp"
     "sim_environment_dev.cpp"
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
