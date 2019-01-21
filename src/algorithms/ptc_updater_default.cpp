@@ -1,6 +1,5 @@
 #include "ptc_updater_default.h"
 // #include "algorithms/interpolation.h"
-// #include "algorithms/ptc_updater_avx_helper.h"
 #include "omp.h"
 #include "sim_data.h"
 #include "sim_environment.h"
@@ -41,15 +40,15 @@ movement3ds(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1,
 }
 
 ptc_updater_default::ptc_updater_default(const sim_environment& env)
-    : ptc_updater(env),
-      m_j1(env.grid().extent()),
-      m_j2(env.grid().extent()),
-      m_j3(env.grid().extent()) {}
+    : ptc_updater(env) {}
+      // m_j1(env.grid().extent()),
+      // m_j2(env.grid().extent()),
+      // m_j3(env.grid().extent()) {}
 
 ptc_updater_default::~ptc_updater_default() {}
 
 void
-ptc_updater_default::update_particles(sim_data& data, double dt) {
+ptc_updater_default::update_particles(sim_data& data, double dt, uint32_t step) {
   // m_j1.assign(simd_buffer{0.0});
   // m_j2.assign(simd_buffer{0.0});
   // m_j3.assign(simd_buffer{0.0});
@@ -60,7 +59,7 @@ ptc_updater_default::update_particles(sim_data& data, double dt) {
 }
 
 void
-ptc_updater_default::push(sim_data& data, double dt) {
+ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
   using namespace simd;
 
   auto& ptc = data.particles;
@@ -190,7 +189,7 @@ ptc_updater_default::push(sim_data& data, double dt) {
 }
 
 void
-ptc_updater_default::esirkepov_deposit(sim_data& data, double dt) {
+ptc_updater_default::esirkepov_deposit(sim_data& data, double dt, uint32_t step) {
   auto& ptc = data.particles;
   auto& mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {

@@ -1,7 +1,7 @@
 #ifndef _PTC_UPDATER_LOGSPH_H_
 #define _PTC_UPDATER_LOGSPH_H_
 
-#include "data/grid_log_sph.h"
+#include "data/grid_log_sph_dev.h"
 #include "data/fields_dev.h"
 #include "ptc_updater_dev.h"
 
@@ -18,7 +18,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
                   Scalar p3, Scalar w, Scalar omega);
 
  private:
-  Grid_LogSph::mesh_ptrs m_mesh_ptrs;
+  Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 

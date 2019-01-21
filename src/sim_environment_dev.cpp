@@ -3,7 +3,7 @@
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
 #include "data/grid_1dGR.h"
-#include "data/grid_log_sph.h"
+#include "data/grid_log_sph_dev.h"
 // #include "data/detail/grid_impl.hpp"
 #include "cu_sim_data.h"
 // #include "domain_communicator.h"
@@ -26,6 +26,11 @@ Environment::~Environment() {}
 void
 Environment::setup_env() {
   sim_environment::setup_env();
+
+  if (m_params.coord_system == "LogSpherical") {
+    m_grid.reset(new Grid_LogSph_dev());
+    m_grid->init(m_params);
+  }
 
   init_dev_params(m_params);
   init_dev_mesh(*(m_grid->mesh_ptr()));

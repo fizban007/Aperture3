@@ -1,14 +1,14 @@
 #ifndef _FIELD_SOLVER_LOG_SPH_H_
 #define _FIELD_SOLVER_LOG_SPH_H_
 
+#include "data/grid_log_sph_dev.h"
 #include "field_solver_dev.h"
-#include "data/grid_log_sph.h"
 
 namespace Aperture {
 
 class FieldSolver_LogSph : public FieldSolverDev {
  public:
-  FieldSolver_LogSph(const Grid_LogSph& g);
+  FieldSolver_LogSph(const Grid_LogSph_dev& g);
   virtual ~FieldSolver_LogSph();
   virtual void update_fields(cu_sim_data& data, double dt,
                              double time = 0.0) override;
@@ -29,15 +29,12 @@ class FieldSolver_LogSph : public FieldSolverDev {
   sfield_t& get_divB() { return m_divB; }
 
  private:
-  const Grid_LogSph& m_grid;
+  const Grid_LogSph_dev& m_grid;
   sfield_t m_divE, m_divB, m_phi_e;
   cudaPitchedPtr* m_dev_rho = nullptr;
   bool m_rho_initialized = false;
-}; // ----- end of class FieldSolver_LogSph : public FieldSolver -----
+};  // ----- end of class FieldSolver_LogSph : public FieldSolver -----
 
-
-
-
-}
+}  // namespace Aperture
 
 #endif  // _FIELD_SOLVER_LOG_SPH_H_

@@ -100,13 +100,6 @@ sim_environment::setup_env() {
   // (void*)m_grid.mesh_ptr(), sizeof(Quadmesh)); CudaCheckError();
   // init_dev_mesh(*(m_grid->mesh_ptr()));
 
-  // Initialize the background fields
-  // if (m_params.use_bg_fields) {
-  //   m_Ebg = cu_vector_field<Scalar>(*m_grid);
-  //   m_Bbg = cu_vector_field<Scalar>(*m_grid);
-  //   init_dev_bg_fields(m_Ebg, m_Bbg);
-  // }
-
   // Setup particle charges and masses
   for (int i = 0; i < 8; i++) {
     m_charges[i] = m_params.q_e;
@@ -117,8 +110,6 @@ sim_environment::setup_env() {
   for (int i = 0; i < 8; i++) {
     m_q_over_m[i] = m_charges[i] / m_masses[i];
   }
-  // init_dev_charges(charges);
-  // init_dev_masses(masses);
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);

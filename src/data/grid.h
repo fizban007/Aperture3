@@ -16,8 +16,8 @@
 
 namespace Aperture {
 
-// Currently the class Grid is simply a thin wrapper around Quadmesh
-// with some cached grid quantities
+// Currently the class Grid is simply a thin wrapper around Quadmesh.
+// Any grid in specific coordinate systems should derive from this class
 class Grid {
  public:
   Grid();
@@ -46,7 +46,5 @@ class Grid {
 };
 
 }  // namespace Aperture
-
-// #include "data/detail/grid_impl.hpp"
 
 #endif  // _GRID_H_
