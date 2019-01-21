@@ -29,14 +29,14 @@ template <typename VF>
 inline VF
 movement3d(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1,
            const VF& sz0, const VF& sz1) {
-  return (sz1 - sz0) * center2d(sx0, sx1, sy0, sy1);
+  return (sx1 - sx0) * center2d(sy0, sy1, sz0, sz1);
 }
 
 template <typename VF>
 inline VF
 movement3ds(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1,
             const VF& sz0, const VF& sz1) {
-  return (sz1 - sz0) * center2ds(sx0, sx1, sy0, sy1);
+  return (sx1 - sx0) * center2ds(sy0, sy1, sz0, sz1);
 }
 
 ptc_updater_default::ptc_updater_default(const sim_environment& env)

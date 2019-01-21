@@ -57,7 +57,9 @@ set(Aperture_src
   "sim_data.cpp"
   # "pic_sim.cpp"
   "algorithms/field_solver_default.cpp"
+  "algorithms/field_solver_1d.cpp"
   "algorithms/ptc_updater_default.cpp"
+  "algorithms/ptc_updater_1d.cpp"
   )
 
 # modify Aperture_src using the files in the lab
