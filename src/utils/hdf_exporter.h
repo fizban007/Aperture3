@@ -8,7 +8,7 @@
 #include "data/grid.h"
 #include "data/particle_interface.h"
 // #include "data/particles_dev.h"
-// #include "data/photons.h"
+// #include "data/photons_dev.h"
 #include "sim_params.h"
 #include <boost/multi_array.hpp>
 #include <fstream>

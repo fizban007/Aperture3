@@ -5,7 +5,7 @@
 #include "cuda/kernels.h"
 #include "data/particles_dev.h"
 #include "data/particles_1d.h"
-#include "data/photons.h"
+#include "data/photons_dev.h"
 #include "data/photons_1d.h"
 #include "data/detail/multi_array_utils.hpp"
 #include "radiation/curvature_instant.h"

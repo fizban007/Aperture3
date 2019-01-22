@@ -18,6 +18,7 @@ ptc_updater_1d::update_particles(sim_data& data, double dt,
                                  uint32_t step) {
   push(data, dt, step);
   deposit(data, dt, step);
+  data.particles.clear_guard_cells(data.E.grid());
 }
 
 void
@@ -83,6 +84,12 @@ ptc_updater_1d::deposit(sim_data& data, double dt, uint32_t step) {
     Logger::print_info("Grid is not 1d, doing nothing in deposit");
     return;
   }
+  data.J.initialize();
+  if ((step + 1) % m_env.params().data_interval == 0) {
+    for (int sp = 0; sp < m_env.params().num_species; sp++)
+      data.Rho[sp].initialize();
+  }
+
   if (ptc.number() > 0) {
 #pragma omp simd
     for (size_t idx = 0; idx < ptc.number(); idx++) {
@@ -116,7 +123,8 @@ ptc_updater_1d::deposit(sim_data& data, double dt, uint32_t step) {
 
         size_t off = offset + i * sizeof(Scalar);
 
-        data.J.data(0)[off + sizeof(Scalar)] += weight * djx;
+        data.J.data(0)[off + sizeof(Scalar)] +=
+            weight * djx * mesh.delta[0] / dt;
 
         if ((step + 1) % m_env.params().data_interval == 0) {
           data.Rho[sp].data()[off] -= weight * sx1;

@@ -265,19 +265,34 @@ data_exporter::write_particles(uint32_t step, double time) {
     particles_t *ptc = dynamic_cast<particles_t *>(ptcoutput.ptc);
     if (ptc != nullptr) {
       Logger::print_info("Writing tracked particles");
-      std::string name_x = ptcoutput.name + "_x";
-      std::string name_p = ptcoutput.name + "_p";
-      unsigned int idx = 0;
-      for (Index_t n = 0; n < ptc->number(); n++) {
-        if (!ptc->is_empty(n) &&
-            ptc->check_flag(n, ParticleFlag::tracked) &&
-            idx < MAX_TRACKED) {
-          Scalar x =
-              mesh.pos(0, ptc->data().cell[n], ptc->data().x1[n]);
-          ptcoutput.x[idx] = x;
-          ptcoutput.p[idx] = ptc->data().p1[n];
-          idx += 1;
+      File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                                filePrefix, step)
+                        .c_str(),
+                    File::ReadWrite);
+      for (int sp = 0; sp < m_params.num_species; sp++) {
+        unsigned int idx = 0;
+        std::string name_x = NameStr((ParticleType)sp) + "_x";
+        std::string name_p = NameStr((ParticleType)sp) + "_p";
+        for (Index_t n = 0; n < ptc->number(); n++) {
+          if (!ptc->is_empty(n) &&
+              ptc->check_flag(n, ParticleFlag::tracked) &&
+              ptc->check_type(n) == (ParticleType)sp &&
+              idx < MAX_TRACKED) {
+            Scalar x =
+                mesh.pos(0, ptc->data().cell[n], ptc->data().x1[n]);
+            ptcoutput.x[idx] = x;
+            ptcoutput.p[idx] = ptc->data().p1[n];
+            idx += 1;
+          }
         }
+        DataSet data_x =
+            datafile.createDataSet<float>(name_x, DataSpace{idx});
+        data_x.write(ptcoutput.x);
+        DataSet data_p =
+            datafile.createDataSet<float>(name_p, DataSpace{idx});
+        data_p.write(ptcoutput.p);
+
+        // Logger::print_info("Written {} tracked particles", idx);
       }
       // hsize_t sizes[1] = {idx};
       // H5::DataSpace space(1, sizes);
@@ -292,18 +307,6 @@ data_exporter::write_particles(uint32_t step, double time) {
 
       // delete dataset_x;
       // delete dataset_p;
-      File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-                                filePrefix, step)
-                        .c_str(),
-                    File::ReadWrite);
-      DataSet data_x = datafile.createDataSet<float>(
-          name_x, DataSpace::From(ptcoutput.x));
-      data_x.write(ptcoutput.x);
-      DataSet data_p = datafile.createDataSet<float>(
-          name_p, DataSpace::From(ptcoutput.p));
-      data_p.write(ptcoutput.p);
-
-      Logger::print_info("Written {} tracked particles", idx);
     }
   }
 }
