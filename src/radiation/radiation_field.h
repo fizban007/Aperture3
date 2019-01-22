@@ -6,12 +6,12 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 
 // This is tailored to handle radiation field in 1D
 class RadiationField {
  public:
-  RadiationField(const Environment& env);
+  RadiationField(const cu_sim_environment& env);
   virtual ~RadiationField();
 
   void advect(Scalar dt);
@@ -22,7 +22,7 @@ class RadiationField {
   const Scalar* ptr() { return m_data.data(); }
 
  private:
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
   cu_multi_array<Scalar> m_data;
 };  // ----- end of class RadiationField -----
 

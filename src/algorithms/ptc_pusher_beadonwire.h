@@ -8,13 +8,13 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 
 class ParticlePusher_BeadOnWire : public ParticlePusher {
  public:
   typedef ParticlePusher_BeadOnWire self_type;
 
-  ParticlePusher_BeadOnWire(const Environment& env);
+  ParticlePusher_BeadOnWire(const cu_sim_environment& env);
   virtual ~ParticlePusher_BeadOnWire();
 
   virtual void push(cu_sim_data& data, double dt);

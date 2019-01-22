@@ -10,21 +10,21 @@
 
 namespace Aperture {
 
-// Environment&
-Environment::Environment(int* argc, char*** argv)
+// cu_sim_environment&
+cu_sim_environment::cu_sim_environment(int* argc, char*** argv)
     : sim_environment(argc, argv) {
   setup_env();
 }
 
-Environment::Environment(const std::string& conf_file)
+cu_sim_environment::cu_sim_environment(const std::string& conf_file)
     : sim_environment(conf_file) {
   setup_env();
 }
 
-Environment::~Environment() {}
+cu_sim_environment::~cu_sim_environment() {}
 
 void
-Environment::setup_env() {
+cu_sim_environment::setup_env() {
   sim_environment::setup_env();
 
   if (m_params.coord_system == "LogSpherical") {
@@ -72,7 +72,7 @@ Environment::setup_env() {
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 }
 // void
-// Environment::setup_domain(int num_nodes) {
+// cu_sim_environment::setup_domain(int num_nodes) {
 //   int ndims = m_super_grid.dim();
 
 //   //   if (total_dims > 1)
@@ -92,7 +92,7 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::setup_domain(int dimx, int dimy, int dimz) {
+// cu_sim_environment::setup_domain(int dimx, int dimy, int dimz) {
 //   // First create Cartesian rank group
 //   bool periodic[3];
 //   for (int i = 0; i < 3; i++) {
@@ -199,7 +199,7 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::set_initial_condition(InitialCondition* ic) {
+// cu_sim_environment::set_initial_condition(InitialCondition* ic) {
 //   if (m_ic == nullptr)
 //     m_ic.reset(ic);
 //   else
@@ -207,11 +207,11 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::set_initial_condition(cu_sim_data& data, const Index& start,
+// cu_sim_environment::set_initial_condition(cu_sim_data& data, const Index& start,
 // const Extent& extent) {}
 
 // void
-// Environment::add_fieldBC(fieldBC *bc) {
+// cu_sim_environment::add_fieldBC(fieldBC *bc) {
 //   // Only add boundary condition if the node is at boundary
 //   int pos = static_cast<int>(bc->pos());
 //   if (m_domain_info.is_boundary[pos]) {
@@ -221,12 +221,12 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::add_ptcBC(ptcBC* bc) {
+// cu_sim_environment::add_ptcBC(ptcBC* bc) {
 //   m_bc.add_ptcBC(bc);
 // }
 
 // void
-// Environment::setup_local_grid(Grid &local_grid, const Grid
+// cu_sim_environment::setup_local_grid(Grid &local_grid, const Grid
 // &super_grid, const DomainInfo& info) {
 //   local_grid = super_grid;
 //   auto& local_mesh = local_grid.mesh();
@@ -263,7 +263,7 @@ Environment::setup_env() {
 // }
 
 // void
-// Environment::apply_initial_condition(cu_sim_data &data) {
+// cu_sim_environment::apply_initial_condition(cu_sim_data &data) {
 //   Logger::print_info("Applying initial condition");
 //   if (m_ic == nullptr) {
 //     Logger::print_err("No initial condition set yet!");
@@ -289,17 +289,17 @@ Environment::setup_env() {
 // }
 
 void
-Environment::check_dev_mesh(Quadmesh& mesh) {
+cu_sim_environment::check_dev_mesh(Quadmesh& mesh) {
   get_dev_mesh(mesh);
 }
 
 void
-Environment::check_dev_params(SimParams& params) {
+cu_sim_environment::check_dev_params(SimParams& params) {
   get_dev_params(params);
 }
 
 void
-Environment::init_bg_fields(cu_sim_data& data) {
+cu_sim_environment::init_bg_fields(cu_sim_data& data) {
   // Initialize the background fields
   if (m_params.use_bg_fields) {
     // data.Ebg = cu_vector_field<Scalar>(*m_grid);

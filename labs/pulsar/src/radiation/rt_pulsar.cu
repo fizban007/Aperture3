@@ -262,7 +262,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 }  // namespace Kernels
 
-RadiationTransferPulsar::RadiationTransferPulsar(const Environment& env)
+RadiationTransferPulsar::RadiationTransferPulsar(const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),

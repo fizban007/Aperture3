@@ -45,7 +45,7 @@ cu_data_exporter::add_field(const std::string &name,
 }
 
 void
-cu_data_exporter::write_snapshot(Environment &env, cu_sim_data &data,
+cu_data_exporter::write_snapshot(cu_sim_environment &env, cu_sim_data &data,
                                  uint32_t timestep) {
   File snapshotfile(
       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
@@ -162,7 +162,7 @@ cu_data_exporter::write_snapshot(Environment &env, cu_sim_data &data,
 }
 
 void
-cu_data_exporter::load_from_snapshot(Environment &env,
+cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
                                      cu_sim_data &data,
                                      uint32_t &timestep) {
   File snapshotfile(

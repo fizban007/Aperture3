@@ -13,7 +13,7 @@
 using namespace Aperture;
 
 // TEST_CASE("Sorting Particles by cell", "[Particles]") {
-//   Environment env("test.toml");
+//   cu_sim_environment env("test.toml");
 //   size_t N = 1000000;
 //   Particles ptc(N);
 
@@ -113,7 +113,7 @@ TEST_CASE("Erasing particles in guard cells", "[Particles]") {
 }
 
 TEST_CASE("Sorting random particles", "[Particles]") {
-  Environment env("test_particles.toml");
+  cu_sim_environment env("test_particles.toml");
   auto& mesh = env.grid().mesh();
   size_t N = 5000000;
   Particles ptc(N);
@@ -144,7 +144,7 @@ TEST_CASE("Sorting random particles", "[Particles]") {
 }
 
 TEST_CASE("Making photons", "[Particles]") {
-  Environment env("test_particles.toml");
+  cu_sim_environment env("test_particles.toml");
   auto& mesh = env.grid().mesh();
   cu_sim_data data(env);
   RadiationTransferPulsar rad(env);
@@ -165,7 +165,7 @@ TEST_CASE("Making photons", "[Particles]") {
 }
 
 TEST_CASE("Fine testing pair creation", "[Particles]") {
-  Environment env("test_particles.toml");
+  cu_sim_environment env("test_particles.toml");
   auto& mesh = env.grid().mesh();
   cu_sim_data data(env);
   RadiationTransferPulsar rad(env);

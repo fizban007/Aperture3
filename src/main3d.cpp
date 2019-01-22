@@ -11,7 +11,7 @@ using namespace Aperture;
 int
 main(int argc, char* argv[]) {
   // Construct the simulation environment
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // Allocate simulation data
   cu_sim_data data(env);

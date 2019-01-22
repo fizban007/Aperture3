@@ -61,7 +61,7 @@ gamma(double beta_phi, double p) {
 }
 
 ParticlePusher_Geodesic::ParticlePusher_Geodesic(
-    const Environment& env) {}
+    const cu_sim_environment& env) {}
 
 ParticlePusher_Geodesic::~ParticlePusher_Geodesic() {}
 

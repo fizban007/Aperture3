@@ -385,7 +385,7 @@ update_particles_1d(particle_data ptc, size_t num, const Scalar *E1,
 
 }  // namespace Kernels
 
-PtcUpdaterDev::PtcUpdaterDev(const Environment &env) : m_env(env) {
+PtcUpdaterDev::PtcUpdaterDev(const cu_sim_environment &env) : m_env(env) {
   m_extent = m_env.grid().extent();
   // FIXME: select the correct device?
   CudaSafeCall(cudaMallocManaged(

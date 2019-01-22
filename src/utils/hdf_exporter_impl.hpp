@@ -706,7 +706,7 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
 }
 
 // void
-// hdf_exporter::writeSnapshot(Environment &env, cu_sim_data &data,
+// hdf_exporter::writeSnapshot(cu_sim_environment &env, cu_sim_data &data,
 //                             uint32_t timestep) {
 //   File snapshotfile(
 //       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
@@ -832,7 +832,7 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
 // }
 
 // void
-// hdf_exporter::load_from_snapshot(Environment &env, cu_sim_data &data,
+// hdf_exporter::load_from_snapshot(cu_sim_environment &env, cu_sim_data &data,
 //                                  uint32_t &timestep) {
 //   File snapshotfile(
 //       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,

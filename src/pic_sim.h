@@ -16,7 +16,7 @@ namespace Aperture {
 class PICSim {
  public:
   // PICSim();
-  PICSim(Environment& env);
+  PICSim(cu_sim_environment& env);
   virtual ~PICSim();
 
   void loop(cu_sim_data& data, uint32_t steps = 100000,
@@ -31,7 +31,7 @@ class PICSim {
   // InverseCompton& inverse_compton() { return *m_inverse_compton; }
 
  private:
-  Environment& m_env;
+  cu_sim_environment& m_env;
 
   // modules
   // std::unique_ptr<ParticlePusher> m_pusher;

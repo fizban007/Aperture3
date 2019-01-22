@@ -7,12 +7,12 @@
 namespace Aperture {
 
 struct cu_sim_data;
-class Environment;
+class cu_sim_environment;
 
 class AdditionalDiagnostics
 {
  public:
-  AdditionalDiagnostics(const Environment& env);
+  AdditionalDiagnostics(const cu_sim_environment& env);
   ~AdditionalDiagnostics();
 
   void collect_diagnostics(const cu_sim_data& data);
@@ -22,7 +22,7 @@ class AdditionalDiagnostics
   cu_scalar_field<Scalar>& get_ptc_num(int n) { return m_ptc_num[n]; }
 
  private:
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
 
   cu_scalar_field<Scalar> m_ph_num;
   std::vector<cu_scalar_field<Scalar>> m_gamma;

@@ -162,7 +162,7 @@ push_and_move(particle_data ptc, const Scalar* E,
 }  // namespace Kernels
 
 ParticlePusher_BeadOnWire::ParticlePusher_BeadOnWire(
-    const Environment& env)
+    const cu_sim_environment& env)
     : m_params(env.params()) {}
 
 ParticlePusher_BeadOnWire::~ParticlePusher_BeadOnWire() {}

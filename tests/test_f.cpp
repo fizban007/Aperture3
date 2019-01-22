@@ -10,7 +10,7 @@ using namespace Aperture;
 
 int main(int argc, char *argv[])
 {
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
   Photons ph(env);
 
   std::cout << "e_min is " << env.conf().e_min << std::endl;

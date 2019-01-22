@@ -7,12 +7,12 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
 class RadiationTransfer {
  public:
-  RadiationTransfer(const Environment& env);
+  RadiationTransfer(const cu_sim_environment& env);
   virtual ~RadiationTransfer();
 
   void emit_photons(PhotonClass& photons, PtcClass& ptc);
@@ -22,7 +22,7 @@ class RadiationTransfer {
   cu_scalar_field<Scalar>& get_ph_events() { return m_ph_events; }
 
  private:
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
   Array<int> m_numPerBlock;

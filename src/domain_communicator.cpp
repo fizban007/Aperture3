@@ -18,7 +18,7 @@ using namespace Aperture;
 
 const int max_buff_num = 10000;
 
-DomainCommunicator::DomainCommunicator(Environment& env) : m_env(env) {
+DomainCommunicator::DomainCommunicator(cu_sim_environment& env) : m_env(env) {
   for (int i = 0; i < NUM_PTC_BUFFERS; i++) {
     m_ptc_buffers[i].resize(max_buff_num, single_particle_t());
     m_photon_buffers[i].resize(max_buff_num, single_photon_t());

@@ -9,9 +9,9 @@
 namespace Aperture {
 
 // PICSim::PICSim() :
-//     PICSim(Environment::get_instance()) {}
+//     PICSim(cu_sim_environment::get_instance()) {}
 
-PICSim::PICSim(Environment& env) : m_env(env) {
+PICSim::PICSim(cu_sim_environment& env) : m_env(env) {
   // Logger::print_info("Periodic is {}",
   // env.conf().boundary_periodic[0]); Initialize modules m_comm =
   // std::make_unique<DomainCommunicator>(env);

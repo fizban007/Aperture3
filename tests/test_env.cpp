@@ -20,9 +20,9 @@ TEST_CASE("Loading environment", "[Env]") {
   strcpy(my_argv[5], "-d");
   strcpy(my_argv[6], "20");
   my_argv[7] = nullptr;
-  // Aperture::Environment &env = Aperture::Environment::get_instance().initialize(&my_argc, &my_argv);
-  // env = std::make_unique<Aperture::Environment>(&my_argc, &my_argv);
-  Environment env(&my_argc, &my_argv);
+  // Aperture::cu_sim_environment &env = Aperture::cu_sim_environment::get_instance().initialize(&my_argc, &my_argv);
+  // env = std::make_unique<Aperture::cu_sim_environment>(&my_argc, &my_argv);
+  cu_sim_environment env(&my_argc, &my_argv);
 
   CHECK(env.params().max_steps == 100000);
   CHECK(env.params().data_interval == 20);

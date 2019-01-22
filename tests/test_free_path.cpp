@@ -10,7 +10,7 @@ using namespace Aperture;
 
 int main(int argc, char *argv[])
 {
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
   Photons ph(env);
 
   const int N = 1000;

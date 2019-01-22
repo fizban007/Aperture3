@@ -46,7 +46,7 @@ Photons::Photons() {}
 Photons::Photons(std::size_t max_num)
     : particle_base_dev<single_photon_t>(max_num) {}
 
-Photons::Photons(const Environment& env)
+Photons::Photons(const cu_sim_environment& env)
     : particle_base_dev<single_photon_t>(env.params().max_photon_number) {}
 
 Photons::Photons(const SimParams& params)

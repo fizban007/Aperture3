@@ -5,12 +5,12 @@
 namespace Aperture {
 
 // cu_sim_data::cu_sim_data() :
-//     env(Environment::get_instance()) {
-//   // const Environment& env = Environment::get_instance();
+//     env(cu_sim_environment::get_instance()) {
+//   // const cu_sim_environment& env = cu_sim_environment::get_instance();
 //   initialize(env);
 // }
 
-cu_sim_data::cu_sim_data(const Environment& e, int deviceId)
+cu_sim_data::cu_sim_data(const cu_sim_environment& e, int deviceId)
     : env(e),
       E(env.local_grid()),
       B(env.local_grid()),
@@ -59,6 +59,6 @@ cu_sim_data::~cu_sim_data() {
 }
 
 void
-cu_sim_data::initialize(const Environment& env) {}
+cu_sim_data::initialize(const cu_sim_environment& env) {}
 
 }  // namespace Aperture

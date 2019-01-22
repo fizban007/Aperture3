@@ -5,14 +5,14 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 
 class CurrentDepositer_Esirkepov : public CurrentDepositer {
  public:
   typedef cu_vector_field<Scalar> vfield;
   typedef cu_scalar_field<Scalar> sfield;
 
-  CurrentDepositer_Esirkepov(const Environment& env);
+  CurrentDepositer_Esirkepov(const cu_sim_environment& env);
   virtual ~CurrentDepositer_Esirkepov();
 
   virtual void deposit(cu_sim_data& data, double dt);
@@ -29,7 +29,7 @@ class CurrentDepositer_Esirkepov : public CurrentDepositer {
   void scan_current(vfield& J);
   void scan_current(sfield& J);
 
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
   // int m_deposit_order = 3;
   // int m_deriv_order;
 };  // ----- end of class current_depositer_Esirkepov : public

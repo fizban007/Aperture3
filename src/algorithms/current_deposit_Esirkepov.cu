@@ -68,7 +68,7 @@ compute_delta_rho_1d(Scalar** rho, Scalar** delta_rho,
 }  // namespace Kernels
 
 CurrentDepositer_Esirkepov::CurrentDepositer_Esirkepov(
-    const Environment& env)
+    const cu_sim_environment& env)
     : m_env(env) {}
 
 CurrentDepositer_Esirkepov::~CurrentDepositer_Esirkepov() {}

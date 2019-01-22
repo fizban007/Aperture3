@@ -12,12 +12,12 @@ namespace Aperture {
 
 struct cu_sim_data {
   // cu_sim_data();
-  cu_sim_data(const Environment& env, int deviceId = 0);
+  cu_sim_data(const cu_sim_environment& env, int deviceId = 0);
   ~cu_sim_data();
 
-  void initialize(const Environment& env);
+  void initialize(const cu_sim_environment& env);
 
-  const Environment& env;
+  const cu_sim_environment& env;
   cu_vector_field<Scalar> E;
   cu_vector_field<Scalar> B;
   cu_vector_field<Scalar> J;

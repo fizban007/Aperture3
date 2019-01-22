@@ -24,15 +24,15 @@ struct cu_sim_data;
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
 ////////////////////////////////////////////////////////////////////////////////
-class Environment : public sim_environment {
+class cu_sim_environment : public sim_environment {
  public:
-  Environment(int* argc, char*** argv);
-  Environment(const std::string& conf_file);
-  ~Environment();
+  cu_sim_environment(int* argc, char*** argv);
+  cu_sim_environment(const std::string& conf_file);
+  ~cu_sim_environment();
 
   // Remove copy and assignment operators
-  Environment(Environment const&) = delete;
-  Environment& operator=(Environment const&) = delete;
+  cu_sim_environment(cu_sim_environment const&) = delete;
+  cu_sim_environment& operator=(cu_sim_environment const&) = delete;
 
   // void set_initial_condition(cu_sim_data& data);
   // void set_initial_condition(cu_sim_data& data, const Index& start, const
@@ -83,12 +83,12 @@ class Environment : public sim_environment {
   void load_from_snapshot(const std::string& snapshot_file);
 
  private:
-  // Environment() {}
+  // cu_sim_environment() {}
   void setup_env();
 
   // cu_vector_field<Scalar> m_Ebg;
   // cu_vector_field<Scalar> m_Bbg;
-};  // ----- end of class Environment -----
+};  // ----- end of class cu_sim_environment -----
 }  // namespace Aperture
 
 #endif  // _SIM_ENVIRONMENT_DEV_H_
