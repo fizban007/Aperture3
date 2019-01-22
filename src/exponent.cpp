@@ -21,7 +21,7 @@ using namespace HighFive;
 
 template <typename Rad>
 double
-measure_exp(cu_sim_data& data, PICSim& sim, Environment& env, Rad& rad,
+measure_exp(cu_sim_data& data, PICSim& sim, cu_sim_environment& env, Rad& rad,
             double E) {
   Scalar dt = env.params().delta_t;
   env.params().constE = E;
@@ -149,7 +149,7 @@ measure_exp(cu_sim_data& data, PICSim& sim, Environment& env, Rad& rad,
 
 int
 main(int argc, char* argv[]) {
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // Print the parameters of this run
   Logger::print_info("dt is {}", env.params().delta_t);

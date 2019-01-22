@@ -21,7 +21,7 @@ rho_gj(double jb, double x) {
 int
 main(int argc, char *argv[]) {
   // Initialize the simulation environment
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // These are debug output
   Logger::print_debug("{}", env.params().delta_t);

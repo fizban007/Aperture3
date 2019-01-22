@@ -9,7 +9,7 @@ namespace Aperture {
 
 class PtcUpdaterLogSph : public PtcUpdaterDev {
  public:
-  PtcUpdaterLogSph(const Environment& env);
+  PtcUpdaterLogSph(const cu_sim_environment& env);
   virtual ~PtcUpdaterLogSph();
 
   virtual void update_particles(cu_sim_data& data, double dt, uint32_t step = 0);

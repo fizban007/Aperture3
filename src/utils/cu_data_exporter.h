@@ -5,7 +5,7 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 struct cu_sim_data;
 template <typename T>
 class cu_scalar_field;
@@ -24,9 +24,9 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
   void add_field(const std::string& name, cu_vector_field<T>& field,
                  bool sync = true);
 
-  void write_snapshot(Environment& env, cu_sim_data& data,
+  void write_snapshot(cu_sim_environment& env, cu_sim_data& data,
                      uint32_t timestep);
-  void load_from_snapshot(Environment& env, cu_sim_data& data,
+  void load_from_snapshot(cu_sim_environment& env, cu_sim_data& data,
                           uint32_t& timestep);
 
   template <typename T>

@@ -9,7 +9,7 @@ using namespace Aperture;
 
 class FFETests {
  protected:
-  Environment env;
+  cu_sim_environment env;
   cu_vector_field<Scalar> E, B;
   cu_vector_field<Scalar> E_out, B_out, J_out;
       // , u_comp;

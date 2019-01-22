@@ -21,7 +21,7 @@ main(int argc, char* argv[]) {
   uint32_t step = 0;
 
   // Construct the simulation environment
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // Allocate simulation data
   cu_sim_data data(env);

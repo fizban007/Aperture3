@@ -4,7 +4,7 @@
 namespace Aperture {
 
 struct cu_sim_data;
-class Environment;
+class cu_sim_environment;
 
 struct fields_data {
   cudaPitchedPtr E1, E2, E3;
@@ -15,7 +15,7 @@ struct fields_data {
 
 class PtcUpdaterDev {
  public:
-  PtcUpdaterDev(const Environment& env);
+  PtcUpdaterDev(const cu_sim_environment& env);
   virtual ~PtcUpdaterDev();
 
   virtual void update_particles(cu_sim_data& data, double dt, uint32_t step = 0);
@@ -24,7 +24,7 @@ class PtcUpdaterDev {
  protected:
   void initialize_dev_fields(cu_sim_data& data);
   
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
 
   fields_data m_dev_fields;
   Extent m_extent;

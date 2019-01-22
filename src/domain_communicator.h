@@ -14,7 +14,7 @@ class DomainCommunicator {
   typedef cu_vector_field<Scalar> vec_field_t;
   typedef cu_scalar_field<Scalar> sca_field_t;
 
-  DomainCommunicator(Environment& env);
+  DomainCommunicator(cu_sim_environment& env);
   ~DomainCommunicator();
 
   template <typename ParticleClass>
@@ -66,7 +66,7 @@ class DomainCommunicator {
     return m_photon_buf_num;
   }
 
-  Environment& m_env;
+  cu_sim_environment& m_env;
 
   std::vector<Index_t>
       m_ptc_partition;  ///< Partition array used to mark the

@@ -10,7 +10,7 @@ using namespace Aperture;
 
 class FiniteDiffTests {
  protected:
-  Environment env;
+  cu_sim_environment env;
   cu_vector_field<Scalar> u, v, u_comp;
   cu_scalar_field<Scalar> f;
   const Quadmesh& mesh;

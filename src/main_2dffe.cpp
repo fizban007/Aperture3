@@ -40,7 +40,7 @@ compute_flux(cu_scalar_field<Scalar>& flux, cu_vector_field<Scalar>& B) {
 
 int
 main(int argc, char* argv[]) {
-  Environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // Print the parameters of this run
   Logger::print_info("dt is {}", env.params().delta_t);

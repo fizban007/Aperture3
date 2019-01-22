@@ -575,7 +575,7 @@ boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
 
 }  // namespace Kernels
 
-PtcUpdaterLogSph::PtcUpdaterLogSph(const Environment &env)
+PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
     : PtcUpdaterDev(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),

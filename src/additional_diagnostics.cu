@@ -58,7 +58,7 @@ collect_photon_diagnostics(photon_data photons, size_t num,
 
 }  // namespace Kernels
 
-AdditionalDiagnostics::AdditionalDiagnostics(const Environment& env)
+AdditionalDiagnostics::AdditionalDiagnostics(const cu_sim_environment& env)
     : m_env(env), m_ph_num(env.local_grid()) {
   CudaSafeCall(cudaMallocManaged(
       &m_dev_gamma,

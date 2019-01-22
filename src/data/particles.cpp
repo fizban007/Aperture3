@@ -14,7 +14,7 @@ particles_t::particles_t()
 particles_t::particles_t(std::size_t max_num)
     : particle_base<single_particle_t>(max_num) {}
 
-// particles_t::particles_t(const Environment& env, ParticleType type)
+// particles_t::particles_t(const cu_sim_environment& env, ParticleType type)
 particles_t::particles_t(const SimParams& params)
     : particle_base<single_particle_t>(
           (std::size_t)params.max_ptc_number) {}

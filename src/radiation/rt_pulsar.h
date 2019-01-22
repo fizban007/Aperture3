@@ -7,14 +7,14 @@
 
 namespace Aperture {
 
-class Environment;
+class cu_sim_environment;
 class Particles;
 class Photons;
 struct cu_sim_data;
 
 class RadiationTransferPulsar {
  public:
-  RadiationTransferPulsar(const Environment& env);
+  RadiationTransferPulsar(const cu_sim_environment& env);
   virtual ~RadiationTransferPulsar();
 
   void emit_photons(cu_sim_data& data);
@@ -24,7 +24,7 @@ class RadiationTransferPulsar {
   cu_scalar_field<Scalar>& get_ph_events() { return m_ph_events; }
 
  private:
-  const Environment& m_env;
+  const cu_sim_environment& m_env;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
   Array<int> m_numPerBlock;

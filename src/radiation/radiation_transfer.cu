@@ -202,7 +202,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 template <typename PtcClass, typename PhotonClass, typename RadModel>
 RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(
-    const Environment& env)
+    const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(512),

@@ -3,7 +3,7 @@
 
 namespace Aperture {
 
-RadiationField::RadiationField(const Environment& env)
+RadiationField::RadiationField(const cu_sim_environment& env)
     : m_env(env),
       m_data(env.params().rad_energy_bins,
              env.local_grid().extent()[0]) {}

@@ -12,7 +12,7 @@
 using namespace Aperture;
 
 TEST_CASE("Producing photons", "[Photons]") {
-  Environment env("test.toml");
+  cu_sim_environment env("test.toml");
 
   Particles ptc(env.params());
   Photons photons(env.params());
@@ -46,7 +46,7 @@ TEST_CASE("Producing photons", "[Photons]") {
 }
 
 TEST_CASE("ICPL", "[Photons]") {
-  Environment env("test.toml");
+  cu_sim_environment env("test.toml");
 
   Particles ptc(env.params());
   Photons photons(env.params());
