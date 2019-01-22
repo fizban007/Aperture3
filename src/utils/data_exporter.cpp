@@ -1,8 +1,8 @@
 #include "utils/data_exporter.h"
-#include "utils/hdf_exporter_impl.hpp"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "sim_params.h"
+#include "utils/hdf_exporter_impl.hpp"
 #include "utils/type_name.h"
 
 #define H5_USE_BOOST
@@ -44,7 +44,31 @@ data_exporter::add_field(const std::string &name,
 template <typename T>
 void
 data_exporter::interpolate_field_values(fieldoutput<1> &field,
-                                        int components, const T &t) {}
+                                        int components, const T &t) {
+  if (components == 1) {
+    auto fptr = dynamic_cast<scalar_field<T> *>(field.field);
+    auto &mesh = fptr->grid().mesh();
+    for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      field.f[0][i / downsample_factor + mesh.guard[0]] = 0.0;
+      for (int n1 = 0; n1 < downsample_factor; n1++) {
+        field.f[0][i / downsample_factor + mesh.guard[0]] +=
+            (*fptr)(i + n1 + mesh.guard[0]) / downsample_factor;
+      }
+    }
+  } else if (components == 3) {
+    auto fptr = dynamic_cast<vector_field<T> *>(field.field);
+    auto &mesh = fptr->grid().mesh();
+    for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+      field.f[0][i / downsample_factor + mesh.guard[0]] = 0.0;
+      // field.f[1][i / downsample_factor + mesh.guard[0]] = 0.0;
+      // field.f[2][i / downsample_factor + mesh.guard[0]] = 0.0;
+      for (int n1 = 0; n1 < downsample_factor; n1++) {
+        field.f[0][i / downsample_factor + mesh.guard[0]] +=
+            (*fptr)(0, i + n1 + mesh.guard[0]) / downsample_factor;
+      }
+    }
+  }
+}
 
 template <typename T>
 void
@@ -190,7 +214,8 @@ data_exporter::interpolate_field_values(fieldoutput<3> &field,
                     (*fptr)(0, i + n1 + mesh.guard[0],
                             j + n2 + mesh.guard[1],
                             k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor * downsample_factor);
+                    (downsample_factor * downsample_factor *
+                     downsample_factor);
                 // std::cout << vf.f1[j / downsample_factor +
                 // mesh.guard[1]
                 //     [i / downsample_factor + mesh.guard[0]] <<
@@ -201,7 +226,8 @@ data_exporter::interpolate_field_values(fieldoutput<3> &field,
                     (*fptr)(1, i + n1 + mesh.guard[0],
                             j + n2 + mesh.guard[1],
                             k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor * downsample_factor);
+                    (downsample_factor * downsample_factor *
+                     downsample_factor);
 
                 field.f[2][k / downsample_factor + mesh.guard[2]]
                        [j / downsample_factor + mesh.guard[1]]
@@ -209,7 +235,8 @@ data_exporter::interpolate_field_values(fieldoutput<3> &field,
                     (*fptr)(2, i + n1 + mesh.guard[0],
                             j + n2 + mesh.guard[1],
                             k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor * downsample_factor);
+                    (downsample_factor * downsample_factor *
+                     downsample_factor);
               }
             }
           }
@@ -231,5 +258,64 @@ data_exporter::interpolate_field_values(fieldoutput<3> &field,
   }
 }
 
+void
+data_exporter::write_particles(uint32_t step, double time) {
+  auto &mesh = grid->mesh();
+  for (auto &ptcoutput : dbPtcData1d) {
+    particles_t *ptc = dynamic_cast<particles_t *>(ptcoutput.ptc);
+    if (ptc != nullptr) {
+      Logger::print_info("Writing tracked particles");
+      std::string name_x = ptcoutput.name + "_x";
+      std::string name_p = ptcoutput.name + "_p";
+      unsigned int idx = 0;
+      for (Index_t n = 0; n < ptc->number(); n++) {
+        if (!ptc->is_empty(n) &&
+            ptc->check_flag(n, ParticleFlag::tracked) &&
+            idx < MAX_TRACKED) {
+          Scalar x =
+              mesh.pos(0, ptc->data().cell[n], ptc->data().x1[n]);
+          ptcoutput.x[idx] = x;
+          ptcoutput.p[idx] = ptc->data().p1[n];
+          idx += 1;
+        }
+      }
+      // hsize_t sizes[1] = {idx};
+      // H5::DataSpace space(1, sizes);
+      // H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
+      //     name_x, H5::PredType::NATIVE_FLOAT, space));
+      // dataset_x->write((void *)ds.data_x.data(),
+      //                  H5::PredType::NATIVE_FLOAT);
+      // H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
+      //     name_p, H5::PredType::NATIVE_FLOAT, space));
+      // dataset_p->write((void *)ds.data_p.data(),
+      //                  H5::PredType::NATIVE_FLOAT);
+
+      // delete dataset_x;
+      // delete dataset_p;
+      File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                                filePrefix, step)
+                        .c_str(),
+                    File::ReadWrite);
+      DataSet data_x = datafile.createDataSet<float>(
+          name_x, DataSpace::From(ptcoutput.x));
+      data_x.write(ptcoutput.x);
+      DataSet data_p = datafile.createDataSet<float>(
+          name_p, DataSpace::From(ptcoutput.p));
+      data_p.write(ptcoutput.p);
+
+      Logger::print_info("Written {} tracked particles", idx);
+    }
+  }
+}
+
+// Explicit instantiation
+template void data_exporter::add_field<float>(
+    const std::string &name, scalar_field<float> &field);
+template void data_exporter::add_field<float>(
+    const std::string &name, vector_field<float> &field);
+template void data_exporter::add_field<double>(
+    const std::string &name, scalar_field<double> &field);
+template void data_exporter::add_field<double>(
+    const std::string &name, vector_field<double> &field);
 
 }  // namespace Aperture

@@ -194,8 +194,9 @@ endif()
 if (CMAKE_CUDA_COMPILER)
   target_link_libraries(aperture cuAperture)
 endif()
-# add_executable(aperture3D "main3D.cpp")
-# target_link_libraries(aperture3D Pulsar)
+
+add_executable(aperture1D "main_1d.cpp")
+target_link_libraries(aperture1D Aperture)
 
 # if (CUDA_FOUND)
 #   target_link_libraries(aperture Pulsar_dev)

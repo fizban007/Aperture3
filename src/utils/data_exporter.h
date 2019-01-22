@@ -26,6 +26,7 @@ class data_exporter : public hdf_exporter<data_exporter> {
                      uint32_t timestep);
   void load_from_snapshot(sim_environment& env, sim_data& data,
                           uint32_t& timestep);
+  void write_particles(uint32_t step, double time);
 
   template <typename T>
   void interpolate_field_values(fieldoutput<1>& field, int components, const T& t);
