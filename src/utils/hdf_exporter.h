@@ -73,6 +73,14 @@ struct ptcoutput {
   particle_interface* ptc;
 };
 
+struct ptcoutput_1d {
+  std::string name;
+  std::string type;
+  particle_interface* ptc;
+  std::vector<float> x;
+  std::vector<float> p;
+};
+
 // Using the CRTP to allow base class to access derived class methods
 template <typename DerivedClass>
 class hdf_exporter {
@@ -100,6 +108,9 @@ class hdf_exporter {
                         field_base* field, int dim, bool sync = false);
   void add_ptc_output(const std::string& name, const std::string& type,
                       particle_interface* ptc);
+  void add_ptc_output_1d(const std::string& name,
+                         const std::string& type,
+                         particle_interface* ptc);
 
   // void AddArray(const std::string& name, float* data, int* dims,
   //               int ndims);
@@ -149,7 +160,7 @@ class hdf_exporter {
   std::vector<ptcoutput> dbPtc;
   // meshoutput dbMesh;
 
-  // std::vector<ptcoutput<Particles>> dbPtcData;
+  std::vector<ptcoutput_1d> dbPtcData1d;
   // std::vector<ptcoutput<Photons>> dbPhotonData;
 
   // Grid grid;

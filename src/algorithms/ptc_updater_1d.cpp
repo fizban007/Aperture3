@@ -122,6 +122,11 @@ ptc_updater_1d::deposit(sim_data& data, double dt, uint32_t step) {
           data.Rho[sp].data()[off] -= weight * sx1;
         }
       }
+
+      auto dc1 = floor(new_x1);
+      new_x1 -= dc1;
+      ptc.data().cell[idx] = c + int(dc1);
+      ptc.data().x1[idx] = new_x1;
     }
   }
 }

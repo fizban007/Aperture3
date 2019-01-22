@@ -1,6 +1,6 @@
 // #include "cuda/cudaUtility.h"
-#include "utils/hdf_exporter.h"
 #include "data/grid_log_sph.h"
+#include "utils/hdf_exporter.h"
 // #include "data/photons.h"
 #include "fmt/core.h"
 #include "utils/filesystem.h"
@@ -12,8 +12,8 @@
 // #include "cu_sim_data.h"
 // #include "sim_environment_dev.h"
 #include "sim_params.h"
-// #include <H5Cpp.h>
 #include <fstream>
+#include <vector>
 
 #define H5_USE_BOOST
 
@@ -141,6 +141,27 @@ hdf_exporter<T>::add_field_output(const std::string &name,
 
 template <typename T>
 void
+hdf_exporter<T>::add_ptc_output(const std::string &name,
+                                const std::string &type,
+                                particle_interface *ptc) {}
+
+template <typename T>
+void
+hdf_exporter<T>::add_ptc_output_1d(const std::string &name,
+                                   const std::string &type,
+                                   particle_interface *ptc) {
+  ptcoutput_1d tmp_data;
+  tmp_data.name = name;
+  tmp_data.type = type;
+  tmp_data.ptc = ptc;
+  tmp_data.x = std::vector<float>(MAX_TRACKED);
+  tmp_data.p = std::vector<float>(MAX_TRACKED);
+
+  dbPtcData1d.push_back(tmp_data);
+}
+
+template <typename T>
+void
 hdf_exporter<T>::createDirectories() {
   boost::filesystem::path subPath(outputDirectory);
   boost::filesystem::path logPath(outputDirectory + "log/");
@@ -188,8 +209,8 @@ hdf_exporter<T>::checkDirectories() {
 template <typename T>
 void
 hdf_exporter<T>::WriteGrid() {
+  auto &mesh = grid->mesh();
   if (grid->dim() == 3) {
-    auto &mesh = grid->mesh();
     boost::multi_array<float, 3> x1_array(
         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
     boost::multi_array<float, 3> x2_array(
@@ -221,7 +242,6 @@ hdf_exporter<T>::WriteGrid() {
         meshfile.createDataSet<float>("x3", DataSpace::From(x3_array));
     mesh_x3.write(x3_array);
   } else if (grid->dim() == 2) {
-    auto &mesh = grid->mesh();
     boost::multi_array<float, 2> x1_array(
         boost::extents[mesh.dims[1]][mesh.dims[0]]);
     boost::multi_array<float, 2> x2_array(
@@ -251,6 +271,20 @@ hdf_exporter<T>::WriteGrid() {
     DataSet mesh_x2 =
         meshfile.createDataSet<float>("x2", DataSpace::From(x2_array));
     mesh_x2.write(x2_array);
+  } else if (grid->dim() == 1) {
+    std::vector<float> x_array(mesh.dims[0]);
+
+    for (int i = 0; i < mesh.dims[0]; i++) {
+      x_array[i] = mesh.pos(0, i, false);
+    }
+
+    std::string meshfilename = outputDirectory + "mesh.h5";
+    Logger::print_info("{}", meshfilename);
+    File meshfile(meshfilename.c_str(),
+                  File::ReadWrite | File::Create | File::Truncate);
+    DataSet mesh_x1 =
+        meshfile.createDataSet<float>("x1", DataSpace::From(x_array));
+    mesh_x1.write(x_array);
   }
 }
 
@@ -380,12 +414,28 @@ hdf_exporter<T>::WriteOutput(int timestep, double time) {
   //   error.printErrorStack();
   //   // return -1;
   // }
+  for (auto &f : dbFields1d) {
+    int components = f.f.size();
+    T *self = static_cast<T *>(this);
+    if (f.type == "float") {
+      self->interpolate_field_values(f, components, float{});
+    } else if (f.type == "double") {
+      self->interpolate_field_values(f, components, double{});
+    }
+    if (components == 1) {
+      DataSet data = datafile.createDataSet<float>(
+          f.name, DataSpace::From(f.f[0]));
+      data.write(f.f[0]);
+    } else {
+      for (int n = 0; n < components; n++) {
+        DataSet data = datafile.createDataSet<float>(
+            f.name + std::to_string(n + 1), DataSpace::From(f.f[n]));
+        data.write(f.f[n]);
+      }
+    }
+  }
   for (auto &f : dbFields2d) {
     int components = f.f.size();
-    // if (f.type == "float")
-    //   InterpolateFieldValues(f, components, float{});
-    // else if (f.type == "double")
-    //   InterpolateFieldValues(f, components, double{});
     T *self = static_cast<T *>(this);
     if (f.type == "float") {
       self->interpolate_field_values(f, components, float{});

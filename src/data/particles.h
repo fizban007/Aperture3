@@ -9,12 +9,11 @@ namespace Aperture {
 
 struct SimParams;
 
-class particles_t : public particle_base<single_particle_t>
-{
+class particles_t : public particle_base<single_particle_t> {
  public:
   typedef particle_base<single_particle_t> base_class;
   typedef particle_data data_class;
-  
+
   particles_t();
   particles_t(size_t max_num);
   particles_t(const SimParams& params);
@@ -37,14 +36,13 @@ class particles_t : public particle_base<single_particle_t>
                         std::vector<uint32_t>& nums, ParticleFlag flag);
 
   void track(Index_t pos) {
-    m_data.flag[pos] |= (int)ParticleFlag::tracked;
+    m_data.flag[pos] |= bit_or(ParticleFlag::tracked);
   }
   bool check_flag(Index_t pos, ParticleFlag flag) const {
-    return (m_data.flag[pos] & (unsigned int)flag) ==
-           (unsigned int)flag;
+    return (m_data.flag[pos] & bit_or(flag)) == bit_or(flag);
   }
   void set_flag(Index_t pos, ParticleFlag flag) {
-    m_data.flag[pos] |= (unsigned int)flag;
+    m_data.flag[pos] |= bit_or(flag);
   }
   // Use the highest 3 bits to represent particle type
   ParticleType check_type(Index_t pos) const {
@@ -55,10 +53,9 @@ class particles_t : public particle_base<single_particle_t>
   }
 
  private:
-  
-}; // ----- end of class particles_t : public particle_base<single_particle_t> -----
+};  // ----- end of class particles_t : public
+    // particle_base<single_particle_t> -----
 
-
-}
+}  // namespace Aperture
 
 #endif  // _PARTICLES_H_
