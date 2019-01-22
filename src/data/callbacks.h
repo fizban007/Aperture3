@@ -3,7 +3,7 @@
 
 #include "data/fields_dev.h"
 #include "data/particles_dev.h"
-#include "data/photons.h"
+#include "data/photons_dev.h"
 #include <functional>
 
 namespace Aperture {

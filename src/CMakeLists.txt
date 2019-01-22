@@ -49,6 +49,7 @@ set(Aperture_src
   "data/fields.cpp"
   "data/detail/particle_data_impl.cpp"
   "data/particles.cpp"
+  "data/photons.cpp"
   # "utils/hdf_exporter.cpp"
   "utils/data_exporter.cpp"
   "commandline_args.cpp"
@@ -60,6 +61,7 @@ set(Aperture_src
   "algorithms/field_solver_1d.cpp"
   "algorithms/ptc_updater_default.cpp"
   "algorithms/ptc_updater_1d.cpp"
+  "radiation/rt_1d.cpp"
   )
 
 # modify Aperture_src using the files in the lab
@@ -84,10 +86,9 @@ if (CMAKE_CUDA_COMPILER)
     # "algorithms/ptc_pusher_geodesic.cpp"
     "utils/cu_data_exporter.cpp"
     "cu_sim_data.cu"
-    "data/photons.cu"
     "data/particles_dev.cu"
     "data/fields_dev.cu"
-    "data/photons.cu"
+    "data/photons_dev.cu"
     "additional_diagnostics.cu"
     "ptc_updater_dev.cu"
     "ptc_updater_logsph.cu"

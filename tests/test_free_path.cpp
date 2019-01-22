@@ -1,5 +1,5 @@
 #include "algorithms/functions.h"
-#include "data/photons.h"
+#include "data/photons_dev.h"
 #include "sim_environment_dev.h"
 #include <iostream>
 #include <fstream>

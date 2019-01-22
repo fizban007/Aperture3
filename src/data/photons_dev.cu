@@ -1,7 +1,7 @@
 #include "algorithms/functions.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
-#include "data/photons.h"
+#include "data/photons_dev.h"
 #include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
