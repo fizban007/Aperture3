@@ -359,6 +359,10 @@ template void cu_data_exporter::add_field<float>(
     const std::string &name, cu_scalar_field<float> &field, bool sync);
 template void cu_data_exporter::add_field<float>(
     const std::string &name, cu_vector_field<float> &field, bool sync);
+template void cu_data_exporter::add_field<double>(
+    const std::string &name, cu_scalar_field<double> &field, bool sync);
+template void cu_data_exporter::add_field<double>(
+    const std::string &name, cu_vector_field<double> &field, bool sync);
 
 template void cu_data_exporter::interpolate_field_values<float>(
     fieldoutput<2> &field, int components, const float &t);

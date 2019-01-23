@@ -20,7 +20,7 @@ class Grid_LogSph_base : public Grid {
     z = r * std::cos(x2);
   }
 
-  virtual void init(const SimParams& params) = 0;
+  virtual void init(const SimParams& params) override {}
 };  // ----- end of class Grid_LogSph : public Grid -----
 
 }  // namespace Aperture

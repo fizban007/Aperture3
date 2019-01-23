@@ -13,7 +13,7 @@ class Grid_LogSph_dev : public Grid_LogSph_base<Grid_LogSph_dev> {
   Grid_LogSph_dev();
   virtual ~Grid_LogSph_dev();
 
-  void init(const SimParams& params) override;
+  virtual void init(const SimParams& params) override;
 
   struct mesh_ptrs {
     cudaPitchedPtr l1_e, l2_e, l3_e;

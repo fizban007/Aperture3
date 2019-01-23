@@ -9,6 +9,8 @@ Grid_LogSph::Grid_LogSph() {}
 Grid_LogSph::~Grid_LogSph() {}
 
 void
-Grid_LogSph::init( const SimParams &params ) {}
+Grid_LogSph::init( const SimParams &params ) {
+  Grid::init(params);
+}
 
 }  // namespace Aperture

@@ -13,7 +13,7 @@ class Grid_LogSph : public Grid_LogSph_base<Grid_LogSph> {
   Grid_LogSph();
   virtual ~Grid_LogSph();
 
-  void init(const SimParams& params) override;
+  virtual void init(const SimParams& params) override;
 
   void compute_flux(scalar_field<Scalar>& flux,
                     vector_field<Scalar>& B,
