@@ -15,17 +15,19 @@ rad_transfer_1d::emit_photons(sim_data& data) {
   auto& photons = data.photons;
   auto& ptc = data.particles;
   auto& ptcdata = ptc.data();
+  auto& mesh = m_env.grid().mesh();
 
   uint32_t num_ph = 0;
   for (Index_t idx = 0; idx < ptc.number(); idx++) {
     Scalar gamma = ptcdata.E[idx];
-    if (gamma > m_env.params().gamma_thr) {
+    Scalar x = mesh.pos(0, ptcdata.cell[idx], ptcdata.x1[idx]);
+    if (gamma > m_env.params().gamma_thr && x < 0.3 * mesh.sizes[0]) {
       Scalar p_i = std::abs(ptcdata.p1[idx]);
       Scalar E_f = gamma - 2.0 * m_env.params().E_secondary;
       Scalar l_ph = 0.0;
       photons.append(
           {ptcdata.x1[idx], 0.0, 0.0},
-          {sgn(ptcdata.p1[idx]) * 2.0 * m_env.params().E_secondary, 0.0,
+          {sgn(ptcdata.p1[idx]) * (Scalar)2.0 * m_env.params().E_secondary, 0.0,
            0.0},
           ptcdata.cell[idx], l_ph, ptcdata.weight[idx],
           (m_dist(m_gen) < 0.1 ? bit_or(PhotonFlag::tracked) : 0));

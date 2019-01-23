@@ -69,6 +69,7 @@ hdf_exporter<T>::hdf_exporter(SimParams &params, uint32_t &timestep)
     grid->mesh().delta[i] *= downsample;
     grid->mesh().inv_delta[i] /= downsample;
   }
+  Logger::print_info("initialize output {}d grid of size {}x{}", grid->mesh().dim(), grid->mesh().dims[1], grid->mesh().dims[0]);
 }
 
 template <typename T>
@@ -102,6 +103,7 @@ hdf_exporter<T>::add_field_output(const std::string &name,
     tempData.f.resize(num_components);
     for (int i = 0; i < num_components; i++) {
       tempData.f[i].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+      // Logger::print_info("mesh sizes are {}x{}, f[i] size is {}", mesh.dims[1], mesh.dims[0], tempData.f[i].size());
     }
     dbFields2d.push_back(std::move(tempData));
   } else if (dim == 1) {
@@ -427,7 +429,7 @@ hdf_exporter<T>::WriteOutput(int timestep, double time) {
           f.name, DataSpace::From(f.f[0]));
       data.write(f.f[0]);
     } else {
-      for (int n = 0; n < components; n++) {
+      for (int n = 0; n < 1; n++) {
         DataSet data = datafile.createDataSet<float>(
             f.name + std::to_string(n + 1), DataSpace::From(f.f[n]));
         data.write(f.f[n]);
@@ -443,13 +445,17 @@ hdf_exporter<T>::WriteOutput(int timestep, double time) {
       self->interpolate_field_values(f, components, double{});
     }
     if (components == 1) {
+      // Logger::print_info("Creating dataset for {}", f.name);
       DataSet data = datafile.createDataSet<float>(
           f.name, DataSpace::From(f.f[0]));
       data.write(f.f[0]);
     } else {
+      // Logger::print_info("Creating dataset for {}", f.name);
       for (int n = 0; n < components; n++) {
+        // Logger::print_info("{}, {}", n, f.f[n].size());
         DataSet data = datafile.createDataSet<float>(
             f.name + std::to_string(n + 1), DataSpace::From(f.f[n]));
+        // Logger::print_info("dataset created");
         data.write(f.f[n]);
       }
     }
@@ -515,6 +521,8 @@ hdf_exporter<T>::writeXMFStep(std::ofstream &fs, int step,
                           mesh.dims[0]);
   } else if (grid->dim() == 2) {
     dim_str = fmt::format("{} {}", mesh.dims[1], mesh.dims[0]);
+  } else if (grid->dim() == 1) {
+    dim_str = fmt::format("{} 1", mesh.dims[0]);
   }
 
   fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
@@ -528,18 +536,24 @@ hdf_exporter<T>::writeXMFStep(std::ofstream &fs, int step,
     fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
        << "\"/>" << std::endl;
     fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  } else if (grid->dim() == 1) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
   }
   fs << "    <DataItem Dimensions=\"" << dim_str
      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
      << std::endl;
   fs << "      mesh.h5:x1" << std::endl;
   fs << "    </DataItem>" << std::endl;
-  fs << "    <DataItem Dimensions=\"" << dim_str
-     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
-     << std::endl;
-  fs << "      mesh.h5:x2" << std::endl;
-  fs << "    </DataItem>" << std::endl;
-  if (grid->dim() == 3) {
+  if (grid->dim() >= 2) {
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x2" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+  if (grid->dim() >= 3) {
     fs << "    <DataItem Dimensions=\"" << dim_str
        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
        << std::endl;
@@ -578,6 +592,34 @@ hdf_exporter<T>::writeXMFStep(std::ofstream &fs, int step,
     }
   }
 
+  for (auto &f : dbFields1d) {
+    if (f.f.size() == 1) {
+      fs << "  <Attribute Name=\"" << f.name
+         << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+      fs << "    <DataItem Dimensions=\"" << dim_str
+         << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+         << std::endl;
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+                        f.name)
+         << std::endl;
+      fs << "    </DataItem>" << std::endl;
+      fs << "  </Attribute>" << std::endl;
+    } else if (f.f.size() == 3) {
+      for (int i = 0; i < 1; i++) {
+        fs << "  <Attribute Name=\"" << f.name << i + 1
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
+           << std::endl;
+        fs << "    <DataItem Dimensions=\"" << dim_str
+           << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+           << std::endl;
+        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
+                          f.name, i + 1)
+           << std::endl;
+        fs << "    </DataItem>" << std::endl;
+        fs << "  </Attribute>" << std::endl;
+      }
+    }
+  }
   // for (auto &sf : dbScalars2d) {
   //   fs << "  <Attribute Name=\"" << sf.name
   //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
@@ -706,7 +748,8 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
 }
 
 // void
-// hdf_exporter::writeSnapshot(cu_sim_environment &env, cu_sim_data &data,
+// hdf_exporter::writeSnapshot(cu_sim_environment &env, cu_sim_data
+// &data,
 //                             uint32_t timestep) {
 //   File snapshotfile(
 //       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
@@ -832,7 +875,8 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
 // }
 
 // void
-// hdf_exporter::load_from_snapshot(cu_sim_environment &env, cu_sim_data &data,
+// hdf_exporter::load_from_snapshot(cu_sim_environment &env, cu_sim_data
+// &data,
 //                                  uint32_t &timestep) {
 //   File snapshotfile(
 //       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,

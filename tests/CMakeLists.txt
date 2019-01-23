@@ -48,7 +48,9 @@ if (CMAKE_CUDA_COMPILER)
   add_dependencies(check test_fd)
 
   set(test_cuda_src
-    "test.cu" "test_multiarray.cu")
+    "test.cu" "test_multiarray.cu"
+    "test_env.cu"
+    )
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
   add_cuda_executable(test_cuda)

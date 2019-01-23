@@ -12,7 +12,8 @@ __constant__ FieldData dev_bg_fields;
 
 void
 init_dev_params(const SimParams& params) {
-  CudaSafeCall(cudaMemcpyToSymbol(dev_params, (void*)&params,
+  const SimParamsBase* p = &params;
+  CudaSafeCall(cudaMemcpyToSymbol(dev_params, (void*)p,
                                   sizeof(SimParamsBase)));
 }
 

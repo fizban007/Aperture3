@@ -3194,12 +3194,12 @@ static inline Vec4d gather4d(void const * a) {
 *
 *****************************************************************************/
 #if INSTRSET >= 8 && VECTORI256_H > 1 // AVX2
-static inline Vec8f gather(float* data, const Vec8ui& offsets, int scale) {
-  return _mm256_i32gather_ps(data, offsets, scale);
+static inline Vec8f gather(float* data, const Vec8ui& offsets, int scale = 1) {
+  return _mm256_i32gather_ps(data, offsets, 1);
 }
 
-static inline Vec4d gather(double* data, const Vec4uq& offsets, int scale) {
-  return _mm256_i64gather_pd(data, offsets, scale);
+static inline Vec4d gather(double* data, const Vec4uq& offsets, int scale = 1) {
+  return _mm256_i64gather_pd(data, offsets, 1);
 }
 #endif
 
