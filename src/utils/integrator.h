@@ -1,9 +1,9 @@
 #ifndef _INTEGRATOR_H_
 #define _INTEGRATOR_H_
 
-#include "algorithms/runge_kutta.h"
-#include "data/grid.h"
-#include "data/vec3.h"
+#include "core/runge_kutta.h"
+#include "core/grid.h"
+#include "core/vec3.h"
 #include "utils/silo_file.h"
 #include <string>
 

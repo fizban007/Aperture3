@@ -1,7 +1,7 @@
 #ifndef _MPI_COMM_IMPL_H_
 #define _MPI_COMM_IMPL_H_
 
-#include "data/enum_types.h"
+#include "core/enum_types.h"
 #include "utils/logger.h"
 #include "utils/mpi_comm.h"
 #include <stddef.h>

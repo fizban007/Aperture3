@@ -7,7 +7,7 @@
 #include "data/particles_1d.h"
 #include "data/photons_dev.h"
 #include "data/photons_1d.h"
-#include "data/detail/multi_array_utils.hpp"
+#include "core/detail/multi_array_utils.hpp"
 #include "radiation/curvature_instant.h"
 #include "radiation/inverse_compton_black_body.h"
 #include "radiation/inverse_compton_dummy.h"

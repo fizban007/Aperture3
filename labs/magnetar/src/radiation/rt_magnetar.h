@@ -3,7 +3,7 @@
 
 #include "data/array.h"
 #include "data/fields_dev.h"
-#include "data/typedefs.h"
+#include "core/typedefs.h"
 
 namespace Aperture {
 

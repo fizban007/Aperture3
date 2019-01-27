@@ -5,7 +5,7 @@
 // #include <H5Cpp.h>
 // #include "data/fields_dev.h"
 #include "data/field_base.h"
-#include "data/grid.h"
+#include "core/grid.h"
 #include "data/particle_interface.h"
 // #include "data/particles_dev.h"
 // #include "data/photons_dev.h"

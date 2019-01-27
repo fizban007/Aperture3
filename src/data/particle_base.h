@@ -1,8 +1,8 @@
 #ifndef _PARTICLE_BASE_H_
 #define _PARTICLE_BASE_H_
 
-#include "data/enum_types.h"
-#include "data/grid.h"
+#include "core/enum_types.h"
+#include "core/grid.h"
 #include "data/particle_data.h"
 #include "data/particle_interface.h"
 #include <cstddef>

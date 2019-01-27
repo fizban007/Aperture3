@@ -2,7 +2,7 @@
 #define _INVERSE_COMPTON_BB_H_
 
 #include "cuda/cuda_control.h"
-#include "data/typedefs.h"
+#include "core/typedefs.h"
 #include "sim_params.h"
 
 // class curandState;

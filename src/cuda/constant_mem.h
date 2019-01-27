@@ -1,7 +1,7 @@
 #ifndef _CONSTANT_MEM_H_
 #define _CONSTANT_MEM_H_
 
-#include "data/quadmesh.h"
+#include "core/quadmesh.h"
 #include "data/field_data.h"
 #include "sim_params.h"
 

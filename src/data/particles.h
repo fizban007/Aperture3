@@ -1,7 +1,7 @@
 #ifndef _PARTICLES_H_
 #define _PARTICLES_H_
 
-#include "data/enum_types.h"
+#include "core/enum_types.h"
 #include "data/particle_base.h"
 #include "utils/util_functions.h"
 

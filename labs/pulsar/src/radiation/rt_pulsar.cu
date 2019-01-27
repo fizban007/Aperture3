@@ -4,7 +4,7 @@
 #include "cuda/cudarng.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "data/detail/multi_array_utils.hpp"
+#include "core/detail/multi_array_utils.hpp"
 #include "data/particles_dev.h"
 // #include "data/particles_1d.h"
 #include "data/photons_dev.h"

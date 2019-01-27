@@ -1,4 +1,4 @@
-#include "algorithms/ptc_updater_default.h"
+#include "core/ptc_updater_default.h"
 #include "catch.hpp"
 #include "data/fields.h"
 #include "sim_data.h"

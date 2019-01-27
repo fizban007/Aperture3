@@ -1,6 +1,6 @@
-#include "data/grid.h"
+#include "core/grid.h"
 #include "data/fields.h"
-#include "algorithms/field_solver_default.h"
+#include "core/field_solver_default.h"
 #include "utils/timer.h"
 #include "utils/logger.h"
 #include "catch.hpp"

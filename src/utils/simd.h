@@ -2,7 +2,7 @@
 #define _SIMD_H_
 
 #include <immintrin.h>
-#include "data/typedefs.h"
+#include "core/typedefs.h"
 #define MAX_VECTOR_SIZE 512
 #include "vectorclass.h"
 

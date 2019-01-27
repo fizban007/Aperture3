@@ -3,7 +3,7 @@
 // #include "cuda/constant_mem_func.h"
 // #include "cuda/cudaUtility.h"
 // #include "data/grid_1dGR.h"
-#include "data/grid_log_sph.h"
+#include "grids/grid_log_sph.h"
 #include "fmt/format.h"
 #include <memory>
 // #include "data/detail/grid_impl.hpp"

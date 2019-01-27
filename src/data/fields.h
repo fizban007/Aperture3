@@ -1,13 +1,13 @@
 #ifndef _FIELDS_H_
 #define _FIELDS_H_
 
-#include "constant_defs.h"
-#include "data/enum_types.h"
+#include "core/constant_defs.h"
+#include "core/enum_types.h"
+#include "core/multi_array.h"
+#include "core/stagger.h"
+#include "core/typedefs.h"
 #include "data/field_base.h"
-#include "data/grid.h"
-#include "data/multi_array.h"
-#include "data/stagger.h"
-#include "data/typedefs.h"
+#include "core/grid.h"
 // #include "vectorclass.h"
 #include <array>
 // #include "initial_conditions/initial_condition.h"

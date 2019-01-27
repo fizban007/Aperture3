@@ -1,5 +1,5 @@
 #include "utils/silo_file.h"
-#include "data/grid.h"
+#include "core/grid.h"
 #include "fmt/format.h"
 #include "metrics.h"
 #include <boost/filesystem.hpp>

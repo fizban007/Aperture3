@@ -9,8 +9,8 @@
 #include <memory>
 #include <random>
 #include <string>
-#include "data/domain_info.h"
-#include "data/grid.h"
+#include "core/domain_info.h"
+#include "core/grid.h"
 // #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
 #include "utils/logger.h"

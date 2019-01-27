@@ -1,7 +1,7 @@
 #ifndef _FIELD_BASE_H_
 #define _FIELD_BASE_H_
 
-#include "data/grid.h"
+#include "core/grid.h"
 
 namespace Aperture {
 

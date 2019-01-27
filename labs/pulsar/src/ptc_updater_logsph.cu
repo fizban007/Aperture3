@@ -3,7 +3,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "data/detail/multi_array_utils.hpp"
+#include "core/detail/multi_array_utils.hpp"
 #include "ptc_updater_helper.cuh"
 #include "ptc_updater_logsph.h"
 #include "sim_environment_dev.h"

@@ -1,7 +1,6 @@
-// #include "algorithms/field_solver_helper.cuh"
 #include "data/fields.h"
-#include "algorithms/interpolation.h"
-#include "data/detail/map_multi_array.hpp"
+#include "core/interpolation.h"
+#include "core/detail/map_multi_array.hpp"
 
 namespace Aperture {
 

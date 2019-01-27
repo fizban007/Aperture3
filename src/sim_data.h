@@ -1,7 +1,7 @@
 #ifndef _SIM_DATA_H_
 #define _SIM_DATA_H_
 
-#include "data/enum_types.h"
+#include "core/enum_types.h"
 #include "data/fields.h"
 #include "data/particles.h"
 #include "data/photons.h"

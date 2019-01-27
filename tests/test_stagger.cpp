@@ -1,4 +1,4 @@
-#include "data/stagger.h"
+#include "core/stagger.h"
 #include "catch.hpp"
 
 using namespace Aperture;

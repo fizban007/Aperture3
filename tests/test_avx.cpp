@@ -1,7 +1,7 @@
-#include "algorithms/interpolation.h"
 #include "catch.hpp"
+#include "core/interpolation.h"
+#include "core/stagger.h"
 #include "data/fields.h"
-#include "data/stagger.h"
 #include "omp.h"
 #include "utils/avx_interp.hpp"
 #include "utils/logger.h"
@@ -107,7 +107,8 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
                       c / Divisor_ui(mesh.dims[0]));
     Vec8ui c1s = select(~empty_mask, Vec8ui(1), c - d * mesh.dims[0]);
     Vec8ui offsets = c1s * sizeof(float) + d * data.pitch();
-    Vec8f f000 = interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
+    Vec8f f000 =
+        interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
 
     f000.store(results1.data() + i);
   }
@@ -161,10 +162,11 @@ TEST_CASE("avx interpolation on field", "[avx2]") {
 
     Vec16ib empty_mask = (c != Vec16ui(MAX_CELL));
     Vec16ui d = select(~empty_mask, Vec16ui(1 + mesh.dims[1]),
-                      c / Divisor_ui(mesh.dims[0]));
+                       c / Divisor_ui(mesh.dims[0]));
     Vec16ui c1s = select(~empty_mask, Vec16ui(1), c - d * mesh.dims[0]);
     Vec16ui offsets = c1s * sizeof(float) + d * data.pitch();
-    Vec16f f000 = interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
+    Vec16f f000 =
+        interpolate_3d(data, offsets, x1, x2, x3, Stagger(0b111));
 
     f000.store(results1.data() + i);
   }
@@ -225,8 +227,10 @@ TEST_CASE("testing simd_buffer", "[simd]") {
   Grid g(N1, N2, N3);
   multi_array<simd::simd_buffer> array(g.extent());
 
-  Logger::print_info("simd_buffer multi_array has pitch {}", array.pitch());
-  Logger::print_info("simd_buffer has size {}", sizeof(simd::simd_buffer));
+  Logger::print_info("simd_buffer multi_array has pitch {}",
+                     array.pitch());
+  Logger::print_info("simd_buffer has size {}",
+                     sizeof(simd::simd_buffer));
 
   array.assign(simd::simd_buffer{1.0f});
 

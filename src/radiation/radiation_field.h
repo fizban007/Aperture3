@@ -2,7 +2,7 @@
 #define _RADIATION_FIELD_H_
 
 #include "data/cu_multi_array.h"
-#include "data/typedefs.h"
+#include "core/typedefs.h"
 
 namespace Aperture {
 

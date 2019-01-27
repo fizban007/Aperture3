@@ -1,7 +1,7 @@
 #ifndef _MPI_COMM_H_
 #define _MPI_COMM_H_
 
-#include "data/vec3.h"
+#include "core/vec3.h"
 #include "utils/mpi_helper.h"
 #include <boost/optional.hpp>
 #include <memory>

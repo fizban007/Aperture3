@@ -1,5 +1,5 @@
-#include "algorithms/field_solver_1d.h"
-#include "algorithms/ptc_updater_1d.h"
+#include "core/field_solver_1d.h"
+#include "core/ptc_updater_1d.h"
 #include "radiation/rt_1d.h"
 #include "sim_data.h"
 #include "sim_environment.h"

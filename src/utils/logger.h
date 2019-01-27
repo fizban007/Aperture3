@@ -1,7 +1,7 @@
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
-#include "data/enum_types.h"
+#include "core/enum_types.h"
 #include <cstdio>
 #include <fmt/core.h>
 #include <string>
