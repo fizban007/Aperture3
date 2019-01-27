@@ -1,4 +1,4 @@
-#include "data/multi_array.h"
+#include "core/multi_array.h"
 #include "catch.hpp"
 
 using namespace Aperture;

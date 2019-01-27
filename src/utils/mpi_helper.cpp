@@ -2,7 +2,7 @@
 #include <stddef.h>
 // #include <boost/fusion/include/size.hpp>
 #include "data/particle_data.h"
-#include "data/vec3.h"
+#include "core/vec3.h"
 #include "visit_struct/visit_struct.hpp"
 // #include "utils/mpi_comm.h"
 

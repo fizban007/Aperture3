@@ -1,11 +1,11 @@
 #ifndef _AVX_INTERP_H_
 #define _AVX_INTERP_H_
 
-#include "constant_defs.h"
-#include "data/multi_array.h"
-#include "data/stagger.h"
-#include "data/typedefs.h"
-#include "data/vec3.h"
+#include "core/constant_defs.h"
+#include "core/multi_array.h"
+#include "core/stagger.h"
+#include "core/typedefs.h"
+#include "core/vec3.h"
 #include "utils/simd.h"
 
 namespace Aperture {

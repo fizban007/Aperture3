@@ -13,7 +13,7 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 #include "utils/data_exporter.h"
-#include "algorithms/field_solver_default.h"
+#include "core/field_solver_default.h"
 #include <random>
 
 using namespace Aperture;

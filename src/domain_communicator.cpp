@@ -1,6 +1,6 @@
 #include "domain_communicator.h"
-#include "data/detail/multi_array_iter_impl.hpp"
-#include "data/detail/multi_array_utils.hpp"
+#include "core/detail/multi_array_iter_impl.hpp"
+#include "core/detail/multi_array_utils.hpp"
 
 #define INSTANTIATE_FUNCTIONS(type)                                  \
   template void DomainCommunicator::get_guard_cells_leftright<type>( \

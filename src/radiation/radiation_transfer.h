@@ -2,7 +2,7 @@
 #define _RADIATION_TRANSFER_H_
 
 #include "data/array.h"
-#include "data/typedefs.h"
+#include "core/typedefs.h"
 #include "data/fields_dev.h"
 
 namespace Aperture {

@@ -1,7 +1,7 @@
 #ifndef _RT_1D_H_
 #define _RT_1D_H_
 
-#include "data/array.h"
+// #include "data/array.h"
 #include <random>
 
 namespace Aperture {

@@ -1,8 +1,8 @@
 #include "catch.hpp"
+#include "core/grid.h"
 #include "data/particles.h"
-#include "data/grid.h"
 // #include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cuda/core/sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include <random>
@@ -111,7 +111,8 @@ TEST_CASE("Sorting random particles on CPU", "[Particles]") {
   ptc.sort_by_cell(grid);
 
   CHECK(ptc.number() == num * 9 / 10);
-  timer::show_duration_since_stamp("sorting 5M particles by cell on cpu", "ms");
+  timer::show_duration_since_stamp(
+      "sorting 5M particles by cell on cpu", "ms");
 }
 
 // TEST_CASE("Making photons", "[Particles]") {
@@ -123,7 +124,8 @@ TEST_CASE("Sorting random particles on CPU", "[Particles]") {
 //   for (int i = 0; i < 1000; i++) {
 //     data.particles.append({0.0, 0.0, 0.0},
 //                           {(i % 10 == 0 ? 1000.0f : 0.0f), 0.0, 0.0},
-//                           mesh.get_idx(10, 10), ParticleType::electron);
+//                           mesh.get_idx(10, 10),
+//                           ParticleType::electron);
 //   }
 //   rad.emit_photons(data);
 //   data.photons.sort_by_cell();
@@ -149,18 +151,24 @@ TEST_CASE("Sorting random particles on CPU", "[Particles]") {
 
 //   data.particles.append({0.2, 0.3, 0.4},
 //                         {1000.0, 0.0, 0.0},
-//                         mesh.get_idx(10, 10), ParticleType::electron);
+//                         mesh.get_idx(10, 10),
+//                         ParticleType::electron);
 //   rad.emit_photons(data);
 
-//   cudaMemcpy(x1_ptr.data(), data.photons.data().x1, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x1_ptr.data(), data.photons.data().x1, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(x2_ptr.data(), data.photons.data().x2, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x2_ptr.data(), data.photons.data().x2, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(x3_ptr.data(), data.photons.data().x3, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x3_ptr.data(), data.photons.data().x3, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
 
 //   for (int i = 0; i < 4; i++) {
-//     Logger::print_info("photon, cell is {}, x is ({}, {}, {}), weight is {}", cell_ptr[i], x1_ptr[i], x2_ptr[i], x3_ptr[i], weight_ptr[i]);
+//     Logger::print_info("photon, cell is {}, x is ({}, {}, {}), weight
+//     is {}", cell_ptr[i], x1_ptr[i], x2_ptr[i], x3_ptr[i],
+//     weight_ptr[i]);
 //   }
 
 //   rad.produce_pairs(data);
@@ -169,17 +177,23 @@ TEST_CASE("Sorting random particles on CPU", "[Particles]") {
 //   data.photons.sort_by_cell();
 //   CHECK(data.photons.number() == 0);
 
-//   cudaMemcpy(cell_ptr.data(), data.particles.data().cell, 4 * sizeof(uint32_t),
+//   cudaMemcpy(cell_ptr.data(), data.particles.data().cell, 4 *
+//   sizeof(uint32_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(x1_ptr.data(), data.particles.data().x1, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x1_ptr.data(), data.particles.data().x1, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(x2_ptr.data(), data.particles.data().x2, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x2_ptr.data(), data.particles.data().x2, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(x3_ptr.data(), data.particles.data().x3, 4 * sizeof(Pos_t),
+//   cudaMemcpy(x3_ptr.data(), data.particles.data().x3, 4 *
+//   sizeof(Pos_t),
 //              cudaMemcpyDeviceToHost);
-//   cudaMemcpy(weight_ptr.data(), data.particles.data().weight, 4 * sizeof(Scalar),
+//   cudaMemcpy(weight_ptr.data(), data.particles.data().weight, 4 *
+//   sizeof(Scalar),
 //              cudaMemcpyDeviceToHost);
 //   for (int i = 0; i < 4; i++) {
-//     Logger::print_info("cell is {}, x is ({}, {}, {}), weight is {}", cell_ptr[i], x1_ptr[i], x2_ptr[i], x3_ptr[i], weight_ptr[i]);
+//     Logger::print_info("cell is {}, x is ({}, {}, {}), weight is {}",
+//     cell_ptr[i], x1_ptr[i], x2_ptr[i], x3_ptr[i], weight_ptr[i]);
 //   }
 // }

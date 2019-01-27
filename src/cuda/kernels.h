@@ -1,6 +1,6 @@
 #ifndef _KERNELS_H_
 #define _KERNELS_H_
-#include "data/enum_types.h"
+#include "core/enum_types.h"
 #include <curand_kernel.h>
 #include <cinttypes>
 

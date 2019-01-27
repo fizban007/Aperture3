@@ -3,7 +3,7 @@
 
 // #include <hdf5.h>
 // #include <H5Cpp.h>
-#include "data/domain_info.h"
+#include "core/domain_info.h"
 #include "data/fields.h"
 #include "data/particles_dev.h"
 #include "data/photons_dev.h"

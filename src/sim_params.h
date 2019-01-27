@@ -1,9 +1,9 @@
 #ifndef _SIM_PARAMS_H_
 #define _SIM_PARAMS_H_
 
-#include "data/enum_types.h"
-#include "data/typedefs.h"
-#include "data/quadmesh.h"
+#include "core/enum_types.h"
+#include "core/typedefs.h"
+#include "core/quadmesh.h"
 #include <array>
 #include <string>
 

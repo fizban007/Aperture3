@@ -8,9 +8,9 @@
 // #include <Eigen/Dense>
 #include "CudaLE.h"
 #include "Integrate.hpp"
-#include "algorithms/interpolation.h"
-#include "constant_defs.h"
-#include "data/grid.h"
+#include "core/interpolation.h"
+#include "core/constant_defs.h"
+#include "core/grid.h"
 
 // TODO: double check what kind of staggered definition for cell face
 // area, determinant, metric elements makes the most sense, and can be

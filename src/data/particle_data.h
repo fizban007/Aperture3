@@ -1,11 +1,11 @@
 #ifndef _PARTICLE_DATA_H_
 #define _PARTICLE_DATA_H_
 
-#include "constant_defs.h"
+#include "core/constant_defs.h"
 #include "cuda/cuda_control.h"
 #include "data/detail/macro_trickery.h"
-#include "data/typedefs.h"
-#include "data/vec3.h"
+#include "core/typedefs.h"
+#include "core/vec3.h"
 #include "visit_struct/visit_struct.hpp"
 #include <cinttypes>
 #include <type_traits>

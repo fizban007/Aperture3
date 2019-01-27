@@ -2,8 +2,8 @@
 #define _UTIL_FUNCTIONS_H_
 
 #include "cuda/cuda_control.h"
-#include "data/enum_types.h"
-#include "data/typedefs.h"
+#include "core/enum_types.h"
+#include "core/typedefs.h"
 #include <string>
 
 namespace Aperture {

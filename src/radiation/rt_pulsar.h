@@ -1,9 +1,9 @@
 #ifndef _RADIATION_TRANSFER_PULSAR_H_
 #define _RADIATION_TRANSFER_PULSAR_H_
 
-#include "data/array.h"
-#include "data/fields_dev.h"
-#include "data/typedefs.h"
+#include "cuda/data/array.h"
+#include "cuda/data/fields_dev.h"
+#include "core/typedefs.h"
 
 namespace Aperture {
 

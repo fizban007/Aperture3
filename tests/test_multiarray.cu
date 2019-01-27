@@ -1,9 +1,9 @@
-#include "data/cu_multi_array.h"
-#include "data/detail/multi_array_utils.hpp"
+#include "catch.hpp"
+#include "core/detail/multi_array_utils.hpp"
+#include "cuda/cudaUtility.h"
+#include "cuda/data/cu_multi_array.h"
 #include <cuda_runtime.h>
 #include <iostream>
-#include "catch.hpp"
-#include "cuda/cudaUtility.h"
 
 using namespace Aperture;
 
@@ -11,7 +11,8 @@ using namespace Aperture;
 // void add(const Scalar* a, const Scalar* b, Scalar* c);
 
 // __global__
-// void add2D(const Extent ext, const Scalar* a, const Scalar* b, Scalar* c) {
+// void add2D(const Extent ext, const Scalar* a, const Scalar* b,
+// Scalar* c) {
 
 //   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
 //        j < ext.y;
@@ -23,15 +24,15 @@ using namespace Aperture;
 //       c[idx] = a[idx] + b[idx];
 //     }
 //   }
-  
+
 // }
 
 struct Data {
   cu_multi_array<Scalar> a, b, c;
   size_t size, memSize;
 
-  Data(int x, int y = 1, int z = 1) :
-      a(x, y, z), b(x, y, z), c(x, y, z) {
+  Data(int x, int y = 1, int z = 1)
+      : a(x, y, z), b(x, y, z), c(x, y, z) {
     size = x * y * z;
     memSize = size * sizeof(Scalar);
     a.assign_dev(0.0);
@@ -69,8 +70,9 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
   // // add<<<256, 256>>>(data.a.data(), data.b.data(), data.c.data());
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
-  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>
-      (data.a.data_d(), data.b.data_d(), data.c.data_d(), data.a.extent(), detail::Op_Plus<Scalar>());
+  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(
+      data.a.data_d(), data.b.data_d(), data.c.data_d(),
+      data.a.extent(), detail::Op_Plus<Scalar>());
   CudaCheckError();
 
   // Wait for GPU to finish before accessing on host
@@ -82,7 +84,6 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
   for (size_t i = 0; i < N; i++) {
     CHECK(data.c[i] == 3.0f);
   }
-
 }
 
 // TEST_CASE("Add 2D multi_array", "[MultiArray]") {
@@ -99,7 +100,8 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
 
 //   dim3 blockSize(32, 32);
 //   dim3 gridSize(32, 32);
-//   add2D<<<gridSize, blockSize>>>(data.a.extent(), data.a.data(), data.b.data(), data.c.data());
+//   add2D<<<gridSize, blockSize>>>(data.a.extent(), data.a.data(),
+//   data.b.data(), data.c.data());
 
 //   data.prefetch();
 //   // Wait for GPU to finish before accessing on host
@@ -111,7 +113,7 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
 //   }
 // }
 
-TEST_CASE("Map Array Multiply", "[MultiArray]")  {
+TEST_CASE("Map Array Multiply", "[MultiArray]") {
   int deviceId;
   cudaGetDevice(&deviceId);
   std::cout << "device is " << deviceId << std::endl;
@@ -128,7 +130,9 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
   // dim3 gridSize(32, 32);
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(16, 16, 8);
-  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(data.a.data_d(), data.b.data_d(), data.c.data_d(), data.a.extent(), Op_Multiply<Scalar>());
+  Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(
+      data.a.data_d(), data.b.data_d(), data.c.data_d(),
+      data.a.extent(), Op_Multiply<Scalar>());
   CudaCheckError();
 
   data.prefetch();
@@ -137,7 +141,8 @@ TEST_CASE("Map Array Multiply", "[MultiArray]")  {
 
   size_t N = data.c.size();
   for (size_t i = 0; i < N; i++) {
-    INFO("i, j, k are " << i % 150 << ", " << (i / 150) % 150 << ", " << i / (150*150));
+    INFO("i, j, k are " << i % 150 << ", " << (i / 150) % 150 << ", "
+                        << i / (150 * 150));
     REQUIRE(data.c[i] == 3.0f);
   }
 }

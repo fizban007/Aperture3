@@ -3,7 +3,7 @@
 
 #include "data/fields_dev.h"
 #include "data/cu_multi_array.h"
-#include "data/vec3.h"
+#include "core/vec3.h"
 #include <array>
 #include <silo.h>
 #include <string>

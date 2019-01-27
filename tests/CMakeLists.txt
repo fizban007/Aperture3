@@ -49,7 +49,7 @@ if (CMAKE_CUDA_COMPILER)
 
   set(test_cuda_src
     "test.cu" "test_multiarray.cu"
-    "test_env.cu"
+    # "test_env.cu"
     )
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")

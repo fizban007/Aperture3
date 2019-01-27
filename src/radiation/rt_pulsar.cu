@@ -1,18 +1,18 @@
+#include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
+#include "cuda/data/particles_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "data/detail/multi_array_utils.hpp"
-#include "data/particles_dev.h"
 // #include "data/particles_1d.h"
-#include "data/photons_dev.h"
+#include "cuda/data/photons_dev.h"
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/sim_environment_dev.h"
 #include "radiation/rt_pulsar.h"
-#include "cu_sim_data.h"
-#include "sim_environment_dev.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <thrust/device_ptr.h>
@@ -219,7 +219,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
       ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
-      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e], ptc.x2[offset_e], ptc.x3[offset_e]);
+      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
+      // ptc.x2[offset_e], ptc.x3[offset_e]);
 
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
@@ -246,7 +247,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 }  // namespace Kernels
 
-RadiationTransferPulsar::RadiationTransferPulsar(const cu_sim_environment& env)
+RadiationTransferPulsar::RadiationTransferPulsar(
+    const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),
