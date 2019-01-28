@@ -5,7 +5,7 @@
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/particles_1d.h"
-#include "cuda/data/photons_dev.h"
+#include "cuda/data/photons_1d.h"
 
 namespace Aperture {
 
@@ -22,6 +22,7 @@ struct cu_sim_data1d {
   std::vector<cu_scalar_field<Scalar>> Rho;
 
   Particles_1D particles;
+  Photons_1D photons;
   int devId;
 };  // ----- end of class cu_sim_data1d -----
 

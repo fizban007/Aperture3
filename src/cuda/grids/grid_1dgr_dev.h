@@ -14,12 +14,14 @@ class Grid_1dGR_dev : public Grid {
   virtual void init(const SimParams &params) override;
 
   struct mesh_ptrs {
-    Scalar *D1, *D2, *D3;
-    Scalar *dPdt, *Btp, *agrr, *agrf, *g5;
+    const Scalar *D1, *D2, *D3, *alpha2;
+    const Scalar *dPdt, *Btp, *agrr, *agrf, *g5;
   };
 
+  mesh_ptrs get_mesh_ptrs() const;
+
  private:
-  Array<Scalar> m_D1, m_D2, m_D3;
+  Array<Scalar> m_D1, m_D2, m_D3, m_alpha2;
   Array<Scalar> m_dPdt, m_Btp, m_agrr, m_agrf, m_g5;
   // Scalar *m_g1 = nullptr,
 
