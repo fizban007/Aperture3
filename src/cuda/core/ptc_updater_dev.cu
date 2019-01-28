@@ -19,7 +19,7 @@ namespace Kernels {
 
 HOST_DEVICE void
 vay_push_2d(Scalar &p1, Scalar &p2, Scalar &p3, Scalar &gamma,
-            fields_data &fields, Pos_t x1, Pos_t x2, int c1, int c2,
+            PtcUpdaterDev::fields_data &fields, Pos_t x1, Pos_t x2, int c1, int c2,
             Scalar q_over_m) {
   Interpolator2D<spline_t> interp;
   Scalar E1 =
@@ -66,7 +66,7 @@ ptc_movement_2d(Pos_t &new_x1, Pos_t &new_x2, Pos_t &new_x3, Scalar p1,
 __global__ void
 // __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
 __launch_bounds__(128, 4)
-    update_particles(particle_data ptc, size_t num, fields_data fields,
+    update_particles(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
                      Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -142,7 +142,7 @@ __launch_bounds__(128, 4)
 __global__ void
 __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
     deposit_current_3d(particle_data ptc, size_t num,
-                       fields_data fields, Scalar dt) {
+                       PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -245,7 +245,7 @@ __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
 }
 
 __global__ void
-update_particles_2d(particle_data ptc, size_t num, fields_data fields,
+update_particles_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
                     Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {

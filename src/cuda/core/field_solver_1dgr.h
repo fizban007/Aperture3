@@ -16,7 +16,6 @@ class field_solver_1dgr_dev {
 
  private:
   const Grid_1dGR_dev& m_grid;
-
 };  // ----- end of class field_solver_1dgr_dev -----
 
 }  // namespace Aperture
