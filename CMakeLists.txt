@@ -123,8 +123,8 @@ if (build_tests)
 endif()
 
 # This is to get all header files recognized by QtCreator
-file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp" "src/*.h" "src/*/*.h" "src/*.hpp" "src/*/*.hpp")
-add_custom_target(myIncludes SOURCES ${headers})
+# file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp" "src/*.h" "src/*/*.h" "src/*.hpp" "src/*/*.hpp")
+# add_custom_target(myIncludes SOURCES ${headers})
 
 # find_package(Cuda REQUIRED)
 # if (CUDA_FOUND)
