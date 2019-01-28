@@ -56,6 +56,10 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
     auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
+    if (!dev_mesh.is_in_bulk(c1, c2)) {
+      ptc.cell[idx] = MAX_CELL;
+      continue;
+    }
     Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
     // step 0: Grab E & M fields at the particle position
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
@@ -332,6 +336,10 @@ __launch_bounds__(512, 4)
     Interpolator2D<spline_t> interp;
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
+    if (!dev_mesh.is_in_bulk(c1, c2)) {
+      ptc.cell[idx] = MAX_CELL;
+      continue;
+    }
     auto v1 = ptc.p1[idx], v2 = ptc.p2[idx], v3 = ptc.p3[idx];
     Scalar gamma = ptc.E[idx];
     // printf("gamma is %f\n", gamma);
@@ -600,8 +608,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       m_blocksPerGrid(128),
       m_J1(env.local_grid()),
       m_J2(env.local_grid()) {
-  const Grid_LogSph &grid =
-      dynamic_cast<const Grid_LogSph &>(env.grid());
+  const Grid_LogSph_dev &grid =
+      dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;
@@ -633,6 +641,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       Kernels::vay_push_2d<<<256, 512>>>(data.particles.data(),
                                          data.particles.number(),
                                          m_dev_fields, dt);
+      cudaDeviceSynchronize();
       CudaCheckError();
       data.J.initialize();
       for (auto &rho : data.Rho) {
@@ -687,6 +696,31 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
   data.particles.set_num(data.particles.number() +
                          2 * inj_per_cell *
                              data.E.grid().mesh().reduced_dim(1));
+}
+
+void
+PtcUpdaterLogSph::initialize_dev_fields(cu_sim_data &data) {
+  if (!m_fields_initialized) {
+    m_dev_fields.E1 = data.E.ptr(0);
+    m_dev_fields.E2 = data.E.ptr(1);
+    m_dev_fields.E3 = data.E.ptr(2);
+    m_dev_fields.B1 = data.B.ptr(0);
+    m_dev_fields.B2 = data.B.ptr(1);
+    m_dev_fields.B3 = data.B.ptr(2);
+    m_dev_fields.J1 = data.J.ptr(0);
+    m_dev_fields.J2 = data.J.ptr(1);
+    m_dev_fields.J3 = data.J.ptr(2);
+    // Logger::print_info(
+    //     "m_dev_fields.J3 pitch: {}, xsize: {}, ysize: {}",
+    //     m_dev_fields.J3.pitch, m_dev_fields.J3.xsize,
+    //     m_dev_fields.J3.ysize);
+    for (int i = 0; i < data.num_species; i++) {
+      m_dev_fields.Rho[i] = data.Rho[i].ptr();
+    }
+    CudaSafeCall(cudaMemcpyToSymbol(dev_fields, (void *)&m_dev_fields,
+                                    sizeof(fields_data)));
+    m_fields_initialized = true;
+  }
 }
 
 }  // namespace Aperture

@@ -65,7 +65,7 @@ ptc_movement_2d(Pos_t &new_x1, Pos_t &new_x2, Pos_t &new_x3, Scalar p1,
 #define MAX_THREADS_PER_BLOCK 256
 __global__ void
 // __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
-__launch_bounds__(256, 4)
+__launch_bounds__(128, 4)
     update_particles(particle_data ptc, size_t num, fields_data fields,
                      Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
@@ -438,7 +438,7 @@ PtcUpdaterDev::update_particles(cu_sim_data &data, double dt,
                                                m_dev_fields, dt);
     CudaCheckError();
   } else if (m_env.grid().dim() == 3) {
-    Kernels::update_particles<<<256, 256>>>(data.particles.data(),
+    Kernels::update_particles<<<256, 128>>>(data.particles.data(),
                                             data.particles.number(),
                                             m_dev_fields, dt);
     CudaCheckError();
