@@ -2,7 +2,6 @@
 #define _CU_SIM_DATA_H_
 
 #include "core/enum_types.h"
-#include "core/grid.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/particles_dev.h"
