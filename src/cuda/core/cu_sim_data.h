@@ -35,6 +35,8 @@ struct cu_sim_data {
   int num_species;
   double time = 0.0;
   int devId;
+
+  void set_initial_condition(Scalar weight);
 };
 
 }  // namespace Aperture
