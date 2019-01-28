@@ -79,17 +79,23 @@ if (CMAKE_CUDA_COMPILER)
   set(cuAperture_src
     "cuda/data/fields_utils.cu"
     "cuda/data/particles_dev.cu"
-    "cuda/data/fields_dev.cu"
     "cuda/data/photons_dev.cu"
+    "cuda/data/particles_1d.cu"
+    "cuda/data/photons_1d.cu"
+    "cuda/data/fields_dev.cu"
     "cuda/data/array.cu"
     "cuda/data/cu_multi_array.cu"
     "cuda/grids/grid_log_sph_dev.cpp"
+    "cuda/grids/grid_1dgr_dev.cu"
     "cuda/core/field_solver_log_sph.cu"
+    "cuda/core/field_solver_1dgr.cu"
     "cuda/core/sim_environment_dev.cpp"
     "cuda/core/cu_sim_data.cu"
+    "cuda/core/cu_sim_data1d.cu"
     "cuda/core/additional_diagnostics.cu"
     "cuda/core/ptc_updater_dev.cu"
     "cuda/core/ptc_updater_logsph.cu"
+    "cuda/core/ptc_updater_1dgr.cu"
     "cuda/core/finite_diff.cu"
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
@@ -97,7 +103,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/utils/cu_data_exporter.cpp"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
-    "radiation/rt_pulsar.cu"
+    "cuda/radiation/rt_pulsar.cu"
     )
 
   if(LAB_ROOT_DIR)

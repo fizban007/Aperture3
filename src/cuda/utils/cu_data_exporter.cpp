@@ -170,7 +170,7 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
       File::ReadOnly);
 
-  size_t grid_size = data.E.grid().size();
+  // size_t grid_size = data.E.grid().size();
   size_t ptcNum, phNum;
   int devId;
 

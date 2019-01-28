@@ -1,13 +1,48 @@
-#include "cuda/cudaUtility.h"
 #include "cu_sim_data.h"
+#include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
+#include "cuda/cudaUtility.h"
 
 namespace Aperture {
 
+namespace Kernels {
+
+__global__ void
+fill_particles(particle_data ptc, Scalar weight) {
+  for (int j =
+           blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
+       j < dev_mesh.dims[1] - dev_mesh.guard[1];
+       j += blockDim.y * gridDim.y) {
+    for (int i =
+             blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+         i < dev_mesh.dims[0] - dev_mesh.guard[0];
+         i += blockDim.x * gridDim.x) {
+      uint32_t cell = i + j * dev_mesh.dims[0];
+      Scalar theta = dev_mesh.pos(1, j, 0.5f);
+      for (int n = 0; n < 4; n++) {
+        size_t idx = cell * 10 + n * 2;
+        ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
+        ptc.x2[idx] = ptc.x2[idx + 1] = 0.5f;
+        ptc.x3[idx] = ptc.x3[idx + 1] = 0.5f;
+        ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
+        ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
+        ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
+        ptc.E[idx] = ptc.E[idx + 1] = 1.0f;
+        ptc.cell[idx] = ptc.cell[idx + 1] = cell;
+        ptc.weight[idx] = ptc.weight[idx + 1] = weight * sin(theta);
+        ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
+        ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
+      }
+    }
+  }
+}
+
+}  // namespace Kernels
+
 // cu_sim_data::cu_sim_data() :
 //     env(cu_sim_environment::get_instance()) {
-//   // const cu_sim_environment& env = cu_sim_environment::get_instance();
-//   initialize(env);
+//   // const cu_sim_environment& env =
+//   cu_sim_environment::get_instance(); initialize(env);
 // }
 
 cu_sim_data::cu_sim_data(const cu_sim_environment& e, int deviceId)
@@ -55,10 +90,19 @@ cu_sim_data::cu_sim_data(const cu_sim_environment& e, int deviceId)
   cudaDeviceSynchronize();
 }
 
-cu_sim_data::~cu_sim_data() {
-}
+cu_sim_data::~cu_sim_data() {}
 
 void
 cu_sim_data::initialize(const cu_sim_environment& env) {}
+
+void
+cu_sim_data::set_initial_condition(Scalar weight) {
+  Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(particles.data(), weight);
+  cudaDeviceSynchronize();
+  CudaCheckError();
+
+  auto& mesh = E.grid().mesh();
+  particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 10);
+}
 
 }  // namespace Aperture

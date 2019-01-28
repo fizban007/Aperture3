@@ -40,7 +40,7 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
-vay_push_2d(particle_data ptc, size_t num, fields_data fields,
+vay_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
             Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -146,7 +146,7 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
 }
 
 __global__ void
-boris_push_2d(particle_data ptc, size_t num, fields_data fields,
+boris_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
               Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -302,7 +302,7 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
 __global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
-                               fields_data fields,
+                               PtcUpdaterDev::fields_data fields,
                                Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
                                cudaPitchedPtr j1, cudaPitchedPtr j2,
                                Scalar dt) {
@@ -435,7 +435,7 @@ __launch_bounds__(512, 4)
 }
 
 __global__ void
-convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
+convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, PtcUpdaterDev::fields_data fields) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -451,7 +451,7 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
 }
 
 __global__ void
-process_j(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
+process_j(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
           Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
@@ -524,7 +524,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+boundary_rho(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t offset_0 =
