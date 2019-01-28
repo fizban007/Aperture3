@@ -12,7 +12,7 @@
 // #include "radiation/curvature_instant.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/sim_environment_dev.h"
-#include "radiation/rt_pulsar.h"
+#include "cuda/radiation/rt_pulsar.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <thrust/device_ptr.h>

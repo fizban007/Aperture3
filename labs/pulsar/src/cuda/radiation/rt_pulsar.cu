@@ -1,18 +1,18 @@
+#include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
+#include "cuda/data/particles_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "core/detail/multi_array_utils.hpp"
-#include "data/particles_dev.h"
 // #include "data/particles_1d.h"
-#include "data/photons_dev.h"
+#include "cuda/data/photons_dev.h"
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
-#include "radiation/rt_pulsar.h"
-#include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/sim_environment_dev.h"
+#include "cuda/radiation/rt_pulsar.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <thrust/device_ptr.h>
@@ -262,7 +262,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 }  // namespace Kernels
 
-RadiationTransferPulsar::RadiationTransferPulsar(const cu_sim_environment& env)
+RadiationTransferPulsar::RadiationTransferPulsar(
+    const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),

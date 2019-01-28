@@ -1,19 +1,21 @@
-#include "cu_sim_data.h"
+#include "cuda/core/cu_sim_data.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "core/detail/multi_array_utils.hpp"
-#include "ptc_updater_helper.cuh"
-#include "ptc_updater_logsph.h"
-#include "sim_environment_dev.h"
-#include "utils/interpolation.cuh"
+#include "cuda/core/ptc_updater_helper.cuh"
+#include "cuda/core/ptc_updater_logsph.h"
+#include "cuda/core/sim_environment_dev.h"
+#include "cuda/utils/interpolation.cuh"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 
 #define DEPOSIT_EPS 1.0e-10f
 
 namespace Aperture {
+
+__constant__ fields_data dev_fields;
 
 namespace Kernels {
 
@@ -322,10 +324,13 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
 __global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
-                               fields_data fields,
-                               Grid_LogSph::mesh_ptrs mesh_ptrs,
-                               cudaPitchedPtr j1, cudaPitchedPtr j2,
+                               // fields_data fields_a,
+                               cudaPitchedPtr J1, cudaPitchedPtr J2,
+                               cudaPitchedPtr J3, cudaPitchedPtr *Rho,
+                               Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
                                Scalar dt, uint32_t step) {
+  // if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 && blockIdx.y == 0)
+  //   printf("J3 pitch: %lu, sizeof: %d\n", J3.pitch, sizeof(cudaPitchedPtr));
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -426,7 +431,7 @@ __launch_bounds__(512, 4)
       Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
       Scalar sy1 = interp.interpolate(-new_x2 + (j + 1 - dc2));
 
-      size_t j_offset = (j + c2) * fields.J1.pitch;
+      size_t j_offset = (j + c2) * J1.pitch;
       Scalar djx = 0.0f;
       for (int i = i_0; i <= i_1; i++) {
         Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
@@ -436,25 +441,28 @@ __launch_bounds__(512, 4)
         int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
+        atomicAdd(ptrAddr(J1, offset + sizeof(Scalar)),
                   weight * djx);
 
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         djy[i - i_0] += val1;
-        atomicAdd(ptrAddr(fields.J2, offset + fields.J2.pitch),
+        atomicAdd(ptrAddr(J2, offset + J2.pitch),
                   weight * djy[i - i_0]);
 
         // j3 is simply v3 times rho at volume average
+        // printf("J1 pitch: %d, xsize: %d, ysize: %d\n",
+        // J1.pitch, J1.xsize,
+        // J1.ysize);
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
-        atomicAdd(ptrAddr(fields.J3, offset),
+        atomicAdd(ptrAddr(J3, offset),
                   -weight * v3 * val2 / *ptrAddr(mesh_ptrs.dV, offset));
 
         // rho is deposited at the final position, only do this if we
         // are going to output data next step
         if ((step + 1) % dev_params.data_interval == 0) {
           Scalar s1 = sx1 * sy1;
-          atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+          atomicAdd(ptrAddr(Rho[sp], offset), -weight * s1);
         }
       }
     }
@@ -467,31 +475,31 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
          i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-      size_t offset_f = j * fields.J1.pitch + i * sizeof(Scalar);
+      size_t offset_f = j * dev_fields.J1.pitch + i * sizeof(Scalar);
       size_t offset_d = j * j1.pitch + i * sizeof(double);
-      (*ptrAddr(fields.J1, offset_f)) =
+      (*ptrAddr(dev_fields.J1, offset_f)) =
           (*(float2 *)((char *)j1.ptr + offset_d)).x;
-      (*ptrAddr(fields.J2, offset_f)) =
+      (*ptrAddr(dev_fields.J2, offset_f)) =
           (*(float2 *)((char *)j2.ptr + offset_d)).x;
     }
   }
 }
 
 __global__ void
-process_j(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs,
+process_j(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
           Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
          i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-      size_t offset = j * fields.J1.pitch + i * sizeof(Scalar);
+      size_t offset = j * dev_fields.J1.pitch + i * sizeof(Scalar);
       Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
-      (*ptrAddr(fields.J1, offset)) *=
+      (*ptrAddr(dev_fields.J1, offset)) *=
           w / *ptrAddr(mesh_ptrs.A1_e, offset);
-      (*ptrAddr(fields.J2, offset)) *=
+      (*ptrAddr(dev_fields.J2, offset)) *=
           w / *ptrAddr(mesh_ptrs.A2_e, offset);
       for (int n = 0; n < dev_params.num_species; n++) {
-        (*ptrAddr(fields.Rho[n], offset)) /=
+        (*ptrAddr(dev_fields.Rho[n], offset)) /=
             *ptrAddr(mesh_ptrs.dV, offset);
       }
     }
@@ -551,51 +559,58 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(fields_data fields, Grid_LogSph::mesh_ptrs mesh_ptrs) {
+boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    size_t offset_0 =
-        i * sizeof(Scalar) + dev_mesh.guard[1] * fields.Rho[0].pitch;
+    size_t offset_0 = i * sizeof(Scalar) +
+                      dev_mesh.guard[1] * dev_fields.Rho[0].pitch;
     size_t offset_pi = i * sizeof(Scalar) +
                        (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) *
-                           fields.Rho[0].pitch;
+                           dev_fields.Rho[0].pitch;
     for (int n = 0; n < dev_params.num_species; n++) {
-      // (*ptrAddr(fields.Rho[n], offset_0)) +=
-      //     *ptrAddr(fields.Rho[n], offset_0 - 2 * fields.Rho[n].pitch)
+      // (*ptrAddr(dev_fields.Rho[n], offset_0)) +=
+      //     *ptrAddr(dev_fields.Rho[n], offset_0 - 2 *
+      //     dev_fields.Rho[n].pitch)
       //     * *ptrAddr(mesh_ptrs.dV, offset_0 - 2 *
-      //     fields.Rho[n].pitch) / *ptrAddr(mesh_ptrs.dV, offset_0);
-      // (*ptrAddr(fields.Rho[n], offset_pi)) +=
-      //     *ptrAddr(fields.Rho[n], offset_pi + 2 *
-      //     fields.Rho[n].pitch) * *ptrAddr(mesh_ptrs.dV, offset_pi + 2
-      //     * fields.Rho[n].pitch) / *ptrAddr(mesh_ptrs.dV, offset_pi);
+      //     dev_fields.Rho[n].pitch) / *ptrAddr(mesh_ptrs.dV,
+      //     offset_0);
+      // (*ptrAddr(dev_fields.Rho[n], offset_pi)) +=
+      //     *ptrAddr(dev_fields.Rho[n], offset_pi + 2 *
+      //     dev_fields.Rho[n].pitch) * *ptrAddr(mesh_ptrs.dV, offset_pi
+      //     + 2
+      //     * dev_fields.Rho[n].pitch) / *ptrAddr(mesh_ptrs.dV,
+      //     offset_pi);
 
-      // (*ptrAddr(fields.Rho[n], offset_0 - 2 * fields.Rho[0].pitch)) =
+      // (*ptrAddr(dev_fields.Rho[n], offset_0 - 2 *
+      // dev_fields.Rho[0].pitch)) =
       //     0.0f;
-      // (*ptrAddr(fields.Rho[n], offset_pi + 2 * fields.Rho[0].pitch))
+      // (*ptrAddr(dev_fields.Rho[n], offset_pi + 2 *
+      // dev_fields.Rho[0].pitch))
       // =
       //     0.0f;
     }
-    // (*ptrAddr(fields.J1, offset_0)) -=
-    //     *ptrAddr(fields.J1, offset_0 - 2 * fields.J1.pitch);
-    // (*ptrAddr(fields.J1, offset_pi)) +=
-    //     *ptrAddr(fields.J1, offset_pi + 2 * fields.J1.pitch) *
-    //     *ptrAddr(mesh_ptrs.A1_e, offset_pi + 2 * fields.J1.pitch) /
-    //     *ptrAddr(mesh_ptrs.A1_e, offset_pi);
+    // (*ptrAddr(dev_fields.J1, offset_0)) -=
+    //     *ptrAddr(dev_fields.J1, offset_0 - 2 * dev_fields.J1.pitch);
+    // (*ptrAddr(dev_fields.J1, offset_pi)) +=
+    //     *ptrAddr(dev_fields.J1, offset_pi + 2 * dev_fields.J1.pitch)
+    //     * *ptrAddr(mesh_ptrs.A1_e, offset_pi + 2 *
+    //     dev_fields.J1.pitch) / *ptrAddr(mesh_ptrs.A1_e, offset_pi);
 
-    // *ptrAddr(fields.J1, offset_0 - 2 * fields.J1.pitch) = 0.0f;
-    // *ptrAddr(fields.J1, offset_pi + 2 * fields.J1.pitch) = 0.0f;
+    // *ptrAddr(dev_fields.J1, offset_0 - 2 * dev_fields.J1.pitch) =
+    // 0.0f; *ptrAddr(dev_fields.J1, offset_pi + 2 *
+    // dev_fields.J1.pitch) = 0.0f;
 
-    // (*ptrAddr(fields.J2, offset_0)) -=
-    //     *ptrAddr(fields.J2, offset_0 - fields.J2.pitch);
-    (*ptrAddr(fields.J2, offset_pi + fields.J2.pitch)) -=
-        *ptrAddr(fields.J2, offset_pi + 2 * fields.J2.pitch);
+    // (*ptrAddr(dev_fields.J2, offset_0)) -=
+    //     *ptrAddr(dev_fields.J2, offset_0 - dev_fields.J2.pitch);
+    (*ptrAddr(dev_fields.J2, offset_pi + dev_fields.J2.pitch)) -=
+        *ptrAddr(dev_fields.J2, offset_pi + 2 * dev_fields.J2.pitch);
 
-    (*ptrAddr(fields.J3, offset_0 - fields.J3.pitch)) = 0.0f;
-    (*ptrAddr(fields.J3, offset_pi + fields.J3.pitch)) = 0.0f;
-    // (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) = 0.0f;
-    // (*ptrAddr(fields.J2, offset_pi)) = 0.0f;
-    // (*ptrAddr(fields.J2, offset_pi - fields.J2.pitch)) -=
-    //     *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
+    (*ptrAddr(dev_fields.J3, offset_0 - dev_fields.J3.pitch)) = 0.0f;
+    (*ptrAddr(dev_fields.J3, offset_pi + dev_fields.J3.pitch)) = 0.0f;
+    // (*ptrAddr(dev_fields.J2, offset_0 - dev_fields.J2.pitch)) = 0.0f;
+    // (*ptrAddr(dev_fields.J2, offset_pi)) = 0.0f;
+    // (*ptrAddr(dev_fields.J2, offset_pi - dev_fields.J2.pitch)) -=
+    //     *ptrAddr(dev_fields.J2, offset_pi + dev_fields.J2.pitch);
   }
 }
 
@@ -649,12 +664,20 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       }
       // m_J1.initialize();
       // m_J2.initialize();
+      // Logger::print_info(
+      //     "right before deposit, m_dev_fields.J3 ptr: {}, pitch: {}, "
+      //     "xsize: {}, ysize: {}",
+      //     m_dev_fields.J3.ptr, m_dev_fields.J3.pitch,
+      //     m_dev_fields.J3.xsize, m_dev_fields.J3.ysize);
       Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
-          data.particles.data(), data.particles.number(), m_dev_fields,
-          m_mesh_ptrs, m_J1.ptr(), m_J2.ptr(), dt, step);
+          data.particles.data(), data.particles.number(), data.J.ptr(0), data.J.ptr(1), data.J.ptr(2),
+          m_dev_fields.Rho,
+          m_mesh_ptrs, dt, step);
+      cudaDeviceSynchronize();
       CudaCheckError();
       Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
           m_dev_fields, m_mesh_ptrs, dt);
+      cudaDeviceSynchronize();
       CudaCheckError();
 
       // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(

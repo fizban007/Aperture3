@@ -1,11 +1,11 @@
-#include "algorithms/field_solver_helper.cuh"
-#include "algorithms/field_solver_log_sph.h"
-#include "algorithms/finite_diff.h"
-#include "cuda/constant_mem.h"
-#include "cuda/cudaUtility.h"
-#include "cuda/ptr_util.h"
 #include "core/detail/multi_array_utils.hpp"
-#include "data/field_data.h"
+#include "cuda/constant_mem.h"
+#include "cuda/core/field_solver_helper.cuh"
+#include "cuda/core/field_solver_log_sph.h"
+#include "cuda/core/finite_diff.h"
+#include "cuda/cudaUtility.h"
+#include "cuda/data/field_data.h"
+#include "cuda/ptr_util.h"
 // #include "data/fields_utils.h"
 #include "utils/timer.h"
 
@@ -25,8 +25,8 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
                  cudaPitchedPtr b2, cudaPitchedPtr b3,
                  cudaPitchedPtr j1, cudaPitchedPtr j2,
-                 cudaPitchedPtr j3, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
-                 Scalar dt) {
+                 cudaPitchedPtr j3,
+                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -442,7 +442,8 @@ relax_electric_potential(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
 __global__ void
 correct_E_field(cudaPitchedPtr e1, cudaPitchedPtr e2,
-                cudaPitchedPtr dphi, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+                cudaPitchedPtr dphi,
+                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -533,7 +534,8 @@ void
 FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 
 void
-FieldSolver_LogSph::boundary_conditions(cu_sim_data& data, double omega) {
+FieldSolver_LogSph::boundary_conditions(cu_sim_data& data,
+                                        double omega) {
   // Logger::print_info("omega is {}", omega);
   Kernels::stellar_boundary<<<32, 256>>>(
       data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),

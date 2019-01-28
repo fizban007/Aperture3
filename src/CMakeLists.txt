@@ -80,6 +80,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/data/fields_utils.cu"
     "cuda/data/particles_dev.cu"
     "cuda/data/particles_1d.cu"
+    "cuda/data/photons_1d.cu"
     "cuda/data/fields_dev.cu"
     "cuda/data/photons_dev.cu"
     "cuda/data/array.cu"
@@ -101,7 +102,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/utils/cu_data_exporter.cpp"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
-    "radiation/rt_pulsar.cu"
+    "cuda/radiation/rt_pulsar.cu"
     )
 
   if(LAB_ROOT_DIR)
