@@ -15,7 +15,7 @@
 
 namespace Aperture {
 
-__constant__ fields_data dev_fields;
+__constant__ PtcUpdaterDev::fields_data dev_fields;
 
 namespace Kernels {
 
@@ -42,7 +42,7 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
-vay_push_2d(particle_data ptc, size_t num, fields_data fields,
+vay_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
             Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -168,7 +168,7 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
 }
 
 __global__ void
-boris_push_2d(particle_data ptc, size_t num, fields_data fields,
+boris_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
               Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -324,7 +324,7 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
 __global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
-                               // fields_data fields_a,
+                               // PtcUpdaterDev::fields_data fields_a,
                                cudaPitchedPtr J1, cudaPitchedPtr J2,
                                cudaPitchedPtr J3, cudaPitchedPtr *Rho,
                                Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
@@ -470,7 +470,7 @@ __launch_bounds__(512, 4)
 }
 
 __global__ void
-convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
+convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, PtcUpdaterDev::fields_data fields) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -486,7 +486,7 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
 }
 
 __global__ void
-process_j(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
+process_j(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
           Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
@@ -559,7 +559,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+boundary_rho(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t offset_0 = i * sizeof(Scalar) +
@@ -625,6 +625,7 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       m_J2(env.local_grid()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
+  // TODO: Check error!!
   m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;
@@ -741,7 +742,7 @@ PtcUpdaterLogSph::initialize_dev_fields(cu_sim_data &data) {
       m_dev_fields.Rho[i] = data.Rho[i].ptr();
     }
     CudaSafeCall(cudaMemcpyToSymbol(dev_fields, (void *)&m_dev_fields,
-                                    sizeof(fields_data)));
+                                    sizeof(PtcUpdaterDev::fields_data)));
     m_fields_initialized = true;
   }
 }

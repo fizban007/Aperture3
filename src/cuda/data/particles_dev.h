@@ -50,29 +50,9 @@ class Particles : public particle_base_dev<single_particle_t> {
   using BaseClass::compute_spectrum;
   void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
                         std::vector<uint32_t>& nums, ParticleFlag flag);
-  // void put(std::size_t pos, const single_particle_t& part);
-  // void swap(Index_t pos, single_particle_t& part);
 
-  // bool is_empty(Index_t pos) const {
-  //   return (m_data.cell[pos] == MAX_CELL);
-  // }
+  void annihilate_extra_pairs(const Grid& grid);
 
-  // // After rearrange, the index array will all be -1
-  // void rearrange(std::vector<Index_t>& index, std::size_t num = 0);
-  // // Partition according to a grid configuration, sort the particles
-  // // into the bulk part, and those that needs to be communicated out
-  // void partition(std::vector<Index_t>& partitions, const Grid& grid);
-  // void clear_guard_cells(const Grid& grid);
-  // void sort(const Grid& grid);
-
-  // particle_data& data() { return m_data; }
-  // const particle_data& data() const { return m_data; }
-  // ParticleType type() const { return m_type; }
-  // Scalar charge() const { return m_charge; }
-  // Scalar mass() const { return m_mass; }
-  // void set_type(ParticleType type) { m_type = type; }
-  // void set_charge(Scalar charge) { m_charge = charge; }
-  // void set_mass(Scalar mass) { m_mass = mass; }
   void track(Index_t pos) {
     m_data.flag[pos] |= (int)ParticleFlag::tracked;
   }
