@@ -19,7 +19,7 @@ Grid_1dGR_dev::init(const SimParams& params) {
   m_Btp.resize(params.N[0] + 2 * params.guard[0]);
   m_agrr.resize(params.N[0] + 2 * params.guard[0]);
   m_agrf.resize(params.N[0] + 2 * params.guard[0]);
-  m_g5.resize(params.N[0] + 2 * params.guard[0]);
+  m_rho0.resize(params.N[0] + 2 * params.guard[0]);
 
   // TODO: initialize all the array content
 }
@@ -36,6 +36,7 @@ Grid_1dGR_dev::get_mesh_ptrs() const {
   ptrs.Btp = m_Btp.data_d();
   ptrs.agrr = m_agrr.data_d();
   ptrs.agrf = m_agrf.data_d();
+  ptrs.rho0 = m_rho0.data_d();
 
   return ptrs;
 }
