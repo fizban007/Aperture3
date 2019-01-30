@@ -59,8 +59,8 @@ interpolate_3d(const multi_array<Float>& data, VI offsets, VF x1,
 template <typename VF>
 inline VF
 interp_1(VF dx) {
-  auto abs_dx = abs(dx);
-  return max(1.0 - abs_dx, VF(0.0));
+  auto abs_dx = std::abs(dx);
+  return std::max(1.0 - abs_dx, VF(0.0));
 }
 
 template <>

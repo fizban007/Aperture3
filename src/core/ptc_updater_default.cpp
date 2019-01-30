@@ -41,14 +41,15 @@ movement3ds(const VF& sx0, const VF& sx1, const VF& sy0, const VF& sy1,
 
 ptc_updater_default::ptc_updater_default(const sim_environment& env)
     : ptc_updater(env) {}
-      // m_j1(env.grid().extent()),
-      // m_j2(env.grid().extent()),
-      // m_j3(env.grid().extent()) {}
+// m_j1(env.grid().extent()),
+// m_j2(env.grid().extent()),
+// m_j3(env.grid().extent()) {}
 
 ptc_updater_default::~ptc_updater_default() {}
 
 void
-ptc_updater_default::update_particles(sim_data& data, double dt, uint32_t step) {
+ptc_updater_default::update_particles(sim_data& data, double dt,
+                                      uint32_t step) {
   // m_j1.assign(simd_buffer{0.0});
   // m_j2.assign(simd_buffer{0.0});
   // m_j3.assign(simd_buffer{0.0});
@@ -64,6 +65,7 @@ ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
 
   auto& ptc = data.particles;
   auto& mesh = m_env.grid().mesh();
+
   if (ptc.number() > 0) {
     //    int vec_width = 8;
     Logger::print_info("vec_width is {}", vec_width);
@@ -90,6 +92,7 @@ ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
 #endif
       offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
+#ifndef USE_DOUBLE
       Vec_f_type x1;
       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
       Vec_f_type x2;
@@ -184,12 +187,14 @@ ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
       p1.maskstore_a(ptc.data().p1 + idx, empty_mask);
       p2.maskstore_a(ptc.data().p2 + idx, empty_mask);
       p3.maskstore_a(ptc.data().p3 + idx, empty_mask);
+#endif
     }
   }
 }
 
 void
-ptc_updater_default::esirkepov_deposit(sim_data& data, double dt, uint32_t step) {
+ptc_updater_default::esirkepov_deposit(sim_data& data, double dt,
+                                       uint32_t step) {
   auto& ptc = data.particles;
   auto& mesh = m_env.grid().mesh();
   if (ptc.number() > 0) {
