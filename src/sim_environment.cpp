@@ -1,7 +1,4 @@
 #include "sim_environment.h"
-// #include "cuda/constant_mem.h"
-// #include "cuda/constant_mem_func.h"
-// #include "cuda/cudaUtility.h"
 // #include "data/grid_1dGR.h"
 #include "grids/grid_log_sph.h"
 #include "fmt/format.h"
@@ -13,7 +10,6 @@
 
 namespace Aperture {
 
-// sim_environment&
 sim_environment::sim_environment(int* argc, char*** argv)
     : m_generator(), m_dist(0.0, 1.0) {
   // m_comm = std::make_unique<MPIComm>(argc, argv);
