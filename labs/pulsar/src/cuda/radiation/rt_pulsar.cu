@@ -148,8 +148,8 @@ template <typename PhotonData>
 __global__ void
 count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
                      int* pair_pos, curandState* states,
-                     cudaPitchedPtr pair_events, cudaPitchedPtr b1,
-                     cudaPitchedPtr b2, cudaPitchedPtr b3) {
+                     cudaPitchedPtr pair_events, cudaPitchedPtr rho0,
+                     cudaPitchedPtr rho1, cudaPitchedPtr rho2) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
@@ -183,6 +183,14 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     // photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b100));
 
     if (photons.path_left[tid] <= 0.0f) {
+      // if (*ptrAddr(rho0, c1, c2))
+      Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
+      Scalar N = *ptrAddr(rho1, c1, c2) - *ptrAddr(rho0, c1, c2);
+      Scalar multiplicity = N / rho;
+      if (multiplicity > 100.0f) {
+        photons.cell[tid] = MAX_CELL;
+        continue; 
+      }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       Scalar w = photons.weight[tid];
@@ -360,8 +368,8 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data& data) {
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           photons.data(), photons.number(), m_numPerBlock.data_d(),
           m_posInBlock.data_d(), (curandState*)d_rand_states,
-          m_pair_events.ptr(), data.B.ptr(0), data.B.ptr(1),
-          data.B.ptr(2));
+          m_pair_events.ptr(), data.Rho[0].ptr(), data.Rho[1].ptr(),
+          data.Rho[2].ptr());
   CudaCheckError();
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());

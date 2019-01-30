@@ -15,14 +15,14 @@ class Grid_1dGR_dev : public Grid {
 
   struct mesh_ptrs {
     const Scalar *D1, *D2, *D3, *alpha2;
-    const Scalar *dPdt, *Btp, *agrr, *agrf, *g5;
+    const Scalar *dPdt, *Btp, *agrr, *agrf, *rho0;
   };
 
   mesh_ptrs get_mesh_ptrs() const;
 
  private:
   Array<Scalar> m_D1, m_D2, m_D3, m_alpha2;
-  Array<Scalar> m_dPdt, m_Btp, m_agrr, m_agrf, m_g5;
+  Array<Scalar> m_dPdt, m_Btp, m_agrr, m_agrf, m_rho0;
   // Scalar *m_g1 = nullptr,
 
 };  // ----- end of class Grid_1dGR_dev : public Grid -----

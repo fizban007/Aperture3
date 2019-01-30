@@ -1,12 +1,12 @@
-#include "cuda/core/cu_sim_data.h"
-#include "cuda/constant_mem.h"
-#include "cuda/cudaUtility.h"
-#include "cuda/kernels.h"
-#include "cuda/ptr_util.h"
 #include "core/detail/multi_array_utils.hpp"
+#include "cuda/constant_mem.h"
+#include "cuda/core/cu_sim_data.h"
 #include "cuda/core/ptc_updater_helper.cuh"
 #include "cuda/core/ptc_updater_logsph.h"
 #include "cuda/core/sim_environment_dev.h"
+#include "cuda/cudaUtility.h"
+#include "cuda/kernels.h"
+#include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
@@ -15,7 +15,7 @@
 
 namespace Aperture {
 
-__constant__ fields_data dev_fields;
+__constant__ PtcUpdaterDev::fields_data dev_fields;
 
 namespace Kernels {
 
@@ -42,8 +42,8 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
-vay_push_2d(particle_data ptc, size_t num, fields_data fields,
-            Scalar dt) {
+vay_push_2d(particle_data ptc, size_t num,
+            PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -168,8 +168,8 @@ vay_push_2d(particle_data ptc, size_t num, fields_data fields,
 }
 
 __global__ void
-boris_push_2d(particle_data ptc, size_t num, fields_data fields,
-              Scalar dt) {
+boris_push_2d(particle_data ptc, size_t num,
+              PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -324,13 +324,15 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
 __global__ void
 __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
-                               // fields_data fields_a,
+                               // PtcUpdaterDev::fields_data fields_a,
                                cudaPitchedPtr J1, cudaPitchedPtr J2,
                                cudaPitchedPtr J3, cudaPitchedPtr *Rho,
                                Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
                                Scalar dt, uint32_t step) {
-  // if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 && blockIdx.y == 0)
-  //   printf("J3 pitch: %lu, sizeof: %d\n", J3.pitch, sizeof(cudaPitchedPtr));
+  // if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 &&
+  // blockIdx.y == 0)
+  //   printf("J3 pitch: %lu, sizeof: %d\n", J3.pitch,
+  //   sizeof(cudaPitchedPtr));
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -441,8 +443,7 @@ __launch_bounds__(512, 4)
         int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        atomicAdd(ptrAddr(J1, offset + sizeof(Scalar)),
-                  weight * djx);
+        atomicAdd(ptrAddr(J1, offset + sizeof(Scalar)), weight * djx);
 
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
@@ -460,17 +461,18 @@ __launch_bounds__(512, 4)
 
         // rho is deposited at the final position, only do this if we
         // are going to output data next step
-        if ((step + 1) % dev_params.data_interval == 0) {
-          Scalar s1 = sx1 * sy1;
-          atomicAdd(ptrAddr(Rho[sp], offset), -weight * s1);
-        }
+        // if ((step + 1) % dev_params.data_interval == 0) {
+        Scalar s1 = sx1 * sy1;
+        atomicAdd(ptrAddr(Rho[sp], offset), -weight * s1);
+        // }
       }
     }
   }
 }
 
 __global__ void
-convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
+convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2,
+          PtcUpdaterDev::fields_data fields) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -486,8 +488,8 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, fields_data fields) {
 }
 
 __global__ void
-process_j(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
-          Scalar dt) {
+process_j(PtcUpdaterDev::fields_data fields,
+          Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -559,7 +561,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+boundary_rho(PtcUpdaterDev::fields_data fields,
+             Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t offset_0 = i * sizeof(Scalar) +
@@ -625,6 +628,7 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       m_J2(env.local_grid()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
+  // TODO: Check error!!
   m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;
@@ -665,14 +669,14 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       // m_J1.initialize();
       // m_J2.initialize();
       // Logger::print_info(
-      //     "right before deposit, m_dev_fields.J3 ptr: {}, pitch: {}, "
-      //     "xsize: {}, ysize: {}",
-      //     m_dev_fields.J3.ptr, m_dev_fields.J3.pitch,
-      //     m_dev_fields.J3.xsize, m_dev_fields.J3.ysize);
+      //     "right before deposit, m_dev_fields.J3 ptr: {}, pitch: {},
+      //     " "xsize: {}, ysize: {}", m_dev_fields.J3.ptr,
+      //     m_dev_fields.J3.pitch, m_dev_fields.J3.xsize,
+      //     m_dev_fields.J3.ysize);
       Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
-          data.particles.data(), data.particles.number(), data.J.ptr(0), data.J.ptr(1), data.J.ptr(2),
-          m_dev_fields.Rho,
-          m_mesh_ptrs, dt, step);
+          data.particles.data(), data.particles.number(), data.J.ptr(0),
+          data.J.ptr(1), data.J.ptr(2), m_dev_fields.Rho, m_mesh_ptrs,
+          dt, step);
       cudaDeviceSynchronize();
       CudaCheckError();
       Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
@@ -740,8 +744,9 @@ PtcUpdaterLogSph::initialize_dev_fields(cu_sim_data &data) {
     for (int i = 0; i < data.num_species; i++) {
       m_dev_fields.Rho[i] = data.Rho[i].ptr();
     }
-    CudaSafeCall(cudaMemcpyToSymbol(dev_fields, (void *)&m_dev_fields,
-                                    sizeof(fields_data)));
+    CudaSafeCall(
+        cudaMemcpyToSymbol(dev_fields, (void *)&m_dev_fields,
+                           sizeof(PtcUpdaterDev::fields_data)));
     m_fields_initialized = true;
   }
 }

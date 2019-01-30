@@ -1,7 +1,7 @@
 #include "sim_environment.h"
 // #include "data/grid_1dGR.h"
-#include "grids/grid_log_sph.h"
 #include "fmt/format.h"
+#include "grids/grid_log_sph.h"
 #include <memory>
 // #include "data/detail/grid_impl.hpp"
 #include "sim_data.h"
@@ -147,6 +147,14 @@ sim_environment::setup_env() {
   Logger::print_info("Each photon is worth {} bytes",
                      photon_data::size);
 }
+
+void
+sim_environment::setup_local_grid(Grid& local_grid,
+                                  const Grid& super_grid,
+                                  const domain_info& info) {
+
+}
+
 // void
 // sim_environment::setup_domain(int num_nodes) {
 //   int ndims = m_super_grid.dim();
@@ -283,8 +291,8 @@ sim_environment::setup_env() {
 // }
 
 // void
-// sim_environment::set_initial_condition(cu_sim_data& data, const Index& start,
-// const Extent& extent) {}
+// sim_environment::set_initial_condition(cu_sim_data& data, const
+// Index& start, const Extent& extent) {}
 
 // void
 // sim_environment::add_fieldBC(fieldBC *bc) {

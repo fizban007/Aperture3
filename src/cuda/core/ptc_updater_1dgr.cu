@@ -3,6 +3,8 @@
 #include "cuda/core/ptc_updater_1dgr.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/ptr_util.h"
+#include "cuda/utils/interpolation.cuh"
 
 namespace Aperture {
 
@@ -31,8 +33,11 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     Scalar D1 = mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * nx1;
     Scalar D2 = mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * nx1;
     Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
-    Scalar Dr = fields.E1[c] * x1 + fields.E1[c - 1] * nx1;
-    Scalar Dphi = fields.E3[c] * x1 + fields.E3[c - 1] * nx1;
+    Scalar Dr = *ptrAddr(fields.E1, c, 0) * x1 +
+                *ptrAddr(fields.E1, c - 1, 0) * nx1;
+    // Scalar Dphi = fields.E3[c] * x1 + fields.E3[c - 1] * nx1;
+    Scalar Dphi = *ptrAddr(fields.E3, c, 0) * x1 +
+                  *ptrAddr(fields.E3, c - 1, 0) * nx1;
     Scalar agrr = mesh_ptrs.agrr[c] * x1 + mesh_ptrs.agrr[c - 1] * nx1;
     Scalar agrf = mesh_ptrs.agrf[c] * x1 + mesh_ptrs.agrf[c - 1] * nx1;
     Scalar Er = agrr * Dr + agrf * Dphi;
@@ -61,9 +66,9 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     // compute movement
     Pos_t new_x1 = x1 + vr * dt * dev_mesh.inv_delta[0];
     int dc1 = floor(new_x1);
-    ptc.cell[idx] = c + dc1;
     new_x1 -= (Pos_t)dc1;
 
+    ptc.cell[idx] = c + dc1;
     ptc.x1[idx] = new_x1;
 
     nx1 = 1.0f - new_x1;
@@ -81,6 +86,24 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     ptc.E[idx] = u0;
 
     // TODO: deposit current
+    if (!check_bit(flag, ParticleFlag::ignore_current)) {
+      Spline::cloud_in_cell interp;
+      Scalar weight = -dev_charges[sp] * ptc.weight[idx];
+      int i_0 = (dc1 == -1 ? -2 : -1);
+      int i_1 = (dc1 == 1 ? 2 : 1);
+      Scalar djx = 0.0f;
+      for (int i = i_0; i < i_1; i++) {
+        Scalar sx0 = interp(0.5f - x1 + i);
+        Scalar sx1 = interp(0.5f - new_x1 + (i - dc1));
+        int offset = (i + c) * sizeof(Scalar);
+        djx += (sx1 - sx0) * weight;
+
+        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)), djx);
+        // TODO: account for the geometric factors!!
+
+        // TODO: add deposit of charge as well!
+      }
+    }
   }
 }
 
@@ -106,7 +129,13 @@ ptc_updater_1dgr_dev::~ptc_updater_1dgr_dev() {
 
 void
 ptc_updater_1dgr_dev::update_particles(cu_sim_data1d& data, double dt,
-                                       uint32_t step) {}
+                                       uint32_t step) {
+  Kernels::update_ptc_1dgr<<<256, 512>>>(data.particles.data(),
+                                         data.particles.number(),
+                                         m_dev_fields, m_mesh_ptrs,
+                                         dt);
+  CudaCheckError();
+}
 
 void
 ptc_updater_1dgr_dev::initialize_dev_fields(cu_sim_data1d& data) {
