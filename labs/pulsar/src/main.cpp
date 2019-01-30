@@ -45,29 +45,45 @@ main(int argc, char* argv[]) {
     data.E.initialize();
     data.B.initialize();
     data.B.initialize(0, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
-                           Scalar r = exp(x1);
-                           // return 2.0 * B0 * cos(x2) / (r * r * r);
-                           return B0 * cos(x2) *
-                               (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
-                                1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
-                               (r * mesh.delta[0]);
-                         });
+      Scalar r = exp(x1);
+      // return 2.0 * B0 * cos(x2) / (r * r * r);
+      return B0 * cos(x2) *
+             (1.0 / square(exp(x1 - 0.5 * mesh.delta[0])) -
+              1.0 / square(exp(x1 + 0.5 * mesh.delta[0]))) /
+             (r * mesh.delta[0]);
+    });
     data.B.initialize(1, [B0, mesh](Scalar x1, Scalar x2, Scalar x3) {
-                           Scalar r = exp(x1);
-                           // return B0 * sin(x2) / (r * r * r);
-                           return B0 *
-                               (cos(x2 - 0.5 * mesh.delta[1]) -
-                                cos(x2 + 0.5 * mesh.delta[1])) /
-                               (r * r * r * mesh.delta[1]);
-                         });
+      Scalar r = exp(x1);
+      // return B0 * sin(x2) / (r * r * r);
+      return B0 *
+             (cos(x2 - 0.5 * mesh.delta[1]) -
+              cos(x2 + 0.5 * mesh.delta[1])) /
+             (r * r * r * mesh.delta[1]);
+    });
     data.B.sync_to_device();
     // Put the initial condition to the background
     env.init_bg_fields(data);
 
+    // for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1];
+    // j++) {
+    //   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0];
+    //        i++) {
+    //     uint32_t cell = i + j * mesh.dims[0];
+    //     for (int n = 0; n < 5; n++) {
+    //       data.particles.append({0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+    //       cell,
+    //                             ParticleType::electron, 100.0);
+    //       data.particles.append({0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+    //       cell,
+    //                             ParticleType::positron, 100.0);
+    //     }
+    //   }
+    // }
+    data.set_initial_condition(20.0);
   }
   // Initialize the field solver
   FieldSolver_LogSph field_solver(
-      *dynamic_cast<const Grid_LogSph*>(&env.grid()));
+      *dynamic_cast<const Grid_LogSph_dev*>(&env.grid()));
 
   // Initialize particle updater
   PtcUpdaterLogSph ptc_updater(env);
@@ -116,7 +132,7 @@ main(int argc, char* argv[]) {
     // Output data
     if ((step % env.params().data_interval) == 0) {
       diag.collect_diagnostics(data);
-      dynamic_cast<const Grid_LogSph*>(&env.local_grid())
+      dynamic_cast<const Grid_LogSph_dev*>(&env.local_grid())
           ->compute_flux(data.flux, data.B, data.Bbg);
       // Logger::print_info("Finished computing flux");
 
@@ -143,7 +159,7 @@ main(int argc, char* argv[]) {
     timer::stamp();
     field_solver.update_fields(data.E, data.B, data.J, dt, time);
     field_solver.boundary_conditions(data, omega);
-    
+
     auto t_field = timer::get_duration_since_stamp("us");
     Logger::print_info("Field Update took {}us", t_field);
 
