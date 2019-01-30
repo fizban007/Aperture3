@@ -1,7 +1,8 @@
 #ifndef _ENUM_TYPES_H_
 #define _ENUM_TYPES_H_
 
-#include <bitset>
+#include <cstdint>
+// #include <bitset>
 
 // #define PARTICLE_TYPE_NUM 3
 

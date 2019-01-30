@@ -46,6 +46,7 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
 #endif
       offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
+#ifndef USE_DOUBLE
       Vec_f_type x1;
       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
 
@@ -72,6 +73,7 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
       auto gamma = sqrt(mul_add(p1, p1, Vec_f_type(1.0)));
 
       gamma.maskstore_a(ptc.data().E + idx, empty_mask);
+#endif
     }
   }
 }

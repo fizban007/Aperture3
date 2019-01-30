@@ -30,23 +30,6 @@ class Particles_1D : public particle_base_dev<single_particle1d_t> {
   //          ParticleType type, Scalar weight = 1.0, uint32_t flag = 0);
   // void append(Pos_t x1, Scalar p1, int cell, ParticleType type,
   //             Scalar weight = 1.0, uint32_t flag = 0);
-  // void track(Index_t pos) {
-  //   m_data.flag[pos] |= (int)ParticleFlag::tracked;
-  // }
-  // bool check_flag(Index_t pos, ParticleFlag flag) const {
-  //   return (m_data.flag[pos] & (unsigned int)flag) ==
-  //          (unsigned int)flag;
-  // }
-  // void set_flag(Index_t pos, ParticleFlag flag) {
-  //   m_data.flag[pos] |= (unsigned int)flag;
-  // }
-  // // Use the highest 3 bits to represent particle type
-  // ParticleType check_type(Index_t pos) const {
-  //   return (ParticleType)get_ptc_type(m_data.flag[pos]);
-  // }
-  // void set_type(Index_t pos, ParticleType type) {
-  //   m_data.flag[pos] = set_ptc_type_flag(m_data.flag[pos], type);
-  // }
 
  private:
   std::vector<Index_t> m_partition;
