@@ -81,6 +81,7 @@ class scalar_field : public field_base {
   Stagger m_stagger;
 };  // ----- end of class scalar_field -----
 
+/// Class for a scalar field with three components.
 template <typename T>
 class vector_field : public field_base {
  public:
