@@ -8,14 +8,17 @@
 
 namespace Aperture {
 
+/// Field staggering type
 enum class FieldType : char { E, B };
 
+/// Field normalization, not used
 enum class FieldNormalization : unsigned char {
   coord,
   physical,
   volume
 };
 
+/// Particle types 
 enum class ParticleType : unsigned char { electron = 0, positron, ion };
 
 enum class CommTags : char { left = 0, right };

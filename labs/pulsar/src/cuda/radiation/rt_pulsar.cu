@@ -15,6 +15,8 @@
 #include "cuda/radiation/rt_pulsar.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
+#include <cuda.h>
+#include <device_functions.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 

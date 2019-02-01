@@ -4,12 +4,19 @@
 #include <limits>
 #include <math.h>
 
+/// Defines the vector dimension
 #define VECTOR_DIM 3
+
+/// Constant pi
 #define CONST_PI 3.14159265358979323846
+
 // #define MAX_CELL std::numeric_limits<uint32_t>::max()
-// Note: you can only have up to 4 billion cells on one rank!
+/// MAX_CELL is used to denote empty particles
 #define MAX_CELL 4294967295
 #define MAX_TILE 4294967295
+// Note: you can only have up to 4 billion cells on one rank!
+
+/// Anything below this is treated as zero
 #define EPS 1.0e-10
 
 #define CENTRAL_ZONE 13
