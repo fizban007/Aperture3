@@ -1,14 +1,10 @@
 #include "sim_environment.h"
-// #include "cuda/constant_mem.h"
-// #include "cuda/constant_mem_func.h"
-// #include "cuda/cudaUtility.h"
-// #include "data/grid_1dGR.h"
-#include "fmt/format.h"
-#include "grids/grid_log_sph.h"
-#include <memory>
-// #include "data/detail/grid_impl.hpp"
 #include "sim_data.h"
+#include "grids/grid_log_sph.h"
+#include "utils/logger.h"
 #include <boost/filesystem.hpp>
+#include <memory>
+#include "fmt/format.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -156,7 +152,7 @@ void
 sim_environment::setup_local_grid(Grid& local_grid,
                                   const Grid& super_grid,
                                   const domain_info& info) {
-
+  // m_grid->init(m_params);
 }
 
 // void

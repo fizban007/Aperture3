@@ -13,14 +13,11 @@
 #include "core/grid.h"
 // #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
-#include "utils/logger.h"
 
 namespace Aperture {
 
-////////////////////////////////////////////////////////////////////////////////
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
-////////////////////////////////////////////////////////////////////////////////
 class sim_environment {
  public:
   sim_environment(int* argc, char*** argv);

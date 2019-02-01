@@ -6,18 +6,16 @@
 #include <sstream>
 #include <string>
 #include <vector>
-// #include <functional>
 #include "core/constant_defs.h"
 #include "core/quadmesh.h"
 #include "core/typedefs.h"
 #include "core/vec3.h"
 #include "sim_params.h"
-// #include "metrics.h"
 
 namespace Aperture {
 
-// Currently the class Grid is simply a thin wrapper around Quadmesh.
-// Any grid in specific coordinate systems should derive from this class
+/// Currently the class Grid is simply a thin wrapper around Quadmesh.
+/// Any grid in specific coordinate systems should derive from this class
 class Grid {
  public:
   Grid();
@@ -26,6 +24,7 @@ class Grid {
   Grid(Grid&& g);
   virtual ~Grid();
 
+  /// Initialize the grid parameters
   virtual void init(const SimParams& params);
 
   Grid& operator=(const Grid& g);
@@ -34,14 +33,13 @@ class Grid {
 
   Quadmesh& mesh() { return m_mesh; }
   const Quadmesh& mesh() const { return m_mesh; }
-  Quadmesh* mesh_ptr() { return &m_mesh; }
-  const Quadmesh* mesh_ptr() const { return &m_mesh; }
   int size() const { return m_mesh.size(); }
   Extent extent() const { return m_mesh.extent(); }
+
+  /// Dimension of the grid
   unsigned int dim() const { return m_mesh.dim(); }
 
  protected:
-  // void allocate_arrays();
   Quadmesh m_mesh;
 };
 
