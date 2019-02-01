@@ -1,6 +1,7 @@
-#include "radiation/rt_1d.h"
 #include "sim_data.h"
 #include "sim_environment.h"
+#include "radiation/rt_1d.h"
+#include "utils/logger.h"
 #include <cstdint>
 
 namespace Aperture {
@@ -27,8 +28,9 @@ rad_transfer_1d::emit_photons(sim_data& data) {
       Scalar l_ph = 0.0;
       photons.append(
           {ptcdata.x1[idx], 0.0, 0.0},
-          {sgn(ptcdata.p1[idx]) * (Scalar)2.0 * m_env.params().E_secondary, 0.0,
-           0.0},
+          {sgn(ptcdata.p1[idx]) * (Scalar)2.0 *
+               m_env.params().E_secondary,
+           0.0, 0.0},
           ptcdata.cell[idx], l_ph, ptcdata.weight[idx],
           (m_dist(m_gen) < 0.1 ? bit_or(PhotonFlag::tracked) : 0));
       ptcdata.p1[idx] *= sqrt(E_f * E_f - 1.0) / p_i;

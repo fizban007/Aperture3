@@ -80,7 +80,7 @@ get_mpi_datatype(const uint16_t& x) {
 template <>
 MPI_Datatype
 get_mpi_datatype(const bool& x) {
-  return MPI::BOOL;
+  return MPI_C_BOOL;
 }
 
 template <>
