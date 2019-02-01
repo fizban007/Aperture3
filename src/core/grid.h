@@ -14,8 +14,9 @@
 
 namespace Aperture {
 
-/// Currently the class Grid is simply a thin wrapper around Quadmesh.
-/// Any grid in specific coordinate systems should derive from this class
+/// The base class Grid is simply a thin wrapper around Quadmesh.  Any
+/// grid in specific coordinate systems should derive from this class
+/// and implement the `init` method.
 class Grid {
  public:
   Grid();
