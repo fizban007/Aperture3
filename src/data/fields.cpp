@@ -51,7 +51,7 @@ scalar_field<T>::assign(data_type value) {
 template <typename T>
 void
 scalar_field<T>::copy_from(const self_type& field) {
-  /// We can copy as long as the extents are the same
+  // We can copy as long as the extents are the same
   this->check_grid_extent(this->m_grid->extent(),
                           field.grid().extent());
 

@@ -9,6 +9,7 @@ namespace Aperture {
 
 struct SimParams;
 
+/// Particle storage class on cpu memory
 class particles_t : public particle_base<single_particle_t> {
  public:
   typedef particle_base<single_particle_t> base_class;

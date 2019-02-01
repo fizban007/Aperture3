@@ -47,9 +47,7 @@ struct Quadmesh {
 #endif  // __CUDACC__
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Constructor which only initialize dimensions.
-  ////////////////////////////////////////////////////////////////////////////////
   HOST_DEVICE Quadmesh(int N1, int N2 = 1, int N3 = 1) {
     dims[0] = (N1 > 1 ? N1 : 1);
     dims[1] = (N2 > 1 ? N2 : 1);
@@ -67,9 +65,7 @@ struct Quadmesh {
     dimension = dim();
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Assignment operator
-  ////////////////////////////////////////////////////////////////////////////////
   HOST_DEVICE Quadmesh& operator=(const Quadmesh& m) {
     for (int i = 0; i < 3; i++) {
       dims[i] = m.dims[i];
@@ -84,9 +80,7 @@ struct Quadmesh {
     return *this;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Comparison operator
-  ////////////////////////////////////////////////////////////////////////////////
   HOST_DEVICE bool operator==(const Quadmesh& m) const {
     bool result = true;
     for (int i = 0; i < 3; i++) {
@@ -100,13 +94,11 @@ struct Quadmesh {
     return result;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Reduced dimension in one direction.
   ///
   ///  Reduced dimension means the total size of the grid minus the
   ///  guard cells in both ends. This function is only defined for i >=
   ///  0 and i < DIM.
-  ////////////////////////////////////////////////////////////////////////////////
   // template <int i,
   //           typename = typename std::enable_if<(i >= 0 && i <
   //           DIM)>::type>
@@ -114,7 +106,6 @@ struct Quadmesh {
     return (dims[i] - 2 * guard[i]);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Coordinate of a point inside cell n in dimension i.
   ///
   ///  This function applies to field points. Stagger = false means
@@ -124,12 +115,10 @@ struct Quadmesh {
   ///  This calculation is assuming boundary located at the interface
   ///  between guard cells and physical cells. The function is only
   ///  defined for i >= 0 and i < DIM.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE Scalar pos(int i, int n, bool stagger) const {
     return pos(i, n, (int)stagger);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Coordinate of a point inside cell n in dimension i.
   ///
   ///  This function applies to field points. Stagger = 0 means field is
@@ -139,12 +128,10 @@ struct Quadmesh {
   ///  This calculation is assuming boundary located at the interface
   ///  between guard cells and physical cells. The function is only
   ///  defined for i >= 0 and i < DIM.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE Scalar pos(int i, int n, int stagger) const {
     return pos(i, n, (Scalar)(stagger * 0.5 + 0.5));
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Coordinate of a point inside cell n in dimension i.
   ///
   ///  This function applies to particles. pos_in_cell is the relative
@@ -153,7 +140,6 @@ struct Quadmesh {
   ///  This calculation is assuming boundary located at the interface
   ///  between guard cells and physical cells. The function is only
   ///  defined for i >= 0 and i < DIM.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE Scalar pos(int i, int n, Scalar pos_in_cell) const {
     if (i < dimension)
       return (lower[i] + delta[i] * (n - guard[i] + pos_in_cell));
@@ -173,7 +159,7 @@ struct Quadmesh {
   //     return 0.0;
   // }
 
-  // Get 3D position from a linear position of a cell
+  /// Get 3D position from a linear position of a cell
   HD_INLINE Vec3<Scalar> pos_3d(int idx, Stagger stagger) const {
     Vec3<Scalar> result;
     result[0] = pos(0, idx % dims[0], stagger[0]);
@@ -182,7 +168,6 @@ struct Quadmesh {
     return result;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Full coordinate of a point inside the grid.
   ///
   ///  This function applies for only particle position. Pos_rel has
@@ -192,7 +177,6 @@ struct Quadmesh {
   ///  This calculation is assuming boundary located at the interface
   ///  between guard cells and physical cells. The function is only
   ///  defined for i >= 0 and i < DIM.
-  ////////////////////////////////////////////////////////////////////////////////
   template <typename T>
   HD_INLINE Vec3<Scalar> pos_particle(int cell_linear,
                                       const Vec3<T>& pos_rel) const {
@@ -205,16 +189,12 @@ struct Quadmesh {
     return pos_full;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Upper boundary position in direction i
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE Scalar upper(int i) const {
     return pos(i, dims[i] - guard[i] - 1, 1);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Find the relative position and cell number in the dual grid
-  ////////////////////////////////////////////////////////////////////////////////
   template <typename T>
   HD_INLINE void pos_dual(Vec3<int>& c, Vec3<T>& pos) const {
     for (int i = 0; i < dimension; i++) {
@@ -227,23 +207,17 @@ struct Quadmesh {
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Index of the point if the grid is stratified into 1 direction.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int get_idx(int c1, int c2 = 0, int c3 = 0) const {
     return c1 + c2 * dims[0] + c3 * dims[0] * dims[1];
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Index of the point if the grid is stratified into 1 direction.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int get_idx(const Index& idx) const {
     return idx[0] + idx[1] * dims[0] + idx[2] * dims[0] * dims[1];
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Index increment in the particular direction
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int idx_increment(int direction) const {
     if (direction >= dimension) return 0;
     switch (direction) {
@@ -258,28 +232,22 @@ struct Quadmesh {
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Test if a point is inside the grid.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE bool is_in_grid(int c1, int c2 = 0, int c3 = 0) const {
     return (c1 >= 0 && c1 < dims[0]) && (c2 >= 0 && c2 < dims[1]) &&
            (c3 >= 0 && c3 < dims[2]);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Test if a point is inside the bulk of the grid, not in guard
   ///  cells.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE bool is_in_bulk(int c1, int c2, int c3 = 0) const {
     return (c1 >= guard[0] && c1 < dims[0] - guard[0]) &&
            (c2 >= guard[1] && c2 < dims[1] - guard[1]) &&
            (c3 >= guard[2] && c3 < dims[2] - guard[2]);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Test if a point is inside the bulk of the grid, not in guard
   ///  cells.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE bool is_in_bulk(const Index& idx) const {
     // return (idx.x >= guard[0] && idx.x < dims[0] - guard[0])
     //     && (idx.y >= guard[1] && idx.y < dims[1] - guard[1])
@@ -287,25 +255,19 @@ struct Quadmesh {
     return is_in_bulk(idx.x, idx.y, idx.z);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Test if a point is inside the bulk of the grid, not in guard
   ///  cells.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE bool is_in_bulk(int c) const {
     return is_in_bulk(get_c1(c), get_c2(c), get_c3(c));
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Get the size of the grid (product of all dimensions).
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int size() const {
     int tmp = dims[0] * dims[1] * dims[2];
     return tmp;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Find the zone the cell belongs to (for communication purposes)
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int find_zone(int cell) const {
     int c1 = get_c1(cell);
     int c2 = get_c2(cell);
@@ -317,10 +279,8 @@ struct Quadmesh {
     return z1 + z2 * 3 + z3 * 9;
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Find the cell index from the global position, and get the
   ///  relative position as well.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE int find_cell(const Vec3<Scalar>& pos,
                           Vec3<Pos_t>& rel_pos) const {
     int c1 = static_cast<int>(floor((pos.x - lower[0]) / delta[0])) +
@@ -352,10 +312,8 @@ struct Quadmesh {
     return get_idx(c1, c2, c3);
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
   ///  Get the extent of the grid. Used for interfacing with
   ///  multiarrays.
-  ////////////////////////////////////////////////////////////////////////////////
   HD_INLINE Extent extent() const {
     return Extent{dims[0], dims[1], dims[2]};
     //    return tmp;
