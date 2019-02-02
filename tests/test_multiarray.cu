@@ -2,6 +2,7 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/cu_multi_array.h"
+#include "cuda/ptr_util.h"
 #include <cuda_runtime.h>
 #include <iostream>
 
@@ -26,6 +27,10 @@ using namespace Aperture;
 //   }
 
 // }
+__global__ void
+knl_print_value(cudaPitchedPtr p, size_t offset) {
+  printf("%f\n", ptrAddr(p, offset));
+}
 
 struct Data {
   cu_multi_array<Scalar> a, b, c;
@@ -65,11 +70,17 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
   Data data(256, 256);
 
   data.a.assign_dev(1.0);
+  cudaDeviceSynchronize();
+  knl_print_value<<<1, 1>>>(
+      data.a.data_d(), 2 * data.a.data_d().pitch + 2 * sizeof(Scalar));
   data.b.assign_dev(2.0);
+  cudaDeviceSynchronize();
+  knl_print_value<<<1, 1>>>(
+      data.b.data_d(), 2 * data.b.data_d().pitch + 2 * sizeof(Scalar));
 
   // // add<<<256, 256>>>(data.a.data(), data.b.data(), data.c.data());
-  dim3 blockSize(8, 8, 8);
-  dim3 gridSize(8, 8, 8);
+  dim3 blockSize(8, 8);
+  dim3 gridSize(8, 8);
   Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(
       data.a.data_d(), data.b.data_d(), data.c.data_d(),
       data.a.extent(), detail::Op_Plus<Scalar>());
@@ -80,9 +91,12 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
 
   data.c.sync_to_host();
 
-  size_t N = data.a.size();
-  for (size_t i = 0; i < N; i++) {
-    CHECK(data.c[i] == 3.0f);
+  int N1 = data.a.extent().x;
+  int N2 = data.a.extent().y;
+  for (int i = 0; i < N1; i++) {
+    for (int j = 0; j < N2; j++) {
+      CHECK(data.c(i, j) == 3.0f);
+    }
   }
 }
 
@@ -139,10 +153,13 @@ TEST_CASE("Map Array Multiply", "[MultiArray]") {
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 
-  size_t N = data.c.size();
-  for (size_t i = 0; i < N; i++) {
-    INFO("i, j, k are " << i % 150 << ", " << (i / 150) % 150 << ", "
-                        << i / (150 * 150));
-    REQUIRE(data.c[i] == 3.0f);
+  int N1 = data.c.extent().x;
+  int N2 = data.c.extent().y;
+  for (int i = 0; i < N1; i++) {
+    for (int j = 0; j < N2; j++) {
+      INFO("i, j, k are " << i % 150 << ", " << (i / 150) % 150 << ", "
+                          << i / (150 * 150));
+      REQUIRE(data.c(i, j) == 3.0f);
+    }
   }
 }

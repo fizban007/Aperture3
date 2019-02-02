@@ -3,7 +3,6 @@
 
 #include "core/stagger.h"
 #include "core/vec3.h"
-// #include "utils/simd.h"
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
@@ -21,18 +20,6 @@ class multi_array {
   typedef T data_type;
   typedef T* ptr_type;
   typedef multi_array<T> self_type;
-
-  /// Iterator for the multi_array class, defines both the const and
-  /// nonconst iterators at the same time.
-  // template <bool isConst>
-  // class const_nonconst_iterator;
-
-  // typedef const_nonconst_iterator<false> iterator;
-  // typedef const_nonconst_iterator<true> const_iterator;
-
-  ////////////////////////////////////////////////////////////////////////////////
-  //  Constructors
-  ////////////////////////////////////////////////////////////////////////////////
 
   /// Default constructor, initializes `_size` to zero and `_data` to
   /// `nullptr`.
@@ -53,7 +40,7 @@ class multi_array {
   multi_array(self_type&& other);
 
   /// Destructor. Delete the member data array.
-  ~multi_array();
+  virtual ~multi_array();
 
   /// Assignment operators for copying
   self_type& operator=(const self_type& other);
@@ -91,20 +78,12 @@ class multi_array {
   /// Linearized indexing operator, read only. @param offset gives the
   /// offset in number of bytes
   const data_type& operator[](size_t offset) const {
-    // int x = idx % _extent.width();
-    // int y = (idx / _extent.width()) % _extent.height();
-    // int z = (idx / (_extent.width() * _extent.height()));
-    // return operator()(x, y, z);
     return *((ptr_type)((char*)_data + offset));
   }
 
   /// Linearized indexing operator, read and write. @param offset gives
   /// the offset in number of bytes
   data_type& operator[](size_t offset) {
-    // int x = idx % _extent.width();
-    // int y = (idx / _extent.width()) % _extent.height();
-    // int z = (idx / (_extent.width() * _extent.height()));
-    // return operator()(x, y, z);
     return *((ptr_type)((char*)_data + offset));
   }
 
@@ -147,7 +126,7 @@ class multi_array {
   data_type interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
                         Stagger stagger) const;
 
- private:
+ protected:
   void find_dim();
 
   void* _data;  ///< Pointer to the data stored on the host
@@ -160,8 +139,5 @@ class multi_array {
 };  // ----- end of class multi_array -----
 
 }  // namespace Aperture
-
-// #include "core/detail/multi_array_impl.hpp"
-// #include "core/detail/multi_array_utils.hpp"
 
 #endif  // ----- #ifndef _MULTIARRAY_H_  -----

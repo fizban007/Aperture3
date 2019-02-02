@@ -16,7 +16,7 @@
 #ifndef __CUDAUTILITY_INC
 #define __CUDAUTILITY_INC
 
-#include <device_functions.h>
+#include <cuda_runtime.h>
 
 #define CUDA_ERROR_CHECK  //!< Defines whether to check error
 #define CudaSafeCall(err) \
