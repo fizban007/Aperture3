@@ -71,7 +71,7 @@ class cu_scalar_field : public field_base {
   // Accessor methods
   array_type &data() { return m_array; }
   const array_type &data() const { return m_array; }
-  cudaPitchedPtr &ptr() { return m_array.data_d(); }
+  // cudaPitchedPtr ptr() { return m_array.data_d(); }
   cudaPitchedPtr ptr() const { return m_array.data_d(); }
   Stagger stagger() const { return m_stagger; }
 
@@ -171,8 +171,8 @@ class cu_vector_field : public field_base {
   /// Accessor methods
   array_type &data(int n) { return m_array[n]; }
   const array_type &data(int n) const { return m_array[n]; }
-  cudaPitchedPtr ptr(int n) { return m_array[n].data_d(); }
-  const cudaPitchedPtr ptr(int n) const { return m_array[n].data_d(); }
+  // cudaPitchedPtr ptr(int n) { return m_array[n].data_d(); }
+  cudaPitchedPtr ptr(int n) const { return m_array[n].data_d(); }
   // data_type **array_ptrs() { return m_ptrs; }
   // const data_type *const *array_ptrs() const { return m_ptrs; }
   Stagger stagger(int n) const { return m_stagger[n]; }
