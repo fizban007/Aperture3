@@ -13,7 +13,6 @@
 #include "core/grid.h"
 // #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
-#include "utils/logger.h"
 
 namespace Aperture {
 

@@ -5,6 +5,7 @@
 #include "utils/avx_interp.hpp"
 #include "utils/avx_utils.h"
 #include "utils/simd.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 

@@ -1,14 +1,14 @@
 #ifndef _FIELD_SOLVER_H_
 #define _FIELD_SOLVER_H_
 
+#include "core/typedefs.h"
 #include "data/fields.h"
 
 namespace Aperture {
 
 struct sim_data;
 
-class field_solver
-{
+class field_solver {
  public:
   typedef vector_field<Scalar> vfield_t;
   typedef scalar_field<Scalar> sfield_t;
@@ -20,9 +20,8 @@ class field_solver
                              double time = 0.0) = 0;
 
  protected:
-}; // ----- end of class field_solver -----
+};  // ----- end of class field_solver -----
 
-
-} // namespace Aperture
+}  // namespace Aperture
 
 #endif  // _FIELD_SOLVER_H_
