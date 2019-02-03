@@ -33,7 +33,7 @@ cu_sim_environment::setup_env() {
   }
 
   init_dev_params(m_params);
-  init_dev_mesh(*(m_grid->mesh_ptr()));
+  init_dev_mesh(m_grid->mesh());
 
   init_dev_charges(m_charges.data());
   init_dev_masses(m_masses.data());

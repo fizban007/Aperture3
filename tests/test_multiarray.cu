@@ -27,10 +27,6 @@ using namespace Aperture;
 //   }
 
 // }
-__global__ void
-knl_print_value(cudaPitchedPtr p, size_t offset) {
-  printf("%f\n", ptrAddr(p, offset));
-}
 
 struct Data {
   cu_multi_array<Scalar> a, b, c;
@@ -70,13 +66,7 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
   Data data(256, 256);
 
   data.a.assign_dev(1.0);
-  cudaDeviceSynchronize();
-  knl_print_value<<<1, 1>>>(
-      data.a.data_d(), 2 * data.a.data_d().pitch + 2 * sizeof(Scalar));
   data.b.assign_dev(2.0);
-  cudaDeviceSynchronize();
-  knl_print_value<<<1, 1>>>(
-      data.b.data_d(), 2 * data.b.data_d().pitch + 2 * sizeof(Scalar));
 
   // // add<<<256, 256>>>(data.a.data(), data.b.data(), data.c.data());
   dim3 blockSize(8, 8);
