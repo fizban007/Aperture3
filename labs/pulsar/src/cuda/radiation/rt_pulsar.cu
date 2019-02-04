@@ -175,6 +175,10 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
       photons.cell[tid] = MAX_CELL;
       continue;
     }
+    if (!dev_mesh.is_in_bulk(c1, c2)) {
+      photons.cell[tid] = MAX_CELL;
+      continue;
+    }
 
     // Get the B field at the current location
     // Scalar B1v = interp(b1, photons.x1[tid], photons.x2[tid], c1, c2,
@@ -185,9 +189,9 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     if (photons.path_left[tid] <= 0.0f) {
       // if (*ptrAddr(rho0, c1, c2))
       Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
-      Scalar N = *ptrAddr(rho1, c1, c2) - *ptrAddr(rho0, c1, c2);
-      Scalar multiplicity = N / rho;
-      if (multiplicity > 100.0f) {
+      Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
+      // Scalar multiplicity = N / rho;
+      if (N > 1.0e6f) {
         photons.cell[tid] = MAX_CELL;
         continue; 
       }
