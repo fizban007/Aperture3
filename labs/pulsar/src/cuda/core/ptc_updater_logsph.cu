@@ -145,15 +145,15 @@ vay_push_2d(particle_data ptc, size_t num,
         Scalar pp1 = p1 - B1 * pdotB / tt;
         Scalar pp2 = p2 - B2 * pdotB / tt;
         Scalar pp3 = p3 - B3 * pdotB / tt;
-        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3) /
-                    (q_over_m * q_over_m);
+        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
+        // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
 
-        p1 -= pp1 * (2.0f * dt * pp * tt / 3.0f) *
-              dev_params.rad_cooling_coef;
-        p2 -= pp2 * (2.0f * dt * pp * tt / 3.0f) *
-              dev_params.rad_cooling_coef;
-        p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
-              dev_params.rad_cooling_coef;
+        p1 -= pp1 * dt * dev_params.rad_cooling_coef;
+        p2 -= pp2 * dt * dev_params.rad_cooling_coef;
+        p3 -= pp3 * dt * dev_params.rad_cooling_coef;
+              // dev_params.rad_cooling_coef;
+        // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
+        //       dev_params.rad_cooling_coef;
       }
 
       // printf("gamma after is %f\n", gamma);
@@ -510,8 +510,8 @@ process_j(PtcUpdaterDev::fields_data fields,
 
 __global__ void
 inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
-           Scalar p2, Scalar p3, Scalar w, curandState *states,
-           Scalar omega) {
+           Scalar p2, Scalar p3, Scalar w, cudaPitchedPtr rho0,
+           cudaPitchedPtr rho1, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i = dev_mesh.guard[1] + 1 + id;
@@ -520,6 +520,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
+    Scalar dens = max(-*ptrAddr(rho0, dev_mesh.guard[0] + 2, i),
+                      *ptrAddr(rho1, dev_mesh.guard[0] + 2, i));
+    if (dens > 0.2 * square(dev_mesh.dims[1] / 3.14f)) continue;
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
@@ -717,7 +720,8 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
                              Scalar omega) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
       data.particles.data(), data.particles.number(), inj_per_cell, p1,
-      p2, p3, w, (curandState *)d_rand_states, omega);
+      p2, p3, w, data.Rho[0].ptr(), data.Rho[2].ptr(),
+      (curandState *)d_rand_states, omega);
   CudaCheckError();
 
   data.particles.set_num(data.particles.number() +
