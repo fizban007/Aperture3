@@ -1,8 +1,8 @@
 #ifndef _RT_MAGNETAR_H_
 #define _RT_MAGNETAR_H_
 
-#include "data/array.h"
-#include "data/fields_dev.h"
+#include "cuda/data/array.h"
+#include "cuda/data/fields_dev.h"
 #include "core/typedefs.h"
 
 namespace Aperture {
@@ -33,8 +33,9 @@ class RadiationTransferMagnetar {
 
   cu_scalar_field<Scalar> m_pair_events;
   cu_scalar_field<Scalar> m_ph_events;
-};  // ----- end of class RadiationTransferMagnetar -----
+};  // ----- end of class RadiationTransferPulsar -----
 
-}  // namespace Aperture
+
+}
 
 #endif  // _RT_MAGNETAR_H_

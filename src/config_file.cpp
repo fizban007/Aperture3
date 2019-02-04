@@ -105,6 +105,7 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.constE =
       config->get_as<double>("constE").value_or(defaults.constE);
   params.B0 = config->get_as<double>("B0").value_or(defaults.B0);
+  params.BQ = config->get_as<double>("BQ").value_or(defaults.BQ);
   params.damping_coef = config->get_as<double>("damping_coef")
                             .value_or(defaults.damping_coef);
   params.E_secondary = config->get_as<double>("E_secondary")
