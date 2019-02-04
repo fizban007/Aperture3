@@ -1,19 +1,22 @@
+#include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
+#include "cuda/data/particles_dev.h"
 #include "cuda/kernels.h"
-#include "core/detail/multi_array_utils.hpp"
-#include "data/particles_dev.h"
+#include "cuda/ptr_util.h"
 // #include "data/particles_1d.h"
-#include "data/photons_dev.h"
+#include "cuda/data/photons_dev.h"
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
-#include "radiation/rt_magnetar.h"
-#include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/sim_environment_dev.h"
+#include "cuda/radiation/rt_magnetar.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
+#include <cuda.h>
+#include <device_functions.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 
@@ -24,7 +27,8 @@ namespace Kernels {
 template <typename PtcData>
 __global__ void
 count_photon_produced(PtcData ptc, size_t number, int* ph_count,
-                      int* phPos, curandState* states,
+                      int* phPos, cudaPitchedPtr B1, cudaPitchedPtr B2,
+                      cudaPitchedPtr B3, curandState* states,
                       cudaPitchedPtr ph_events) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
@@ -44,7 +48,11 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     uint32_t cell = ptc.cell[tid];
     // Skip empty particles
     if (cell == MAX_CELL) continue;
+    auto flag = ptc.flag[tid];
+    int sp = get_ptc_type(flag);
+    if (sp == (int)ParticleType::ion) continue;
     int c1 = dev_mesh.get_c1(cell);
+    int c2 = dev_mesh.get_c2(cell);
 
     // Skip photon emission when outside given radius
     Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
@@ -106,6 +114,10 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       ptc.p3[tid] = p3 * pf / pi;
       ptc.E[tid] = gamma - Eph;
 
+      auto c = ptc.cell[tid];
+      Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
+      Scalar lph = min(10.0f, 0.03f * (1.0f / std::sin(theta) - 1.0f) +
+                                  dev_params.photon_path);
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       // if (std::abs(Eph) < dev_params.E_ph_min) continue;
@@ -113,8 +125,11 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // Add the new photon
       // Scalar path = rad_model.draw_photon_freepath(Eph);
       Scalar u = rng();
-      Scalar path =
-          dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
+      // Scalar path =
+      //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
+      // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
+      Scalar path = lph * (0.01f + 0.99f * u);
+      if (path > dev_params.r_cutoff) continue;
       // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;
       // if (true) continue;
@@ -137,8 +152,8 @@ template <typename PhotonData>
 __global__ void
 count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
                      int* pair_pos, curandState* states,
-                     cudaPitchedPtr pair_events, cudaPitchedPtr b1,
-                     cudaPitchedPtr b2, cudaPitchedPtr b3) {
+                     cudaPitchedPtr pair_events, cudaPitchedPtr rho0,
+                     cudaPitchedPtr rho1, cudaPitchedPtr rho2) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
@@ -156,14 +171,36 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     uint32_t cell = photons.cell[tid];
     // Skip empty photons
     if (cell == MAX_CELL) continue;
+    int c1 = dev_mesh.get_c1(cell);
     int c2 = dev_mesh.get_c2(cell);
+    // Remove photon if it is too close to the axis
     if (c2 == dev_mesh.guard[1] ||
         c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
       photons.cell[tid] = MAX_CELL;
       continue;
     }
+    if (!dev_mesh.is_in_bulk(c1, c2)) {
+      photons.cell[tid] = MAX_CELL;
+      continue;
+    }
+
+    // Get the B field at the current location
+    // Scalar B1v = interp(b1, photons.x1[tid], photons.x2[tid], c1, c2,
+    // Stagger(0b001)); Scalar B2v = interp(b2, photons.x1[tid],
+    // photons.x2[tid], c1, c2, Stagger(0b010)); Scalar B3v = interp(b3,
+    // photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b100));
 
     if (photons.path_left[tid] <= 0.0f) {
+      // if (*ptrAddr(rho0, c1, c2))
+      Scalar rho =
+          max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)),
+              0.0001f);
+      Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
+      // Scalar multiplicity = N / rho;
+      if (N > 1.0e6f) {
+        photons.cell[tid] = MAX_CELL;
+        continue;
+      }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       Scalar w = photons.weight[tid];
@@ -215,7 +252,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
       ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
-      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e], ptc.x2[offset_e], ptc.x3[offset_e]);
+      // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
+      // ptc.x2[offset_e], ptc.x3[offset_e]);
 
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
@@ -242,7 +280,8 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 }  // namespace Kernels
 
-RadiationTransferMagnetar::RadiationTransferMagnetar(const Environment& env)
+RadiationTransferMagnetar::RadiationTransferMagnetar(
+    const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),
@@ -339,8 +378,8 @@ RadiationTransferMagnetar::produce_pairs(cu_sim_data& data) {
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           photons.data(), photons.number(), m_numPerBlock.data_d(),
           m_posInBlock.data_d(), (curandState*)d_rand_states,
-          m_pair_events.ptr(), data.B.ptr(0), data.B.ptr(1),
-          data.B.ptr(2));
+          m_pair_events.ptr(), data.Rho[0].ptr(), data.Rho[1].ptr(),
+          data.Rho[2].ptr());
   CudaCheckError();
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());

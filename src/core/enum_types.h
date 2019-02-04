@@ -67,7 +67,8 @@ enum class ParticleFlag : uint32_t {
   primary,
   secondary,
   existed,
-  annihilate
+  annihilate,
+  emit_photon
 };
 
 enum class PhotonFlag : uint32_t { tracked = 1, ignore_pair_create };

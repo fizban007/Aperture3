@@ -154,21 +154,22 @@ cu_multi_array<T>::operator=(const self_type& other) -> self_type& {
 template <typename T>
 auto
 cu_multi_array<T>::operator=(self_type&& other) -> self_type& {
-  if (this->_extent != other._extent) {
-    this->_extent = other._extent;
-    this->_size = this->_extent.size();
-    this->find_dim();
-  }
+  // if (this->_extent != other._extent) {
+  //   this->_extent = other._extent;
+  //   this->_size = this->_extent.size();
+  //   this->find_dim();
+  // }
+  base_class::operator=(other);
   // If the memory is already allocated, then pointing _data to
   // another place will lead to memory leak.
   free_mem();
-  base_class::free_mem();
+  // base_class::free_mem();
   _data_d = other._data_d;
   other._data_d.ptr = nullptr;
-  this->_data = other._data;
-  other._data = nullptr;
+  // this->_data = other._data;
+  // other._data = nullptr;
   _devId = other._devId;
-  this->_pitch = other._pitch;
+  // this->_pitch = other._pitch;
   return (*this);
 }
 
