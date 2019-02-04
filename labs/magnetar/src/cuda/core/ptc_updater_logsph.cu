@@ -157,7 +157,8 @@ vay_push_2d(particle_data ptc, size_t num,
       ptc.p3[idx] = p3;
       ptc.E[idx] = gamma;
 
-      if (gamma > dev_params.gamma_thr * sqrt(tt) / (dev_params.BQ * q_over_m)) {
+      Scalar gamma_thr_B = dev_params.gamma_thr * sqrt(tt) / (dev_params.BQ * q_over_m);
+      if (gamma_thr_B > 10.0f && gamma > gamma_thr_B) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
       }
     }

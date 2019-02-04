@@ -103,7 +103,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/utils/cu_data_exporter.cpp"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
-    "cuda/radiation/rt_pulsar.cu"
+    # "cuda/radiation/rt_pulsar.cu"
     )
 
   if(LAB_ROOT_DIR)
