@@ -17,8 +17,6 @@ struct Quadmesh {
   int dims[3];   //!< Dimensions of the grid of each direction
   int guard[3];  //!< Number of guard cells at either end of each
                  //!< direction
-  // int indent[NUM_BOUNDARIES]; //!< Indent of the physical domain,
-  // required near the boundaries
 
   Scalar delta[3];  //!< Grid spacing on each direction (spacing in
                     //!< coordinate space)
@@ -99,9 +97,6 @@ struct Quadmesh {
   ///  Reduced dimension means the total size of the grid minus the
   ///  guard cells in both ends. This function is only defined for i >=
   ///  0 and i < DIM.
-  // template <int i,
-  //           typename = typename std::enable_if<(i >= 0 && i <
-  //           DIM)>::type>
   HD_INLINE int reduced_dim(int i) const {
     return (dims[i] - 2 * guard[i]);
   }
@@ -148,18 +143,6 @@ struct Quadmesh {
       return pos_in_cell * delta[i];
   }
 
-  // Scalar pos(int i, int n, StaggerType stagger,
-  //            Scalar pos_in_cell = 0.5) const {
-  //   if (i < dimension)
-  //     return (lower[i] +
-  //             delta[i] *
-  //             (n - guard[i] + pos_in_cell + 0.5 *
-  //             static_cast<int>(stagger)));
-  //   else
-  //     return 0.0;
-  // }
-
-  /// Get 3D position from a linear position of a cell
   HD_INLINE Vec3<Scalar> pos_3d(int idx, Stagger stagger) const {
     Vec3<Scalar> result;
     result[0] = pos(0, idx % dims[0], stagger[0]);
@@ -340,21 +323,6 @@ struct Quadmesh {
   HD_INLINE uint32_t get_c3(uint32_t idx) const {
     return idx / (dims[0] * dims[1]);
   }
-
-// #if defined(__AVX2__) && (defined(__ICC) || defined(__INTEL_COMPILER))
-//   simd::v8i get_c1(simd::v8i n) const {
-//     return _mm256_rem_epi32(n, _mm256_set1_epi32(dims[0]));
-//   }
-
-//   simd::v8i get_c2(simd::v8i n) const {
-//     return _mm256_rem_epi32(_mm256_div_epi32(n, _mm256_set1_epi32(dims[0])) , _mm256_set1_epi32(dims[1]));
-//   }
-
-//   simd::v8i get_c3(simd::v8i n) const {
-//     return _mm256_div_epi32(n, _mm256_set1_epi32(dims[0] * dims[1]));
-//   }
-// #endif
-
 
   HD_INLINE Vec3<int> get_cell_3d(int idx) const {
     return Vec3<int>(get_c1(idx), get_c2(idx), get_c3(idx));

@@ -11,19 +11,19 @@ namespace Aperture {
 
 /// This is a simple 1D array wrapping a cuda device pointer
 template <typename T>
-class Array {
+class cu_array {
  public:
   typedef T data_type;
   typedef T* ptr_type;
-  typedef Array<T> self_type;
+  typedef cu_array<T> self_type;
 
-  Array();
+  cu_array();
 
-  explicit Array(size_t length, int devId = 0);
-  Array(const self_type& other);
-  Array(self_type&& other);
+  explicit cu_array(size_t length, int devId = 0);
+  cu_array(const self_type& other);
+  cu_array(self_type&& other);
 
-  ~Array();
+  ~cu_array();
 
   /// Assignment operators for copying
   self_type& operator=(const self_type& other);
