@@ -2,6 +2,7 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/cu_multi_array.h"
+#include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/ptr_util.h"
 #include <cuda_runtime.h>
 #include <iostream>
