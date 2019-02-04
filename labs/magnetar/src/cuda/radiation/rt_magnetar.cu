@@ -16,7 +16,7 @@
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <cuda.h>
-#include <device_functions.h>
+#include <cuda_runtime.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 
@@ -27,8 +27,7 @@ namespace Kernels {
 template <typename PtcData>
 __global__ void
 count_photon_produced(PtcData ptc, size_t number, int* ph_count,
-                      int* phPos, cudaPitchedPtr B1, cudaPitchedPtr B2,
-                      cudaPitchedPtr B3, curandState* states,
+                      int* phPos, curandState* states,
                       cudaPitchedPtr ph_events) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
@@ -50,25 +49,27 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     if (cell == MAX_CELL) continue;
     auto flag = ptc.flag[tid];
     int sp = get_ptc_type(flag);
-    if (sp == (int)ParticleType::ion) continue;
+    if (sp == (int)ParticleType::ion ||
+        !check_bit(flag, ParticleFlag::emit_photon))
+      continue;
     int c1 = dev_mesh.get_c1(cell);
     int c2 = dev_mesh.get_c2(cell);
+    // int c2 = dev_mesh.get_c2(cell);
 
     // Skip photon emission when outside given radius
-    Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
-    Scalar gamma = ptc.E[tid];
+    // Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
+    // Scalar gamma = ptc.E[tid];
     Scalar w = ptc.weight[tid];
 
     // if (rad_model.emit_photon(gamma)) {
-    if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
-        r > 1.02f) {
-      // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
-      phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
-      int c2 = dev_mesh.get_c2(cell);
-      atomicAdd(ptrAddr(ph_events,
-                        c2 * ph_events.pitch + c1 * sizeof(Scalar)),
-                w);
-    }
+    // if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
+    //     r > 1.02f) {
+    // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
+    phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
+    atomicAdd(
+        ptrAddr(ph_events, c2 * ph_events.pitch + c1 * sizeof(Scalar)),
+        w);
+    // }
   }
 
   __syncthreads();
