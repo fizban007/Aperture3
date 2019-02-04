@@ -465,7 +465,7 @@ cu_vector_field<T>::cu_vector_field(const grid_type& grid)
     : field_base(grid) {
   m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_array[i] = array_type(grid.extent());
+    m_array[i] = std::move(array_type(grid.extent()));
     // Default initialize to face-centered
     m_stagger[i] = Stagger();
     // m_stagger[i].set_bit(i, true);

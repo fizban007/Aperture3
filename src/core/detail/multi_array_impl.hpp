@@ -21,7 +21,7 @@ multi_array<T>::multi_array() : _data(nullptr), _size(0) {
 template <typename T>
 multi_array<T>::multi_array(int width, int height, int depth)
     : _data(nullptr), _extent{width, height, depth} {
-  _size = _extent.size();
+  // _size = _extent.size();
   // Logger::print_info("extent has {}, {}, {}", _extent.width(),
   //                    _extent.height(), _extent.depth());
   // auto ext = cuda_ext(_extent, T{});
