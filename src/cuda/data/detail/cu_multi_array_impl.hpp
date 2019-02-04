@@ -168,6 +168,7 @@ cu_multi_array<T>::operator=(self_type&& other) -> self_type& {
   this->_data = other._data;
   other._data = nullptr;
   _devId = other._devId;
+  this->_pitch = other._pitch;
   return (*this);
 }
 
@@ -199,9 +200,9 @@ cu_multi_array<T>::sync_to_device(int devId) {
   // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T),
   // devId));
   cudaMemcpy3DParms myParms = {0};
-  myParms.srcPtr =
-      make_cudaPitchedPtr(this->_data, this->_pitch,
-                          this->_extent.x, this->_extent.y);
+  myParms.srcPtr = make_cudaPitchedPtr(this->_data, this->_pitch,
+                                       sizeof(Scalar) * this->_extent.x,
+                                       this->_extent.y);
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
@@ -229,9 +230,10 @@ cu_multi_array<T>::sync_to_host() {
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  myParms.dstPtr =
-      make_cudaPitchedPtr(this->_data, this->_pitch,
-                          this->_extent.x, this->_extent.y);
+  // Logger::print_info("Pitch is {}, cudaPitch is {}", this->_pitch, _data_d.pitch);
+  myParms.dstPtr = make_cudaPitchedPtr(this->_data, this->_pitch,
+                                       sizeof(Scalar) * this->_extent.x,
+                                       this->_extent.y);
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(this->_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;

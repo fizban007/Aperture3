@@ -5,12 +5,12 @@
 #include "config_file.h"
 #include "sim_params.h"
 
+#include "core/domain_info.h"
+#include "core/grid.h"
 #include <array>
 #include <memory>
 #include <random>
 #include <string>
-#include "core/domain_info.h"
-#include "core/grid.h"
 // #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
 
@@ -33,6 +33,8 @@ class sim_environment {
   void setup_local_grid(Grid& local_grid, const Grid& super_grid,
                         const domain_info& info);
 
+  /// generate a random number between 0 and 1, useful for setting up
+  /// things
   float gen_rand() { return m_dist(m_generator); }
 
   // data access methods
