@@ -27,9 +27,9 @@ class RadiationTransferPulsar {
   const cu_sim_environment& m_env;
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
-  Array<int> m_numPerBlock;
-  Array<int> m_cumNumPerBlock;
-  Array<int> m_posInBlock;
+  cu_array<int> m_numPerBlock;
+  cu_array<int> m_cumNumPerBlock;
+  cu_array<int> m_posInBlock;
 
   cu_scalar_field<Scalar> m_pair_events;
   cu_scalar_field<Scalar> m_ph_events;

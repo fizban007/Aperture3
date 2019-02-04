@@ -12,20 +12,20 @@
 namespace Aperture {
 
 template <typename T>
-Array<T>::Array() {}
+cu_array<T>::cu_array() {}
 
 template <typename T>
-Array<T>::Array(size_t length, int devId) {
+cu_array<T>::cu_array(size_t length, int devId) {
   alloc_mem(length, devId);
 }
 
 template <typename T>
-Array<T>::Array(const self_type& other) {
+cu_array<T>::cu_array(const self_type& other) {
   alloc_mem(other.m_length, other.m_devId);
 }
 
 template <typename T>
-Array<T>::Array(self_type&& other) {
+cu_array<T>::cu_array(self_type&& other) {
   m_data_d = other.m_data_d;
   m_data_h = other.m_data_h;
   m_length = other.m_length;
@@ -36,13 +36,13 @@ Array<T>::Array(self_type&& other) {
 }
 
 template <typename T>
-Array<T>::~Array() {
+cu_array<T>::~cu_array() {
   free_mem();
 }
 
 template <typename T>
 void
-Array<T>::alloc_mem(size_t N, int deviceId) {
+cu_array<T>::alloc_mem(size_t N, int deviceId) {
   if (m_data_d != nullptr || m_data_h != nullptr) free_mem();
   m_devId = deviceId;
   CudaSafeCall(cudaSetDevice(m_devId));
@@ -53,7 +53,7 @@ Array<T>::alloc_mem(size_t N, int deviceId) {
 
 template <typename T>
 void
-Array<T>::free_mem() {
+cu_array<T>::free_mem() {
   CudaSafeCall(cudaSetDevice(m_devId));
   if (m_data_d != nullptr) {
     CudaSafeCall(cudaFree(m_data_d));
@@ -68,7 +68,7 @@ Array<T>::free_mem() {
 /// Sync the content between host and device
 template <typename T>
 void
-Array<T>::sync_to_device(int devId) {
+cu_array<T>::sync_to_device(int devId) {
   CudaSafeCall(cudaSetDevice(devId));
   CudaSafeCall(cudaMemcpy(m_data_d, m_data_h, m_length * sizeof(T),
                           cudaMemcpyHostToDevice));
@@ -77,14 +77,14 @@ Array<T>::sync_to_device(int devId) {
 /// Sync the content between host and device
 template <typename T>
 void
-Array<T>::sync_to_device() {
+cu_array<T>::sync_to_device() {
   sync_to_device(m_devId);
 }
 
 /// Sync the content between host and device
 template <typename T>
 void
-Array<T>::sync_to_host() {
+cu_array<T>::sync_to_host() {
   CudaSafeCall(cudaSetDevice(m_devId));
   CudaSafeCall(cudaMemcpy(m_data_h, m_data_d, m_length * sizeof(T),
                           cudaMemcpyDeviceToHost));
@@ -93,7 +93,7 @@ Array<T>::sync_to_host() {
 /// Set part of the array to a single initial value on the host
 template <typename T>
 void
-Array<T>::assign(const data_type& value, size_t num) {
+cu_array<T>::assign(const data_type& value, size_t num) {
   if (num > m_length) num = m_length;
   std::fill_n(m_data_h, num, value);
 }
@@ -102,7 +102,7 @@ Array<T>::assign(const data_type& value, size_t num) {
 /// kernel
 template <typename T>
 void
-Array<T>::assign_dev(const data_type& value, size_t num) {
+cu_array<T>::assign_dev(const data_type& value, size_t num) {
   if (num > m_length) num = m_length;
   thrust::device_ptr<T> ptr = thrust::device_pointer_cast(m_data_d);
   thrust::fill_n(ptr, num, value);
@@ -112,21 +112,21 @@ Array<T>::assign_dev(const data_type& value, size_t num) {
 /// Set the whole array to a single initial value on the host
 template <typename T>
 void
-Array<T>::assign(const data_type& value) {
+cu_array<T>::assign(const data_type& value) {
   assign(value, m_length);
 }
 
 /// Set the whole array to a single initial value through device kernel
 template <typename T>
 void
-Array<T>::assign_dev(const data_type& value) {
+cu_array<T>::assign_dev(const data_type& value) {
   assign_dev(value, m_length);
 }
 
 /// Resize the array.
 template <typename T>
 void
-Array<T>::resize(size_t length, int deviceId) {
+cu_array<T>::resize(size_t length, int deviceId) {
   free_mem();
   alloc_mem(length, deviceId);
 }

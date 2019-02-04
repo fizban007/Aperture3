@@ -1,14 +1,13 @@
 #ifndef _CU_MULTI_ARRAY_IMPL_H_
 #define _CU_MULTI_ARRAY_IMPL_H_
 
-#include "cuda/cudaUtility.h"
-#include "cuda_runtime.h"
+// #include "core/detail/multi_array_impl.hpp"
 #include "core/detail/multi_array_utils.hpp"
+#include "cuda/cudaUtility.h"
 #include "cuda/data/cu_multi_array.h"
-#include "thrust/copy.h"
-#include "thrust/device_ptr.h"
 #include "utils/logger.h"
-// #include "utils/memory.h"
+#include <thrust/copy.h>
+#include <thrust/device_ptr.h>
 
 namespace Aperture {
 
@@ -20,61 +19,45 @@ cuda_ext(const Extent& ext, const T& t) {
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array()
-    : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
-      _data_h(nullptr),
-      _size(0) {
-  _extent.width() = 0;
-  _extent.height() = 1;
-  _extent.depth() = 1;
-  find_dim();
-}
+    : multi_array<T>(),
+      _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)) {}
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array(int width, int height, int depth,
-                          int deviceId)
-    : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
-      _data_h(nullptr),
-      _extent{width, height, depth} {
-  _size = _extent.size();
+                                  int deviceId)
+    : multi_array<T>(width, height, depth),
+      _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)) {
   // Logger::print_info("extent has {}, {}, {}", _extent.width(),
   //                    _extent.height(), _extent.depth());
   // auto ext = cuda_ext(_extent, T{});
   // Logger::print_info("now cuda extent has {}, {}, {}", ext.width,
   //                    ext.height, ext.depth);
-  find_dim();
-  alloc_mem(_extent, deviceId);
+  alloc_mem(this->_extent, deviceId);
 }
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array(const Extent& extent, int deviceId)
     : cu_multi_array(extent.width(), extent.height(), extent.depth(),
-                 deviceId) {}
+                     deviceId) {}
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array(const self_type& other)
-    : _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
-      _data_h(nullptr),
-      _extent(other._extent),
-      _size(other._size),
-      _dim(other._dim) {
+    : multi_array<T>(other),
+      _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)),
+      _devId(other._devId) {
   // _data = new T[_size];
   // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T),
   // 64));
-  alloc_mem(_extent, other._devId);
+  alloc_mem(this->_extent, other._devId);
   copy_from(other);
 }
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array(self_type&& other)
-    : _extent(other._extent), _size(other._size), _dim(other._dim) {
+    : multi_array<T>(other) {
   _data_d = other._data_d;
-  _data_h = other._data_h;
+  _devId = other._devId;
   other._data_d.ptr = nullptr;
-  other._data_h = nullptr;
-  other._size = 0;
-  other._extent.width() = 0;
-  other._extent.height() = 1;
-  other._extent.depth() = 1;
 }
 
 template <typename T>
@@ -85,7 +68,7 @@ cu_multi_array<T>::~cu_multi_array() {
 template <typename T>
 void
 cu_multi_array<T>::alloc_mem(const Extent& ext, int deviceId) {
-  if (_data_d.ptr != nullptr || _data_h != nullptr) free_mem();
+  if (_data_d.ptr != nullptr) free_mem();
   _devId = deviceId;
   CudaSafeCall(cudaSetDevice(_devId));
   auto extent = cuda_ext(ext, T{});
@@ -94,7 +77,7 @@ cu_multi_array<T>::alloc_mem(const Extent& ext, int deviceId) {
   CudaSafeCall(cudaMalloc3D(&_data_d, extent));
   // Logger::print_info("pitch is {}, xsize is {}, ysize is {}",
   //                    _data_d.pitch, _data_d.xsize, _data_d.ysize);
-  _data_h = new T[ext.size()];
+  // base_class::alloc_mem(ext);
 }
 
 template <typename T>
@@ -105,23 +88,19 @@ cu_multi_array<T>::free_mem() {
     CudaSafeCall(cudaFree(_data_d.ptr));
     _data_d.ptr = nullptr;
   }
-  if (_data_h != nullptr) {
-    delete[] _data_h;
-    _data_h = nullptr;
-  }
 }
 
 template <typename T>
 void
 cu_multi_array<T>::copy_from(const self_type& other) {
-  assert(_size == other._size);
+  assert(this->_size == other._size);
   CudaSafeCall(cudaSetDevice(_devId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = other._data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = cuda_ext(_extent, T{});
+  myParms.extent = cuda_ext(this->_extent, T{});
   myParms.kind = cudaMemcpyDeviceToDevice;
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
@@ -134,29 +113,30 @@ cu_multi_array<T>::copy_from(const self_type& other) {
 template <typename T>
 void
 cu_multi_array<T>::assign(const data_type& value) {
-  std::fill_n(_data_h, _size, value);
+  // std::fill_n(_data_h, _size, value);
+  base_class::assign(value);
 }
 
 template <typename T>
 void
 cu_multi_array<T>::assign_dev(const data_type& value) {
   CudaSafeCall(cudaSetDevice(_devId));
-  if (_dim == 3) {
+  if (this->_dim == 3) {
     // Logger::print_info("assign_dev 3d version");
     dim3 blockSize(8, 8, 8);
     // dim3 gridSize(8, 8, 8);
-    dim3 gridSize((_extent.x + 7)/8,
-                  (_extent.y + 7)/8,
-                  (_extent.z + 7)/8);
+    dim3 gridSize((this->_extent.x + 7) / 8, (this->_extent.y + 7) / 8,
+                  (this->_extent.z + 7) / 8);
     Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
-        _data_d, _extent, detail::Op_AssignConst<T>(value));
+        _data_d, this->_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
-  } else if (_dim == 2) {
+  } else if (this->_dim == 2) {
     // Logger::print_info("assign_dev 2d version");
     dim3 blockSize(32, 16);
-    dim3 gridSize((_extent.x+31)/32, (_extent.y+15)/16);
+    dim3 gridSize((this->_extent.x + 31) / 32,
+                  (this->_extent.y + 15) / 16);
     Kernels::map_array_unary_op_2d<T><<<gridSize, blockSize>>>(
-        _data_d, _extent, detail::Op_AssignConst<T>(value));
+        _data_d, this->_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
   }
 }
@@ -164,7 +144,7 @@ cu_multi_array<T>::assign_dev(const data_type& value) {
 template <typename T>
 auto
 cu_multi_array<T>::operator=(const self_type& other) -> self_type& {
-  if (_extent != other._extent) {
+  if (this->_extent != other._extent) {
     resize(other._extent, other._devId);
   }
   copy_from(other);
@@ -174,32 +154,36 @@ cu_multi_array<T>::operator=(const self_type& other) -> self_type& {
 template <typename T>
 auto
 cu_multi_array<T>::operator=(self_type&& other) -> self_type& {
-  if (_extent != other._extent) {
-    _extent = other._extent;
-    _size = _extent.size();
-    find_dim();
+  if (this->_extent != other._extent) {
+    this->_extent = other._extent;
+    this->_size = this->_extent.size();
+    this->find_dim();
   }
   // If the memory is already allocated, then pointing _data to
   // another place will lead to memory leak.
   free_mem();
+  base_class::free_mem();
   _data_d = other._data_d;
   other._data_d.ptr = nullptr;
-  _data_h = other._data_h;
-  other._data_h = nullptr;
+  this->_data = other._data;
+  other._data = nullptr;
   _devId = other._devId;
   return (*this);
 }
 
 template <typename T>
 void
-cu_multi_array<T>::resize(int width, int height, int depth, int deviceId) {
-  _extent.width() = width;
-  _extent.height() = height;
-  _extent.depth() = depth;
-  _size = _extent.size();
-  find_dim();
+cu_multi_array<T>::resize(int width, int height, int depth,
+                          int deviceId) {
+  // this->_extent.width() = width;
+  // this->_extent.height() = height;
+  // this->_extent.depth() = depth;
+  // this->_size = this->_extent.size();
+  // this->find_dim();
+  // base_class::free_mem();
+  base_class::resize(width, height, depth);
   free_mem();
-  alloc_mem(_extent, deviceId);
+  alloc_mem(this->_extent, deviceId);
 }
 
 template <typename T>
@@ -210,28 +194,18 @@ cu_multi_array<T>::resize(Extent extent, int deviceId) {
 
 template <typename T>
 void
-cu_multi_array<T>::find_dim() {
-  if (_extent.height() <= 1 && _extent.depth() <= 1)
-    _dim = 1;
-  else if (_extent.depth() <= 1)
-    _dim = 2;
-  else
-    _dim = 3;
-}
-
-template <typename T>
-void
 cu_multi_array<T>::sync_to_device(int devId) {
   CudaSafeCall(cudaSetDevice(devId));
   // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T),
   // devId));
   cudaMemcpy3DParms myParms = {0};
-  myParms.srcPtr = make_cudaPitchedPtr(
-      (void*)_data_h, _extent.x * sizeof(T), _extent.x, _extent.y);
+  myParms.srcPtr =
+      make_cudaPitchedPtr(this->_data, this->_pitch,
+                          this->_extent.x, this->_extent.y);
   myParms.srcPos = make_cudaPos(0, 0, 0);
   myParms.dstPtr = _data_d;
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = cuda_ext(_extent, T{});
+  myParms.extent = cuda_ext(this->_extent, T{});
   myParms.kind = cudaMemcpyHostToDevice;
   // Logger::print_info("before copy to device, extent has {}, {}, {}",
   // myParms.extent.width,
@@ -255,10 +229,11 @@ cu_multi_array<T>::sync_to_host() {
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  myParms.dstPtr = make_cudaPitchedPtr(
-      (void*)_data_h, _extent.x * sizeof(T), _extent.x, _extent.y);
+  myParms.dstPtr =
+      make_cudaPitchedPtr(this->_data, this->_pitch,
+                          this->_extent.x, this->_extent.y);
   myParms.dstPos = make_cudaPos(0, 0, 0);
-  myParms.extent = cuda_ext(_extent, T{});
+  myParms.extent = cuda_ext(this->_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
   // Logger::print_info("before copy to host, extent has {}, {}, {}",
   // myParms.extent.width,

@@ -16,6 +16,8 @@
 #ifndef __CUDAUTILITY_INC
 #define __CUDAUTILITY_INC
 
+#include <cuda_runtime.h>
+
 #define CUDA_ERROR_CHECK  //!< Defines whether to check error
 #define CudaSafeCall(err) \
   __cudaSafeCall(         \
@@ -25,15 +27,10 @@
   __cudaCheckError(      \
       __FILE__,          \
       __LINE__)  //!< Wrapper to allow display of file and line number
-#define EPS \
-  1.0e-10  //!< Smallest floating point difference to be tolerated when
-           //!< checking a floating number against zero
 
 #include <stdio.h>
 
-////////////////////////////////////////////////////////////////////////////////
 ///  Checks last kernel launch error.
-////////////////////////////////////////////////////////////////////////////////
 inline void
 __cudaCheckError(const char *file, const int line) {
 #ifdef CUDA_ERROR_CHECK
@@ -60,9 +57,7 @@ __cudaCheckError(const char *file, const int line) {
   return;
 }
 
-////////////////////////////////////////////////////////////////////////////////
 ///  Checks memory allocation error
-////////////////////////////////////////////////////////////////////////////////
 inline void
 __cudaSafeCall(cudaError err, const char *file, const int line) {
 #ifdef CUDA_ERROR_CHECK
