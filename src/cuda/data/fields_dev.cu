@@ -3,6 +3,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/field_solver_helper.cuh"
 #include "cuda/cudaUtility.h"
+#include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/data/fields_dev.h"
 
 namespace Aperture {

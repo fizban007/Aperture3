@@ -3,6 +3,7 @@
 
 // #include "core/detail/multi_array_impl.hpp"
 #include "core/detail/multi_array_utils.hpp"
+#include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/cu_multi_array.h"
 #include "utils/logger.h"

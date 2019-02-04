@@ -1,6 +1,7 @@
 #include "core/constant_defs.h"
-#include "cuda/cudaUtility.h"
 #include "core/detail/multi_array_utils.hpp"
+#include "cuda/cudaUtility.h"
+#include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/fields_utils.h"
 
