@@ -2,9 +2,8 @@
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
-// #include "cuda/grids/grid_1dGR.h"
+#include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/grids/grid_log_sph_dev.h"
-// #include "data/detail/grid_impl.hpp"
 #include "cuda/core/cu_sim_data.h"
 // #include "domain_communicator.h"
 
@@ -29,6 +28,9 @@ cu_sim_environment::setup_env() {
 
   if (m_params.coord_system == "LogSpherical") {
     m_grid.reset(new Grid_LogSph_dev());
+    m_grid->init(m_params);
+  } else if (m_params.coord_system == "1DGR" && m_grid->dim() == 1) {
+    m_grid.reset(new Grid_1dGR_dev());
     m_grid->init(m_params);
   }
 

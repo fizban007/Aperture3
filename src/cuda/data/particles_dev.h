@@ -3,6 +3,7 @@
 
 #include "core/constant_defs.h"
 #include "core/grid.h"
+#include "cuda/data/cu_multi_array.h"
 #include "cuda/data/particle_base_dev.h"
 #include "utils/util_functions.h"
 #include <cstdlib>
@@ -13,6 +14,7 @@
 namespace Aperture {
 
 struct SimParams;
+struct cu_sim_data;
 
 class Particles : public particle_base_dev<single_particle_t> {
  public:
@@ -51,8 +53,6 @@ class Particles : public particle_base_dev<single_particle_t> {
   void compute_spectrum(int num_bins, std::vector<Scalar>& energies,
                         std::vector<uint32_t>& nums, ParticleFlag flag);
 
-  void annihilate_extra_pairs(const Grid& grid);
-
   void track(Index_t pos) {
     m_data.flag[pos] |= (int)ParticleFlag::tracked;
   }
@@ -83,7 +83,8 @@ class Particles : public particle_base_dev<single_particle_t> {
   // ParticleType m_type;
   // Scalar m_charge = 1.0;
   // Scalar m_mass = 1.0;
-  std::vector<Index_t> m_partition;
+  // std::vector<Index_t> m_partition;
+  // cu_multi_array<Scalar> m_dens;
 
   // std::vector<Index_t> m_index;
 };  // ----- end of class Particles : public particle_base_dev -----

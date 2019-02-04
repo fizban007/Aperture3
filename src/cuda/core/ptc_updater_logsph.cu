@@ -40,8 +40,8 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
-vay_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
-            Scalar dt) {
+vay_push_2d(particle_data ptc, size_t num,
+            PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -146,8 +146,8 @@ vay_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
 }
 
 __global__ void
-boris_push_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
-              Scalar dt) {
+boris_push_2d(particle_data ptc, size_t num,
+              PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -435,7 +435,8 @@ __launch_bounds__(512, 4)
 }
 
 __global__ void
-convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, PtcUpdaterDev::fields_data fields) {
+convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2,
+          PtcUpdaterDev::fields_data fields) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -451,8 +452,8 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2, PtcUpdaterDev::fields_data field
 }
 
 __global__ void
-process_j(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
-          Scalar dt) {
+process_j(PtcUpdaterDev::fields_data fields,
+          Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -524,7 +525,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
-boundary_rho(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+boundary_rho(PtcUpdaterDev::fields_data fields,
+             Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t offset_0 =
@@ -572,6 +574,89 @@ boundary_rho(PtcUpdaterDev::fields_data fields, Grid_LogSph_dev::mesh_ptrs mesh_
   }
 }
 
+__global__ void
+annihilate_pairs(particle_data data, size_t num, cudaPitchedPtr j1,
+                 cudaPitchedPtr j2, cudaPitchedPtr j3) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    // First do a deposit before annihilation
+    auto c = ptc.cell[idx];
+    auto flag = ptc.flag[idx];
+    // Skip empty particles
+    if (c == MAX_CELL || !check_bit(flag, ParticleFlag::annihilate))
+      continue;
+
+    // Load particle quantities
+    Interpolator2D<spline_t> interp;
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    int sp = get_ptc_type(flag);
+    auto w = ptc.weight[idx];
+    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
+
+    Pos_t new_x1 = 0.5f;
+    Pos_t new_x2 = 0.5f;
+
+    // Move the particles to be annihilated to the center of the cell
+    ptc.x1[idx] = new_x1;
+    ptc.x2[idx] = new_x2;
+
+    // step 2: Deposit current
+    if (check_bit(flag, ParticleFlag::ignore_current)) continue;
+    // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
+    // {0.0f};
+    Scalar weight = -dev_charges[sp] * w;
+
+    Scalar djy[3] = {0.0f};
+    for (int j = -1; j <= 0; j++) {
+      Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
+      Scalar sy1 = interp.interpolate(-new_x2 + j + 1);
+
+      size_t j_offset = (j + c2) * fields.J1.pitch;
+      Scalar djx = 0.0f;
+      for (int i = -1; i <= 0; i++) {
+        Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
+        Scalar sx1 = interp.interpolate(-new_x1 + i + 1);
+
+        // j1 is movement in r
+        int offset = j_offset + (i + c1) * sizeof(Scalar);
+        Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
+        djx += val0;
+        atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)), weight * djx);
+
+        // j2 is movement in theta
+        Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
+        djy[i - i_0] += val1;
+        atomicAdd(ptrAddr(j2, offset + fields.J2.pitch),
+                  weight * djy[i - i_0]);
+      }
+    }
+  }
+}
+
+__global__ void
+flag_annihilation(particle_data data, size_t num, cudaPitchedPtr dens,
+                  cudaPitchedPtr balance) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = data.cell[i];
+    auto flag = data.flag[i];
+    auto w = data.weight[i];
+
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
+
+    Scalar n = atomicAdd(ptrAddr(dens, offset), w);
+    Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
+    // TODO: implement the proper condition
+    if (n >
+        0.5 * dev_mesh.inv_delta[0] * dev_mesh.inv_delta[0] / (r * r)) {
+      set_bit(flag, ParticleFlag::annihilate);
+    }
+  }
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
@@ -579,8 +664,9 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       d_rand_states(nullptr),
       m_threadsPerBlock(256),
       m_blocksPerGrid(128),
-      m_J1(env.local_grid()),
-      m_J2(env.local_grid()) {
+      // m_J1(env.local_grid()),
+      m_dens(env.local_grid()),
+      m_balance(env.local_grid()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   m_mesh_ptrs = grid.get_mesh_ptrs();
@@ -592,8 +678,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
   init_rand_states((curandState *)d_rand_states, seed,
                    m_threadsPerBlock, m_blocksPerGrid);
 
-  m_J1.initialize();
-  m_J2.initialize();
+  // m_J1.initialize();
+  // m_J2.initialize();
 }
 
 PtcUpdaterLogSph::~PtcUpdaterLogSph() {
@@ -668,6 +754,12 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
   data.particles.set_num(data.particles.number() +
                          2 * inj_per_cell *
                              data.E.grid().mesh().reduced_dim(1));
+}
+
+void
+PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data) {
+  m_dens.data().assign_dev(0.0);
+  m_balance.data().assign_dev(0.0);
 }
 
 }  // namespace Aperture

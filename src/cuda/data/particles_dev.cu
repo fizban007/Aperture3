@@ -1,6 +1,8 @@
 #include "cuda/data/detail/particle_base_impl_dev.hpp"
 #include "cuda/data/particles_dev.h"
 // #include "sim_environment.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/ptr_util.h"
 #include "sim_params.h"
 
 namespace Aperture {
@@ -31,7 +33,8 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
   data.p1[num] = p[0];
   data.p2[num] = p[1];
   data.p3[num] = p[2];
-  data.E[num] = std::sqrt(1.0f + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
+  data.E[num] =
+      std::sqrt(1.0f + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
   data.weight[num] = w;
   data.cell[num] = cell;
   data.flag[num] = flag | gen_ptc_type_flag(type);
@@ -47,7 +50,8 @@ Particles::Particles() {}
 Particles::Particles(std::size_t max_num)
     : particle_base_dev<single_particle_t>(max_num) {}
 
-// Particles::Particles(const cu_sim_environment& env, ParticleType type)
+// Particles::Particles(const cu_sim_environment& env, ParticleType
+// type)
 Particles::Particles(const SimParams& params)
     : particle_base_dev<single_particle_t>(
           (std::size_t)params.max_ptc_number) {}
@@ -85,7 +89,8 @@ void
 Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
                   ParticleType type, Scalar weight, uint32_t flag) {
   // put(m_number, x, p, cell, type, weight, flag);
-  Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type, weight, flag);
+  Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type,
+                                weight, flag);
   CudaCheckError();
   m_number += 1;
   cudaDeviceSynchronize();
