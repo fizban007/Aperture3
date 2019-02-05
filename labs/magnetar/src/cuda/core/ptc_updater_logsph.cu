@@ -145,7 +145,7 @@ vay_push_2d(particle_data ptc, size_t num,
         p1 -= pp1 * dt * dev_params.rad_cooling_coef;
         p2 -= pp2 * dt * dev_params.rad_cooling_coef;
         p3 -= pp3 * dt * dev_params.rad_cooling_coef;
-              // dev_params.rad_cooling_coef;
+        // dev_params.rad_cooling_coef;
         // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
         //       dev_params.rad_cooling_coef;
       }
@@ -157,7 +157,8 @@ vay_push_2d(particle_data ptc, size_t num,
       ptc.p3[idx] = p3;
       ptc.E[idx] = gamma;
 
-      Scalar gamma_thr_B = dev_params.gamma_thr * sqrt(tt) / (dev_params.BQ * q_over_m);
+      Scalar gamma_thr_B =
+          dev_params.gamma_thr * sqrt(tt) / (dev_params.BQ * q_over_m);
       if (gamma_thr_B > 10.0f && gamma > gamma_thr_B) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
       }
@@ -658,27 +659,34 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
 }
 
 __global__ void
-flag_annihilation(particle_data data, size_t num, cudaPitchedPtr dens,
-                  cudaPitchedPtr balance) {
+flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
+                  cudaPitchedPtr dens_p, cudaPitchedPtr balance) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
-    auto c = data.cell[i];
+    auto c = ptc.cell[i];
     // Skip empty particles
     if (c == MAX_CELL) continue;
 
-    auto flag = data.flag[i];
+    auto flag = ptc.flag[i];
     if (get_ptc_type(flag) > 1) continue;  // ignore ions
-    auto w = data.weight[i];
+    auto w = ptc.weight[i];
 
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
-    size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
+    Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
+    // size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
 
-    Scalar n = atomicAdd(ptrAddr(dens, offset), w);
+    Scalar n_e = *ptrAddr(dens_e, c1, c2);
+    Scalar n_p = *ptrAddr(dens_p, c1, c2);
+    if (get_ptc_type(flag) == (int)ParticleType::electron)
+      n_e = atomicAdd(ptrAddr(dens_e, c1, c2), w);
+    else if (get_ptc_type(flag) == (int)ParticleType::positron)
+      n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
     Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
+    Scalar n_min =
+        0.25 * square(dev_mesh.inv_delta[0]) * sin_t;
     // TODO: implement the proper condition
-    if (n >
-        0.5 * dev_mesh.inv_delta[0] * dev_mesh.inv_delta[0] / (r * r)) {
+    if (n_e > n_min && n_p > n_min) {
       set_bit(flag, ParticleFlag::annihilate);
       atomicAdd(ptrAddr(balance, c1, c2),
                 w * (get_ptc_type(flag) == (int)ParticleType::electron
@@ -726,7 +734,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       m_threadsPerBlock(256),
       m_blocksPerGrid(128),
       // m_J1(env.local_grid()),
-      m_dens(env.local_grid()),
+      m_dens_e(env.local_grid()),
+      m_dens_p(env.local_grid()),
       m_balance(env.local_grid()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
@@ -819,12 +828,13 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
 
 void
 PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data) {
-  m_dens.data().assign_dev(0.0);
+  m_dens_e.data().assign_dev(0.0);
+  m_dens_p.data().assign_dev(0.0);
   m_balance.data().assign_dev(0.0);
 
   Kernels::flag_annihilation<<<256, 512>>>(
-      data.particles.data(), data.particles.number(), m_dens.ptr(),
-      m_balance.ptr());
+      data.particles.data(), data.particles.number(), m_dens_e.ptr(),
+      m_dens_p.ptr(), m_balance.ptr());
   CudaCheckError();
 
   Kernels::annihilate_pairs<<<256, 512>>>(

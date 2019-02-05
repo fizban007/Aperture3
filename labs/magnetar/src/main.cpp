@@ -5,7 +5,7 @@
 // #include "ptc_updater_logsph.h"
 // #include "radiation/curvature_instant.h"
 // #include "radiation/radiation_transfer.h"
-#include "cuda/radiation/rt_magnetar.h"
+#include "cuda/core/radiation/rt_magnetar.h"
 // #include "cu_sim_data.h"
 #include "sim_environment.h"
 #include "sim_data.h"
