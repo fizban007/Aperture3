@@ -24,8 +24,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  cu_scalar_field<double> m_J1, m_J2;
-  cu_scalar_field<Scalar> m_dens, m_balance;
+  cu_scalar_field<Scalar> m_dens_e, m_dens_p, m_balance;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture
