@@ -41,7 +41,10 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 
 __global__ void
 vay_push_2d(particle_data ptc, size_t num,
-            PtcUpdaterDev::fields_data fields, Scalar dt) {
+            PtcUpdaterDev::fields_data fields, cudaPitchedPtr ph_flux,
+            curandState *states, Scalar dt) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState localState = states[id];
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -128,19 +131,21 @@ vay_push_2d(particle_data ptc, size_t num,
       // %d\n", p1, p2, p3,
       //        gamma, inv_gamma2, dev_params.gravity_on);
       // Add an artificial gravity
+      Scalar r = exp(dev_mesh.pos(0, c1, old_x1));
+      Scalar theta = dev_mesh.pos(1, c2, old_x2);
       if (dev_params.gravity_on) {
-        Scalar r = exp(dev_mesh.pos(0, c1, old_x1));
         p1 -= dt * dev_params.gravity / (r * r);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       }
 
+      Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
       if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
-        Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
         Scalar pp1 = p1 - B1 * pdotB / tt;
         Scalar pp2 = p2 - B2 * pdotB / tt;
         Scalar pp3 = p3 - B3 * pdotB / tt;
         Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
         // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+        // printf("pp * dt is %f\n", pp * dt);
 
         p1 -= pp1 * dt * dev_params.rad_cooling_coef;
         p2 -= pp2 * dt * dev_params.rad_cooling_coef;
@@ -149,21 +154,72 @@ vay_push_2d(particle_data ptc, size_t num,
         // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
         //       dev_params.rad_cooling_coef;
       }
-      // printf("gamma after is %f\n", gamma);
-      // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
-      // ptc.p3[idx]);
+      Scalar B = sqrt(tt) / std::abs(q_over_m);
+      B1 /= q_over_m;
+      B2 /= q_over_m;
+      B3 /= q_over_m;
+      Scalar gamma_thr_B = dev_params.gamma_thr * B / dev_params.BQ;
+      // printf("B is %f\n", B);
+      if (gamma_thr_B > 5.0f && gamma > gamma_thr_B &&
+          sp != (int)ParticleType::ion) {
+        ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
+      } else if (dev_params.rad_cooling_on &&
+                 sp != (int)ParticleType::ion) {
+        // Process resonant drag
+        // Scalar p_mag = std::abs(pdotB / B);
+        Scalar p_mag_signed = sgn(pdotB / q_over_m) * sgn(B1) *
+                              std::abs(pdotB / q_over_m) / B;
+        // printf("p_mag_signed is %f\n", p_mag_signed);
+        Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
+        Scalar mu = std::abs(B1 / B);
+        Scalar y = (B / dev_params.BQ) /
+                   (dev_params.star_kT * (g - p_mag_signed * mu));
+        if (y < 20) {
+          // printf("y is %f\n", y);
+          Scalar coef = dev_params.res_drag_coef * y * y * y /
+                        (r * r * (std::exp(y) - 1.0f));
+          // printf("coef is %f\n", coef);
+          // printf("drag coef is %f\n", dev_params.res_drag_coef);
+          Scalar D = coef * (g * mu - p_mag_signed);
+          if (B1 < 0.0f) D *= -1.0f;
+          // printf("D is %f\n", D);
+          p1 += dt * B1 * D / B;
+          p2 += dt * B2 * D / B;
+          p3 += dt * B3 * D / B;
+          // printf("drag on p1 is %f\n", dt * B1 * D / B);
+          gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+
+          // Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu /
+          // g)); Scalar angle =
+          //     acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) /
+          //     B);
+          // Scalar theta_p = 2.0f * CONST_PI *
+          // curand_uniform(&localState); Scalar u = std::cos(theta_p);
+          // Scalar beta = sqrt(1.0f - 1.0f / square(g));
+          // angle = angle + sgn(theta_p - CONST_PI) *
+          //                     std::acos((u + beta) / (1.0f + beta *
+          //                     u));
+          // angle = std::acos(std::cos(angle));
+          // Scalar Eph =
+          //     (g - std::abs(p_mag_signed) * u) *
+          //     (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
+          // Eph = std::log(Eph) / std::log(10.0f);
+          // if (Eph > 0.0f) Eph = 0.0f;
+          // if (Eph < -9.0f) Eph = -9.0f;
+          // int n0 = ((Eph + 9.0f) / 9.0f *
+          //           (ph_flux.xsize / sizeof(float) - 1));
+          // int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize -
+          // 1); atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
+        }
+      }
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
       ptc.E[idx] = gamma;
-
-      Scalar gamma_thr_B =
-          dev_params.gamma_thr * sqrt(tt) / (dev_params.BQ * q_over_m);
-      if (gamma_thr_B > 10.0f && gamma > gamma_thr_B) {
-        ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
-      }
+      // printf("gamma is %f\n", gamma);
     }
   }
+  states[id] = localState;
 }
 
 __global__ void
@@ -507,7 +563,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
-      Scalar vphi = omega * r * sin(theta);
+      // Scalar vphi = omega * r * cos(theta) * sin(theta);
+      Scalar vphi = 0.0f;
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
@@ -520,7 +577,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       // ptc.p3[offset + n * 2] = p3;
       ptc.cell[offset + n * 2] =
           dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
-      ptc.weight[offset + n * 2] = w * sin(theta);
+      ptc.weight[offset + n * 2] = w * sin(theta) * std::abs(cos(theta));
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::electron);
 
@@ -536,9 +593,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       // ptc.p3[offset + n * 2 + 1] = p3;
       ptc.cell[offset + n * 2 + 1] =
           dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
-      ptc.weight[offset + n * 2 + 1] = w * sin(theta);
+      ptc.weight[offset + n * 2 + 1] = w * sin(theta) * std::abs(cos(theta));
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::positron);
+          bit_or(ParticleFlag::primary), ParticleType::ion);
     }
   }
   states[id] = localState;
@@ -683,8 +740,7 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
     else if (get_ptc_type(flag) == (int)ParticleType::positron)
       n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
     Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
-    Scalar n_min =
-        0.25 * square(dev_mesh.inv_delta[0]) * sin_t;
+    Scalar n_min = 0.1 * square(dev_mesh.inv_delta[0]) * sin_t;
     // TODO: implement the proper condition
     if (n_e > n_min && n_p > n_min) {
       set_bit(flag, ParticleFlag::annihilate);
@@ -732,7 +788,7 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
     : PtcUpdaterDev(env),
       d_rand_states(nullptr),
       m_threadsPerBlock(256),
-      m_blocksPerGrid(128),
+      m_blocksPerGrid(256),
       // m_J1(env.local_grid()),
       m_dens_e(env.local_grid()),
       m_dens_p(env.local_grid()),
@@ -762,14 +818,15 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
+    data.photon_flux.assign_dev(0.0);
     // Skip empty particle array
     if (data.particles.number() > 0) {
       Logger::print_info(
           "Updating {} particles in log spherical coordinates",
           data.particles.number());
-      Kernels::vay_push_2d<<<256, 512>>>(data.particles.data(),
-                                         data.particles.number(),
-                                         m_dev_fields, dt);
+      Kernels::vay_push_2d<<<256, 256>>>(
+          data.particles.data(), data.particles.number(), m_dev_fields,
+          data.photon_flux.data_d(), (curandState *)d_rand_states, dt);
       CudaCheckError();
       data.J.initialize();
       for (auto &rho : data.Rho) {

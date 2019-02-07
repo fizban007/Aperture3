@@ -30,14 +30,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
                       int* phPos, curandState* states,
                       cudaPitchedPtr ph_events) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
-  // dev_params.e_s,
-  //                                         dev_params.e_min,
-  //                                         dev_params.photon_path,
-  //                                         rng);
-  // CurvatureInstant<Kernels::CudaRng> rad_model(dev_params, rng);
-  // auto inv_comp = make_inverse_compton_dummy(10.0, )
+
   __shared__ int photonProduced;
   if (threadIdx.x == 0) photonProduced = 0;
 
@@ -54,11 +47,8 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
       continue;
     int c1 = dev_mesh.get_c1(cell);
     int c2 = dev_mesh.get_c2(cell);
-    // int c2 = dev_mesh.get_c2(cell);
 
     // Skip photon emission when outside given radius
-    // Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
-    // Scalar gamma = ptc.E[tid];
     Scalar w = ptc.weight[tid];
 
     // if (rad_model.emit_photon(gamma)) {
@@ -69,6 +59,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     atomicAdd(
         ptrAddr(ph_events, c2 * ph_events.pitch + c1 * sizeof(Scalar)),
         w);
+    ptc.flag[tid] &= ~bit_or(ParticleFlag::emit_photon);
     // }
   }
 
@@ -84,57 +75,47 @@ template <typename PtcData, typename PhotonData>
 __global__ void
 produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
                 size_t ph_num, int* phPos, int* ph_count, int* ph_cum,
+                cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
                 curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
-  // dev_params.e_s,
-  //                                         dev_params.e_min,
-  //                                         dev_params.photon_path,
-  //                                         rng);
-  // CurvatureInstant<Kernels::CudaRng> rad_model(dev_params, rng);
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
     if (pos_in_block > -1 && ptc.cell[tid] != MAX_CELL) {
       int start_pos = ph_cum[blockIdx.x];
+      auto c = ptc.cell[tid];
+      int c1 = dev_mesh.get_c1(c);
+      int c2 = dev_mesh.get_c2(c);
+      Scalar u = rng();
 
-      // TODO: Compute gamma
+      Scalar B1 = *ptrAddr(b1, c1, c2);
+      Scalar B2 = *ptrAddr(b2, c1, c2);
+      Scalar B3 = *ptrAddr(b3, c1, c2);
+      Scalar b = std::sqrt(B1 * B1 + B2 * B2 + B3 * B3) / dev_params.BQ;
+
       Scalar p1 = ptc.p1[tid];
       Scalar p2 = ptc.p2[tid];
       Scalar p3 = ptc.p3[tid];
-      // Scalar gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       Scalar gamma = ptc.E[tid];
+      
       Scalar pi = std::sqrt(gamma * gamma - 1.0f);
-      // Scalar Eph = rad_model.draw_photon_energy(gamma, p);
-      Scalar Eph = dev_params.E_secondary * 2.0f;
+      Scalar Eph = (gamma - pi * (2.0f * u - 1.0f)) *
+                   (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * b));
+      if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
+
       Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
-      // gamma = (gamma - std::abs(Eph));
       ptc.p1[tid] = p1 * pf / pi;
       ptc.p2[tid] = p2 * pf / pi;
       ptc.p3[tid] = p3 * pf / pi;
       ptc.E[tid] = gamma - Eph;
 
-      auto c = ptc.cell[tid];
-      Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
-      Scalar lph = min(10.0f, 0.03f * (1.0f / std::sin(theta) - 1.0f) +
-                                  dev_params.photon_path);
+      Scalar path = dev_params.photon_path;
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
-      // if (std::abs(Eph) < dev_params.E_ph_min) continue;
+      if (Eph < dev_params.E_ph_min) continue;
 
       // Add the new photon
-      // Scalar path = rad_model.draw_photon_freepath(Eph);
-      Scalar u = rng();
-      // Scalar path =
-      //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
-      // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * (0.01f + 0.99f * u);
-      if (path > dev_params.r_cutoff) continue;
-      // Scalar path = dev_params.photon_path;
-      // if (path > dev_params.lph_cutoff) continue;
-      // if (true) continue;
-      // printf("Eph is %f, path is %f\n", Eph, path);
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
       photons.x2[offset] = ptc.x2[tid];
@@ -357,7 +338,8 @@ RadiationTransferMagnetar::emit_photons(cu_sim_data& data) {
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           ptc.data(), ptc.number(), photons.data(), photons.number(),
           m_posInBlock.data_d(), m_numPerBlock.data_d(),
-          m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
+          m_cumNumPerBlock.data_d(), data.B.ptr(0), data.B.ptr(1),
+          data.B.ptr(2), (curandState*)d_rand_states);
   CudaCheckError();
 
   int padding = 1;

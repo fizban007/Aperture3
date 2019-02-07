@@ -106,6 +106,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
       config->get_as<double>("constE").value_or(defaults.constE);
   params.B0 = config->get_as<double>("B0").value_or(defaults.B0);
   params.BQ = config->get_as<double>("BQ").value_or(defaults.BQ);
+  params.res_drag_coef = config->get_as<double>("res_drag_coef")
+                            .value_or(defaults.res_drag_coef);
+  params.star_kT = config->get_as<double>("star_kT")
+                            .value_or(defaults.star_kT);
   params.damping_coef = config->get_as<double>("damping_coef")
                             .value_or(defaults.damping_coef);
   params.E_secondary = config->get_as<double>("E_secondary")
