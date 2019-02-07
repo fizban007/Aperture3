@@ -130,8 +130,11 @@ if (CMAKE_CUDA_COMPILER)
   target_link_libraries(aperture cuAperture)
 endif()
 
-add_executable(aperture1D "main_1d.cpp")
-target_link_libraries(aperture1D Aperture)
+if (LAB_ROOT_DIR)
+else()
+  add_executable(aperture1D "main_1d.cpp")
+  target_link_libraries(aperture1D Aperture)
+endif()
 
 # if (CUDA_FOUND)
 #   target_link_libraries(aperture Pulsar_dev)

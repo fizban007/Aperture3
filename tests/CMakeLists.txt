@@ -67,3 +67,6 @@ endif()
 
 # add_executable(test_parse "test_parse.cpp")
 # target_link_libraries(test_parse Aperture)
+
+add_executable(test_IC "test_IC.cpp")
+target_link_libraries(test_IC Aperture cuAperture)
