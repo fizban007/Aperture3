@@ -76,6 +76,7 @@ class cu_array {
   void resize(size_t length, int deviceId = 0);
 
   size_t length() const { return m_length; }
+  size_t size() const { return m_length; }
   ptr_type data() { return m_data_h; }
   const T* data() const { return m_data_h; }
   ptr_type data_d() { return m_data_d; }
