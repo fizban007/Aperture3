@@ -320,5 +320,7 @@ template void data_exporter::add_field<double>(
     const std::string &name, scalar_field<double> &field);
 template void data_exporter::add_field<double>(
     const std::string &name, vector_field<double> &field);
+template void hdf_exporter<data_exporter>::add_array_output<float>(
+    const std::string &name, multi_array<float> &array);
 
 }  // namespace Aperture

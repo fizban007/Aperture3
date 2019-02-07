@@ -54,6 +54,8 @@ struct SimParamsBase {
   float constE = 1.0;
   float B0 = 1.0;
   float BQ = 1.0;
+  float star_kT = 0.001;
+  float res_drag_coef = 40.0;
 
   // These parameters are for radiative transfer
   float E_cutoff = 10.0;

@@ -1,7 +1,7 @@
+#include "cuda/utils/cu_data_exporter.h"
 #include "core/constant_defs.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/sim_environment_dev.h"
-#include "cuda/utils/cu_data_exporter.h"
 #include "sim_params.h"
 #include "utils/hdf_exporter_impl.hpp"
 #include "utils/type_name.h"
@@ -58,62 +58,62 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   data.Ebg.sync_to_host();
   DataSet data_bg_E1 =
       snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
-  data_bg_E1.write((char*)data.Ebg.data(0).data());
+  data_bg_E1.write((char *)data.Ebg.data(0).data());
   DataSet data_bg_E2 =
       snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(grid_size));
-  data_bg_E2.write((char*)data.Ebg.data(1).data());
+  data_bg_E2.write((char *)data.Ebg.data(1).data());
   DataSet data_bg_E3 =
       snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
-  data_bg_E3.write((char*)data.Ebg.data(2).data());
+  data_bg_E3.write((char *)data.Ebg.data(2).data());
   data.Bbg.sync_to_host();
   DataSet data_bg_B1 =
       snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
-  data_bg_B1.write((char*)data.Bbg.data(0).data());
+  data_bg_B1.write((char *)data.Bbg.data(0).data());
   DataSet data_bg_B2 =
       snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(grid_size));
-  data_bg_B2.write((char*)data.Bbg.data(1).data());
+  data_bg_B2.write((char *)data.Bbg.data(1).data());
   DataSet data_bg_B3 =
       snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(grid_size));
-  data_bg_B3.write((char*)data.Bbg.data(2).data());
+  data_bg_B3.write((char *)data.Bbg.data(2).data());
 
   // Write sim data
   // Write field values
   data.E.sync_to_host();
   DataSet data_E1 =
       snapshotfile.createDataSet<Scalar>("E1", DataSpace(grid_size));
-  data_E1.write((char*)data.E.data(0).data());
+  data_E1.write((char *)data.E.data(0).data());
   DataSet data_E2 =
       snapshotfile.createDataSet<Scalar>("E2", DataSpace(grid_size));
-  data_E2.write((char*)data.E.data(1).data());
+  data_E2.write((char *)data.E.data(1).data());
   DataSet data_E3 =
       snapshotfile.createDataSet<Scalar>("E3", DataSpace(grid_size));
-  data_E3.write((char*)data.E.data(2).data());
+  data_E3.write((char *)data.E.data(2).data());
   data.B.sync_to_host();
   DataSet data_B1 =
       snapshotfile.createDataSet<Scalar>("B1", DataSpace(grid_size));
-  data_B1.write((char*)data.B.data(0).data());
+  data_B1.write((char *)data.B.data(0).data());
   DataSet data_B2 =
       snapshotfile.createDataSet<Scalar>("B2", DataSpace(grid_size));
-  data_B2.write((char*)data.B.data(1).data());
+  data_B2.write((char *)data.B.data(1).data());
   DataSet data_B3 =
       snapshotfile.createDataSet<Scalar>("B3", DataSpace(grid_size));
-  data_B3.write((char*)data.B.data(2).data());
+  data_B3.write((char *)data.B.data(2).data());
   data.J.sync_to_host();
   DataSet data_J1 =
       snapshotfile.createDataSet<Scalar>("J1", DataSpace(grid_size));
-  data_J1.write((char*)data.J.data(0).data());
+  data_J1.write((char *)data.J.data(0).data());
   DataSet data_J2 =
       snapshotfile.createDataSet<Scalar>("J2", DataSpace(grid_size));
-  data_J2.write((char*)data.J.data(1).data());
+  data_J2.write((char *)data.J.data(1).data());
   DataSet data_J3 =
       snapshotfile.createDataSet<Scalar>("J3", DataSpace(grid_size));
-  data_J3.write((char*)data.J.data(2).data());
+  data_J3.write((char *)data.J.data(2).data());
 
   for (int i = 0; i < data.num_species; i++) {
     data.Rho[i].sync_to_host();
     DataSet data_Rho = snapshotfile.createDataSet<Scalar>(
         fmt::format("Rho{}", i), DataSpace(grid_size));
-    data_Rho.write((char*)data.Rho[i].data().data());
+    data_Rho.write((char *)data.Rho[i].data().data());
   }
   DataSet data_devId = snapshotfile.createDataSet<int>(
       "devId", DataSpace::From(data.devId));
@@ -215,46 +215,46 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
 
   // Read field data
   DataSet data_bg_B1 = snapshotfile.getDataSet("bg_B1");
-  data_bg_B1.read((char*)data.Bbg.data(0).data());
+  data_bg_B1.read((char *)data.Bbg.data(0).data());
   DataSet data_bg_B2 = snapshotfile.getDataSet("bg_B2");
-  data_bg_B2.read((char*)data.Bbg.data(1).data());
+  data_bg_B2.read((char *)data.Bbg.data(1).data());
   DataSet data_bg_B3 = snapshotfile.getDataSet("bg_B3");
-  data_bg_B3.read((char*)data.Bbg.data(2).data());
+  data_bg_B3.read((char *)data.Bbg.data(2).data());
   DataSet data_bg_E1 = snapshotfile.getDataSet("bg_E1");
-  data_bg_E1.read((char*)data.Ebg.data(0).data());
+  data_bg_E1.read((char *)data.Ebg.data(0).data());
   DataSet data_bg_E2 = snapshotfile.getDataSet("bg_E2");
-  data_bg_E2.read((char*)data.Ebg.data(1).data());
+  data_bg_E2.read((char *)data.Ebg.data(1).data());
   DataSet data_bg_E3 = snapshotfile.getDataSet("bg_E3");
-  data_bg_E3.read((char*)data.Ebg.data(2).data());
+  data_bg_E3.read((char *)data.Ebg.data(2).data());
 
   data.Bbg.sync_to_device();
   data.Ebg.sync_to_device();
 
   DataSet data_B1 = snapshotfile.getDataSet("B1");
-  data_B1.read((char*)data.B.data(0).data());
+  data_B1.read((char *)data.B.data(0).data());
   DataSet data_B2 = snapshotfile.getDataSet("B2");
-  data_B2.read((char*)data.B.data(1).data());
+  data_B2.read((char *)data.B.data(1).data());
   DataSet data_B3 = snapshotfile.getDataSet("B3");
-  data_B3.read((char*)data.B.data(2).data());
+  data_B3.read((char *)data.B.data(2).data());
   DataSet data_E1 = snapshotfile.getDataSet("E1");
-  data_E1.read((char*)data.E.data(0).data());
+  data_E1.read((char *)data.E.data(0).data());
   DataSet data_E2 = snapshotfile.getDataSet("E2");
-  data_E2.read((char*)data.E.data(1).data());
+  data_E2.read((char *)data.E.data(1).data());
   DataSet data_E3 = snapshotfile.getDataSet("E3");
-  data_E3.read((char*)data.E.data(2).data());
+  data_E3.read((char *)data.E.data(2).data());
   DataSet data_J1 = snapshotfile.getDataSet("J1");
-  data_J1.read((char*)data.J.data(0).data());
+  data_J1.read((char *)data.J.data(0).data());
   DataSet data_J2 = snapshotfile.getDataSet("J2");
-  data_J2.read((char*)data.J.data(1).data());
+  data_J2.read((char *)data.J.data(1).data());
   DataSet data_J3 = snapshotfile.getDataSet("J3");
-  data_J3.read((char*)data.J.data(2).data());
+  data_J3.read((char *)data.J.data(2).data());
   data.B.sync_to_device();
   data.E.sync_to_device();
   data.J.sync_to_device();
 
   for (int i = 0; i < data.num_species; i++) {
     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
-    data_rho.read((char*)data.Rho[i].data().data());
+    data_rho.read((char *)data.Rho[i].data().data());
     data.Rho[i].sync_to_device();
   }
 }
@@ -369,6 +369,8 @@ template void cu_data_exporter::interpolate_field_values<float>(
     fieldoutput<2> &field, int components, const float &t);
 template void cu_data_exporter::interpolate_field_values<double>(
     fieldoutput<2> &field, int components, const double &t);
+template void hdf_exporter<cu_data_exporter>::add_array_output<float>(
+    const std::string &name, multi_array<float> &array);
 
 }  // namespace Aperture
 

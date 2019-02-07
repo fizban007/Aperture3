@@ -69,7 +69,9 @@ hdf_exporter<T>::hdf_exporter(SimParams &params, uint32_t &timestep)
     grid->mesh().delta[i] *= downsample;
     grid->mesh().inv_delta[i] /= downsample;
   }
-  Logger::print_info("initialize output {}d grid of size {}x{}", grid->mesh().dim(), grid->mesh().dims[1], grid->mesh().dims[0]);
+  Logger::print_info("initialize output {}d grid of size {}x{}",
+                     grid->mesh().dim(), grid->mesh().dims[1],
+                     grid->mesh().dims[0]);
 }
 
 template <typename T>
@@ -103,7 +105,8 @@ hdf_exporter<T>::add_field_output(const std::string &name,
     tempData.f.resize(num_components);
     for (int i = 0; i < num_components; i++) {
       tempData.f[i].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
-      // Logger::print_info("mesh sizes are {}x{}, f[i] size is {}", mesh.dims[1], mesh.dims[0], tempData.f[i].size());
+      // Logger::print_info("mesh sizes are {}x{}, f[i] size is {}",
+      // mesh.dims[1], mesh.dims[0], tempData.f[i].size());
     }
     dbFields2d.push_back(std::move(tempData));
   } else if (dim == 1) {
@@ -160,6 +163,20 @@ hdf_exporter<T>::add_ptc_output_1d(const std::string &name,
   tmp_data.p = std::vector<float>(MAX_TRACKED);
 
   dbPtcData1d.push_back(tmp_data);
+}
+
+template <typename DerivedClass>
+template <typename T>
+void
+hdf_exporter<DerivedClass>::add_array_output(const std::string &name,
+                                             multi_array<T> &array) {
+  if (array.dim() == 2) {
+    arrayoutput<T, 2> tmp;
+    tmp.name = name;
+    tmp.array = &array;
+    tmp.f.resize(boost::extents[array.extent().y][array.extent().x]);
+    dbfloat2d.push_back(std::move(tmp));
+  }
 }
 
 template <typename T>
@@ -299,123 +316,7 @@ hdf_exporter<T>::WriteOutput(int timestep, double time) {
                             filePrefix, timestep)
                     .c_str(),
                 File::ReadWrite | File::Create | File::Truncate);
-  // try {
-  //   std::string filename = outputDirectory + filePrefix +
-  //                          fmt::format("{0:06d}.h5", timestep);
-  //   H5::H5File *file = new H5::H5File(filename, H5F_ACC_TRUNC);
 
-  //   for (auto &ds : dbFloat) {
-  //     hsize_t *sizes = new hsize_t[ds.ndims];
-  //     for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
-  //     H5::DataSpace space(ds.ndims, sizes);
-  //     H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
-  //         ds.name, H5::PredType::NATIVE_FLOAT, space));
-  //     dataset->write((void *)ds.data, H5::PredType::NATIVE_FLOAT);
-
-  //     delete[] sizes;
-  //     delete dataset;
-  //   }
-
-  //   for (auto &ds : dbDouble) {
-  //     hsize_t *sizes = new hsize_t[ds.ndims];
-  //     for (int i = 0; i < ds.ndims; i++) sizes[i] = ds.dims[i];
-  //     H5::DataSpace space(ds.ndims, sizes);
-  //     H5::DataSet *dataset = new H5::DataSet(file->createDataSet(
-  //         ds.name, H5::PredType::NATIVE_DOUBLE, space));
-  //     dataset->write((void *)ds.data, H5::PredType::NATIVE_DOUBLE);
-
-  //     delete[] sizes;
-  //     delete dataset;
-  //   }
-
-  //   for (auto &ds : dbPtcData) {
-  //     std::string name_x = ds.name + "_x";
-  //     std::string name_p = ds.name + "_p";
-  //     unsigned int idx = 0;
-  //     for (Index_t n = 0; n < ds.ptc->number(); n++) {
-  //       if (!ds.ptc->is_empty(n) &&
-  //           ds.ptc->check_flag(n, ParticleFlag::tracked) &&
-  //           idx < MAX_TRACKED) {
-  //         Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
-  //                                    ds.ptc->data().x1[n]);
-  //         ds.data_x[idx] = x;
-  //         ds.data_p[idx] = ds.ptc->data().p1[n];
-  //         idx += 1;
-  //       }
-  //     }
-  //     hsize_t sizes[1] = {idx};
-  //     H5::DataSpace space(1, sizes);
-  //     H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-  //         name_x, H5::PredType::NATIVE_FLOAT, space));
-  //     dataset_x->write((void *)ds.data_x.data(),
-  //                      H5::PredType::NATIVE_FLOAT);
-  //     H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-  //         name_p, H5::PredType::NATIVE_FLOAT, space));
-  //     dataset_p->write((void *)ds.data_p.data(),
-  //                      H5::PredType::NATIVE_FLOAT);
-
-  //     delete dataset_x;
-  //     delete dataset_p;
-
-  //     Logger::print_info("Written {} tracked particles", idx);
-  //   }
-
-  //   for (auto &ds : dbPhotonData) {
-  //     std::string name_x = ds.name + "_x";
-  //     std::string name_p = ds.name + "_p";
-  //     // std::string name_l = ds.name + "_l";
-  //     unsigned int idx = 0;
-  //     for (Index_t n = 0; n < ds.ptc->number(); n++) {
-  //       if (!ds.ptc->is_empty(n) &&
-  //           ds.ptc->check_flag(n, PhotonFlag::tracked) &&
-  //           idx < MAX_TRACKED) {
-  //         Scalar x = grid.mesh().pos(0, ds.ptc->data().cell[n],
-  //                                    ds.ptc->data().x1[n]);
-  //         ds.data_x[idx] = x;
-  //         ds.data_p[idx] = ds.ptc->data().p1[n];
-  //         // ds.data_l[idx] = ds.ptc->data().path[n];
-  //         idx += 1;
-  //       }
-  //     }
-  //     hsize_t sizes[1] = {idx};
-  //     H5::DataSpace space(1, sizes);
-  //     H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-  //         name_x, H5::PredType::NATIVE_FLOAT, space));
-  //     dataset_x->write((void *)ds.data_x.data(),
-  //                      H5::PredType::NATIVE_FLOAT);
-  //     H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-  //         name_p, H5::PredType::NATIVE_FLOAT, space));
-  //     dataset_p->write((void *)ds.data_p.data(),
-  //                      H5::PredType::NATIVE_FLOAT);
-  //     // H5::DataSet *dataset_l = new
-  //     // H5::DataSet(file->createDataSet(name_l,
-  //     // H5::PredType::NATIVE_FLOAT, space));
-  //     // dataset_l->write((void*)ds.data_l.data(),
-  //     // H5::PredType::NATIVE_FLOAT);
-
-  //     delete dataset_x;
-  //     delete dataset_p;
-  //     // delete dataset_l;
-
-  //     Logger::print_info("Written {} tracked photons", idx);
-  //   }
-  //   delete file;
-  // }
-  // // catch failure caused by the H5File operations
-  // catch (H5::FileIException &error) {
-  //   error.printErrorStack();
-  //   // return -1;
-  // }
-  // // catch failure caused by the DataSet operations
-  // catch (H5::DataSetIException &error) {
-  //   error.printErrorStack();
-  //   // return -1;
-  // }
-  // // catch failure caused by the DataSpace operations
-  // catch (H5::DataSpaceIException &error) {
-  //   error.printErrorStack();
-  //   // return -1;
-  // }
   for (auto &f : dbFields1d) {
     int components = f.f.size();
     T *self = static_cast<T *>(this);
@@ -459,6 +360,16 @@ hdf_exporter<T>::WriteOutput(int timestep, double time) {
         data.write(f.f[n]);
       }
     }
+  }
+  for (auto &f : dbfloat2d) {
+    // copy field values to ouput buffer
+    for (int j = 0; j < f.array->extent().y; j++) {
+      for (int i = 0; i < f.array->extent().x; i++) {
+        f.f[j][i] = (*f.array)(i, j);
+      }
+    }
+    DataSet data = datafile.createDataSet<float>(f.name, DataSpace::From(f.f));
+    data.write(f.f);
   }
 }
 
@@ -747,232 +658,6 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
   }
 }
 
-// void
-// hdf_exporter::writeSnapshot(cu_sim_environment &env, cu_sim_data
-// &data,
-//                             uint32_t timestep) {
-//   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
-//       timestep) fmt::format("{}snapshot.h5",
-//       outputDirectory).c_str(), File::ReadWrite | File::Create |
-//       File::Truncate);
-
-//   // Write background fields from environment
-//   size_t grid_size = data.E.grid().size();
-//   data.Ebg.sync_to_host();
-//   DataSet data_bg_E1 =
-//       snapshotfile.createDataSet<Scalar>("bg_E1",
-//       DataSpace(grid_size));
-//   data_bg_E1.write(data.Ebg.data(0).data());
-//   DataSet data_bg_E2 =
-//       snapshotfile.createDataSet<Scalar>("bg_E2",
-//       DataSpace(grid_size));
-//   data_bg_E2.write(data.Ebg.data(1).data());
-//   DataSet data_bg_E3 =
-//       snapshotfile.createDataSet<Scalar>("bg_E3",
-//       DataSpace(grid_size));
-//   data_bg_E3.write(data.Ebg.data(2).data());
-//   data.Bbg.sync_to_host();
-//   DataSet data_bg_B1 =
-//       snapshotfile.createDataSet<Scalar>("bg_B1",
-//       DataSpace(grid_size));
-//   data_bg_B1.write(data.Bbg.data(0).data());
-//   DataSet data_bg_B2 =
-//       snapshotfile.createDataSet<Scalar>("bg_B2",
-//       DataSpace(grid_size));
-//   data_bg_B2.write(data.Bbg.data(1).data());
-//   DataSet data_bg_B3 =
-//       snapshotfile.createDataSet<Scalar>("bg_B3",
-//       DataSpace(grid_size));
-//   data_bg_B3.write(data.Bbg.data(2).data());
-
-//   // Write sim data
-//   // Write field values
-//   data.E.sync_to_host();
-//   DataSet data_E1 =
-//       snapshotfile.createDataSet<Scalar>("E1", DataSpace(grid_size));
-//   data_E1.write(data.E.data(0).data());
-//   DataSet data_E2 =
-//       snapshotfile.createDataSet<Scalar>("E2", DataSpace(grid_size));
-//   data_E2.write(data.E.data(1).data());
-//   DataSet data_E3 =
-//       snapshotfile.createDataSet<Scalar>("E3", DataSpace(grid_size));
-//   data_E3.write(data.E.data(2).data());
-//   data.B.sync_to_host();
-//   DataSet data_B1 =
-//       snapshotfile.createDataSet<Scalar>("B1", DataSpace(grid_size));
-//   data_B1.write(data.B.data(0).data());
-//   DataSet data_B2 =
-//       snapshotfile.createDataSet<Scalar>("B2", DataSpace(grid_size));
-//   data_B2.write(data.B.data(1).data());
-//   DataSet data_B3 =
-//       snapshotfile.createDataSet<Scalar>("B3", DataSpace(grid_size));
-//   data_B3.write(data.B.data(2).data());
-//   data.J.sync_to_host();
-//   DataSet data_J1 =
-//       snapshotfile.createDataSet<Scalar>("J1", DataSpace(grid_size));
-//   data_J1.write(data.J.data(0).data());
-//   DataSet data_J2 =
-//       snapshotfile.createDataSet<Scalar>("J2", DataSpace(grid_size));
-//   data_J2.write(data.J.data(1).data());
-//   DataSet data_J3 =
-//       snapshotfile.createDataSet<Scalar>("J3", DataSpace(grid_size));
-//   data_J3.write(data.J.data(2).data());
-
-//   for (int i = 0; i < data.num_species; i++) {
-//     data.Rho[i].sync_to_host();
-//     DataSet data_Rho = snapshotfile.createDataSet<Scalar>(
-//         fmt::format("Rho{}", i), DataSpace(grid_size));
-//     data_Rho.write(data.Rho[i].data().data());
-//   }
-//   DataSet data_devId = snapshotfile.createDataSet<int>(
-//       "devId", DataSpace::From(data.devId));
-//   data_devId.write(data.devId);
-
-//   // Write particle data
-//   size_t ptcNum = data.particles.number();
-//   DataSet data_ptcNum = snapshotfile.createDataSet<size_t>(
-//       "ptcNum", DataSpace::From(ptcNum));
-//   data_ptcNum.write(ptcNum);
-//   Logger::print_info("Writing {} particles to snapshot", ptcNum);
-
-//   size_t phNum = data.photons.number();
-//   DataSet data_phNum = snapshotfile.createDataSet<size_t>(
-//       "phNum", DataSpace::From(phNum));
-//   data_phNum.write(phNum);
-//   Logger::print_info("Writing {} photons to snapshot", phNum);
-
-//   std::vector<double> buffer(std::max(ptcNum, phNum));
-//   visit_struct::for_each(
-//       data.particles.data(),
-//       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
-//         typedef
-//             typename std::remove_reference<decltype(*x)>::type
-//             x_type;
-//         DataSet ptc_data = snapshotfile.createDataSet<x_type>(
-//             fmt::format("ptc_{}", name), DataSpace(ptcNum));
-//         cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
-//                    cudaMemcpyDeviceToHost);
-//         ptc_data.write(reinterpret_cast<x_type *>(buffer.data()));
-//       });
-//   visit_struct::for_each(
-//       data.photons.data(),
-//       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
-//         typedef
-//             typename std::remove_reference<decltype(*x)>::type
-//             x_type;
-//         DataSet ph_data = snapshotfile.createDataSet<x_type>(
-//             fmt::format("ph_{}", name), DataSpace(phNum));
-//         cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
-//                    cudaMemcpyDeviceToHost);
-//         ph_data.write(reinterpret_cast<x_type *>(buffer.data()));
-//       });
-
-//   // Write current simulation timestep and other info
-//   DataSet data_timestep = snapshotfile.createDataSet<uint32_t>(
-//       "timestep", DataSpace::From(timestep));
-//   data_timestep.write(timestep);
-// }
-
-// void
-// hdf_exporter::load_from_snapshot(cu_sim_environment &env, cu_sim_data
-// &data,
-//                                  uint32_t &timestep) {
-//   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
-//       timestep) fmt::format("{}snapshot.h5",
-//       outputDirectory).c_str(), File::ReadOnly);
-
-//   size_t grid_size = data.E.grid().size();
-//   size_t ptcNum, phNum;
-//   int devId;
-
-//   // Read the scalars first
-//   DataSet data_timestep = snapshotfile.getDataSet("timestep");
-//   data_timestep.read(timestep);
-//   DataSet data_ptcNum = snapshotfile.getDataSet("ptcNum");
-//   data_ptcNum.read(ptcNum);
-//   DataSet data_phNum = snapshotfile.getDataSet("phNum");
-//   data_phNum.read(phNum);
-//   DataSet data_devId = snapshotfile.getDataSet("devId");
-//   data_devId.read(devId);
-
-//   // Read particle data
-//   std::vector<double> buffer(std::max(ptcNum, phNum));
-//   data.particles.set_num(ptcNum);
-//   data.photons.set_num(phNum);
-
-//   visit_struct::for_each(
-//       data.particles.data(),
-//       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
-//         typedef
-//             typename std::remove_reference<decltype(*x)>::type
-//             x_type;
-//         DataSet ptc_data =
-//             snapshotfile.getDataSet(fmt::format("ptc_{}", name));
-//         ptc_data.read(reinterpret_cast<x_type *>(buffer.data()));
-//         cudaMemcpy(x, buffer.data(), ptcNum * sizeof(x_type),
-//                    cudaMemcpyHostToDevice);
-//       });
-//   visit_struct::for_each(
-//       data.photons.data(),
-//       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
-//         typedef
-//             typename std::remove_reference<decltype(*x)>::type
-//             x_type;
-//         DataSet ph_data =
-//             snapshotfile.getDataSet(fmt::format("ph_{}", name));
-//         ph_data.read(reinterpret_cast<x_type *>(buffer.data()));
-//         cudaMemcpy(x, buffer.data(), phNum * sizeof(x_type),
-//                    cudaMemcpyHostToDevice);
-//       });
-
-//   // Read field data
-//   DataSet data_bg_B1 = snapshotfile.getDataSet("bg_B1");
-//   data_bg_B1.read(data.Bbg.data(0).data());
-//   DataSet data_bg_B2 = snapshotfile.getDataSet("bg_B2");
-//   data_bg_B2.read(data.Bbg.data(1).data());
-//   DataSet data_bg_B3 = snapshotfile.getDataSet("bg_B3");
-//   data_bg_B3.read(data.Bbg.data(2).data());
-//   DataSet data_bg_E1 = snapshotfile.getDataSet("bg_E1");
-//   data_bg_E1.read(data.Ebg.data(0).data());
-//   DataSet data_bg_E2 = snapshotfile.getDataSet("bg_E2");
-//   data_bg_E2.read(data.Ebg.data(1).data());
-//   DataSet data_bg_E3 = snapshotfile.getDataSet("bg_E3");
-//   data_bg_E3.read(data.Ebg.data(2).data());
-
-//   data.Bbg.sync_to_device();
-//   data.Ebg.sync_to_device();
-
-//   DataSet data_B1 = snapshotfile.getDataSet("B1");
-//   data_B1.read(data.B.data(0).data());
-//   DataSet data_B2 = snapshotfile.getDataSet("B2");
-//   data_B2.read(data.B.data(1).data());
-//   DataSet data_B3 = snapshotfile.getDataSet("B3");
-//   data_B3.read(data.B.data(2).data());
-//   DataSet data_E1 = snapshotfile.getDataSet("E1");
-//   data_E1.read(data.E.data(0).data());
-//   DataSet data_E2 = snapshotfile.getDataSet("E2");
-//   data_E2.read(data.E.data(1).data());
-//   DataSet data_E3 = snapshotfile.getDataSet("E3");
-//   data_E3.read(data.E.data(2).data());
-//   DataSet data_J1 = snapshotfile.getDataSet("J1");
-//   data_J1.read(data.J.data(0).data());
-//   DataSet data_J2 = snapshotfile.getDataSet("J2");
-//   data_J2.read(data.J.data(1).data());
-//   DataSet data_J3 = snapshotfile.getDataSet("J3");
-//   data_J3.read(data.J.data(2).data());
-//   data.B.sync_to_device();
-//   data.E.sync_to_device();
-//   data.J.sync_to_device();
-
-//   for (int i = 0; i < data.num_species; i++) {
-//     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}",
-//     i)); data_rho.read(data.Rho[i].data().data());
-//     data.Rho[i].sync_to_device();
-//   }
-// }
-
 template <typename T>
 void
 hdf_exporter<T>::prepareXMFrestart(uint32_t restart_step,
@@ -1005,349 +690,6 @@ hdf_exporter<T>::prepareXMFrestart(uint32_t restart_step,
   xmf_in.close();
 }
 
-// void
-// DataExporter::AddArray(const std::string &name, float *data, int
-// *dims,
-//                        int ndims) {
-//   dataset<float> tempData;
-
-//   tempData.name = name;
-//   tempData.data = data;
-//   tempData.ndims = ndims;
-//   for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
-
-//   dbFloat.push_back(tempData);
-// }
-
-// void
-// DataExporter::AddArray(const std::string &name, double *data, int
-// *dims,
-//                        int ndims) {
-//   dataset<double> tempData;
-
-//   tempData.name = name;
-//   tempData.data = data;
-//   tempData.ndims = ndims;
-//   for (int i = 0; i < ndims; i++) tempData.dims.push_back(dims[i]);
-
-//   dbDouble.push_back(tempData);
-// }
-
-// template <typename T>
-// void
-// DataExporter::AddArray(const std::string &name, cu_multi_array<T>
-// &array)
-// {
-//   int ndims = array.dim();
-//   int *dims = new int[ndims];
-//   for (int i = 0; i < ndims; i++) dims[i] = array.extent()[i];
-
-//   AddArray(name, array.data(), dims, ndims);
-
-//   delete[] dims;
-// }
-
-// template <typename T>
-// void
-// DataExporter::AddArray(const std::string &name, cu_vector_field<T>
-// &field,
-//                        int component) {
-//   AddArray(name, field.data(component));
-// }
-
-// template <typename T>
-// void hdf_exporter::AddField(const std::string &name,
-// cu_scalar_field<T> &field,
-//                             bool sync) {
-//   auto &mesh = grid->mesh();
-
-//   if (grid->dim() == 3) {
-//     // sfieldoutput3d<T> tempData;
-//     // tempData.name = name;
-//     // tempData.field = &field;
-
-//     // tempData.f.resize(
-//     //     boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-//     // tempData.sync = sync;
-//     // if (std::is_same<T, double>::value)
-//     //   dbScalars3d.push_back(std::move(tempData));
-//     // else
-//     //   dbScalars3f.push_back(std::move(tempData));
-//     fieldoutput<3> tempData;
-//     tempData.name = name;
-//     tempData.type = TypeName<T>::Get();
-//     tempData.field = &field;
-//     tempData.f.resize(1);
-//     tempData.f[0].resize(
-//         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-//     tempData.sync = sync;
-//     dbFields3d.push_back(std::move(tempData));
-//   } else if (grid->dim() == 2) {
-//     fieldoutput<2> tempData;
-//     tempData.name = name;
-//     tempData.type = TypeName<T>::Get();
-//     tempData.field = &field;
-//     tempData.f.resize(1);
-//     tempData.f[0].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
-//     tempData.sync = sync;
-//     dbFields2d.push_back(std::move(tempData));
-//   }
-// }
-
-// template <typename T>
-// void hdf_exporter::AddField(const std::string &name,
-// cu_vector_field<T> &field,
-//                             bool sync) {
-//   auto &mesh = grid->mesh();
-
-//   if (grid->dim() == 3) {
-//     fieldoutput<3> tempData;
-//     tempData.name = name;
-//     tempData.type = TypeName<T>::Get();
-//     tempData.field = &field;
-//     tempData.f.resize(3);
-//     for (int i = 0; i < 3; i++)
-//       tempData.f[i].resize(
-//           boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-//     tempData.sync = sync;
-//     dbFields3d.push_back(std::move(tempData));
-//   } else if (grid->dim() == 2) {
-//     fieldoutput<2> tempData;
-//     tempData.name = name;
-//     tempData.type = TypeName<T>::Get();
-//     tempData.field = &field;
-//     tempData.f.resize(3);
-//     for (int i = 0; i < 3; i++)
-//       tempData.f[i].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
-//     tempData.sync = sync;
-//     dbFields2d.push_back(std::move(tempData));
-//   }
-// }
-
-// void
-// DataExporter::InterpolateFieldValues() {
-//   for (auto &sf : dbScalars3d) {
-//     if (sf.type == 8)
-//       cu_scalar_field<double> *fptr = (cu_scalar_field<double>
-//       *)sf.field;
-//     else
-//       cu_scalar_field<float> *fptr = (cu_scalar_field<float>
-//       *)sf.field;
-//     if (sf.sync) fptr->sync_to_host();
-//     auto &mesh = fptr->grid().mesh();
-//     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)
-//     {
-//       for (int j = 0; j < mesh.reduced_dim(1); j +=
-//       downsample_factor) {
-//         for (int i = 0; i < mesh.reduced_dim(0);
-//              i += downsample_factor) {
-//           sf.f[k / downsample_factor + mesh.guard[2]]
-//               [j / downsample_factor + mesh.guard[1]]
-//               [i / downsample_factor + mesh.guard[0]] = (*fptr)(
-//               i + mesh.guard[0], j + mesh.guard[1], k +
-//               mesh.guard[2]);
-//         }
-//       }
-//     }
-//   }
-
-//   for (auto &vf : dbVectors3d) {
-//     if (vf.type == 8)
-//       cu_vector_field<double> *fptr = (cu_vector_field<double>
-//       *)vf.field;
-//     else
-//       cu_vector_field<float> *fptr = (cu_vector_field<float>
-//       *)vf.field;
-//     if (vf.sync) vf.field->sync_to_host();
-//     auto &mesh = vf.field->grid().mesh();
-//     for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor)
-//     {
-//       for (int j = 0; j < mesh.reduced_dim(1); j +=
-//       downsample_factor) {
-//         for (int i = 0; i < mesh.reduced_dim(0);
-//              i += downsample_factor) {
-//           vf.f1[k / downsample_factor + mesh.guard[2]]
-//                [j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] =
-//               (*vf.field)(0, i + mesh.guard[0], j + mesh.guard[1],
-//                           k + mesh.guard[2]);
-//           vf.f2[k / downsample_factor + mesh.guard[2]]
-//                [j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] =
-//               (*vf.field)(1, i + mesh.guard[0], j + mesh.guard[1],
-//                           k + mesh.guard[2]);
-//           vf.f3[k / downsample_factor + mesh.guard[2]]
-//                [j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] =
-//               (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1],
-//                           k + mesh.guard[2]);
-//         }
-//       }
-//     }
-//   }
-
-//   for (auto &sf : dbScalars2d) {
-//     if (sf.sync) sf.field->sync_to_host();
-//     auto &mesh = sf.field->grid().mesh();
-//     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor)
-//     {
-//       for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       downsample_factor) {
-//         sf.f[j / downsample_factor + mesh.guard[1]]
-//             [i / downsample_factor + mesh.guard[0]] =
-//             (*sf.field)(i + mesh.guard[0], j + mesh.guard[1]);
-//       }
-//       // for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       // downsample_factor) {
-//       //   sf.f[mesh.guard[1] - 1]
-//       //       [i / downsample_factor + mesh.guard[0]] =
-//       //       (*sf.field)(i + mesh.guard[0], mesh.guard[1] - 1);
-//       // }
-//     }
-//   }
-
-//   for (auto &vf : dbVectors2d) {
-//     if (vf.sync) vf.field->sync_to_host();
-//     // Logger::print_info("Writing {}", vf.name);
-//     auto &mesh = vf.field->grid().mesh();
-//     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor)
-//     {
-//       for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       downsample_factor) {
-//         vf.f1[j / downsample_factor + mesh.guard[1]]
-//              [i / downsample_factor + mesh.guard[0]] =
-//             (*vf.field)(0, i + mesh.guard[0], j + mesh.guard[1]);
-//         // std::cout << vf.f1[j / downsample_factor + mesh.guard[1]]
-//         //     [i / downsample_factor + mesh.guard[0]] << std::endl;
-//         vf.f2[j / downsample_factor + mesh.guard[1]]
-//              [i / downsample_factor + mesh.guard[0]] =
-//             (*vf.field)(1, i + mesh.guard[0], j + mesh.guard[1]);
-//         vf.f3[j / downsample_factor + mesh.guard[1]]
-//              [i / downsample_factor + mesh.guard[0]] =
-//             (*vf.field)(2, i + mesh.guard[0], j + mesh.guard[1]);
-//       }
-//       // for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       // downsample_factor) {
-//       //   vf.f1[mesh.guard[1] - 1]
-//       //       [i / downsample_factor + mesh.guard[0]] =
-//       //       (*vf.field)(0, i + mesh.guard[0], mesh.guard[1] - 1);
-//       //   vf.f2[mesh.guard[1] - 1]
-//       //       [i / downsample_factor + mesh.guard[0]] =
-//       //       (*vf.field)(1, i + mesh.guard[0], mesh.guard[1] - 1);
-//       //   vf.f3[mesh.guard[1] - 1]
-//       //       [i / downsample_factor + mesh.guard[0]] =
-//       //       (*vf.field)(2, i + mesh.guard[0], mesh.guard[1] - 1);
-//       // }
-//     }
-//   }
-// }
-
-// template <typename T>
-// void hdf_exporter::InterpolateFieldValues(fieldoutput<2> &field, int
-// components,
-//                                           T t) {
-//   if (components == 1) {
-//     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
-//     if (field.sync)
-//       fptr->sync_to_host();
-//     auto &mesh = fptr->grid().mesh();
-//     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor)
-//     {
-//       for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       downsample_factor) {
-//         field.f[0][j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] = 0.0;
-//         for (int n2 = 0; n2 < downsample_factor; n2++) {
-//           for (int n1 = 0; n1 < downsample_factor; n1++) {
-//             field.f[0][j / downsample_factor + mesh.guard[1]]
-//                    [i / downsample_factor + mesh.guard[0]] +=
-//                 (*fptr)(i + n1 + mesh.guard[0], j + n2 +
-//                 mesh.guard[1]) / square(downsample_factor);
-//           }
-//         }
-//       }
-//       // for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       // downsample_factor) {
-//       //   field.f[0][mesh.guard[1] - 1]
-//       //          [i / downsample_factor + mesh.guard[0]] =
-//       //       (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
-//       // }
-//     }
-//   } else if (components == 3) {
-//     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
-//     if (field.sync)
-//       fptr->sync_to_host();
-//     auto &mesh = fptr->grid().mesh();
-//     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor)
-//     {
-//       for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       downsample_factor) {
-//         field.f[0][j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] = 0.0;
-//         field.f[1][j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] = 0.0;
-//         field.f[2][j / downsample_factor + mesh.guard[1]]
-//                [i / downsample_factor + mesh.guard[0]] = 0.0;
-//         for (int n2 = 0; n2 < downsample_factor; n2++) {
-//           for (int n1 = 0; n1 < downsample_factor; n1++) {
-//             field.f[0][j / downsample_factor + mesh.guard[1]]
-//                    [i / downsample_factor + mesh.guard[0]] +=
-//                 (*fptr)(0, i + n1 + mesh.guard[0], j + n2 +
-//                 mesh.guard[1]) / square(downsample_factor);
-//             // std::cout << vf.f1[j / downsample_factor +
-//             mesh.guard[1]]
-//             //     [i / downsample_factor + mesh.guard[0]] <<
-//             std::endl; field.f[1][j / downsample_factor +
-//             mesh.guard[1]]
-//                    [i / downsample_factor + mesh.guard[0]] +=
-//                 (*fptr)(1, i + n1 + mesh.guard[0], j + n2 +
-//                 mesh.guard[1]) / square(downsample_factor);
-
-//             field.f[2][j / downsample_factor + mesh.guard[1]]
-//                    [i / downsample_factor + mesh.guard[0]] +=
-//                 (*fptr)(2, i + n1 + mesh.guard[0], j + n2 +
-//                 mesh.guard[1]) / square(downsample_factor);
-//           }
-//         }
-//       }
-//       // for (int i = 0; i < mesh.reduced_dim(0); i +=
-//       // downsample_factor) {
-//       //   field.f[0][mesh.guard[1] - 1]
-//       //          [i / downsample_factor + mesh.guard[0]] =
-//       //       (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
-//       //   field.f[1][mesh.guard[1] - 1]
-//       //          [i / downsample_factor + mesh.guard[0]] =
-//       //       (*fptr)(1, i + mesh.guard[0], mesh.guard[1] - 1);
-//       //   field.f[2][mesh.guard[1] - 1]
-//       //          [i / downsample_factor + mesh.guard[0]] =
-//       //       (*fptr)(2, i + mesh.guard[0], mesh.guard[1] - 1);
-//       // }
-//     }
-//   }
-// }
-
-// void hdf_exporter::AddParticleArray(const std::string &name,
-//                                     const Particles &ptc) {
-//   ptcoutput<Particles> temp;
-//   temp.name = name;
-//   temp.ptc = &ptc;
-//   temp.data_x = std::vector<float>(MAX_TRACKED);
-//   temp.data_p = std::vector<float>(MAX_TRACKED);
-
-//   dbPtcData.push_back(std::move(temp));
-// }
-
-// void hdf_exporter::AddParticleArray(const std::string &name,
-//                                     const Photons &ptc) {
-//   ptcoutput<Photons> temp;
-//   temp.name = name;
-//   temp.ptc = &ptc;
-//   temp.data_x = std::vector<float>(MAX_TRACKED);
-//   temp.data_p = std::vector<float>(MAX_TRACKED);
-//   temp.data_l = std::vector<float>(MAX_TRACKED);
-
-//   dbPhotonData.push_back(std::move(temp));
-// }
 
 // Explicit instantiation of templates
 // template void hdf_exporter::AddField<double>(const std::string &name,

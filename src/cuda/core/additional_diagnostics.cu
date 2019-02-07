@@ -102,6 +102,7 @@ AdditionalDiagnostics::collect_diagnostics(const cu_sim_data& data) {
   for (int i = 0; i < m_env.params().num_species; i++) {
     m_gamma[i].divideBy(m_ptc_num[i]);
   }
+  cudaDeviceSynchronize();
 }
 
 }  // namespace Aperture
