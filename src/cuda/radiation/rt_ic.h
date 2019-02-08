@@ -4,6 +4,7 @@
 #include "cuda/cuda_control.h"
 #include "cuda/data/cu_multi_array.h"
 #include "cuda/data/array.h"
+#include <random>
 
 namespace Aperture {
 
@@ -23,6 +24,13 @@ class inverse_compton {
   cu_multi_array<Scalar>& np() { return m_npep; }
   cu_multi_array<Scalar>& dnde1p() { return m_dnde1p; }
 
+  int find_n_gamma(Scalar gamma) const;
+  int find_n_ep(Scalar ep) const;
+  Scalar gen_e1p(int gn);
+  Scalar gen_ep(int gn, Scalar e1p);
+  Scalar gen_photon_e(Scalar gamma);
+  int binary_search(float u, int n, const cu_multi_array<Scalar>& array) const;
+
  private:
   HOST_DEVICE double sigma_ic(Scalar x) const;
   HOST_DEVICE double x_ic(Scalar gamma, Scalar e, Scalar mu) const;
@@ -32,7 +40,11 @@ class inverse_compton {
   cu_multi_array<Scalar> m_npep;
   cu_multi_array<Scalar> m_dnde1p;
   cu_array<Scalar> m_rate, m_gammas, m_ep;
-  double m_dep;
+  Scalar m_dep, m_dg;
+
+  std::default_random_engine m_generator;
+  std::uniform_real_distribution<float> m_dist;
+
 };  // ----- end of class inverse_compton -----
 
 }  // namespace Aperture
