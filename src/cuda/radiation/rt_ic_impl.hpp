@@ -26,6 +26,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   const int N_e = 500;
 
   // Compute the gammas and rates for IC scattering
+  Logger::print_info("Pre-calculating the scattering rate");
   Scalar dmu = 2.0 / (N_mu - 1.0);
   Scalar de = (log(emax) - log(emin)) / (N_e - 1.0);
   for (uint32_t n = 0; n < m_rate.size(); n++) {
@@ -53,6 +54,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
 
   // Compute the photon spectrum in electron rest frame for various
   // gammas
+  Logger::print_info("Pre-calculating the rest frame soft photon spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     Scalar gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_ep.size(); i++) {
@@ -60,7 +62,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       Scalar result = 0.0;
       for (int i_e = 0; i_e < N_e; i_e++) {
         Scalar e = exp(log(emin) + i_e * de);
-        if (e > 0.5*ep/gamma && e < 2.0*ep*gamma)
+        if (e > 0.5 * ep / gamma && e < 2.0 * ep * gamma)
           result += n_e(e) * ep / (2.0 * gamma * e);
       }
       m_npep(i, n) = result * de;
@@ -68,7 +70,32 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   }
 
   // Compute the scattered photon spectrum in the electron rest frame
-  
+  Logger::print_info("Pre-calculating the rest frame scattered photon spectrum");
+  for (uint32_t n = 0; n < m_gammas.size(); n++) {
+    for (uint32_t i = 0; i < m_ep.size(); i++) {
+      Scalar e1p = m_ep[i];
+      if (e1p < 0.03) {
+        m_dnde1p(i, n) = m_npep(i, n) * 2.0 / (1.0 - 2.0 * e1p) * m_ep[i];
+      } else {
+        Scalar result = 0.0;
+        for (uint32_t i_e = 0; i_e < m_ep.size(); i_e++) {
+          Scalar ep = m_ep[i_e];
+          if (ep > e1p && 1.0/(1.0/ep + 2.0) < e1p)
+            result += m_npep(i_e, n) * sigma_rest(ep, e1p) / ep;
+        }
+        m_dnde1p(i, n) = result * m_dep * m_ep[i];
+        // m_dnde1p(i, n) = result * m_dep;
+      }
+    }
+    for (uint32_t i = 1; i < m_ep.size(); i++) {
+      m_dnde1p(i, n) += m_dnde1p(i - 1, n);
+    }
+    for (uint32_t i = 0; i < m_ep.size(); i++) {
+      m_dnde1p(i, n) /= m_dnde1p(m_ep.size() - 1, n);
+    }
+  }
+
+
 }
 
 HOST_DEVICE double
@@ -92,6 +119,11 @@ inverse_compton::x_ic(Scalar gamma, Scalar e, Scalar mu) const {
 HOST_DEVICE double
 inverse_compton::beta(Scalar gamma) const {
   return 1.0 / sqrt(1.0 - 1.0 / square(gamma));
+}
+
+HOST_DEVICE double
+inverse_compton::sigma_rest(Scalar ep, Scalar e1p) const {
+  return (ep / e1p + e1p / ep - (1.0 - square(1.0 - 1.0/e1p + 1.0/ep)));
 }
 
 }  // namespace Aperture

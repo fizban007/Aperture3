@@ -21,11 +21,13 @@ class inverse_compton {
   cu_array<Scalar>& gammas() { return m_gammas; }
   cu_array<Scalar>& ep() { return m_ep; }
   cu_multi_array<Scalar>& np() { return m_npep; }
+  cu_multi_array<Scalar>& dnde1p() { return m_dnde1p; }
 
  private:
   HOST_DEVICE double sigma_ic(Scalar x) const;
   HOST_DEVICE double x_ic(Scalar gamma, Scalar e, Scalar mu) const;
   HOST_DEVICE double beta(Scalar gamma) const;
+  HOST_DEVICE double sigma_rest(Scalar ep, Scalar e1p) const;
 
   cu_multi_array<Scalar> m_npep;
   cu_multi_array<Scalar> m_dnde1p;
