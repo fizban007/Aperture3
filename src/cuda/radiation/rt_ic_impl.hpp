@@ -6,8 +6,8 @@
 namespace Aperture {
 
 inverse_compton::inverse_compton(const SimParams& params)
-    : m_npep(Extent(params.n_gamma, params.n_ep)),
-      m_dnde1p(Extent(params.n_gamma, params.n_ep)),
+    : m_npep(Extent(params.n_ep, params.n_gamma)),
+      m_dnde1p(Extent(params.n_ep, params.n_gamma)),
       m_rate(params.n_gamma),
       m_gammas(params.n_gamma),
       m_ep(params.n_ep) {
@@ -63,9 +63,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
         if (e > 0.5*ep/gamma && e < 2.0*ep*gamma)
           result += n_e(e) * ep / (2.0 * gamma * e);
       }
-      m_npep(n, i) = result * de;
+      m_npep(i, n) = result * de;
     }
   }
+
+  // Compute the scattered photon spectrum in the electron rest frame
+  
 }
 
 HOST_DEVICE double

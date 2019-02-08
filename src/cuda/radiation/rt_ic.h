@@ -19,6 +19,8 @@ class inverse_compton {
 
   cu_array<Scalar>& rate() { return m_rate; }
   cu_array<Scalar>& gammas() { return m_gammas; }
+  cu_array<Scalar>& ep() { return m_ep; }
+  cu_multi_array<Scalar>& np() { return m_npep; }
 
  private:
   HOST_DEVICE double sigma_ic(Scalar x) const;
