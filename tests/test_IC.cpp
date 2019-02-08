@@ -59,5 +59,14 @@ main(int argc, char *argv[]) {
   DataSet data_np = datafile.createDataSet<Scalar>(
       "np", DataSpace::From(out_array));
   data_np.write(out_array);
+
+  for (int j = 0; j < params.n_gamma; j++) {
+    for (int i = 0; i < params.n_ep; i++) {
+      out_array[j][i] = ic.dnde1p()(i, j);
+    }
+  }
+  DataSet data_dnde1p = datafile.createDataSet<Scalar>(
+      "dnde1p", DataSpace::From(out_array));
+  data_dnde1p.write(out_array);
   return 0;
 }
