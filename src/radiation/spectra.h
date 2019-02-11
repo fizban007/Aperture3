@@ -54,6 +54,23 @@ struct black_body {
   Scalar kT_;
 };
 
+struct mono_energetic {
+  HOST_DEVICE mono_energetic(Scalar e0, Scalar de)
+      : e0_(e0), de_(de) {}
+
+  HD_INLINE Scalar operator()(Scalar e) const {
+    if (e < e0_ + de_ && e > e0_ - de_)
+      return 1.0 / (2.0 * de_);
+    else
+      return 0.0;
+  }
+
+  Scalar emin() const { return e0_ * 1e-2; }
+  Scalar emax() const { return e0_ * 1e2; }
+
+  Scalar e0_, de_;
+};
+
 }  // namespace Spectra
 
 }  // namespace Aperture
