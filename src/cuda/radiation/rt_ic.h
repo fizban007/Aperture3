@@ -25,11 +25,12 @@ class inverse_compton {
   cu_multi_array<Scalar>& dnde1p() { return m_dnde1p; }
 
   int find_n_gamma(Scalar gamma) const;
-  int find_n_ep(Scalar ep) const;
+  Scalar find_n_ep(Scalar ep) const;
   Scalar gen_e1p(int gn);
   Scalar gen_ep(int gn, Scalar e1p);
   Scalar gen_photon_e(Scalar gamma);
-  int binary_search(float u, int n, const cu_multi_array<Scalar>& array) const;
+  int binary_search(float u, int n, const cu_multi_array<Scalar>& array,
+                    Scalar& v1, Scalar& v2) const;
 
  private:
   HOST_DEVICE double sigma_ic(Scalar x) const;

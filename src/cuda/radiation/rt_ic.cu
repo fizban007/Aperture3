@@ -159,7 +159,8 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   // distribution
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     for (uint32_t i = 0; i < m_ep.size(); i++) {
-      m_npep(i, n) *= m_ep[i];
+      // if (m_ep[i] < 0.1)
+        m_npep(i, n) *= m_ep[i];
     }
     for (uint32_t i = 1; i < m_ep.size(); i++) {
       m_npep(i, n) += m_npep(i - 1, n);
@@ -212,7 +213,7 @@ inverse_compton::find_n_gamma(Scalar gamma) const {
   return (std::log(gamma) - std::log(MIN_GAMMA)) / m_dg;
 }
 
-int
+Scalar
 inverse_compton::find_n_ep(Scalar ep) const {
   if (ep < MIN_EP) return 0;
   if (ep > MAX_EP) return m_ep.size() - 1;
@@ -221,54 +222,71 @@ inverse_compton::find_n_ep(Scalar ep) const {
 
 int
 inverse_compton::binary_search(
-    float u, int n, const cu_multi_array<Scalar>& array) const {
-  int a = 0, b = m_ep.size() - 1;
+    float u, int n, const cu_multi_array<Scalar>& array, Scalar& v1, Scalar& v2) const {
+  int a = 0, b = m_ep.size() - 1, tmp = 0;
+  Scalar v = 0.0f;
   while (a < b) {
-    int tmp = (a + b) / 2;
-    Scalar v = array(tmp, n);
+    tmp = (a + b) / 2;
+    v = array(tmp, n);
     if (v < u) {
       a = tmp + 1;
     } else if (v > u) {
       b = tmp - 1;
     } else {
       b = tmp;
-      break;
+      v1 = v2 = v;
+      return b;
     }
   }
-  return b;
+  if (v < u) {
+    v1 = v;
+    v2 = (a < m_ep.size() ? array(a, n) : v);
+    return tmp;
+  } else {
+    v2 = v;
+    v1 = (b >= 0 ? array(b, n) : v);
+    return std::max(b, 0);
+  }
 }
 
 Scalar
 inverse_compton::gen_e1p(int gn) {
   // int n = find_n_gamma(gamma);
   float u = m_dist(m_generator);
-  int b = binary_search(u, gn, m_dnde1p);
-  Scalar l = m_dnde1p(b, gn);
-  Scalar h = m_dnde1p(b+1, gn);
+  Scalar l, h;
+  int b = binary_search(u, gn, m_dnde1p, l, h);
+  // Scalar l = m_dnde1p(b, gn);
+  // Scalar h = m_dnde1p(b+1, gn);
   // Logger::print_info("u is {}, b is {}, b+1 is {}", u, ,
   //                    m_dnde1p(b + 1, gn));
-  Scalar bb = (u - l) / (h - l) + b;
+  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
   return std::exp(log(MIN_EP) + m_dep * bb);
 }
 
 Scalar
 inverse_compton::gen_ep(int gn, Scalar e1p) {
-  if (e1p < 0.01f) return e1p;
+  float u = m_dist(m_generator);
+  if (e1p < 0.01f) {
+    Scalar ep = e1p + u * (2.0*e1p*e1p) / (1.0 - 2.0*e1p);
+    return ep; 
+  }
   Scalar u_low = 0.0, u_hi = 1.0;
   if (e1p > 0.5) {
     Scalar e_low = e1p;
-    u_low = m_npep(find_n_ep(e_low), gn);
+    int n_low = find_n_ep(e_low);
+    u_low = m_npep(n_low, gn);
   } else {
     Scalar e_low = e1p, e_hi = e1p / (1.0 - 2.0 * e1p);
     u_low = m_npep(find_n_ep(e_low), gn);
     u_hi = m_npep(find_n_ep(e_hi), gn);
   }
-  float u = m_dist(m_generator);
+  // float u = m_dist(m_generator);
   u = u * (u_hi - u_low) + u_low;
-  int b = binary_search(u, gn, m_npep);
-  Scalar l = m_npep(b, gn);
-  Scalar h = m_npep(b+1, gn);
-  Scalar bb = (u - l) / (h - l) + b;
+  Scalar l, h;
+  int b = binary_search(u, gn, m_npep, l, h);
+  // Scalar l = m_npep(b, gn);
+  // Scalar h = m_npep(b+1, gn);
+  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
   return std::exp(log(MIN_EP) + m_dep * bb);
 }
 
@@ -278,10 +296,15 @@ inverse_compton::gen_photon_e(Scalar gamma) {
   Scalar e1p = gen_e1p(n);
   Scalar ep = gen_ep(n, e1p);
   if (ep < e1p) ep = e1p;
-  Scalar mu = 1.0 - 1.0 / e1p + 1.0 / ep;
-  Scalar result = gamma * e1p * (1.0 + beta(gamma) * (-mu));
+  // Scalar mu = 1.0 - 1.0 / e1p + 1.0 / ep;
+  // Scalar result = gamma * e1p * (1.0 + beta(gamma) * (-mu));
+  Scalar b = beta(gamma);
+  Scalar result = gamma * e1p * (1.0 - b);
+  result += gamma * b * (1.0 - e1p / ep);
   if (result > gamma - 1.0) result = gamma - 1.0;
-  if (result < 0.001 * gamma) result = 0.001 * gamma;
+  if (result < 1.0e-5) result = 1.0e-5;
+  // if (n == 80)
+  //   Logger::print_info("e1p is {}, ep is {}, mu is {}, result is {}", e1p, ep, mu, result/gamma); 
   return result;
 }
 
@@ -291,5 +314,7 @@ template void inverse_compton::init<Spectra::power_law_soft>(
     const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax);
 template void inverse_compton::init<Spectra::black_body>(
     const Spectra::black_body& n_e, Scalar emin, Scalar emax);
+template void inverse_compton::init<Spectra::mono_energetic>(
+    const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax);
 
 }  // namespace Aperture
