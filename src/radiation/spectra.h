@@ -41,6 +41,30 @@ struct power_law_soft {
   Scalar alpha_, emin_, emax_;
 };
 
+struct broken_power_law {
+  HOST_DEVICE broken_power_law(Scalar alpha, Scalar delta, Scalar ep,
+                               Scalar emin, Scalar emax)
+      : alpha_(alpha),
+        delta_(delta),
+        epeak_(ep),
+        emin_(emin),
+        emax_(emax) {}
+
+  HD_INLINE Scalar operator()(Scalar e) const {
+    if (e < epeak_ && e > emin_)
+      return pow(e / epeak_, delta_) / e;
+    else if (e > epeak_ && e < emax_)
+      return pow(e / epeak_, -alpha_) / e;
+    else
+      return 0.0;
+  }
+
+  Scalar emin() const { return emin_; }
+  Scalar emax() const { return emax_; }
+
+  Scalar alpha_, delta_, epeak_, emin_, emax_;
+};
+
 struct black_body {
   HOST_DEVICE black_body(Scalar kT) : kT_(kT) {}
 
@@ -48,15 +72,14 @@ struct black_body {
     return e * e / (exp(e / kT_) - 1.0);
   }
 
-  Scalar emin() const { return 1e-6*kT_; }
-  Scalar emax() const { return 1e4*kT_; }
+  Scalar emin() const { return 1e-6 * kT_; }
+  Scalar emax() const { return 1e4 * kT_; }
 
   Scalar kT_;
 };
 
 struct mono_energetic {
-  HOST_DEVICE mono_energetic(Scalar e0, Scalar de)
-      : e0_(e0), de_(de) {}
+  HOST_DEVICE mono_energetic(Scalar e0, Scalar de) : e0_(e0), de_(de) {}
 
   HD_INLINE Scalar operator()(Scalar e) const {
     if (e < e0_ + de_ && e > e0_ - de_)
