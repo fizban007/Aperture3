@@ -22,13 +22,13 @@ Scalar e_max = 1.0e8;
 int
 main(int argc, char *argv[]) {
   SimParams params;
-  params.n_gamma = 200;
-  params.n_ep = 4000;
+  params.n_gamma = 400;
+  params.n_ep = 1000;
   inverse_compton ic(params);
 
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
-  Spectra::power_law_soft ne(1.1, e_min, e_max);
-  // Spectra::black_body ne(0.001);
+  // Spectra::power_law_soft ne(1.1, e_min, e_max);
+  Spectra::black_body ne(0.001);
   // Spectra::mono_energetic ne(0.001, 1.0e-4);
   ic.init(ne, ne.emin(), ne.emax());
 
@@ -66,21 +66,21 @@ main(int argc, char *argv[]) {
   data_dnde1p.write(out_array);
 
   const uint32_t N_samples = 100000;
-  std::vector<std::vector<Scalar>> test_e1p(params.n_gamma);
+  // std::vector<std::vector<Scalar>> test_e1p(params.n_gamma);
   std::vector<std::vector<Scalar>> test_e(params.n_gamma);
   for (int n = 0; n < params.n_gamma; n++) {
-    test_e1p[n] = std::vector<Scalar>(N_samples);
+    // test_e1p[n] = std::vector<Scalar>(N_samples);
     test_e[n] = std::vector<Scalar>(N_samples);
     for (uint32_t i = 0; i < N_samples; i++) {
       // Logger::print_info("at {}", i);
       // test_e1p[n][i] = ic.gen_e1p(ic.find_n_gamma(ic.gammas()[n]));
-      test_e1p[n][i] = ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f);
+      // test_e1p[n][i] = ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f);
       test_e[n][i] = ic.gen_photon_e(ic.gammas()[n]);
     }
   }
-  DataSet data_teste1p = datafile.createDataSet<Scalar>(
-      "test_e1p", DataSpace::From(test_e1p));
-  data_teste1p.write(test_e1p);
+  // DataSet data_teste1p = datafile.createDataSet<Scalar>(
+  //     "test_e1p", DataSpace::From(test_e1p));
+  // data_teste1p.write(test_e1p);
   DataSet data_teste = datafile.createDataSet<Scalar>(
       "test_e", DataSpace::From(test_e));
   data_teste.write(test_e);

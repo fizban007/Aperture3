@@ -34,12 +34,14 @@ class inverse_compton {
 
  private:
   HOST_DEVICE double sigma_ic(Scalar x) const;
+  HOST_DEVICE double sigma_lab(Scalar q, Scalar ge) const;
   HOST_DEVICE double x_ic(Scalar gamma, Scalar e, Scalar mu) const;
   HOST_DEVICE double beta(Scalar gamma) const;
   HOST_DEVICE double sigma_rest(Scalar ep, Scalar e1p) const;
 
   cu_multi_array<Scalar> m_npep;
   cu_multi_array<Scalar> m_dnde1p;
+  cu_multi_array<Scalar> m_dNde;
   cu_array<Scalar> m_rate, m_gammas, m_ep;
   Scalar m_dep, m_dg;
 

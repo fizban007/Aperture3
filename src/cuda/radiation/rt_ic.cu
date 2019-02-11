@@ -53,14 +53,19 @@ gen_e1p(Scalar gamma, curandState& state, cudaPitchedPtr dnde1p) {
 inverse_compton::inverse_compton(const SimParams& params)
     : m_npep(Extent(params.n_ep, params.n_gamma)),
       m_dnde1p(Extent(params.n_ep, params.n_gamma)),
+      m_dNde(Extent(params.n_ep, params.n_gamma)),
       m_rate(params.n_gamma),
       m_gammas(params.n_gamma),
       m_ep(params.n_ep),
       m_generator(),
       m_dist(0.0, 1.0) {
-  m_dep = (log(MAX_EP) - log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
+  // m_dep = (log(MAX_EP) - log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
+  // for (uint32_t n = 0; n < m_ep.size(); n++) {
+  //   m_ep[n] = exp(log(MIN_EP) + m_dep * (Scalar)n);
+  // }
+  m_dep = 1.0 / ((Scalar)m_ep.size() - 1.0);
   for (uint32_t n = 0; n < m_ep.size(); n++) {
-    m_ep[n] = exp(log(MIN_EP) + m_dep * (Scalar)n);
+    m_ep[n] = m_dep * n;
   }
   m_dg =
       (log(MAX_GAMMA) - log(MIN_GAMMA)) / ((Scalar)m_rate.size() - 1.0);
@@ -80,7 +85,7 @@ template <typename F>
 void
 inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   const int N_mu = 100;
-  const int N_e = 500;
+  const int N_e = 800;
 
   // Compute the gammas and rates for IC scattering
   Logger::print_info("Pre-calculating the scattering rate");
@@ -109,72 +114,99 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
 
   // Compute the photon spectrum in electron rest frame for various
   // gammas
-  Logger::print_info(
-      "Pre-calculating the rest frame soft photon spectrum");
+  // Logger::print_info(
+  //     "Pre-calculating the rest frame soft photon spectrum");
+  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
+  //   Scalar gamma = m_gammas[n];
+  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
+  //     Scalar ep = m_ep[i];
+  //     Scalar result = 0.0;
+  //     for (int i_e = 0; i_e < N_e; i_e++) {
+  //       Scalar e = exp(log(emin) + i_e * de);
+  //       if (e > 0.5 * ep / gamma && e < 2.0 * ep * gamma)
+  //         result += n_e(e) * ep / (2.0 * gamma * e);
+  //     }
+  //     m_npep(i, n) = result * de;
+  //   }
+  // }
+
+  // // Compute the scattered photon spectrum in the electron rest
+  // // frame. We only store the cumulative distribution for Monte Carlo
+  // // purpose
+  // Logger::print_info(
+  //     "Pre-calculating the rest frame scattered photon spectrum");
+  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
+  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
+  //     Scalar e1p = m_ep[i];
+  //     if (e1p < 0.03) {
+  //       m_dnde1p(i, n) =
+  //           m_npep(i, n) * 2.0 / (1.0 - 2.0 * e1p) * m_ep[i];
+  //     } else {
+  //       Scalar result = 0.0;
+  //       for (uint32_t i_e = 0; i_e < m_ep.size(); i_e++) {
+  //         Scalar ep = m_ep[i_e];
+  //         if (ep > e1p && 1.0 / (1.0 / ep + 2.0) < e1p)
+  //           result += m_npep(i_e, n) * sigma_rest(ep, e1p) / ep;
+  //       }
+  //       m_dnde1p(i, n) = result * m_dep * m_ep[i];
+  //       // m_dnde1p(i, n) = result * m_dep;
+  //     }
+  //   }
+  //   for (uint32_t i = 1; i < m_ep.size(); i++) {
+  //     m_dnde1p(i, n) += m_dnde1p(i - 1, n);
+  //   }
+  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
+  //     m_dnde1p(i, n) /= m_dnde1p(m_ep.size() - 1, n);
+  //   }
+  // }
+
+  // // Process the npep distribution to turn it into a cumulative
+  // // distribution
+  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
+  //   // We should multiply by ep, but we also divide by ep because of
+  //   // cross section, so we do nothing
+
+  //   // for (uint32_t i = 0; i < m_ep.size(); i++) {
+  //   //   if (m_ep[i] < 0.5)
+  //   //     m_npep(i, n) /= m_ep[i];
+  //   // }
+  //   for (uint32_t i = 1; i < m_ep.size(); i++) {
+  //     m_npep(i, n) += m_npep(i - 1, n);
+  //   }
+  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
+  //     m_npep(i, n) /= m_npep(m_ep.size() - 1, n);
+  //   }
+  // }
+
+  // Compute the photon spectrum in lab frame for various gammas
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     Scalar gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_ep.size(); i++) {
-      Scalar ep = m_ep[i];
+      Scalar e1 = m_ep[i];
       Scalar result = 0.0;
-      for (int i_e = 0; i_e < N_e; i_e++) {
+      for (uint32_t i_e = 0; i_e < N_e; i_e++) {
         Scalar e = exp(log(emin) + i_e * de);
-        if (e > 0.5 * ep / gamma && e < 2.0 * ep * gamma)
-          result += n_e(e) * ep / (2.0 * gamma * e);
+        Scalar ge = gamma * e * 4.0;
+        Scalar q = e1/(ge * (1.0 - e1));
+        if (e1 < ge / (1.0 + ge) && e1 > e/gamma)
+          result += n_e(e) * sigma_lab(q, ge) / gamma;
       }
-      m_npep(i, n) = result * de;
-    }
-  }
-
-  // Compute the scattered photon spectrum in the electron rest
-  // frame. We only store the cumulative distribution for Monte Carlo
-  // purpose
-  Logger::print_info(
-      "Pre-calculating the rest frame scattered photon spectrum");
-  for (uint32_t n = 0; n < m_gammas.size(); n++) {
-    for (uint32_t i = 0; i < m_ep.size(); i++) {
-      Scalar e1p = m_ep[i];
-      if (e1p < 0.03) {
-        m_dnde1p(i, n) =
-            m_npep(i, n) * 2.0 / (1.0 - 2.0 * e1p) * m_ep[i];
-      } else {
-        Scalar result = 0.0;
-        for (uint32_t i_e = 0; i_e < m_ep.size(); i_e++) {
-          Scalar ep = m_ep[i_e];
-          if (ep > e1p && 1.0 / (1.0 / ep + 2.0) < e1p)
-            result += m_npep(i_e, n) * sigma_rest(ep, e1p) / ep;
-        }
-        m_dnde1p(i, n) = result * m_dep * m_ep[i];
-        // m_dnde1p(i, n) = result * m_dep;
-      }
+      m_dNde(i, n) = result * de;
     }
     for (uint32_t i = 1; i < m_ep.size(); i++) {
-      m_dnde1p(i, n) += m_dnde1p(i - 1, n);
+      m_dNde(i, n) += m_dNde(i - 1, n);
     }
     for (uint32_t i = 0; i < m_ep.size(); i++) {
-      m_dnde1p(i, n) /= m_dnde1p(m_ep.size() - 1, n);
+      m_dNde(i, n) /= m_dNde(m_ep.size() - 1, n);
     }
   }
-
-  // Process the npep distribution to turn it into a cumulative
-  // distribution
-  for (uint32_t n = 0; n < m_gammas.size(); n++) {
-    for (uint32_t i = 0; i < m_ep.size(); i++) {
-      // if (m_ep[i] < 0.1)
-        m_npep(i, n) *= m_ep[i];
-    }
-    for (uint32_t i = 1; i < m_ep.size(); i++) {
-      m_npep(i, n) += m_npep(i - 1, n);
-    }
-    for (uint32_t i = 0; i < m_ep.size(); i++) {
-      m_npep(i, n) /= m_npep(m_ep.size() - 1, n);
-    }
-  }
-
+  
   m_gammas.sync_to_device();
   m_rate.sync_to_device();
   m_ep.sync_to_device();
-  m_npep.sync_to_device();
-  m_dnde1p.sync_to_device();
+  m_dNde.sync_to_device();
+  // m_npep.sync_to_device();
+  // m_dnde1p.sync_to_device();
 }
 
 HOST_DEVICE double
@@ -193,6 +225,12 @@ inverse_compton::sigma_ic(Scalar x) const {
 HOST_DEVICE double
 inverse_compton::x_ic(Scalar gamma, Scalar e, Scalar mu) const {
   return gamma * e * (1.0 - mu * beta(gamma));
+}
+
+HOST_DEVICE double
+inverse_compton::sigma_lab(Scalar q, Scalar ge) const {
+  return 2.0 * q * log(q) + (1.0 + 2.0 * q) * (1.0 - q) +
+         0.5 * square(ge * q) * (1.0 - q) / (1.0 + q * ge);
 }
 
 HOST_DEVICE double
@@ -221,8 +259,9 @@ inverse_compton::find_n_ep(Scalar ep) const {
 }
 
 int
-inverse_compton::binary_search(
-    float u, int n, const cu_multi_array<Scalar>& array, Scalar& v1, Scalar& v2) const {
+inverse_compton::binary_search(float u, int n,
+                               const cu_multi_array<Scalar>& array,
+                               Scalar& v1, Scalar& v2) const {
   int a = 0, b = m_ep.size() - 1, tmp = 0;
   Scalar v = 0.0f;
   while (a < b) {
@@ -265,23 +304,37 @@ inverse_compton::gen_e1p(int gn) {
 
 Scalar
 inverse_compton::gen_ep(int gn, Scalar e1p) {
+  // generate uniform random number u between 0 and 1
   float u = m_dist(m_generator);
-  if (e1p < 0.01f) {
-    Scalar ep = e1p + u * (2.0*e1p*e1p) / (1.0 - 2.0*e1p);
-    return ep; 
+  if (e1p < 0.02f) {
+    // e1p is very small, so ep has a very narrow range, good
+    // approximation to let ep ~ e1p. Take ep to be randomly between e1p
+    // and upper bound
+    Scalar ep = e1p + u * (2.0 * e1p * e1p) / (1.0 - 2.0 * e1p);
+    return ep;
   }
+  // now we need to set some range for u according to e1p
   Scalar u_low = 0.0, u_hi = 1.0;
   if (e1p > 0.5) {
+    // if e1p > 0.5, there is only lower bound, which is ep > e1p
     Scalar e_low = e1p;
     int n_low = find_n_ep(e_low);
     u_low = m_npep(n_low, gn);
+    // linearly scale u to be between u_hi and u_low, here u_hi is
+    // just 1.0
+    u = u * (u_hi - u_low) + u_low;
   } else {
+    // if e1p < 0.5, there is both upper and lower bounds
     Scalar e_low = e1p, e_hi = e1p / (1.0 - 2.0 * e1p);
-    u_low = m_npep(find_n_ep(e_low), gn);
+    u_low = m_npep(find_n_ep(e_low) + 1, gn);
     u_hi = m_npep(find_n_ep(e_hi), gn);
+    // the cross-section skews towards e_low when e1p is close to 0.5,
+    // so we do some tricks to u to reflect this scaling
+    if (e1p > 0.1)
+      u = pow(u, 8.0 * e1p) * (u_hi - u_low) + u_low;
+    else
+      u = u * (u_hi - u_low) + u_low;
   }
-  // float u = m_dist(m_generator);
-  u = u * (u_hi - u_low) + u_low;
   Scalar l, h;
   int b = binary_search(u, gn, m_npep, l, h);
   // Scalar l = m_npep(b, gn);
@@ -292,20 +345,28 @@ inverse_compton::gen_ep(int gn, Scalar e1p) {
 
 Scalar
 inverse_compton::gen_photon_e(Scalar gamma) {
-  int n = find_n_gamma(gamma);
-  Scalar e1p = gen_e1p(n);
-  Scalar ep = gen_ep(n, e1p);
-  if (ep < e1p) ep = e1p;
+  // int n = find_n_gamma(gamma);
+  // Scalar e1p = gen_e1p(n);
+  // Scalar ep = gen_ep(n, e1p);
+  // if (ep < e1p) ep = e1p;
   // Scalar mu = 1.0 - 1.0 / e1p + 1.0 / ep;
-  // Scalar result = gamma * e1p * (1.0 + beta(gamma) * (-mu));
-  Scalar b = beta(gamma);
-  Scalar result = gamma * e1p * (1.0 - b);
-  result += gamma * b * (1.0 - e1p / ep);
-  if (result > gamma - 1.0) result = gamma - 1.0;
-  if (result < 1.0e-5) result = 1.0e-5;
-  // if (n == 80)
-  //   Logger::print_info("e1p is {}, ep is {}, mu is {}, result is {}", e1p, ep, mu, result/gamma); 
-  return result;
+  // // Scalar result = gamma * e1p * (1.0 + beta(gamma) * (-mu));
+  // Scalar b = beta(gamma);
+  // Scalar result = gamma * e1p * (1.0 - b);
+  // result += gamma * b * (1.0 - e1p / ep);
+  // if (result > gamma - 1.0) result = gamma - 1.0;
+  // if (result < 1.0e-5) result = 1.0e-5;
+  // if (n == 33 && result / gamma < 0.2)
+  //   Logger::print_info("e1p is {}, ep is {}, mu is {}, result is {}",
+  //                      e1p, ep, mu, result / gamma);
+  float u = m_dist(m_generator);
+  int gn = find_n_gamma(gamma);
+  Scalar l, h;
+  int b = binary_search(u, gn, m_dNde, l, h);
+  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+
+  Scalar result = m_dep * bb;
+  return result * gamma;
 }
 
 template void inverse_compton::init<Spectra::power_law_hard>(
