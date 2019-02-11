@@ -21,8 +21,8 @@ class inverse_compton {
   cu_array<Scalar>& rate() { return m_rate; }
   cu_array<Scalar>& gammas() { return m_gammas; }
   cu_array<Scalar>& ep() { return m_ep; }
-  cu_multi_array<Scalar>& np() { return m_npep; }
-  cu_multi_array<Scalar>& dnde1p() { return m_dnde1p; }
+  // cu_multi_array<Scalar>& np() { return m_npep; }
+  // cu_multi_array<Scalar>& dnde1p() { return m_dnde1p; }
 
   int find_n_gamma(Scalar gamma) const;
   Scalar find_n_ep(Scalar ep) const;
@@ -32,21 +32,20 @@ class inverse_compton {
   int binary_search(float u, int n, const cu_multi_array<Scalar>& array,
                     Scalar& v1, Scalar& v2) const;
 
- private:
-  HOST_DEVICE double sigma_ic(Scalar x) const;
-  HOST_DEVICE double sigma_lab(Scalar q, Scalar ge) const;
-  HOST_DEVICE double x_ic(Scalar gamma, Scalar e, Scalar mu) const;
-  HOST_DEVICE double beta(Scalar gamma) const;
-  HOST_DEVICE double sigma_rest(Scalar ep, Scalar e1p) const;
+  void generate_photon_energies(cu_array<Scalar>& e_ph, cu_array<Scalar>& gammas);
+  void generate_random_gamma(cu_array<Scalar>& gammas);
 
-  cu_multi_array<Scalar> m_npep;
-  cu_multi_array<Scalar> m_dnde1p;
+ private:
+  // cu_multi_array<Scalar> m_npep;
+  // cu_multi_array<Scalar> m_dnde1p;
   cu_multi_array<Scalar> m_dNde;
   cu_array<Scalar> m_rate, m_gammas, m_ep;
   Scalar m_dep, m_dg;
+  int m_threads, m_blocks;
 
   std::default_random_engine m_generator;
   std::uniform_real_distribution<float> m_dist;
+  void* m_states;
 
 };  // ----- end of class inverse_compton -----
 
