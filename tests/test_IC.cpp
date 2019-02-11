@@ -23,8 +23,8 @@ Scalar e_max = 1.0e8;
 int
 main(int argc, char *argv[]) {
   SimParams params;
-  params.n_gamma = 400;
-  params.n_ep = 1000;
+  params.n_gamma = 600;
+  params.n_ep = 600;
   inverse_compton ic(params);
 
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
