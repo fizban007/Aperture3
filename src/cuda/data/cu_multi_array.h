@@ -127,7 +127,8 @@ class cu_multi_array : public multi_array<T> {
   // T* data() { return _data_h; }
   // const T* data() const { return _data_h; }
   // cudaPitchedPtr data_d() { return _data_d; }
-  cudaPitchedPtr data_d() const { return _data_d; }
+  cudaPitchedPtr& data_d() { return _data_d; }
+  const cudaPitchedPtr& data_d() const { return _data_d; }
   int devId() const { return _devId; }
 
  private:

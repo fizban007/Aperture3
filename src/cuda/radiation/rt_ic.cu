@@ -1,5 +1,6 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/radiation/rt_ic.h"
 #include "radiation/spectra.h"
@@ -11,14 +12,50 @@
 namespace Aperture {
 
 #define MIN_GAMMA 1.01f
-#define MAX_GAMMA 1.0e12
+#define MAX_GAMMA 1.0e15
 #define MIN_EP 1.0e-15
 #define MAX_EP 1.0e15
+
+HOST_DEVICE double
+beta(Scalar gamma) {
+  return 1.0 / sqrt(1.0 - 1.0 / square(gamma));
+}
+
+HOST_DEVICE double
+sigma_ic(Scalar x) {
+  if (x < 1.0e-3) {
+    return 1.0f - 2.0f * x + 26.0f * x * x / 5.0f;
+  } else {
+    double l = std::log(1.0 + 2.0 * x);
+    return 0.75 *
+           ((1.0 + x) * (2.0 * x * (1.0 + x) / (1.0 + 2.0 * x) - l) /
+                cube(x) +
+            0.5 * l / x - (1.0 + 3.0 * x) / square(1.0 + 2.0 * x));
+  }
+}
+
+HOST_DEVICE double
+x_ic(Scalar gamma, Scalar e, Scalar mu) {
+  return gamma * e * (1.0 - mu * beta(gamma));
+}
+
+HOST_DEVICE double
+sigma_lab(Scalar q, Scalar ge) {
+  return 2.0 * q * log(q) + (1.0 + 2.0 * q) * (1.0 - q) +
+         0.5 * square(ge * q) * (1.0 - q) / (1.0 + q * ge);
+}
+
+HOST_DEVICE double
+sigma_rest(Scalar ep, Scalar e1p) {
+  return (ep / e1p + e1p / ep -
+          (1.0 - square(1.0 - 1.0 / e1p + 1.0 / ep)));
+}
 
 namespace Kernels {
 
 __constant__ Scalar dev_ic_dep;
 __constant__ Scalar dev_ic_dg;
+__constant__ cudaPitchedPtr dev_dNde;
 
 __device__ int
 find_n_gamma(Scalar gamma) {
@@ -27,42 +64,139 @@ find_n_gamma(Scalar gamma) {
   return (std::log(gamma) - std::log(MIN_GAMMA)) / dev_ic_dg;
 }
 
-__device__ Scalar
-gen_e1p(Scalar gamma, curandState& state, cudaPitchedPtr dnde1p) {
-  int n = find_n_gamma(gamma);
-  float u = curand_uniform(&state);
-  int a = 0, b = dev_params.n_ep;
+__device__ int
+find_n_e1(Scalar e1) {
+  if (e1 < 0.0f) e1 = 0.0;
+  if (e1 > 1.0f) e1 = 1.0f;
+  return e1 / dev_ic_dep;
+}
+
+// __device__ Scalar
+// gen_e1p(Scalar gamma, curandState& state, cudaPitchedPtr dnde1p) {
+//   int n = find_n_gamma(gamma);
+//   float u = curand_uniform(&state);
+//   int a = 0, b = dev_params.n_ep;
+//   while (a < b) {
+//     int tmp = (a + b) / 2;
+//     // size_t offset = tmp * sizeof(Scalar) + n * dnde1p.pitch;
+//     Scalar v = *ptrAddr(dnde1p, tmp, n);
+//     if (v < u) {
+//       a = tmp + 1;
+//     } else if (v > u) {
+//       b = tmp - 1;
+//     } else {
+//       b = tmp;
+//       break;
+//     }
+//   }
+//   return std::exp(log(MIN_EP) + dev_ic_dep * b);
+// }
+
+__device__ int
+binary_search(float u, int n, cudaPitchedPtr array, Scalar& l,
+              Scalar& h) {
+  int size = array.xsize / sizeof(Scalar);
+  int a = 0, b = size - 1, tmp = 0;
+  Scalar v = 0.0f;
   while (a < b) {
-    int tmp = (a + b) / 2;
-    // size_t offset = tmp * sizeof(Scalar) + n * dnde1p.pitch;
-    Scalar v = *ptrAddr(dnde1p, tmp, n);
+    tmp = (a + b) / 2;
+    v = *ptrAddr(array, tmp, n);
     if (v < u) {
       a = tmp + 1;
     } else if (v > u) {
       b = tmp - 1;
     } else {
       b = tmp;
-      break;
+      l = h = v;
+      return b;
     }
   }
-  return std::exp(log(MIN_EP) + dev_ic_dep * b);
+  if (v < u) {
+    l = v;
+    h = (a < size ? *ptrAddr(array, a, n) : v);
+    return tmp;
+  } else {
+    h = v;
+    l = (b >= 0 ? *ptrAddr(array, b, n) : v);
+    return max(b, 0);
+  }
+}
+
+__device__ Scalar
+gen_photon_e(Scalar gamma, curandState* state) {
+  float u = curand_uniform(state);
+  int gn = find_n_gamma(gamma);
+  Scalar l, h;
+  int b = binary_search(u, gn, dev_dNde, l, h);
+  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+
+  Scalar result = dev_ic_dep * bb;
+  return result * gamma;
+}
+
+template <typename F>
+__global__ void
+init_scatter_rate(F n_e, Scalar dmu, Scalar de, int N_mu, int N_e,
+                  Scalar* rate, Scalar* gammas, Scalar emin,
+                  uint32_t ngamma) {
+  Scalar result = 0.0;
+  for (int n = threadIdx.x + blockIdx.x * blockDim.x; n < ngamma;
+       n += blockDim.x * gridDim.x) {
+    printf("%d\n", n);
+    Scalar gamma = gammas[n];
+
+    for (int i_mu = 0; i_mu < N_mu; i_mu++) {
+      Scalar mu = i_mu * dmu - 1.0;
+      for (int i_e = 0; i_e < N_e; i_e++) {
+        Scalar e = exp(log(emin) + i_e * de);
+        Scalar x = x_ic(gamma, e, mu);
+        Scalar sigma = sigma_ic(x);
+        result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) * e;
+      }
+    }
+
+    rate[n] = result;
+  }
+}
+
+__global__ void
+gen_photon_energies(Scalar* eph, Scalar* gammas, uint32_t num,
+                    curandState* states) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState local_state = states[id];
+  for (int n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    eph[n] = gen_photon_e(gammas[n], &local_state);
+  }
+  states[id] = local_state;
+}
+
+__global__ void
+gen_rand_gammas(Scalar* gammas, uint32_t num, curandState* states) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState local_state = states[id];
+  for (int n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    gammas[n] = std::exp(std::log(1.01) +
+                         curand_uniform(&local_state) *
+                             (std::log(1e10) - std::log(1.01)));
+  }
+  states[id] = local_state;
 }
 
 }  // namespace Kernels
 
 inverse_compton::inverse_compton(const SimParams& params)
-    : m_npep(Extent(params.n_ep, params.n_gamma)),
-      m_dnde1p(Extent(params.n_ep, params.n_gamma)),
+    :  // m_npep(Extent(params.n_ep, params.n_gamma)),
+       //       m_dnde1p(Extent(params.n_ep, params.n_gamma)),
       m_dNde(Extent(params.n_ep, params.n_gamma)),
       m_rate(params.n_gamma),
       m_gammas(params.n_gamma),
       m_ep(params.n_ep),
+      m_threads(256),
+      m_blocks(256),
       m_generator(),
       m_dist(0.0, 1.0) {
-  // m_dep = (log(MAX_EP) - log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
-  // for (uint32_t n = 0; n < m_ep.size(); n++) {
-  //   m_ep[n] = exp(log(MIN_EP) + m_dep * (Scalar)n);
-  // }
   m_dep = 1.0 / ((Scalar)m_ep.size() - 1.0);
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_ep[n] = m_dep * n;
@@ -73,10 +207,19 @@ inverse_compton::inverse_compton(const SimParams& params)
     m_gammas[n] = exp(log(MIN_GAMMA) + m_dg * (Scalar)n);
   }
 
+  m_ep.sync_to_device();
+  m_gammas.sync_to_device();
+
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dep, &m_dep, sizeof(Scalar)));
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_dNde, &m_dNde.data_d(),
+                                  sizeof(cudaPitchedPtr)));
+
+  CudaSafeCall(cudaMalloc(&m_states,
+                          m_threads * m_blocks * sizeof(curandState)));
+  init_rand_states((curandState*)m_states, 123456, m_threads, m_blocks);
 }
 
 inverse_compton::~inverse_compton() {}
@@ -91,6 +234,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   Logger::print_info("Pre-calculating the scattering rate");
   Scalar dmu = 2.0 / (N_mu - 1.0);
   Scalar de = (log(emax) - log(emin)) / (N_e - 1.0);
+  // Kernels::init_scatter_rate<<<200, 200>>>(
+  //     n_e, dmu, de, N_mu, N_e, m_rate.data(), m_gammas.data(), emin,
+  //     m_gammas.size());
+  // cudaDeviceSynchronize();
+  // CudaCheckError();
+  // m_rate.sync_to_host();
   for (uint32_t n = 0; n < m_rate.size(); n++) {
     Scalar gamma = m_gammas[n];
     // Logger::print_info("gamma is {}", gamma);
@@ -108,9 +257,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
         result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) * e;
       }
     }
-    // Logger::print_info("gamma is {}, result is {}", gamma, result);
+    // Logger::print_info("gamma is {}, result is {}", gamma,
+    // result);
     m_rate[n] = result * dmu * de;
   }
+
+  m_rate.sync_to_device();
 
   // Compute the photon spectrum in electron rest frame for various
   // gammas
@@ -179,6 +331,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   // }
 
   // Compute the photon spectrum in lab frame for various gammas
+  Logger::print_info("Pre-calculating the lab-frame spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     Scalar gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_ep.size(); i++) {
@@ -187,8 +340,8 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       for (uint32_t i_e = 0; i_e < N_e; i_e++) {
         Scalar e = exp(log(emin) + i_e * de);
         Scalar ge = gamma * e * 4.0;
-        Scalar q = e1/(ge * (1.0 - e1));
-        if (e1 < ge / (1.0 + ge) && e1 > e/gamma)
+        Scalar q = e1 / (ge * (1.0 - e1));
+        if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
           result += n_e(e) * sigma_lab(q, ge) / gamma;
       }
       m_dNde(i, n) = result * de;
@@ -200,48 +353,10 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       m_dNde(i, n) /= m_dNde(m_ep.size() - 1, n);
     }
   }
-  
-  m_gammas.sync_to_device();
-  m_rate.sync_to_device();
-  m_ep.sync_to_device();
+
   m_dNde.sync_to_device();
   // m_npep.sync_to_device();
   // m_dnde1p.sync_to_device();
-}
-
-HOST_DEVICE double
-inverse_compton::sigma_ic(Scalar x) const {
-  if (x < 1.0e-3) {
-    return 1.0f - 2.0f * x + 26.0f * x * x / 5.0f;
-  } else {
-    double l = std::log(1.0 + 2.0 * x);
-    return 0.75 *
-           ((1.0 + x) * (2.0 * x * (1.0 + x) / (1.0 + 2.0 * x) - l) /
-                cube(x) +
-            0.5 * l / x - (1.0 + 3.0 * x) / square(1.0 + 2.0 * x));
-  }
-}
-
-HOST_DEVICE double
-inverse_compton::x_ic(Scalar gamma, Scalar e, Scalar mu) const {
-  return gamma * e * (1.0 - mu * beta(gamma));
-}
-
-HOST_DEVICE double
-inverse_compton::sigma_lab(Scalar q, Scalar ge) const {
-  return 2.0 * q * log(q) + (1.0 + 2.0 * q) * (1.0 - q) +
-         0.5 * square(ge * q) * (1.0 - q) / (1.0 + q * ge);
-}
-
-HOST_DEVICE double
-inverse_compton::beta(Scalar gamma) const {
-  return 1.0 / sqrt(1.0 - 1.0 / square(gamma));
-}
-
-HOST_DEVICE double
-inverse_compton::sigma_rest(Scalar ep, Scalar e1p) const {
-  return (ep / e1p + e1p / ep -
-          (1.0 - square(1.0 - 1.0 / e1p + 1.0 / ep)));
 }
 
 int
@@ -288,60 +403,62 @@ inverse_compton::binary_search(float u, int n,
   }
 }
 
-Scalar
-inverse_compton::gen_e1p(int gn) {
-  // int n = find_n_gamma(gamma);
-  float u = m_dist(m_generator);
-  Scalar l, h;
-  int b = binary_search(u, gn, m_dnde1p, l, h);
-  // Scalar l = m_dnde1p(b, gn);
-  // Scalar h = m_dnde1p(b+1, gn);
-  // Logger::print_info("u is {}, b is {}, b+1 is {}", u, ,
-  //                    m_dnde1p(b + 1, gn));
-  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
-  return std::exp(log(MIN_EP) + m_dep * bb);
-}
+// Scalar
+// inverse_compton::gen_e1p(int gn) {
+//   // int n = find_n_gamma(gamma);
+//   float u = m_dist(m_generator);
+//   Scalar l, h;
+//   int b = binary_search(u, gn, m_dnde1p, l, h);
+//   // Scalar l = m_dnde1p(b, gn);
+//   // Scalar h = m_dnde1p(b+1, gn);
+//   // Logger::print_info("u is {}, b is {}, b+1 is {}", u, ,
+//   //                    m_dnde1p(b + 1, gn));
+//   Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+//   return std::exp(log(MIN_EP) + m_dep * bb);
+// }
 
-Scalar
-inverse_compton::gen_ep(int gn, Scalar e1p) {
-  // generate uniform random number u between 0 and 1
-  float u = m_dist(m_generator);
-  if (e1p < 0.02f) {
-    // e1p is very small, so ep has a very narrow range, good
-    // approximation to let ep ~ e1p. Take ep to be randomly between e1p
-    // and upper bound
-    Scalar ep = e1p + u * (2.0 * e1p * e1p) / (1.0 - 2.0 * e1p);
-    return ep;
-  }
-  // now we need to set some range for u according to e1p
-  Scalar u_low = 0.0, u_hi = 1.0;
-  if (e1p > 0.5) {
-    // if e1p > 0.5, there is only lower bound, which is ep > e1p
-    Scalar e_low = e1p;
-    int n_low = find_n_ep(e_low);
-    u_low = m_npep(n_low, gn);
-    // linearly scale u to be between u_hi and u_low, here u_hi is
-    // just 1.0
-    u = u * (u_hi - u_low) + u_low;
-  } else {
-    // if e1p < 0.5, there is both upper and lower bounds
-    Scalar e_low = e1p, e_hi = e1p / (1.0 - 2.0 * e1p);
-    u_low = m_npep(find_n_ep(e_low) + 1, gn);
-    u_hi = m_npep(find_n_ep(e_hi), gn);
-    // the cross-section skews towards e_low when e1p is close to 0.5,
-    // so we do some tricks to u to reflect this scaling
-    if (e1p > 0.1)
-      u = pow(u, 8.0 * e1p) * (u_hi - u_low) + u_low;
-    else
-      u = u * (u_hi - u_low) + u_low;
-  }
-  Scalar l, h;
-  int b = binary_search(u, gn, m_npep, l, h);
-  // Scalar l = m_npep(b, gn);
-  // Scalar h = m_npep(b+1, gn);
-  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
-  return std::exp(log(MIN_EP) + m_dep * bb);
-}
+// Scalar
+// inverse_compton::gen_ep(int gn, Scalar e1p) {
+//   // generate uniform random number u between 0 and 1
+//   float u = m_dist(m_generator);
+//   if (e1p < 0.02f) {
+//     // e1p is very small, so ep has a very narrow range, good
+//     // approximation to let ep ~ e1p. Take ep to be randomly between
+//     e1p
+//     // and upper bound
+//     Scalar ep = e1p + u * (2.0 * e1p * e1p) / (1.0 - 2.0 * e1p);
+//     return ep;
+//   }
+//   // now we need to set some range for u according to e1p
+//   Scalar u_low = 0.0, u_hi = 1.0;
+//   if (e1p > 0.5) {
+//     // if e1p > 0.5, there is only lower bound, which is ep > e1p
+//     Scalar e_low = e1p;
+//     int n_low = find_n_ep(e_low);
+//     u_low = m_npep(n_low, gn);
+//     // linearly scale u to be between u_hi and u_low, here u_hi is
+//     // just 1.0
+//     u = u * (u_hi - u_low) + u_low;
+//   } else {
+//     // if e1p < 0.5, there is both upper and lower bounds
+//     Scalar e_low = e1p, e_hi = e1p / (1.0 - 2.0 * e1p);
+//     u_low = m_npep(find_n_ep(e_low) + 1, gn);
+//     u_hi = m_npep(find_n_ep(e_hi), gn);
+//     // the cross-section skews towards e_low when e1p is close to
+//     0.5,
+//     // so we do some tricks to u to reflect this scaling
+//     if (e1p > 0.1)
+//       u = pow(u, 8.0 * e1p) * (u_hi - u_low) + u_low;
+//     else
+//       u = u * (u_hi - u_low) + u_low;
+//   }
+//   Scalar l, h;
+//   int b = binary_search(u, gn, m_npep, l, h);
+//   // Scalar l = m_npep(b, gn);
+//   // Scalar h = m_npep(b+1, gn);
+//   Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+//   return std::exp(log(MIN_EP) + m_dep * bb);
+// }
 
 Scalar
 inverse_compton::gen_photon_e(Scalar gamma) {
@@ -367,6 +484,22 @@ inverse_compton::gen_photon_e(Scalar gamma) {
 
   Scalar result = m_dep * bb;
   return result * gamma;
+}
+
+void
+inverse_compton::generate_photon_energies(cu_array<Scalar>& e_ph,
+                                          cu_array<Scalar>& gammas) {
+  Kernels::gen_photon_energies<<<m_blocks, m_threads>>>(
+      e_ph.data_d(), gammas.data_d(), gammas.size(),
+      (curandState*)m_states);
+  CudaCheckError();
+}
+
+void
+inverse_compton::generate_random_gamma(cu_array<Scalar>& gammas) {
+  Kernels::gen_rand_gammas<<<m_blocks, m_threads>>>(
+      gammas.data_d(), gammas.size(), (curandState*)m_states);
+  CudaCheckError();
 }
 
 template void inverse_compton::init<Spectra::power_law_hard>(

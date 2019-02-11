@@ -2,6 +2,7 @@
 #include "radiation/spectra.h"
 #include "sim_params.h"
 #include "utils/logger.h"
+#include "utils/timer.h"
 #include <boost/math/quadrature/gauss.hpp>
 #include <cmath>
 #include <iostream>
@@ -45,39 +46,59 @@ main(int argc, char *argv[]) {
       datafile.createDataSet<Scalar>("ep", DataSpace(ic.ep().size()));
   data_ep.write(ic.ep().data());
 
-  boost::multi_array<Scalar, 2> out_array;
-  out_array.resize(boost::extents[params.n_gamma][params.n_ep]);
-  for (int j = 0; j < params.n_gamma; j++) {
-    for (int i = 0; i < params.n_ep; i++) {
-      out_array[j][i] = ic.np()(i, j);
-    }
-  }
-  DataSet data_np =
-      datafile.createDataSet<Scalar>("np", DataSpace::From(out_array));
-  data_np.write(out_array);
+  // boost::multi_array<Scalar, 2> out_array;
+  // out_array.resize(boost::extents[params.n_gamma][params.n_ep]);
+  // for (int j = 0; j < params.n_gamma; j++) {
+  //   for (int i = 0; i < params.n_ep; i++) {
+  //     out_array[j][i] = ic.np()(i, j);
+  //   }
+  // }
+  // DataSet data_np =
+  //     datafile.createDataSet<Scalar>("np", DataSpace::From(out_array));
+  // data_np.write(out_array);
 
-  for (int j = 0; j < params.n_gamma; j++) {
-    for (int i = 0; i < params.n_ep; i++) {
-      out_array[j][i] = ic.dnde1p()(i, j);
-    }
-  }
-  DataSet data_dnde1p = datafile.createDataSet<Scalar>(
-      "dnde1p", DataSpace::From(out_array));
-  data_dnde1p.write(out_array);
+  // for (int j = 0; j < params.n_gamma; j++) {
+  //   for (int i = 0; i < params.n_ep; i++) {
+  //     out_array[j][i] = ic.dnde1p()(i, j);
+  //   }
+  // }
+  // DataSet data_dnde1p = datafile.createDataSet<Scalar>(
+  //     "dnde1p", DataSpace::From(out_array));
+  // data_dnde1p.write(out_array);
 
-  const uint32_t N_samples = 100000;
+  const uint32_t N_samples = 100000000;
+  cu_array<Scalar> gammas(N_samples);
+  cu_array<Scalar> eph(N_samples);
+  // gammas.assign_dev(1000.0);
+  ic.generate_random_gamma(gammas);
+  gammas.sync_to_host();
+  timer::stamp();
+  ic.generate_photon_energies(eph, gammas);
+  cudaDeviceSynchronize();
+  timer::show_duration_since_stamp("gen photon energies on gpu", "ms");
+  timer::stamp();
+  for (uint32_t i = 0; i < N_samples; i++) {
+    eph[i] = ic.gen_photon_e(gammas[i]);
+  }
+  timer::show_duration_since_stamp("gen photon energies on cpu", "ms");
+  eph.sync_to_host();
+  std::vector<Scalar> test_e(N_samples);
+
+  for (uint32_t i = 0; i < N_samples; i++) {
+    test_e[i] = eph[i];
+  }
   // std::vector<std::vector<Scalar>> test_e1p(params.n_gamma);
-  std::vector<std::vector<Scalar>> test_e(params.n_gamma);
-  for (int n = 0; n < params.n_gamma; n++) {
-    // test_e1p[n] = std::vector<Scalar>(N_samples);
-    test_e[n] = std::vector<Scalar>(N_samples);
-    for (uint32_t i = 0; i < N_samples; i++) {
-      // Logger::print_info("at {}", i);
-      // test_e1p[n][i] = ic.gen_e1p(ic.find_n_gamma(ic.gammas()[n]));
-      // test_e1p[n][i] = ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f);
-      test_e[n][i] = ic.gen_photon_e(ic.gammas()[n]);
-    }
-  }
+  // std::vector<std::vector<Scalar>> test_e(params.n_gamma);
+  // for (int n = 0; n < params.n_gamma; n++) {
+  //   // test_e1p[n] = std::vector<Scalar>(N_samples);
+  //   test_e[n] = std::vector<Scalar>(N_samples);
+  //   for (uint32_t i = 0; i < N_samples; i++) {
+  //     // Logger::print_info("at {}", i);
+  //     // test_e1p[n][i] = ic.gen_e1p(ic.find_n_gamma(ic.gammas()[n]));
+  //     // test_e1p[n][i] = ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f);
+  //     test_e[n][i] = ic.gen_photon_e(ic.gammas()[n]);
+  //   }
+  // }
   // DataSet data_teste1p = datafile.createDataSet<Scalar>(
   //     "test_e1p", DataSpace::From(test_e1p));
   // data_teste1p.write(test_e1p);
