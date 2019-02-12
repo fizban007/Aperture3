@@ -18,7 +18,8 @@ class inverse_compton {
   template <typename F>
   void init(const F& n_e, Scalar emin, Scalar emax);
 
-  cu_array<Scalar>& rate() { return m_rate; }
+  cu_array<Scalar>& ic_rate() { return m_ic_rate; }
+  cu_array<Scalar>& gg_rate() { return m_gg_rate; }
   cu_array<Scalar>& gammas() { return m_gammas; }
   cu_array<Scalar>& ep() { return m_ep; }
 
@@ -34,7 +35,7 @@ class inverse_compton {
 
  private:
   cu_multi_array<Scalar> m_dNde;
-  cu_array<Scalar> m_rate, m_gammas, m_ep;
+  cu_array<Scalar> m_ic_rate, m_gg_rate, m_gammas, m_ep;
   Scalar m_dep, m_dg;
   int m_threads, m_blocks;
 

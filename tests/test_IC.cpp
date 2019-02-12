@@ -18,7 +18,7 @@ using namespace Aperture;
 using namespace HighFive;
 
 Scalar e_min = 1.0e-3;
-Scalar e_max = 1.0e8;
+Scalar e_max = 1.0e6;
 
 int
 main(int argc, char *argv[]) {
@@ -28,8 +28,9 @@ main(int argc, char *argv[]) {
   inverse_compton ic(params);
 
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
-  // Spectra::power_law_soft ne(1.1, e_min, e_max);
-  Spectra::black_body ne(0.001);
+  Spectra::power_law_soft ne(2.0, e_min, e_max);
+  // Spectra::black_body ne(0.001);
+  // Spectra::broken_power_law ne(1.25, )
   // Spectra::mono_energetic ne(0.001, 1.0e-4);
   ic.init(ne, ne.emin(), ne.emax());
 
@@ -40,8 +41,11 @@ main(int argc, char *argv[]) {
       "gammas", DataSpace(ic.gammas().size()));
   data_gammas.write(ic.gammas().data());
   DataSet data_rates = datafile.createDataSet<Scalar>(
-      "rates", DataSpace(ic.rate().size()));
-  data_rates.write(ic.rate().data());
+      "rates", DataSpace(ic.ic_rate().size()));
+  data_rates.write(ic.ic_rate().data());
+  DataSet data_gg_rates = datafile.createDataSet<Scalar>(
+      "gg_rates", DataSpace(ic.gg_rate().size()));
+  data_gg_rates.write(ic.gg_rate().data());
   DataSet data_ep =
       datafile.createDataSet<Scalar>("ep", DataSpace(ic.ep().size()));
   data_ep.write(ic.ep().data());
@@ -66,11 +70,11 @@ main(int argc, char *argv[]) {
   //     "dnde1p", DataSpace::From(out_array));
   // data_dnde1p.write(out_array);
 
-  const uint32_t N_samples = 100000000;
+  const uint32_t N_samples = 10000000;
   cu_array<Scalar> gammas(N_samples);
   cu_array<Scalar> eph(N_samples);
-  // gammas.assign_dev(1000.0);
-  ic.generate_random_gamma(gammas);
+  gammas.assign_dev(1.1);
+  // ic.generate_random_gamma(gammas);
   gammas.sync_to_host();
   timer::stamp();
   ic.generate_photon_energies(eph, gammas);

@@ -35,6 +35,12 @@ sigma_ic(Scalar x) {
 }
 
 HOST_DEVICE double
+sigma_gg(double beta) {
+  return (1.0 - square(beta))*((3.0-beta*beta*beta*beta)*log((1.0+beta)/(1.0-beta)) -
+                               2.0*beta*(2.0-beta*beta));
+}
+
+HOST_DEVICE double
 x_ic(Scalar gamma, Scalar e, Scalar mu) {
   return gamma * e * (1.0 - mu * beta(gamma));
 }
@@ -56,7 +62,9 @@ namespace Kernels {
 __constant__ Scalar dev_ic_dep;
 __constant__ Scalar dev_ic_dg;
 __constant__ cudaPitchedPtr dev_ic_dNde;
-__constant__ Scalar* dev_ic_rates;
+__constant__ Scalar* dev_ic_rate;
+__constant__ Scalar* dev_gg_rate;
+__constant__ Scalar* dev_gammas;
 
 __device__ int
 find_n_gamma(Scalar gamma) {
@@ -123,7 +131,18 @@ gen_photon_e(Scalar gamma, curandState* state) {
 __device__ Scalar
 find_ic_rate(Scalar gamma) {
   int gn = find_n_gamma(gamma);
-  return dev_ic_rates[gn];
+  if (gamma > MAX_GAMMA) return dev_ic_rate[gn];
+  Scalar x = (std::log(gamma) - std::log(dev_gammas[gn])) / dev_ic_dg;
+  return dev_ic_rate[gn] * (1.0f - x) + dev_ic_rate[gn + 1] * x;
+}
+
+__device__ Scalar
+find_gg_rate(Scalar eph) {
+  if (eph < 2.0) return 0.0;
+  int n = find_n_gamma(eph);
+  if (eph > MAX_GAMMA) return dev_gg_rate[n];
+  Scalar x = (std::log(eph) - std::log(dev_gammas[n])) / dev_ic_dg;
+  return dev_gg_rate[n] * (1.0f - x) + dev_gg_rate[n + 1] * x;
 }
 
 template <typename F>
@@ -179,10 +198,9 @@ gen_rand_gammas(Scalar* gammas, uint32_t num, curandState* states) {
 }  // namespace Kernels
 
 inverse_compton::inverse_compton(const SimParams& params)
-    :  // m_npep(Extent(params.n_ep, params.n_gamma)),
-       //       m_dnde1p(Extent(params.n_ep, params.n_gamma)),
-      m_dNde(Extent(params.n_ep, params.n_gamma)),
-      m_rate(params.n_gamma),
+    : m_dNde(Extent(params.n_ep, params.n_gamma)),
+      m_ic_rate(params.n_gamma),
+      m_gg_rate(params.n_gamma),
       m_gammas(params.n_gamma),
       m_ep(params.n_ep),
       m_threads(256),
@@ -193,9 +211,9 @@ inverse_compton::inverse_compton(const SimParams& params)
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_ep[n] = m_dep * n;
   }
-  m_dg =
-      (log(MAX_GAMMA) - log(MIN_GAMMA)) / ((Scalar)m_rate.size() - 1.0);
-  for (uint32_t n = 0; n < m_rate.size(); n++) {
+  m_dg = (log(MAX_GAMMA) - log(MIN_GAMMA)) /
+         ((Scalar)m_ic_rate.size() - 1.0);
+  for (uint32_t n = 0; n < m_ic_rate.size(); n++) {
     m_gammas[n] = exp(log(MIN_GAMMA) + m_dg * (Scalar)n);
   }
 
@@ -206,15 +224,22 @@ inverse_compton::inverse_compton(const SimParams& params)
       cudaMemcpyToSymbol(Kernels::dev_ic_dep, &m_dep, sizeof(Scalar)));
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde, &m_dNde.data_d(),
-                                  sizeof(cudaPitchedPtr)));
-  Scalar* dev_rates = m_rate.data_d();
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rates, &dev_rates,
+  CudaSafeCall(cudaMemcpyToSymbol(
+      Kernels::dev_ic_dNde, &m_dNde.data_d(), sizeof(cudaPitchedPtr)));
+  Scalar* dev_ic_rates = m_ic_rate.data_d();
+  Scalar* dev_gg_rates = m_gg_rate.data_d();
+  Scalar* dev_g = m_gammas.data_d();
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rates,
+                                  sizeof(Scalar*)));
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rates,
+                                  sizeof(Scalar*)));
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g,
                                   sizeof(Scalar*)));
 
   CudaSafeCall(cudaMalloc(&m_states,
                           m_threads * m_blocks * sizeof(curandState)));
-  init_rand_states((curandState*)m_states, params.random_seed, m_threads, m_blocks);
+  init_rand_states((curandState*)m_states, params.random_seed,
+                   m_threads, m_blocks);
 }
 
 inverse_compton::~inverse_compton() {}
@@ -230,12 +255,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   Scalar dmu = 2.0 / (N_mu - 1.0);
   Scalar de = (log(emax) - log(emin)) / (N_e - 1.0);
   // Kernels::init_scatter_rate<<<200, 200>>>(
-  //     n_e, dmu, de, N_mu, N_e, m_rate.data(), m_gammas.data(), emin,
-  //     m_gammas.size());
+  //     n_e, dmu, de, N_mu, N_e, m_ic_rate.data(), m_gammas.data(),
+  //     emin, m_gammas.size());
   // cudaDeviceSynchronize();
   // CudaCheckError();
-  // m_rate.sync_to_host();
-  for (uint32_t n = 0; n < m_rate.size(); n++) {
+  // m_ic_rate.sync_to_host();
+  for (uint32_t n = 0; n < m_ic_rate.size(); n++) {
     Scalar gamma = m_gammas[n];
     // Logger::print_info("gamma is {}", gamma);
     Scalar result = 0.0;
@@ -243,89 +268,42 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       Scalar mu = i_mu * dmu - 1.0;
       for (int i_e = 0; i_e < N_e; i_e++) {
         Scalar e = exp(log(emin) + i_e * de);
-        // integrand(i_e, i_mu)
         Scalar x = x_ic(gamma, e, mu);
         Scalar sigma = sigma_ic(x);
-        // if (i_mu == 50)
-        // Logger::print_info("e is {}, x is {}, sigma is {}", e, x,
-        //                    sigma);
         result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) * e;
       }
     }
-    // Logger::print_info("gamma is {}, result is {}", gamma,
-    // result);
-    m_rate[n] = result * dmu * de;
+    m_ic_rate[n] = result * dmu * de;
   }
+  m_ic_rate.sync_to_device();
 
-  m_rate.sync_to_device();
+  // TODO: Precalculate gamma-gamma rate
+  Logger::print_info(
+      "Pre-calculating the gamma-gamma pair creation rate");
+  for (uint32_t n = 0; n < m_gg_rate.size(); n++) {
+    Scalar eph = m_gammas[n];
+    if (eph < 2.0) {
+      m_gg_rate[n] = 0.0;
+    } else {
+      Scalar result = 0.0;
+      for (int i_mu = 0; i_mu < N_mu; i_mu++) {
+        Scalar mu = i_mu * dmu - 1.0;
+        for (int i_e = 0; i_e < N_e; i_e++) {
+          double e = exp(log(emin) + i_e * de);
+          double s = eph*e*(1.0-mu)*0.5;
+          if (s <= 1.0) continue;
+          double b = sqrt(1.0 - 1.0/s);
+          if (b == 1.0) continue;
+          result += sigma_gg(b) * (1.0 - mu) * n_e(e) * e;
+          // Logger::print_info("eph is {}, s is {}, b is {}, sigma is {}", eph, s, b, sigma_gg(b));
+        }
+      }
+      m_gg_rate[n] = 0.25 * result * dmu * de;
+      // Logger::print_info("rate {}", m_gg_rate[n]);
+    }
+  }
+  m_gg_rate.sync_to_device();
 
-  // Compute the photon spectrum in electron rest frame for various
-  // gammas
-  // Logger::print_info(
-  //     "Pre-calculating the rest frame soft photon spectrum");
-  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
-  //   Scalar gamma = m_gammas[n];
-  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
-  //     Scalar ep = m_ep[i];
-  //     Scalar result = 0.0;
-  //     for (int i_e = 0; i_e < N_e; i_e++) {
-  //       Scalar e = exp(log(emin) + i_e * de);
-  //       if (e > 0.5 * ep / gamma && e < 2.0 * ep * gamma)
-  //         result += n_e(e) * ep / (2.0 * gamma * e);
-  //     }
-  //     m_npep(i, n) = result * de;
-  //   }
-  // }
-
-  // // Compute the scattered photon spectrum in the electron rest
-  // // frame. We only store the cumulative distribution for Monte Carlo
-  // // purpose
-  // Logger::print_info(
-  //     "Pre-calculating the rest frame scattered photon spectrum");
-  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
-  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
-  //     Scalar e1p = m_ep[i];
-  //     if (e1p < 0.03) {
-  //       m_dnde1p(i, n) =
-  //           m_npep(i, n) * 2.0 / (1.0 - 2.0 * e1p) * m_ep[i];
-  //     } else {
-  //       Scalar result = 0.0;
-  //       for (uint32_t i_e = 0; i_e < m_ep.size(); i_e++) {
-  //         Scalar ep = m_ep[i_e];
-  //         if (ep > e1p && 1.0 / (1.0 / ep + 2.0) < e1p)
-  //           result += m_npep(i_e, n) * sigma_rest(ep, e1p) / ep;
-  //       }
-  //       m_dnde1p(i, n) = result * m_dep * m_ep[i];
-  //       // m_dnde1p(i, n) = result * m_dep;
-  //     }
-  //   }
-  //   for (uint32_t i = 1; i < m_ep.size(); i++) {
-  //     m_dnde1p(i, n) += m_dnde1p(i - 1, n);
-  //   }
-  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
-  //     m_dnde1p(i, n) /= m_dnde1p(m_ep.size() - 1, n);
-  //   }
-  // }
-
-  // // Process the npep distribution to turn it into a cumulative
-  // // distribution
-  // for (uint32_t n = 0; n < m_gammas.size(); n++) {
-  //   // We should multiply by ep, but we also divide by ep because of
-  //   // cross section, so we do nothing
-
-  //   // for (uint32_t i = 0; i < m_ep.size(); i++) {
-  //   //   if (m_ep[i] < 0.5)
-  //   //     m_npep(i, n) /= m_ep[i];
-  //   // }
-  //   for (uint32_t i = 1; i < m_ep.size(); i++) {
-  //     m_npep(i, n) += m_npep(i - 1, n);
-  //   }
-  //   for (uint32_t i = 0; i < m_ep.size(); i++) {
-  //     m_npep(i, n) /= m_npep(m_ep.size() - 1, n);
-  //   }
-  // }
-
-  // Compute the photon spectrum in lab frame for various gammas
   Logger::print_info("Pre-calculating the lab-frame spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     Scalar gamma = m_gammas[n];

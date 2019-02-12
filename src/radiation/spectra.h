@@ -68,11 +68,11 @@ struct broken_power_law {
 struct black_body {
   HOST_DEVICE black_body(Scalar kT) : kT_(kT) {}
 
-  HD_INLINE Scalar operator()(Scalar e) const {
+  HD_INLINE double operator()(double e) const {
     return e * e / (exp(e / kT_) - 1.0);
   }
 
-  Scalar emin() const { return 1e-6 * kT_; }
+  Scalar emin() const { return 1e-7 * kT_; }
   Scalar emax() const { return 1e4 * kT_; }
 
   Scalar kT_;
