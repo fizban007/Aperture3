@@ -16,4 +16,6 @@ __device__ Scalar gen_photon_e(Scalar gamma, curandState* state);
 
 __device__ Scalar find_ic_rate(Scalar gamma);
 
+__device__ Scalar find_gg_rate(Scalar eph);
+
 }  // namespace Aperture
