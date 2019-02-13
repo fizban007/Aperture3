@@ -28,9 +28,9 @@ main(int argc, char *argv[]) {
   inverse_compton ic(params);
 
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
-  Spectra::power_law_soft ne(2.0, e_min, e_max);
-  // Spectra::black_body ne(0.001);
-  // Spectra::broken_power_law ne(1.25, )
+  // Spectra::power_law_soft ne(2.0, e_min, e_max);
+  Spectra::black_body ne(0.001);
+  // Spectra::broken_power_law ne(1.25, 0.1, 1.0e-3, 1.0e-7, 1.0e4);
   // Spectra::mono_energetic ne(0.001, 1.0e-4);
   ic.init(ne, ne.emin(), ne.emax());
 

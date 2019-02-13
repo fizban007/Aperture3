@@ -8,8 +8,6 @@
 namespace Aperture {
 
 class cu_sim_environment;
-class Particles;
-class Photons;
 struct cu_sim_data;
 
 class RadiationTransferPulsar {

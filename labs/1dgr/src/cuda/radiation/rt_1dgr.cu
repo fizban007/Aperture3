@@ -1,23 +1,24 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/sim_environment_dev.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
 #include "cuda/data/particles_dev.h"
+#include "cuda/data/photons_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-// #include "data/particles_1d.h"
-#include "cuda/data/photons_dev.h"
-// #include "data/photons_1d.h"
-// #include "radiation/curvature_instant.h"
-#include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
-#include "rt_pulsar.h"
+#include "cuda/radiation/rt_ic_dev.h"
+#include "radiation/spectra.h"
+#include "rt_1dgr.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
+
+// __device__ void __syncthreads();
 
 namespace Aperture {
 
@@ -26,17 +27,8 @@ namespace Kernels {
 template <typename PtcData>
 __global__ void
 count_photon_produced(PtcData ptc, size_t number, int* ph_count,
-                      int* phPos, curandState* states,
-                      cudaPitchedPtr ph_events) {
+                      int* phPos, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
-  // dev_params.e_s,
-  //                                         dev_params.e_min,
-  //                                         dev_params.photon_path,
-  //                                         rng);
-  // CurvatureInstant<Kernels::CudaRng> rad_model(dev_params, rng);
-  // auto inv_comp = make_inverse_compton_dummy(10.0, )
   __shared__ int photonProduced;
   if (threadIdx.x == 0) photonProduced = 0;
 
@@ -61,10 +53,10 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
         r > 1.02f) {
       // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
-      int c2 = dev_mesh.get_c2(cell);
-      atomicAdd(ptrAddr(ph_events,
-                        c2 * ph_events.pitch + c1 * sizeof(Scalar)),
-                w);
+      // int c2 = dev_mesh.get_c2(cell);
+      // atomicAdd(ptrAddr(ph_events,
+      //                   c2 * ph_events.pitch + c1 * sizeof(Scalar)),
+      //           w);
     }
   }
 
@@ -148,9 +140,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 template <typename PhotonData>
 __global__ void
 count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
-                     int* pair_pos, curandState* states,
-                     cudaPitchedPtr pair_events, cudaPitchedPtr rho0,
-                     cudaPitchedPtr rho1, cudaPitchedPtr rho2) {
+                     int* pair_pos, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
@@ -189,20 +179,22 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
 
     if (photons.path_left[tid] <= 0.0f) {
       // if (*ptrAddr(rho0, c1, c2))
-      Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
-      Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
+      // Scalar rho =
+      //     max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)),
+      //         0.0001f);
+      // Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
       // Scalar multiplicity = N / rho;
-      if (N > 1.0e6f) {
-        photons.cell[tid] = MAX_CELL;
-        continue; 
-      }
+      // if (N > 1.0e6f) {
+      //   photons.cell[tid] = MAX_CELL;
+      //   continue;
+      // }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
-      int c1 = dev_mesh.get_c1(cell);
-      Scalar w = photons.weight[tid];
+      // int c1 = dev_mesh.get_c1(cell);
+      // Scalar w = photons.weight[tid];
 
-      atomicAdd(ptrAddr(pair_events,
-                        c2 * pair_events.pitch + c1 * sizeof(Scalar)),
-                w);
+      // atomicAdd(ptrAddr(pair_events,
+      //                   c2 * pair_events.pitch + c1 * sizeof(Scalar)),
+      //           w);
     }
   }
 
@@ -275,7 +267,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
 }  // namespace Kernels
 
-RadiationTransferPulsar::RadiationTransferPulsar(
+RadiationTransfer1DGR::RadiationTransfer1DGR(
     const cu_sim_environment& env)
     : m_env(env),
       d_rand_states(nullptr),
@@ -284,8 +276,7 @@ RadiationTransferPulsar::RadiationTransferPulsar(
       m_numPerBlock(m_blocksPerGrid),
       m_cumNumPerBlock(m_blocksPerGrid),
       m_posInBlock(env.params().max_ptc_number),
-      m_pair_events(env.local_grid()),
-      m_ph_events(env.local_grid()) {
+      m_ic(env.params()) {
   int seed = m_env.params().random_seed;
 
   CudaSafeCall(cudaMalloc(
@@ -294,26 +285,17 @@ RadiationTransferPulsar::RadiationTransferPulsar(
   init_rand_states((curandState*)d_rand_states, seed, m_threadsPerBlock,
                    m_blocksPerGrid);
 
-  m_pair_events.initialize();
-  m_ph_events.initialize();
-  // Kernels::init_rand_states<<<m_blocksPerGrid, m_threadsPerBlock>>>(
-  //     (curandState*)d_rand_states, seed);
-  // CudaCheckError();
-
-  // Allocate auxiliary arrays for pair creation
-  // CudaSafeCall(cudaMalloc(&m_numPerBlock, m_blocksPerGrid *
-  // sizeof(uint32_t))); CudaSafeCall(cudaMalloc(&m_cumNumPerBlock,
-  // m_blocksPerGrid * sizeof(uint32_t)));
-  // CudaSafeCall(cudaMalloc(&m_posInBlock,
-  // m_env.params().max_ptc_number));
+  // Init inverse compton module
+  Spectra::black_body ne(0.001);
+  m_ic.init(ne, ne.emin(), ne.emax());
 }
 
-RadiationTransferPulsar::~RadiationTransferPulsar() {
+RadiationTransfer1DGR::~RadiationTransfer1DGR() {
   CudaSafeCall(cudaFree((curandState*)d_rand_states));
 }
 
 void
-RadiationTransferPulsar::emit_photons(cu_sim_data& data) {
+RadiationTransfer1DGR::emit_photons(cu_sim_data& data) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
@@ -321,32 +303,28 @@ RadiationTransferPulsar::emit_photons(cu_sim_data& data) {
   m_cumNumPerBlock.assign_dev(0);
 
   cudaDeviceSynchronize();
-  // Logger::print_debug("Initialize finished");
 
+  // Count the number of photons produced
   Kernels::count_photon_produced<particle_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           ptc.data(), ptc.number(), m_numPerBlock.data_d(),
-          m_posInBlock.data_d(), (curandState*)d_rand_states,
-          m_ph_events.ptr());
+          m_posInBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
   thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
-
-  // cudaDeviceSynchronize();
-  // Logger::print_debug("Count finished");
   // Scan the number of photons produced per block. The result gives the
   // offset for each block
   thrust::exclusive_scan(ptrNumPerBlock,
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
   CudaCheckError();
-  // Logger::print_debug("Scan finished");
   m_cumNumPerBlock.sync_to_host();
   m_numPerBlock.sync_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1] +
                     m_numPerBlock[m_blocksPerGrid - 1];
   Logger::print_info("{} photons are produced!", new_photons);
 
+  // Actually produce the photons
   Kernels::produce_photons<particle_data, photon_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           ptc.data(), ptc.number(), photons.data(), photons.number(),
@@ -356,54 +334,6 @@ RadiationTransferPulsar::emit_photons(cu_sim_data& data) {
 
   int padding = 1;
   photons.set_num(photons.number() + new_photons + padding);
-  // Logger::print_info("There are {} photons in the pool",
-  //                    photons.number());
-  // cudaDeviceSynchronize();
-}
-
-void
-RadiationTransferPulsar::produce_pairs(cu_sim_data& data) {
-  auto& ptc = data.particles;
-  auto& photons = data.photons;
-  m_posInBlock.assign_dev(0, photons.number());
-  m_numPerBlock.assign_dev(0);
-  m_cumNumPerBlock.assign_dev(0);
-
-  Kernels::count_pairs_produced<photon_data>
-      <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          photons.data(), photons.number(), m_numPerBlock.data_d(),
-          m_posInBlock.data_d(), (curandState*)d_rand_states,
-          m_pair_events.ptr(), data.Rho[0].ptr(), data.Rho[1].ptr(),
-          data.Rho[2].ptr());
-  CudaCheckError();
-
-  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
-  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
-  // cudaDeviceSynchronize();
-
-  // Scan the number of photons produced per block. The last one will be
-  // the total
-  thrust::exclusive_scan(ptrNumPerBlock,
-                         ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
-  m_cumNumPerBlock.sync_to_host();
-  m_numPerBlock.sync_to_host();
-  int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
-                   m_numPerBlock[m_blocksPerGrid - 1]);
-  Logger::print_info("{} electron-positron pairs are produced!",
-                     new_pairs);
-
-  Kernels::produce_pairs<particle_data, photon_data>
-      <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          photons.data(), photons.number(), ptc.data(), ptc.number(),
-          m_posInBlock.data_d(), m_numPerBlock.data_d(),
-          m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
-  CudaCheckError();
-
-  int padding = 1;
-  ptc.set_num(ptc.number() + new_pairs * 2 + padding);
-  // Logger::print_info("There are {} particles in the pool",
-  //                    ptc.number());
-  cudaDeviceSynchronize();
 }
 
 }  // namespace Aperture
