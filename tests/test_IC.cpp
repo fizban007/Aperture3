@@ -3,9 +3,11 @@
 #include "sim_params.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
+#include "utils/util_functions.h"
 #include <boost/math/quadrature/gauss.hpp>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include <boost/multi_array.hpp>
@@ -20,13 +22,77 @@ using namespace HighFive;
 Scalar e_min = 1.0e-3;
 Scalar e_max = 1.0e6;
 
+struct maxwellian {
+  Scalar kT_;
+
+  maxwellian(Scalar kT) : kT_(kT) {}
+
+  Scalar operator()(Scalar gamma) {
+    Scalar beta = std::sqrt(1.0 - 1.0 / square(gamma));
+    return gamma * gamma * beta * std::exp(-gamma / kT_);
+  }
+};
+
+struct sample_gamma_dist {
+  std::vector<Scalar> dist_;
+  std::vector<Scalar> gammas_;
+  Scalar dg_;
+  const Scalar g_min = 1.0;
+  const Scalar g_max = 1.0e10;
+
+  template <typename F>
+  sample_gamma_dist(F& f) : dist_(500), gammas_(500) {
+    dg_ = (std::log(g_max) - std::log(g_min)) / (dist_.size() - 1.0);
+    for (int n = 0; n < dist_.size(); n++) {
+      gammas_[n] = std::exp(std::log(g_min) + n * dg_);
+      if (n > 0)
+        dist_[n] = dist_[n - 1] + f(gammas_[n]) * gammas_[n] * dg_;
+      // Scalar beta = std::sqrt(1.0 - 1.0 / square(gammas_[n]));
+    }
+    for (int n = 0; n < dist_.size(); n++) {
+      dist_[n] /= dist_[dist_.size() - 1];
+    }
+  }
+
+  Scalar inverse_dist(float u) {
+    int a = 0, b = dist_.size() - 1, tmp = 0;
+    Scalar v = 0.0f, l = 0.0f, h = 0.0f;
+    while (a < b) {
+      tmp = (a + b) / 2;
+      v = dist_[tmp];
+      if (v < u) {
+        a = tmp + 1;
+      } else if (v > u) {
+        b = tmp - 1;
+      } else {
+        b = tmp;
+        l = h = v;
+        break;
+      }
+    }
+    if (v < u) {
+      l = v;
+      h = (a < dist_.size() ? dist_[a] : v);
+      b = tmp;
+    } else {
+      h = v;
+      l = (b >= 0 ? dist_[b] : v);
+      b = std::max(b, 0);
+    }
+    Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+    return std::exp(std::log(g_min) + bb * dg_);
+  }
+};
+
 int
-main(int argc, char *argv[]) {
+main(int argc, char* argv[]) {
   SimParams params;
   params.n_gamma = 600;
   params.n_ep = 600;
   inverse_compton ic(params);
 
+  std::default_random_engine gen;
+  std::uniform_real_distribution<float> dist(0.0, 1.0);
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
   // Spectra::power_law_soft ne(2.0, e_min, e_max);
   Spectra::black_body ne(0.001);
@@ -50,32 +116,21 @@ main(int argc, char *argv[]) {
       datafile.createDataSet<Scalar>("ep", DataSpace(ic.ep().size()));
   data_ep.write(ic.ep().data());
 
-  // boost::multi_array<Scalar, 2> out_array;
-  // out_array.resize(boost::extents[params.n_gamma][params.n_ep]);
-  // for (int j = 0; j < params.n_gamma; j++) {
-  //   for (int i = 0; i < params.n_ep; i++) {
-  //     out_array[j][i] = ic.np()(i, j);
-  //   }
-  // }
-  // DataSet data_np =
-  //     datafile.createDataSet<Scalar>("np", DataSpace::From(out_array));
-  // data_np.write(out_array);
-
-  // for (int j = 0; j < params.n_gamma; j++) {
-  //   for (int i = 0; i < params.n_ep; i++) {
-  //     out_array[j][i] = ic.dnde1p()(i, j);
-  //   }
-  // }
-  // DataSet data_dnde1p = datafile.createDataSet<Scalar>(
-  //     "dnde1p", DataSpace::From(out_array));
-  // data_dnde1p.write(out_array);
-
   const uint32_t N_samples = 10000000;
   cu_array<Scalar> gammas(N_samples);
   cu_array<Scalar> eph(N_samples);
-  gammas.assign_dev(1.1);
+  // gammas.assign_dev(1.1);
   // ic.generate_random_gamma(gammas);
-  gammas.sync_to_host();
+  maxwellian M(0.01);
+  sample_gamma_dist D(M);
+  for (uint32_t i = 0; i < N_samples; i++) {
+    float u = dist(gen);
+    gammas[i] = D.inverse_dist(u);
+  }
+  DataSet data_energies = datafile.createDataSet<Scalar>(
+      "energies", DataSpace(gammas.size()));
+  data_energies.write(gammas.data());
+  gammas.sync_to_device();
   timer::stamp();
   ic.generate_photon_energies(eph, gammas);
   cudaDeviceSynchronize();
@@ -98,16 +153,18 @@ main(int argc, char *argv[]) {
   //   test_e[n] = std::vector<Scalar>(N_samples);
   //   for (uint32_t i = 0; i < N_samples; i++) {
   //     // Logger::print_info("at {}", i);
-  //     // test_e1p[n][i] = ic.gen_e1p(ic.find_n_gamma(ic.gammas()[n]));
-  //     // test_e1p[n][i] = ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f);
-  //     test_e[n][i] = ic.gen_photon_e(ic.gammas()[n]);
+  //     // test_e1p[n][i] =
+  //     ic.gen_e1p(ic.find_n_gamma(ic.gammas()[n]));
+  //     // test_e1p[n][i] =
+  //     ic.gen_ep(ic.find_n_gamma(ic.gammas()[n]), 1.5f); test_e[n][i]
+  //     = ic.gen_photon_e(ic.gammas()[n]);
   //   }
   // }
   // DataSet data_teste1p = datafile.createDataSet<Scalar>(
   //     "test_e1p", DataSpace::From(test_e1p));
   // data_teste1p.write(test_e1p);
-  DataSet data_teste = datafile.createDataSet<Scalar>(
-      "test_e", DataSpace::From(test_e));
+  DataSet data_teste =
+      datafile.createDataSet<Scalar>("test_e", DataSpace::From(test_e));
   data_teste.write(test_e);
   return 0;
 }
