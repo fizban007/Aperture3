@@ -2,12 +2,12 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/ptc_updater_helper.cuh"
-#include "cuda/core/ptc_updater_logsph.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
+#include "ptc_updater_logsph.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 
@@ -50,18 +50,18 @@ vay_push_2d(particle_data ptc, size_t num,
     // Skip empty particles
     if (c == MAX_CELL || idx >= num) continue;
 
-    // Load particle quantities
-    Interpolator2D<spline_t> interp;
-    auto flag = ptc.flag[idx];
-    int sp = get_ptc_type(flag);
-    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
-    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
     if (!dev_mesh.is_in_bulk(c1, c2)) {
       ptc.cell[idx] = MAX_CELL;
       continue;
     }
+    // Load particle quantities
+    Interpolator2D<spline_t> interp;
+    auto flag = ptc.flag[idx];
+    int sp = get_ptc_type(flag);
+    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
+    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
     Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
     // step 0: Grab E & M fields at the particle position
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
@@ -140,30 +140,66 @@ vay_push_2d(particle_data ptc, size_t num,
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       }
 
+      Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
       if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
-        Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
-        Scalar pp1 = p1 - B1 * pdotB / tt;
-        Scalar pp2 = p2 - B2 * pdotB / tt;
-        Scalar pp3 = p3 - B3 * pdotB / tt;
-        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
-        // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+        Scalar res = dt * sqrt(tt / q_over_m / q_over_m) / gamma;
+        // if ()
+        // int substeps = ceil(res);
+        // Scalar ds = 1.0f / substeps;
+        // for (int step = 0; step < substeps; step++) {
+        // Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
+        // Scalar pp1 = p1 - B1 * pdotB / tt - gamma * (E2 * B3 - E3 *
+        // B2) / tt; Scalar pp2 = p2 - B2 * pdotB / tt - gamma * (E3 *
+        // B1 - E1 * B3) / tt; Scalar pp3 = p3 - B3 * pdotB / tt - gamma
+        // * (E1 * B2 - E2 * B1) / tt; Scalar pp = sqrt(pp1 * pp1 + pp2
+        // * pp2 + pp3 * pp3);
+        // // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
 
-        p1 -= pp1 * dt * dev_params.rad_cooling_coef;
-        p2 -= pp2 * dt * dev_params.rad_cooling_coef;
-        p3 -= pp3 * dt * dev_params.rad_cooling_coef;
-              // dev_params.rad_cooling_coef;
-        // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
-        //       dev_params.rad_cooling_coef;
+        // p1 -= pp1 * dev_params.rad_cooling_coef * tt /
+        // square(dev_params.B0 * q_over_m); p2 -= pp2 *
+        // dev_params.rad_cooling_coef * tt / square(dev_params.B0 *
+        // q_over_m); p3 -= pp3 * dev_params.rad_cooling_coef * tt /
+        // square(dev_params.B0 * q_over_m);
+        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
+        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
+        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
+        Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
+        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+
+        Scalar delta_p1 =
+            dev_params.rad_cooling_coef *
+            (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+             gamma * p1 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar delta_p2 =
+            dev_params.rad_cooling_coef *
+            (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+             gamma * p2 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar delta_p3 =
+            dev_params.rad_cooling_coef *
+            (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+             gamma * p3 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                         delta_p3 * delta_p3);
+        if (dp < p) {
+          p1 += delta_p1;
+          p2 += delta_p2;
+          p3 += delta_p3;
+          gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+        }
+        // }
       }
-
-      // printf("gamma after is %f\n", gamma);
-      // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
-      // ptc.p3[idx]);
-      ptc.p1[idx] = p1;
-      ptc.p2[idx] = p2;
-      ptc.p3[idx] = p3;
-      ptc.E[idx] = gamma;
     }
+
+    // printf("gamma after is %f\n", gamma);
+    // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
+    // ptc.p3[idx]);
+    ptc.p1[idx] = p1;
+    ptc.p2[idx] = p2;
+    ptc.p3[idx] = p3;
+    ptc.E[idx] = gamma;
   }
 }
 
@@ -620,6 +656,149 @@ boundary_rho(PtcUpdaterDev::fields_data fields,
   }
 }
 
+__global__ void
+annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
+                 cudaPitchedPtr j2, cudaPitchedPtr j3,
+                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+  for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    // First do a deposit before annihilation
+    auto c = ptc.cell[idx];
+    auto flag = ptc.flag[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+
+    if (check_bit(flag, ParticleFlag::annihilate)) {
+      // Load particle quantities
+      Interpolator2D<spline_t> interp;
+      int c1 = dev_mesh.get_c1(c);
+      int c2 = dev_mesh.get_c2(c);
+      int sp = get_ptc_type(flag);
+      auto w = ptc.weight[idx];
+      auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
+
+      Pos_t new_x1 = 0.5f;
+      Pos_t new_x2 = 0.5f;
+
+      // Move the particles to be annihilated to the center of the cell
+      ptc.x1[idx] = new_x1;
+      ptc.x2[idx] = new_x2;
+
+      // Deposit extra current due to this movement
+      if (!check_bit(flag, ParticleFlag::ignore_current)) {
+        // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
+        // {0.0f};
+        Scalar weight = -dev_charges[sp] * w;
+
+        Scalar djy[3] = {0.0f};
+        for (int j = -1; j <= 0; j++) {
+          Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
+          Scalar sy1 = interp.interpolate(-new_x2 + j + 1);
+
+          size_t j_offset = (j + c2) * j1.pitch;
+          Scalar djx = 0.0f;
+          for (int i = -1; i <= 0; i++) {
+            Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
+            Scalar sx1 = interp.interpolate(-new_x1 + i + 1);
+
+            // j1 is movement in r
+            int offset = j_offset + (i + c1) * sizeof(Scalar);
+            Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
+            djx += val0;
+            atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)),
+                      weight * djx * dev_mesh.delta[0] *
+                          dev_mesh.delta[1] /
+                          (dt * *ptrAddr(mesh_ptrs.A1_e,
+                                         offset + sizeof(Scalar))));
+
+            // j2 is movement in theta
+            Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
+            djy[i + 1] += val1;
+            atomicAdd(
+                ptrAddr(j2, offset + j2.pitch),
+                weight * djy[i + 1] * dev_mesh.delta[0] *
+                    dev_mesh.delta[1] /
+                    (dt * *ptrAddr(mesh_ptrs.A2_e, offset + j2.pitch)));
+          }
+        }
+      }
+
+      // Actually kill the particle
+      ptc.cell[idx] = MAX_CELL;
+      ptc.flag[idx] = 0;
+    }
+  }
+}
+
+__global__ void
+flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
+                  cudaPitchedPtr dens_p, cudaPitchedPtr balance) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[i];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+
+    auto flag = ptc.flag[i];
+    if (get_ptc_type(flag) > 1) continue;  // ignore ions
+    auto w = ptc.weight[i];
+
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
+    // size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
+
+    Scalar n_e = *ptrAddr(dens_e, c1, c2);
+    Scalar n_p = *ptrAddr(dens_p, c1, c2);
+    if (get_ptc_type(flag) == (int)ParticleType::electron)
+      n_e = atomicAdd(ptrAddr(dens_e, c1, c2), w);
+    else if (get_ptc_type(flag) == (int)ParticleType::positron)
+      n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
+    Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
+    Scalar n_min = 0.4 * square(dev_mesh.inv_delta[0]) * sin_t;
+    // TODO: implement the proper condition
+    if (n_e > n_min && n_p > n_min) {
+      set_bit(ptc.flag[i], ParticleFlag::annihilate);
+      atomicAdd(ptrAddr(balance, c1, c2),
+                w * (get_ptc_type(flag) == (int)ParticleType::electron
+                         ? -1.0f
+                         : 1.0f));
+    }
+  }
+  // After this operation, the balance array will contain how much
+  // imbalance is there in the annihilated part. We will add this
+  // imbalance back in as an extra particle
+}
+
+__global__ void
+add_extra_particles(particle_data ptc, size_t num,
+                    cudaPitchedPtr balance) {
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  int num_offset = n2 * dev_mesh.dims[0] + n1;
+  Scalar w = *ptrAddr(balance, n1, n2);
+
+  if (std::abs(w) > EPS) {
+    ptc.cell[num + num_offset] = num_offset;
+    ptc.x1[num + num_offset] = 0.5f;
+    ptc.x2[num + num_offset] = 0.5f;
+    ptc.x3[num + num_offset] = 0.0f;
+    ptc.p1[num + num_offset] = 0.0f;
+    ptc.p2[num + num_offset] = 0.0f;
+    ptc.p3[num + num_offset] = 0.0f;
+    ptc.E[num + num_offset] = 1.0f;
+    ptc.weight[num + num_offset] = std::abs(w);
+    if (w > 0)
+      ptc.flag[num + num_offset] =
+          set_ptc_type_flag(0, ParticleType::positron);
+    else
+      ptc.flag[num + num_offset] =
+          set_ptc_type_flag(0, ParticleType::electron);
+  }
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
@@ -627,8 +806,9 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       d_rand_states(nullptr),
       m_threadsPerBlock(256),
       m_blocksPerGrid(128),
-      m_J1(env.local_grid()),
-      m_J2(env.local_grid()) {
+      m_dens_e(env.local_grid()),
+      m_dens_p(env.local_grid()),
+      m_balance(env.local_grid()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   // TODO: Check error!!
@@ -641,8 +821,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
   init_rand_states((curandState *)d_rand_states, seed,
                    m_threadsPerBlock, m_blocksPerGrid);
 
-  m_J1.initialize();
-  m_J2.initialize();
+  // m_J1.initialize();
+  // m_J2.initialize();
 }
 
 PtcUpdaterLogSph::~PtcUpdaterLogSph() {
@@ -753,6 +933,35 @@ PtcUpdaterLogSph::initialize_dev_fields(cu_sim_data &data) {
                            sizeof(PtcUpdaterDev::fields_data)));
     m_fields_initialized = true;
   }
+}
+
+void
+PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
+  m_dens_e.data().assign_dev(0.0);
+  m_dens_p.data().assign_dev(0.0);
+  m_balance.data().assign_dev(0.0);
+
+  Kernels::flag_annihilation<<<256, 512>>>(
+      data.particles.data(), data.particles.number(), m_dens_e.ptr(),
+      m_dens_p.ptr(), m_balance.ptr());
+  CudaCheckError();
+
+  Kernels::annihilate_pairs<<<256, 512>>>(
+      data.particles.data(), data.particles.number(), data.J.ptr(0),
+      data.J.ptr(1), data.J.ptr(2), m_mesh_ptrs, dt);
+  CudaCheckError();
+
+  auto &mesh = data.E.grid().mesh();
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+
+  Kernels::add_extra_particles<<<gridSize, blockSize>>>(
+      data.particles.data(), data.particles.number(), m_balance.ptr());
+  CudaCheckError();
+
+  cudaDeviceSynchronize();
+  data.particles.set_num(data.particles.number() +
+                         mesh.reduced_dim(0) * mesh.reduced_dim(1));
 }
 
 }  // namespace Aperture

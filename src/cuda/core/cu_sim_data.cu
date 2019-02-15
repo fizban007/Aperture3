@@ -19,11 +19,12 @@ fill_particles(particle_data ptc, Scalar weight) {
          i += blockDim.x * gridDim.x) {
       uint32_t cell = i + j * dev_mesh.dims[0];
       Scalar theta = dev_mesh.pos(1, j, 0.5f);
-      for (int n = 0; n < 4; n++) {
-        size_t idx = cell * 10 + n * 2;
+      int Np = 3;
+      for (int n = 0; n < Np; n++) {
+        size_t idx = cell * Np * 2 + n * 2;
         ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
         ptc.x2[idx] = ptc.x2[idx + 1] = 0.5f;
-        ptc.x3[idx] = ptc.x3[idx + 1] = 0.5f;
+        ptc.x3[idx] = ptc.x3[idx + 1] = 0.0f;
         ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
         ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
         ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
@@ -102,7 +103,7 @@ cu_sim_data::set_initial_condition(Scalar weight) {
   CudaCheckError();
 
   auto& mesh = E.grid().mesh();
-  particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 10);
+  particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 6);
 }
 
 }  // namespace Aperture

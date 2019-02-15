@@ -332,6 +332,12 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
                 square(downsample_factor);
           }
         }
+      assert(!isnan(field.f[0][j / downsample_factor + mesh.guard[1]]
+                    [i / downsample_factor + mesh.guard[0]]));
+      assert(!isnan(field.f[1][j / downsample_factor + mesh.guard[1]]
+                    [i / downsample_factor + mesh.guard[0]]));
+      assert(!isnan(field.f[2][j / downsample_factor + mesh.guard[1]]
+                    [i / downsample_factor + mesh.guard[0]]));
       }
       // for (int i = 0; i < mesh.reduced_dim(0); i +=
       // downsample_factor) {

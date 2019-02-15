@@ -125,7 +125,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // Scalar path =
       //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
       // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * (0.01f + 0.99f * u);
+      Scalar path = lph * (0.1f + 0.9f * u);
       if (path > dev_params.r_cutoff) continue;
       // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;
@@ -189,13 +189,13 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
 
     if (photons.path_left[tid] <= 0.0f) {
       // if (*ptrAddr(rho0, c1, c2))
-      Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
-      Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
+      // Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
+      // Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
       // Scalar multiplicity = N / rho;
-      if (N > 1.0e6f) {
-        photons.cell[tid] = MAX_CELL;
-        continue; 
-      }
+      // if (N > 1.0e6f) {
+      //   photons.cell[tid] = MAX_CELL;
+      //   continue; 
+      // }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       Scalar w = photons.weight[tid];
@@ -354,7 +354,7 @@ RadiationTransferPulsar::emit_photons(cu_sim_data& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  int padding = 1;
+  int padding = 100;
   photons.set_num(photons.number() + new_photons + padding);
   // Logger::print_info("There are {} photons in the pool",
   //                    photons.number());
@@ -399,7 +399,7 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data& data) {
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
-  int padding = 1;
+  int padding = 100;
   ptc.set_num(ptc.number() + new_pairs * 2 + padding);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
