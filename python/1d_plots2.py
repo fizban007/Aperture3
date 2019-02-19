@@ -38,7 +38,8 @@ class Data:
         self.p_p = np.array(data['Positron_p'])
         data.close()
 
-data_dir = '/home/alex/storage/Data/Aperture3/1D_test/'
+# data_dir = '/home/alex/storage/Data/Aperture3/1D_test/'
+data_dir = sys.argv[1]
 if not os.path.isdir(data_dir):
     print("Given path is not a directory")
     exit(0)
