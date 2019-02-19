@@ -204,7 +204,11 @@ gen_photon_energies(Scalar* eph, Scalar* gammas, uint32_t num,
   curandState local_state = states[id];
   for (int n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
-    eph[n] = gen_photon_e(gammas[n], &local_state);
+    float u = curand_uniform(&local_state);
+    if (u < find_ic_rate(gammas[n]))
+      eph[n] = gen_photon_e(gammas[n], &local_state);
+    else
+      eph[n] = 0.0;
   }
   states[id] = local_state;
 }
@@ -314,7 +318,11 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       }
     }
     m_ic_rate[n] = result * dmu * de;
+    if (n != 0)
+      m_ic_rate[n] /= m_ic_rate[0];
+    // Logger::print_info("IC rate is {}", m_ic_rate[n]);
   }
+  m_ic_rate[0] = 1.0;
   m_ic_rate.sync_to_device();
 
   // TODO: Precalculate gamma-gamma rate
@@ -340,9 +348,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
         }
       }
       m_gg_rate[n] = 0.25 * result * dmu * de;
-      // Logger::print_info("rate {}", m_gg_rate[n]);
+      // if (n != 0)
+      //   m_gg_rate[n] /= m_gg_rate[0];
+      // Logger::print_info("gg rate {}", m_gg_rate[n]);
     }
   }
+  // m_gg_rate[0] = 1.0;
   m_gg_rate.sync_to_device();
 
   Logger::print_info("Pre-calculating the lab-frame spectrum");
