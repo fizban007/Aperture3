@@ -24,6 +24,7 @@ class inverse_compton {
   cu_array<Scalar>& ep() { return m_ep; }
 
   int find_n_gamma(Scalar gamma) const;
+  // int find_n_low_gamma(Scalar gamma) const;
   Scalar gen_e1p(int gn);
   Scalar gen_ep(int gn, Scalar e1p);
   Scalar gen_photon_e(Scalar gamma);
@@ -35,8 +36,9 @@ class inverse_compton {
 
  private:
   cu_multi_array<Scalar> m_dNde;
-  cu_array<Scalar> m_ic_rate, m_gg_rate, m_gammas, m_ep;
-  Scalar m_dep, m_dg;
+  cu_multi_array<Scalar> m_dNde_thompson;
+  cu_array<Scalar> m_ic_rate, m_gg_rate, m_gammas, m_log_ep, m_ep;
+  Scalar m_dep, m_dg, m_dlep;
   int m_threads, m_blocks;
 
   std::default_random_engine m_generator;

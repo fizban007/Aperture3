@@ -13,8 +13,10 @@ namespace Aperture {
 
 #define MIN_GAMMA 1.01f
 #define MAX_GAMMA 1.0e15
-#define MIN_EP 1.0e-15
-#define MAX_EP 1.0e15
+#define MIN_LOW_GAMMA 1.0e-5
+#define LOW_GAMMA_THR 3.0
+#define MIN_EP 1.0e-10
+#define MAX_EP 1.0e10
 
 HOST_DEVICE double
 beta(Scalar gamma) {
@@ -36,8 +38,9 @@ sigma_ic(Scalar x) {
 
 HOST_DEVICE double
 sigma_gg(double beta) {
-  return (1.0 - square(beta))*((3.0-beta*beta*beta*beta)*log((1.0+beta)/(1.0-beta)) -
-                               2.0*beta*(2.0-beta*beta));
+  return (1.0 - square(beta)) * ((3.0 - beta * beta * beta * beta) *
+                                     log((1.0 + beta) / (1.0 - beta)) -
+                                 2.0 * beta * (2.0 - beta * beta));
 }
 
 HOST_DEVICE double
@@ -61,7 +64,9 @@ namespace Kernels {
 
 __constant__ Scalar dev_ic_dep;
 __constant__ Scalar dev_ic_dg;
+__constant__ Scalar dev_ic_dlep;
 __constant__ cudaPitchedPtr dev_ic_dNde;
+__constant__ cudaPitchedPtr dev_ic_dNde_thompson;
 __constant__ Scalar* dev_ic_rate;
 __constant__ Scalar* dev_gg_rate;
 __constant__ Scalar* dev_gammas;
@@ -72,6 +77,13 @@ find_n_gamma(Scalar gamma) {
   if (gamma > MAX_GAMMA) return dev_params.n_gamma - 1;
   return (std::log(gamma) - std::log(MIN_GAMMA)) / dev_ic_dg;
 }
+
+// __device__ int
+// find_n_low_gamma(Scalar gamma) {
+//   if (gamma < MIN_LOW_GAMMA) return 0;
+//   if (gamma > LOW_GAMMA_THR) return dev_params.n_gamma - 1;
+//   return (std::log(gamma) - std::log(MIN_LOW_GAMMA)) / dev_ic_dgl;
+// }
 
 __device__ int
 find_n_e1(Scalar e1) {
@@ -119,12 +131,27 @@ binary_search(float u, int n, cudaPitchedPtr array, Scalar& l,
 __device__ Scalar
 gen_photon_e(Scalar gamma, curandState* state) {
   float u = curand_uniform(state);
+  Scalar bb;
+  double result;
   int gn = find_n_gamma(gamma);
+  // if (gamma < LOW_GAMMA_THR) {
+  //   // Thompson regime
+  //   Scalar l, h;
+  //   int b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+  //   bb = (l == h ? b : (u - l) / (h - l) + b);
+  //   result = exp(dev_ic_dlep * bb + log(MIN_EP));
+  // } else {
   Scalar l, h;
   int b = binary_search(u, gn, dev_ic_dNde, l, h);
-  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+  if (b < 2) {
+    b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = exp(dev_ic_dlep * bb + log(MIN_EP));
+  } else {
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = dev_ic_dep * bb;
+  }
 
-  Scalar result = dev_ic_dep * bb;
   return result * gamma;
 }
 
@@ -199,9 +226,11 @@ gen_rand_gammas(Scalar* gammas, uint32_t num, curandState* states) {
 
 inverse_compton::inverse_compton(const SimParams& params)
     : m_dNde(Extent(params.n_ep, params.n_gamma)),
+      m_dNde_thompson(Extent(params.n_ep, params.n_gamma)),
       m_ic_rate(params.n_gamma),
       m_gg_rate(params.n_gamma),
       m_gammas(params.n_gamma),
+      m_log_ep(params.n_ep),
       m_ep(params.n_ep),
       m_threads(256),
       m_blocks(256),
@@ -211,21 +240,32 @@ inverse_compton::inverse_compton(const SimParams& params)
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_ep[n] = m_dep * n;
   }
+  m_dlep = (-log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
+  for (uint32_t n = 0; n < m_ep.size(); n++) {
+    m_log_ep[n] = exp(m_dlep * n + log(MIN_EP));
+    // Logger::print_info("log ep is {}", m_log_ep[n]);
+  }
   m_dg = (log(MAX_GAMMA) - log(MIN_GAMMA)) /
-         ((Scalar)m_ic_rate.size() - 1.0);
-  for (uint32_t n = 0; n < m_ic_rate.size(); n++) {
+         ((Scalar)params.n_gamma - 1.0);
+  for (uint32_t n = 0; n < m_gammas.size(); n++) {
     m_gammas[n] = exp(log(MIN_GAMMA) + m_dg * (Scalar)n);
   }
 
   m_ep.sync_to_device();
   m_gammas.sync_to_device();
+  m_log_ep.sync_to_device();
 
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dep, &m_dep, sizeof(Scalar)));
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
+                                  sizeof(Scalar)));
   CudaSafeCall(cudaMemcpyToSymbol(
       Kernels::dev_ic_dNde, &m_dNde.data_d(), sizeof(cudaPitchedPtr)));
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
+                                  &m_dNde_thompson.data_d(),
+                                  sizeof(cudaPitchedPtr)));
   Scalar* dev_ic_rates = m_ic_rate.data_d();
   Scalar* dev_gg_rates = m_gg_rate.data_d();
   Scalar* dev_g = m_gammas.data_d();
@@ -233,8 +273,8 @@ inverse_compton::inverse_compton(const SimParams& params)
                                   sizeof(Scalar*)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rates,
                                   sizeof(Scalar*)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g,
-                                  sizeof(Scalar*)));
+  CudaSafeCall(
+      cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g, sizeof(Scalar*)));
 
   CudaSafeCall(cudaMalloc(&m_states,
                           m_threads * m_blocks * sizeof(curandState)));
@@ -290,12 +330,13 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
         Scalar mu = i_mu * dmu - 1.0;
         for (int i_e = 0; i_e < N_e; i_e++) {
           double e = exp(log(emin) + i_e * de);
-          double s = eph*e*(1.0-mu)*0.5;
+          double s = eph * e * (1.0 - mu) * 0.5;
           if (s <= 1.0) continue;
-          double b = sqrt(1.0 - 1.0/s);
+          double b = sqrt(1.0 - 1.0 / s);
           if (b == 1.0) continue;
           result += sigma_gg(b) * (1.0 - mu) * n_e(e) * e;
-          // Logger::print_info("eph is {}, s is {}, b is {}, sigma is {}", eph, s, b, sigma_gg(b));
+          // Logger::print_info("eph is {}, s is {}, b is {}, sigma is
+          // {}", eph, s, b, sigma_gg(b));
         }
       }
       m_gg_rate[n] = 0.25 * result * dmu * de;
@@ -328,6 +369,30 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
   }
 
   m_dNde.sync_to_device();
+
+  for (uint32_t n = 0; n < m_gammas.size(); n++) {
+    Scalar gamma = m_gammas[n];
+    for (uint32_t i = 0; i < m_log_ep.size(); i++) {
+      Scalar e1 = m_log_ep[i];
+      Scalar result = 0.0;
+      for (uint32_t i_e = 0; i_e < N_e; i_e++) {
+        Scalar e = exp(log(emin) + i_e * de);
+        Scalar ge = gamma * e * 4.0;
+        Scalar q = e1 / (ge * (1.0 - e1));
+        if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
+          result += n_e(e) * sigma_lab(q, ge) / gamma;
+      }
+      m_dNde_thompson(i, n) = result * de * e1;
+    }
+    for (uint32_t i = 1; i < m_ep.size(); i++) {
+      m_dNde_thompson(i, n) += m_dNde_thompson(i - 1, n);
+    }
+    for (uint32_t i = 0; i < m_ep.size(); i++) {
+      m_dNde_thompson(i, n) /= m_dNde_thompson(m_ep.size() - 1, n);
+    }
+  }
+
+  m_dNde_thompson.sync_to_device();
   // m_npep.sync_to_device();
   // m_dnde1p.sync_to_device();
 }
@@ -338,6 +403,13 @@ inverse_compton::find_n_gamma(Scalar gamma) const {
   if (gamma > MAX_GAMMA) return m_gammas.size() - 1;
   return (std::log(gamma) - std::log(MIN_GAMMA)) / m_dg;
 }
+
+// int
+// inverse_compton::find_n_low_gamma(Scalar gamma) const {
+//   if (gamma < MIN_LOW_GAMMA) return 0;
+//   if (gamma > LOW_GAMMA_THR) return m_low_gammas.size() - 1;
+//   return (std::log(gamma) - std::log(MIN_LOW_GAMMA)) / m_dgl;
+// }
 
 int
 inverse_compton::binary_search(float u, int n,
@@ -386,12 +458,27 @@ inverse_compton::gen_photon_e(Scalar gamma) {
   //   Logger::print_info("e1p is {}, ep is {}, mu is {}, result is {}",
   //                      e1p, ep, mu, result / gamma);
   float u = m_dist(m_generator);
+  Scalar bb, result;
   int gn = find_n_gamma(gamma);
+  // if (gamma < LOW_GAMMA_THR) {
+  //   Scalar l, h;
+  //   int b = binary_search(u, gn, m_dNde_thompson, l, h);
+  //   bb = (l == h ? b : (u - l) / (h - l) + b);
+  //   result = exp(m_dlep * bb + log(MIN_EP));
+  // } else {
   Scalar l, h;
   int b = binary_search(u, gn, m_dNde, l, h);
-  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+  if (b < 2) {
+    b = binary_search(u, gn, m_dNde_thompson, l, h);
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = exp(m_dlep * bb + log(MIN_EP));
+  } else {
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = m_dep * bb;
+  }
+  // }
 
-  Scalar result = m_dep * bb;
+  // Scalar result = m_dep * bb;
   return result * gamma;
 }
 
