@@ -32,43 +32,39 @@ struct maxwellian {
     return gamma * gamma * beta * std::exp(-gamma / kT_);
   }
 
-  Scalar emin() const {
-    return 1.0;
-  }
+  Scalar emin() const { return 1.0; }
 };
 
-struct power_law 
-{
+struct power_law {
   Scalar n_, e_;
 
   power_law(Scalar n, Scalar e) : n_(n), e_(e) {}
 
   Scalar operator()(Scalar gamma) const {
-    return std::pow(gamma/e_, -n_);
+    return std::pow(gamma / e_, -n_);
   }
 
-  Scalar emin() const {
-    return e_;
-  }
+  Scalar emin() const { return e_; }
 };
 
 struct sample_gamma_dist {
   std::vector<Scalar> dist_;
   std::vector<Scalar> gammas_;
   Scalar dg_;
-  Scalar g_min = 1.0;
+  Scalar g_min = 1.0e3;
   Scalar g_max = 1.0e6;
 
   template <typename F>
   sample_gamma_dist(const F& f) : dist_(500), gammas_(500) {
-    g_min = f.emin();
+    // g_min = f.emin();
     dg_ = (std::log(g_max) - std::log(g_min)) / (dist_.size() - 1.0);
     for (int n = 0; n < dist_.size(); n++) {
       gammas_[n] = std::exp(std::log(g_min) + n * dg_);
       if (n > 0)
         dist_[n] = dist_[n - 1] + f(gammas_[n]) * gammas_[n] * dg_;
-      // Logger::print_info("dist is {}, f is {}, gamma is {}, kT is {}", dist_[n], f(gammas_[n]), gammas_[n], f.kT_);
-      // Scalar beta = std::sqrt(1.0 - 1.0 / square(gammas_[n]));
+      // Logger::print_info("dist is {}, f is {}, gamma is {}, kT is
+      // {}", dist_[n], f(gammas_[n]), gammas_[n], f.kT_); Scalar beta =
+      // std::sqrt(1.0 - 1.0 / square(gammas_[n]));
     }
     for (int n = 0; n < dist_.size(); n++) {
       dist_[n] /= dist_[dist_.size() - 1];
@@ -117,7 +113,7 @@ main(int argc, char* argv[]) {
   std::uniform_real_distribution<float> dist(0.0, 1.0);
   // Spectra::power_law_hard ne(0.2, e_min, e_max);
   // Spectra::power_law_soft ne(2.0, e_min, e_max);
-  Spectra::black_body ne(0.001);
+  Spectra::black_body ne(1.0e-3);
   // Spectra::broken_power_law ne(1.25, 2.0, 1.0e-3, 1.0e-7, 1.0e4);
   // Spectra::mono_energetic ne(0.001, 1.0e-4);
   ic.init(ne, ne.emin(), ne.emax());
@@ -145,11 +141,7 @@ main(int argc, char* argv[]) {
   cu_array<Scalar> eph_M(N_samples);
   cu_array<Scalar> eph_PL1(N_samples);
   cu_array<Scalar> eph_PL2(N_samples);
-  // gammas.assign_dev(1.1);
-  // ic.generate_random_gamma(gammas);
-  // maxwellian M(5.0);
-  // power_law P2(2.0, 5.0);
-  // power_law P1(1.0, 5.0);
+  
   sample_gamma_dist DM(maxwellian(10.0));
   sample_gamma_dist DP1(power_law(1.0, 10.0));
   sample_gamma_dist DP2(power_law(2.0, 10.0));
@@ -164,12 +156,12 @@ main(int argc, char* argv[]) {
       "e_Maxwellian", DataSpace(g_M.size()));
   data_energies.write(g_M.data());
   g_M.sync_to_device();
-  DataSet data_PL1 = datafile.createDataSet<Scalar>(
-      "e_PL1", DataSpace(g_PL1.size()));
+  DataSet data_PL1 =
+      datafile.createDataSet<Scalar>("e_PL1", DataSpace(g_PL1.size()));
   data_PL1.write(g_PL1.data());
   g_PL1.sync_to_device();
-  DataSet data_PL2 = datafile.createDataSet<Scalar>(
-      "e_PL2", DataSpace(g_PL2.size()));
+  DataSet data_PL2 =
+      datafile.createDataSet<Scalar>("e_PL2", DataSpace(g_PL2.size()));
   data_PL2.write(g_PL2.data());
   g_PL2.sync_to_device();
   cudaDeviceSynchronize();
@@ -178,13 +170,13 @@ main(int argc, char* argv[]) {
   ic.generate_photon_energies(eph_PL1, g_PL1);
   ic.generate_photon_energies(eph_PL2, g_PL2);
   cudaDeviceSynchronize();
-  // timer::show_duration_since_stamp("gen photon energies on gpu", "ms");
-  // timer::stamp();
+  // timer::show_duration_since_stamp("gen photon energies on gpu",
+  // "ms"); timer::stamp();
   for (uint32_t i = 0; i < N_samples; i++) {
     eph_M[i] = ic.gen_photon_e(g_M[i]);
   }
-  // timer::show_duration_since_stamp("gen photon energies on cpu", "ms");
-  // eph_M.sync_to_host();
+  // timer::show_duration_since_stamp("gen photon energies on cpu",
+  // "ms"); eph_M.sync_to_host();
   eph_PL1.sync_to_host();
   eph_PL2.sync_to_host();
   std::vector<Scalar> test_e_M(N_samples);
@@ -212,14 +204,14 @@ main(int argc, char* argv[]) {
   // DataSet data_teste1p = datafile.createDataSet<Scalar>(
   //     "test_e1p", DataSpace::From(test_e1p));
   // data_teste1p.write(test_e1p);
-  DataSet data_e_M =
-      datafile.createDataSet<Scalar>("test_e_M", DataSpace::From(test_e_M));
+  DataSet data_e_M = datafile.createDataSet<Scalar>(
+      "test_e_M", DataSpace::From(test_e_M));
   data_e_M.write(test_e_M);
-  DataSet data_e_PL1 =
-      datafile.createDataSet<Scalar>("test_e_PL1", DataSpace::From(test_e_PL1));
+  DataSet data_e_PL1 = datafile.createDataSet<Scalar>(
+      "test_e_PL1", DataSpace::From(test_e_PL1));
   data_e_PL1.write(test_e_PL1);
-  DataSet data_e_PL2 =
-      datafile.createDataSet<Scalar>("test_e_PL2", DataSpace::From(test_e_PL2));
+  DataSet data_e_PL2 = datafile.createDataSet<Scalar>(
+      "test_e_PL2", DataSpace::From(test_e_PL2));
   data_e_PL2.write(test_e_PL2);
   return 0;
 }

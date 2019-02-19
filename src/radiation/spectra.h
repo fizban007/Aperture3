@@ -73,7 +73,7 @@ struct black_body {
   }
 
   Scalar emin() const { return 1e-7 * kT_; }
-  Scalar emax() const { return 1e4 * kT_; }
+  Scalar emax() const { return 1e3 * kT_; }
 
   Scalar kT_;
 };
