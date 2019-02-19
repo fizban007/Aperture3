@@ -28,8 +28,9 @@ main(int argc, char* argv[]) {
   auto& mesh = grid.mesh();
 
   // Setup initial conditions
-  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-    for (int n = 0; n < 50; n++) {
+  // for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+  for (int i = mesh.guard[0]; i < mesh.dims[0] / 3; i++) {
+    for (int n = 0; n < 10; n++) {
       data.particles.append(
           {env.gen_rand(), 0.0, 0.0}, {0.0, 0.0, 0.0}, i,
           ParticleType::electron, 1.0,
@@ -40,18 +41,19 @@ main(int argc, char* argv[]) {
           (env.gen_rand() < 0.1 ? bit_or(ParticleFlag::tracked) : 0));
     }
   }
-  for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
-    data.particles.append(
-        {0.5, 0.0, 0.0}, {0.0, 0.0, 0.0}, i, ParticleType::electron,
-        -20.0 + i * 10.0 / mesh.reduced_dim(0),
-        (env.gen_rand() < 0.1 ? bit_or(ParticleFlag::tracked) : 0));
-  }
+  // for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0]; i++) {
+  //   data.particles.append(
+  //       {0.5, 0.0, 0.0}, {0.0, 0.0, 0.0}, i, ParticleType::electron,
+  //       -20.0 + i * 10.0 / mesh.reduced_dim(0),
+  //       (env.gen_rand() < 0.1 ? bit_or(ParticleFlag::tracked) : 0));
+  // }
 
   // Setup background J
   vector_field<Scalar> Jbg(grid);
   Jbg.initialize(0, [&mesh](Scalar x1, Scalar x2, Scalar x3) {
     // return sqrt(mesh.sizes[0] - x1 + 2.0);
-    return 50.0 - 40.0 * x1 / mesh.sizes[0];
+    // return 50.0 - 40.0 * x1 / mesh.sizes[0];
+                      return 5.0;
   });
 
   data_exporter exporter(env.params(), step);

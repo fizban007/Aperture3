@@ -22,7 +22,7 @@ rad_transfer_1d::emit_photons(sim_data& data) {
   for (Index_t idx = 0; idx < ptc.number(); idx++) {
     Scalar gamma = ptcdata.E[idx];
     Scalar x = mesh.pos(0, ptcdata.cell[idx], ptcdata.x1[idx]);
-    if (gamma > m_env.params().gamma_thr && x < 0.3 * mesh.sizes[0]) {
+    if (gamma > m_env.params().gamma_thr && x < 0.4 * mesh.sizes[0]) {
       Scalar p_i = std::abs(ptcdata.p1[idx]);
       Scalar E_f = gamma - 2.0 * m_env.params().E_secondary;
       Scalar l_ph = 0.0;
