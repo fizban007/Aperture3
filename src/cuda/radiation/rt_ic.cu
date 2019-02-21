@@ -78,13 +78,6 @@ find_n_gamma(Scalar gamma) {
   return (std::log(gamma) - std::log(MIN_GAMMA)) / dev_ic_dg;
 }
 
-// __device__ int
-// find_n_low_gamma(Scalar gamma) {
-//   if (gamma < MIN_LOW_GAMMA) return 0;
-//   if (gamma > LOW_GAMMA_THR) return dev_params.n_gamma - 1;
-//   return (std::log(gamma) - std::log(MIN_LOW_GAMMA)) / dev_ic_dgl;
-// }
-
 __device__ int
 find_n_e1(Scalar e1) {
   if (e1 < 0.0f) e1 = 0.0;

@@ -30,6 +30,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
                       int* phPos, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   __shared__ int photonProduced;
+  curandState local_state = states[id];
   if (threadIdx.x == 0) photonProduced = 0;
 
   __syncthreads();
@@ -40,23 +41,16 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     if (cell == MAX_CELL) continue;
     auto flag = ptc.flag[tid];
     int sp = get_ptc_type(flag);
-    if (sp == (int)ParticleType::ion) continue;
-    int c1 = dev_mesh.get_c1(cell);
+    // if (sp == (int)ParticleType::ion) continue;
 
     // Skip photon emission when outside given radius
-    Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
     Scalar gamma = ptc.E[tid];
-    Scalar w = ptc.weight[tid];
-
-    // if (rad_model.emit_photon(gamma)) {
-    if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
-        r > 1.02f) {
-      // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
+    
+    float u = curand_uniform(&local_state);
+    // TODO: Add a scaling factor here for the rate that may depend on
+    // position
+    if (u < find_ic_rate(gamma)) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
-      // int c2 = dev_mesh.get_c2(cell);
-      // atomicAdd(ptrAddr(ph_events,
-      //                   c2 * ph_events.pitch + c1 * sizeof(Scalar)),
-      //           w);
     }
   }
 
@@ -66,6 +60,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
   if (threadIdx.x == 0) {
     ph_count[blockIdx.x] = photonProduced;
   }
+  states[id] = local_state;
 }
 
 template <typename PtcData, typename PhotonData>
@@ -74,28 +69,23 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
                 size_t ph_num, int* phPos, int* ph_count, int* ph_cum,
                 curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
-  // dev_params.e_s,
-  //                                         dev_params.e_min,
-  //                                         dev_params.photon_path,
-  //                                         rng);
-  // CurvatureInstant<Kernels::CudaRng> rad_model(dev_params, rng);
+  curandState local_state = states[id];
+
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
     if (pos_in_block > -1 && ptc.cell[tid] != MAX_CELL) {
       int start_pos = ph_cum[blockIdx.x];
 
-      // TODO: Compute gamma
       Scalar p1 = ptc.p1[tid];
       Scalar p2 = ptc.p2[tid];
       Scalar p3 = ptc.p3[tid];
-      // Scalar gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       Scalar gamma = ptc.E[tid];
+
+      // TODO: May need to transform particle momenta to some other
+      // frame and do the photon spectrum there
       Scalar pi = std::sqrt(gamma * gamma - 1.0f);
-      // Scalar Eph = rad_model.draw_photon_energy(gamma, p);
-      Scalar Eph = dev_params.E_secondary * 2.0f;
+      Scalar Eph = gen_photon_e(gamma, &local_state);
       Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
       // gamma = (gamma - std::abs(Eph));
       ptc.p1[tid] = p1 * pf / pi;
@@ -109,11 +99,11 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
                                   dev_params.photon_path);
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
-      // if (std::abs(Eph) < dev_params.E_ph_min) continue;
+      if (std::abs(Eph) < dev_params.E_ph_min) continue;
 
       // Add the new photon
       // Scalar path = rad_model.draw_photon_freepath(Eph);
-      Scalar u = rng();
+      Scalar u = curand_uniform(&local_state);
       // Scalar path =
       //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
       // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
@@ -135,6 +125,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       photons.cell[offset] = ptc.cell[tid];
     }
   }
+  states[id] = local_state;
 }
 
 template <typename PhotonData>
