@@ -24,7 +24,6 @@ class inverse_compton {
   cu_array<Scalar>& ep() { return m_ep; }
 
   int find_n_gamma(Scalar gamma) const;
-  // int find_n_low_gamma(Scalar gamma) const;
   Scalar gen_e1p(int gn);
   Scalar gen_ep(int gn, Scalar e1p);
   Scalar gen_photon_e(Scalar gamma);
