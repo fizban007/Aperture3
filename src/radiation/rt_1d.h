@@ -11,14 +11,14 @@ struct sim_data;
 
 class rad_transfer_1d {
  public:
-  rad_transfer_1d(const sim_environment& env);
+  rad_transfer_1d(sim_environment& env);
   virtual ~rad_transfer_1d();
 
   void emit_photons(sim_data& data);
   void produce_pairs(sim_data& data);
 
  private:
-  const sim_environment& m_env;
+  sim_environment& m_env;
   std::default_random_engine m_gen;
   std::uniform_real_distribution<double> m_dist;
   std::normal_distribution<double> m_normal;
