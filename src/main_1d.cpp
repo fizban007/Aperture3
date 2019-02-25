@@ -33,7 +33,7 @@ main(int argc, char* argv[]) {
     for (int n = 0; n < 10; n++) {
       data.particles.append(
           {env.gen_rand(), 0.0, 0.0}, {0.0, 0.0, 0.0}, i,
-          ParticleType::electron, 1.0,
+          ParticleType::electron, 1.1,
           (env.gen_rand() < 0.1 ? bit_or(ParticleFlag::tracked) : 0));
       data.particles.append(
           {env.gen_rand(), 0.0, 0.0}, {0.0, 0.0, 0.0}, i,

@@ -6,7 +6,7 @@
 
 namespace Aperture {
 
-rad_transfer_1d::rad_transfer_1d(const sim_environment& env)
+rad_transfer_1d::rad_transfer_1d(sim_environment& env)
     : m_env(env), m_dist(0.0, 1.0) {}
 
 rad_transfer_1d::~rad_transfer_1d() {}
@@ -23,13 +23,15 @@ rad_transfer_1d::emit_photons(sim_data& data) {
     Scalar gamma = ptcdata.E[idx];
     Scalar x = mesh.pos(0, ptcdata.cell[idx], ptcdata.x1[idx]);
     if (gamma > m_env.params().gamma_thr && x < 0.4 * mesh.sizes[0]) {
+      float u = m_env.gen_rand();
+      Scalar l_ph = m_env.params().photon_path * (0.5 + 0.5 * u);
       Scalar p_i = std::abs(ptcdata.p1[idx]);
-      Scalar E_f = gamma - 2.0 * m_env.params().E_secondary;
-      Scalar l_ph = 0.0;
+      u = m_env.gen_rand();
+      Scalar Eph = 2.0 + u * 2.0 * m_env.params().E_secondary;
+      Scalar E_f = gamma - Eph;
       photons.append(
           {ptcdata.x1[idx], 0.0, 0.0},
-          {sgn(ptcdata.p1[idx]) * (Scalar)2.0 *
-               m_env.params().E_secondary,
+          {sgn(ptcdata.p1[idx]) * Eph,
            0.0, 0.0},
           ptcdata.cell[idx], l_ph, ptcdata.weight[idx],
           (m_dist(m_gen) < 0.1 ? bit_or(PhotonFlag::tracked) : 0));

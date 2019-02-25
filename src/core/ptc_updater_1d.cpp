@@ -4,8 +4,8 @@
 #include "sim_environment.h"
 #include "utils/avx_interp.hpp"
 #include "utils/avx_utils.h"
-#include "utils/simd.h"
 #include "utils/logger.h"
+#include "utils/simd.h"
 
 namespace Aperture {
 
@@ -20,6 +20,7 @@ ptc_updater_1d::update_particles(sim_data& data, double dt,
   push(data, dt, step);
   deposit(data, dt, step);
   data.particles.clear_guard_cells(data.E.grid());
+  data.photons.clear_guard_cells(data.E.grid());
 }
 
 void
@@ -27,6 +28,7 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
   using namespace simd;
 
   auto& ptc = data.particles;
+  auto& photons = data.photons;
   auto& mesh = m_env.grid().mesh();
   if (mesh.dim() != 1) {
     Logger::print_info("Grid is not 1d, doing nothing in push");
@@ -74,6 +76,38 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
       auto gamma = sqrt(mul_add(p1, p1, Vec_f_type(1.0)));
 
       gamma.maskstore_a(ptc.data().E + idx, empty_mask);
+#endif
+    }
+  }
+  if (photons.number() > 0) {
+    for (size_t idx = 0; idx < photons.number(); idx += vec_width) {
+      // Interpolate field values to particle position
+      Vec_idx_type c;
+      c.load_a(photons.data().cell + idx);
+      uint32_t empty_offset = sizeof(Scalar);
+#ifdef USE_DOUBLE
+      Vec_ui_type offsets = extend_low(c * sizeof(double));
+      Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
+#else
+      Vec_ui_type offsets = c * sizeof(float);
+      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+#endif
+      offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
+
+#ifndef USE_DOUBLE
+      Vec_f_type x1;
+      x1.maskload_a(photons.data().x1 + idx, empty_mask);
+      Vec_f_type path;
+      path.maskload_a(photons.data().path_left + idx, empty_mask);
+
+      Vec_f_type p1;
+      p1.maskload_a(photons.data().p1 + idx, empty_mask);
+
+      x1 += p1 * dt / abs(p1);
+      path -= dt;
+
+      x1.maskstore_a(photons.data().x1 + idx, empty_mask);
+      path.maskstore_a(photons.data().path_left + idx, empty_mask);
 #endif
     }
   }
