@@ -28,6 +28,7 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
                      uint32_t timestep);
   void load_from_snapshot(cu_sim_environment& env, cu_sim_data& data,
                           uint32_t& timestep);
+  void write_particles(uint32_t step, double time);
 
   template <typename T>
   void interpolate_field_values(fieldoutput<1>& field, int components, const T& t);
@@ -36,6 +37,10 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
   template <typename T>
   void interpolate_field_values(fieldoutput<3>& field, int components, const T& t);
 
+ private:
+  std::vector<Scalar> m_ptc_p, m_ph_p;
+  std::vector<Pos_t> m_ptc_x1, m_ph_x1;
+  std::vector<uint32_t> m_ptc_cell, m_ph_cell, m_ptc_flag, m_ph_flag;
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 
 

@@ -1,10 +1,10 @@
 #ifndef _MULTI_ARRAY_UTILS_CUH_
 #define _MULTI_ARRAY_UTILS_CUH_
 
-#include "cuda/cuda_control.h"
-#include "core/vec3.h"
-#include "core/detail/op.hpp"
 #include "core/constant_defs.h"
+#include "core/detail/op.hpp"
+#include "core/vec3.h"
+#include "cuda/cuda_control.h"
 
 namespace Aperture {
 
@@ -49,6 +49,18 @@ map_array_unary_op_2d(cudaPitchedPtr input, cudaPitchedPtr output,
 
 template <typename T, typename UnaryOp>
 __global__ void
+map_array_unary_op_1d(cudaPitchedPtr input, cudaPitchedPtr output,
+                      const Extent ext, UnaryOp op) {
+  T* row_in = (T*)(input.ptr);
+  T* row_out = (T*)(output.ptr);
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+       i += blockDim.x * gridDim.x) {
+    row_out[i] = op(row_in[i]);
+  }
+}
+
+template <typename T, typename UnaryOp>
+__global__ void
 map_array_unary_op(cudaPitchedPtr array, const Extent ext, UnaryOp op) {
   for (int k = blockIdx.z * blockDim.z + threadIdx.z; k < ext.z;
        k += blockDim.z * gridDim.z) {
@@ -77,6 +89,18 @@ map_array_unary_op_2d(cudaPitchedPtr array, const Extent ext,
       // size_t idx = i + j * ext.x + k * ext.x * ext.y;
       op(row[i]);
     }
+  }
+}
+
+template <typename T, typename UnaryOp>
+__global__ void
+map_array_unary_op_1d(cudaPitchedPtr array, const Extent ext,
+                      UnaryOp op) {
+  T* row = (T*)(array.ptr);
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+       i += blockDim.x * gridDim.x) {
+    // size_t idx = i + j * ext.x + k * ext.x * ext.y;
+    op(row[i]);
   }
 }
 
@@ -146,7 +170,6 @@ map_array_binary_op(cudaPitchedPtr a, cudaPitchedPtr b,
 
 }  // namespace Kernels
 
-  
-}
+}  // namespace Aperture
 
 #endif

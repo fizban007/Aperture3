@@ -277,7 +277,7 @@ RadiationTransfer1DGR::RadiationTransfer1DGR(
                    m_blocksPerGrid);
 
   // Init inverse compton module
-  Spectra::black_body ne(0.001);
+  Spectra::black_body ne(env.params().star_kT);
   m_ic.init(ne, ne.emin(), ne.emax());
 }
 

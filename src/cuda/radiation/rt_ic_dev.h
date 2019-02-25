@@ -2,6 +2,8 @@
 
 namespace Aperture {
 
+namespace Kernels {
+
 __device__ int find_n_gamma(Scalar gamma);
 
 __device__ int find_n_e1(Scalar e1);
@@ -17,5 +19,7 @@ __device__ Scalar gen_photon_e(Scalar gamma, curandState* state);
 __device__ Scalar find_ic_rate(Scalar gamma);
 
 __device__ Scalar find_gg_rate(Scalar eph);
+
+}
 
 }  // namespace Aperture
