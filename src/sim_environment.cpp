@@ -141,10 +141,10 @@ sim_environment::setup_env() {
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 
   Logger::print_info("Setup environment completed.");
-  Logger::print_info("Each particle is worth {} bytes",
-                     particle_data::size);
-  Logger::print_info("Each photon is worth {} bytes",
-                     photon_data::size);
+  // Logger::print_info("Each particle is worth {} bytes",
+  //                    particle_data::size);
+  // Logger::print_info("Each photon is worth {} bytes",
+  //                    photon_data::size);
 }
 
 void

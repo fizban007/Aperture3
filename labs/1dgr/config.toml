@@ -1,20 +1,17 @@
 # Time step size
-delta_t = 0.001
+delta_t = 2.0e-4
 
 # Charge of an electron
 q_e = 1.0
-
-# Ion mass
-ion_mass = 5.0
 
 # Number of species
 num_species = 2
 
 # Maximum number of particles per node
-max_ptc_number = 250000000
+max_ptc_number = 10000000
 
 # Maximum number of photons per node
-max_photon_number = 50000000
+max_photon_number = 10000000
 
 # Create pairs or not
 create_pairs = true
@@ -33,12 +30,6 @@ E_secondary = 6.0
 
 # Radius cutoff for pair creation
 r_cutoff = 3.0
-
-# Gravity switch
-gravity_on = false
-
-# Gravity strength
-gravity = 1.0
 
 # Free path for inverse Compton once a particle reaches threshold
 ic_path = 20.0
@@ -59,10 +50,10 @@ periodic_boundary = [false, false]
 track_percent = 0.1
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/Aperture3/"
+data_dir = "/home/alex/Data/Aperture3/1dgr/"
 
 # Dipole B0
-B0 = 30000.0
+B0 = 500.0
 
 # Damping coefficient
 damping_coef = 0.003
@@ -73,31 +64,43 @@ damping_length = 32
 # Star rotating omega
 omega = 0.1
 
+# Resolution for gamma grid used in IC scattering table
+n_gamma = 300
+
+# Resolution for photon energy grid used in IC table
+n_ep = 300
+
+# Temperature of the background soft photon
+star_kT = 1e-4
+
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
 # dimension, just set N to 1 and guard to 0 on that dimension.
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [1024, 1024, 1]
+N = [16384, 1, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
-guard = [2, 2, 0]
+guard = [2, 0, 0]
 
 # Lower limit of the coordinate
-lower = [0.0, 0.0, 0.0]
+lower = [1.20, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [3.3, 3.1415926535898, 1.0]
-
-# Size of a tile of cells
-tile_size = [16, 16, 1]
+size = [7.32, 1.0, 1.0]
 
 [Simulation]
 
-coord_system = "LogSpherical"
+coord_system = "1DGR"
 
 random_seed = 3333
 
-downsample = 2
+downsample = 1
+
+max_steps = 2
+
+data_interval = 200
+
+sort_interval = 20

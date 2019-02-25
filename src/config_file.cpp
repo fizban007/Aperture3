@@ -107,9 +107,9 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.B0 = config->get_as<double>("B0").value_or(defaults.B0);
   params.BQ = config->get_as<double>("BQ").value_or(defaults.BQ);
   params.res_drag_coef = config->get_as<double>("res_drag_coef")
-                            .value_or(defaults.res_drag_coef);
-  params.star_kT = config->get_as<double>("star_kT")
-                            .value_or(defaults.star_kT);
+                             .value_or(defaults.res_drag_coef);
+  params.star_kT =
+      config->get_as<double>("star_kT").value_or(defaults.star_kT);
   params.damping_coef = config->get_as<double>("damping_coef")
                             .value_or(defaults.damping_coef);
   params.E_secondary = config->get_as<double>("E_secondary")
@@ -180,6 +180,12 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
     params.sort_interval = sim_table->get_as<int>("sort_interval")
                                .value_or(defaults.sort_interval);
   }
+
+  // Radiation transfer parameters
+  params.n_gamma =
+      config->get_as<int64_t>("n_gamma").value_or(defaults.n_gamma);
+  params.n_ep =
+      config->get_as<int64_t>("n_ep").value_or(defaults.n_ep);
 
   compute_derived_quantities(params);
 }

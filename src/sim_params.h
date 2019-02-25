@@ -74,8 +74,8 @@ struct SimParamsBase {
   float omega = 0.2;
 
   // Inverse compton parameters
-  int n_gamma = 300;
-  int n_ep = 5000;
+  int n_gamma = 600;
+  int n_ep = 600;
 
   // Domain decomposition parameters
   int dim_x = 1;

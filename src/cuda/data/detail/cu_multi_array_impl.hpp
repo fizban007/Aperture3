@@ -3,9 +3,9 @@
 
 // #include "core/detail/multi_array_impl.hpp"
 #include "core/detail/multi_array_utils.hpp"
-#include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/cu_multi_array.h"
+#include "cuda/data/detail/multi_array_utils.cuh"
 #include "utils/logger.h"
 #include <thrust/copy.h>
 #include <thrust/device_ptr.h>
@@ -139,6 +139,10 @@ cu_multi_array<T>::assign_dev(const data_type& value) {
     Kernels::map_array_unary_op_2d<T><<<gridSize, blockSize>>>(
         _data_d, this->_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
+  } else if (this->_dim == 1) {
+    Kernels::map_array_unary_op_1d<T><<<64, 128>>>(
+        _data_d, this->_extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
   }
 }
 
@@ -232,7 +236,8 @@ cu_multi_array<T>::sync_to_host() {
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  // Logger::print_info("Pitch is {}, cudaPitch is {}", this->_pitch, _data_d.pitch);
+  // Logger::print_info("Pitch is {}, cudaPitch is {}", this->_pitch,
+  // _data_d.pitch);
   myParms.dstPtr = make_cudaPitchedPtr(this->_data, this->_pitch,
                                        sizeof(Scalar) * this->_extent.x,
                                        this->_extent.y);

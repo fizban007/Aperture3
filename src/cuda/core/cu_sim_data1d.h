@@ -14,10 +14,11 @@ struct cu_sim_data1d {
   virtual ~cu_sim_data1d();
 
   void initialize(const cu_sim_environment& env);
+  void prepare_initial_condition(int multiplicity);
 
   const cu_sim_environment& env;
   cu_vector_field<Scalar> E;
-  cu_vector_field<Scalar> B;
+  // cu_vector_field<Scalar> B;
   cu_vector_field<Scalar> J;
   std::vector<cu_scalar_field<Scalar>> Rho;
 

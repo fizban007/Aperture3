@@ -39,6 +39,7 @@ typedef Vec4qb Vec_ib_type;
 typedef Vec4d Vec_f_type;
 constexpr int vec_width = 4;
 #else
+typedef uint32_t Vec_idx_type;
 typedef uint32_t Vec_ui_type;
 typedef int Vec_i_type;
 typedef bool Vec_ib_type;
