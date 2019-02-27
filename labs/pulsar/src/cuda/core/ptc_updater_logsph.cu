@@ -61,10 +61,21 @@ vay_push_2d(particle_data ptc, size_t num,
     auto flag = ptc.flag[idx];
     int sp = get_ptc_type(flag);
     auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
-    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
+    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx],
+         gamma = ptc.E[idx];
     Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
+    if (p1 != p1 || p2 != p2 || p3 != p3) {
+      // printf("NaN detected! p is %f, E1 is %f, E2 is %f, E3 is %f,
+      // B1 is %f, B2 is %f, B3 is %f\n", p,
+      //        E1, E2, E3, B1, B2, B3);
+      printf(
+          "NaN detected in push! p1 is %f, p2 is %f, p3 is %f, gamma "
+          "is %f\n",
+          p1, p2, p3, gamma);
+      asm("trap;");
+    }
     // step 0: Grab E & M fields at the particle position
-    Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+    gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
           (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
@@ -138,10 +149,23 @@ vay_push_2d(particle_data ptc, size_t num,
         Scalar r = exp(dev_mesh.pos(0, c1, old_x1));
         p1 -= dt * dev_params.gravity / (r * r);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+        if (gamma != gamma) {
+          // printf("NaN detected! p is %f, E1 is %f, E2 is %f, E3 is
+          // %f, B1 is %f, B2 is %f, B3 is %f\n", p,
+          //        E1, E2, E3, B1, B2, B3);
+          printf(
+              "NaN detected after gravity! p1 is %f, p2 is %f, p3 is "
+              "%f, gamma is "
+              "%f\n",
+              p1, p2, p3, gamma);
+          asm("trap;");
+        }
       }
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion)
+      // {
+      if (dev_params.rad_cooling_on) {
         Scalar res = dt * sqrt(tt / q_over_m / q_over_m) / gamma;
         // if ()
         // int substeps = ceil(res);
@@ -200,92 +224,6 @@ vay_push_2d(particle_data ptc, size_t num,
     ptc.p2[idx] = p2;
     ptc.p3[idx] = p3;
     ptc.E[idx] = gamma;
-  }
-}
-
-__global__ void
-boris_push_2d(particle_data ptc, size_t num,
-              PtcUpdaterDev::fields_data fields, Scalar dt) {
-  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
-       idx += blockDim.x * gridDim.x) {
-    auto c = ptc.cell[idx];
-    // Skip empty particles
-    if (c == MAX_CELL) continue;
-
-    // Load particle quantities
-    Interpolator2D<spline_t> interp;
-    auto flag = ptc.flag[idx];
-    int sp = get_ptc_type(flag);
-    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
-    auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
-    int c1 = dev_mesh.get_c1(c);
-    int c2 = dev_mesh.get_c2(c);
-    Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
-    // step 0: Grab E & M fields at the particle position
-    if (!check_bit(flag, ParticleFlag::ignore_EM)) {
-      Scalar E1 =
-          (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110)) +
-           interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
-                  Stagger(0b110))) *
-          q_over_m;
-      Scalar E2 =
-          (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101)) +
-           interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
-                  Stagger(0b101))) *
-          q_over_m;
-      Scalar E3 =
-          (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011)) +
-           interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
-                  Stagger(0b011))) *
-          q_over_m;
-      Scalar B1 =
-          (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
-           interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
-                  Stagger(0b001))) *
-          q_over_m;
-      Scalar B2 =
-          (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
-           interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
-                  Stagger(0b010))) *
-          q_over_m;
-      Scalar B3 =
-          (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100)) +
-           interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
-                  Stagger(0b100))) *
-          q_over_m;
-
-      // printf("B is (%f, %f, %f)\n", B1, B2, B3);
-      // printf("p is (%f, %f, %f)\n", p1, p2, p3);
-      // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar)
-      // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
-
-      // step 1: Update particle momentum using boris pusher
-      Scalar pm1 = p1 + E1;
-      Scalar pm2 = p2 + E2;
-      Scalar pm3 = p3 + E3;
-      // printf("pm is (%f, %f, %f)\n", pm1, pm2, pm3);
-      Scalar gamma =
-          std::sqrt(1.0f + pm1 * pm1 + pm2 * pm2 + pm3 * pm3);
-      Scalar pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
-      Scalar pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
-      Scalar pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
-      // printf("pp is (%f, %f, %f)\n", pp1, pp2, pp3);
-      Scalar t2p1 =
-          1.0f + (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma);
-      // printf("t2p1 is %f, gamma is %f\n", t2p1, gamma);
-      // printf("cross3 are: %f, %f\n", (pm1 * B2 - pm2 * B1) / gamma,
-      //        2.0f * (pp1 * B2 - pp2 * B1) / t2p1);
-
-      // p1 -= 10.0*dt;
-      p1 = E1 + pm1 + 2.0f * (pp2 * B3 - pp3 * B2) / t2p1;
-      p2 = E2 + pm2 + 2.0f * (pp3 * B1 - pp1 * B3) / t2p1;
-      p3 = E3 + pm3 + 2.0f * (pp1 * B2 - pp2 * B1) / t2p1;
-      // printf("p is (%f, %f, %f)\n", p1, p2, p3);
-      ptc.p1[idx] = p1;
-      ptc.p2[idx] = p2;
-      ptc.p3[idx] = p3;
-      ptc.E[idx] = gamma;
-    }
   }
 }
 
@@ -425,6 +363,16 @@ __launch_bounds__(512, 4)
     ptc.p1[idx] = v1 * gamma;
     ptc.p2[idx] = v2 * gamma;
     ptc.p3[idx] = v3 * gamma;
+    if (v1 != v1) {
+      // printf("NaN detected! p is %f, E1 is %f, E2 is %f, E3 is %f, B1
+      // is %f, B2 is %f, B3 is %f\n", p,
+      //        E1, E2, E3, B1, B2, B3);
+      printf(
+          "NaN detected in deposit! p1 is %f, p2 is %f, p3 is %f, "
+          "gamma is %f\n",
+          ptc.p1[idx], ptc.p2[idx], ptc.p3[idx], gamma);
+      asm("trap;");
+    }
 
     // Scalar old_pos3 =
     Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
@@ -563,6 +511,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
       Scalar vphi = omega * r * sin(theta);
+      // Scalar vphi = 0.0f;
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
@@ -732,7 +681,8 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
 
 __global__ void
 flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
-                  cudaPitchedPtr dens_p, cudaPitchedPtr balance) {
+                  cudaPitchedPtr dens_p, cudaPitchedPtr balance,
+                  cudaPitchedPtr annihilate) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     auto c = ptc.cell[i];
@@ -746,6 +696,67 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
     Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
+    int ann = *(int *)((char *)annihilate.ptr + c1 * sizeof(int) +
+                       c2 * annihilate.pitch);
+    Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+    Scalar n;
+    if (ann != 0) {
+      if (get_ptc_type(flag) == (int)ParticleType::electron)
+        n = atomicAdd(ptrAddr(dens_e, c1, c2), w);
+      else  // if (get_ptc_type(flag) == (int)ParticleType::positron)
+        n = atomicAdd(ptrAddr(dens_p, c1, c2), w);
+      if (n < n_min) {
+        set_bit(ptc.flag[i], ParticleFlag::annihilate);
+        atomicAdd(ptrAddr(balance, c1, c2),
+                  w * (get_ptc_type(flag) == (int)ParticleType::electron
+                           ? -1.0f
+                           : 1.0f));
+      }
+    }
+    // Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
+    // // size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
+
+    // Scalar n_e = *ptrAddr(dens_e, c1, c2);
+    // Scalar n_p = *ptrAddr(dens_p, c1, c2);
+    // if (get_ptc_type(flag) == (int)ParticleType::electron)
+    //   n_e = atomicAdd(ptrAddr(dens_e, c1, c2), w);
+    // else if (get_ptc_type(flag) == (int)ParticleType::positron)
+    //   n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
+    // Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
+    // Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+    // // TODO: implement the proper condition
+    // if (n_e > n_min && n_p > n_min) {
+    //   set_bit(ptc.flag[i], ParticleFlag::annihilate);
+    //   atomicAdd(ptrAddr(balance, c1, c2),
+    //             w * (get_ptc_type(flag) ==
+    //             (int)ParticleType::electron
+    //                      ? -1.0f
+    //                      : 1.0f));
+    // }
+  }
+  // After this operation, the balance array will contain how much
+  // imbalance is there in the annihilated part. We will add this
+  // imbalance back in as an extra particle
+}
+
+__global__ void
+check_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
+                   cudaPitchedPtr dens_p, cudaPitchedPtr annihilate) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
+       i += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[i];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+
+    auto flag = ptc.flag[i];
+    if (get_ptc_type(flag) > 1) continue;  // ignore ions
+    auto w = ptc.weight[i];
+
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    size_t offset = c1 * sizeof(int) + c2 * annihilate.pitch;
+    int b = *(int *)((char *)annihilate.ptr + offset);
+    Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
     // size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
 
     Scalar n_e = *ptrAddr(dens_e, c1, c2);
@@ -754,20 +765,12 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
       n_e = atomicAdd(ptrAddr(dens_e, c1, c2), w);
     else if (get_ptc_type(flag) == (int)ParticleType::positron)
       n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
-    Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
-    Scalar n_min = 0.4 * square(dev_mesh.inv_delta[0]) * sin_t;
-    // TODO: implement the proper condition
-    if (n_e > n_min && n_p > n_min) {
-      set_bit(ptc.flag[i], ParticleFlag::annihilate);
-      atomicAdd(ptrAddr(balance, c1, c2),
-                w * (get_ptc_type(flag) == (int)ParticleType::electron
-                         ? -1.0f
-                         : 1.0f));
+    Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+
+    if (n_e > n_min && n_p > n_min && b == 0) {
+      atomicExch((int *)((char *)annihilate.ptr + offset), 1);
     }
   }
-  // After this operation, the balance array will contain how much
-  // imbalance is there in the annihilated part. We will add this
-  // imbalance back in as an extra particle
 }
 
 __global__ void
@@ -808,7 +811,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       m_blocksPerGrid(128),
       m_dens_e(env.local_grid()),
       m_dens_p(env.local_grid()),
-      m_balance(env.local_grid()) {
+      m_balance(env.local_grid()),
+      m_annihilate(env.local_grid().extent()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   // TODO: Check error!!
@@ -835,6 +839,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
+    auto &mesh = m_env.grid().mesh();
     // Skip empty particle array
     if (data.particles.number() > 0) {
       Logger::print_info(
@@ -939,11 +944,19 @@ void
 PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
   m_dens_e.data().assign_dev(0.0);
   m_dens_p.data().assign_dev(0.0);
-  m_balance.data().assign_dev(0.0);
+  m_annihilate.assign_dev(0);
 
+  Kernels::check_annihilation<<<256, 512>>>(
+      data.particles.data(), data.particles.number(), m_dens_e.ptr(),
+      m_dens_p.ptr(), m_annihilate.data_d());
+  CudaCheckError();
+
+  m_dens_e.data().assign_dev(0.0);
+  m_dens_p.data().assign_dev(0.0);
+  m_balance.data().assign_dev(0.0);
   Kernels::flag_annihilation<<<256, 512>>>(
       data.particles.data(), data.particles.number(), m_dens_e.ptr(),
-      m_dens_p.ptr(), m_balance.ptr());
+      m_dens_p.ptr(), m_balance.ptr(), m_annihilate.data_d());
   CudaCheckError();
 
   Kernels::annihilate_pairs<<<256, 512>>>(

@@ -27,6 +27,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
 
   // cu_scalar_field<double> m_J1, m_J2;
   cu_scalar_field<Scalar> m_dens_e, m_dens_p, m_balance;
+  cu_multi_array<int> m_annihilate;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture

@@ -46,6 +46,7 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     uint32_t cell = ptc.cell[tid];
     // Skip empty particles
     if (cell == MAX_CELL) continue;
+    if (!dev_mesh.is_in_bulk(cell)) continue;
     auto flag = ptc.flag[tid];
     int sp = get_ptc_type(flag);
     if (sp == (int)ParticleType::ion) continue;
@@ -92,7 +93,9 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
-    if (pos_in_block > -1 && ptc.cell[tid] != MAX_CELL) {
+    uint32_t cell = ptc.cell[tid];
+    if (pos_in_block > -1 && cell != MAX_CELL) {
+      if (!dev_mesh.is_in_bulk(cell)) continue;
       int start_pos = ph_cum[blockIdx.x];
 
       // TODO: Compute gamma
@@ -103,7 +106,8 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       Scalar gamma = ptc.E[tid];
       Scalar pi = std::sqrt(gamma * gamma - 1.0f);
       // Scalar Eph = rad_model.draw_photon_energy(gamma, p);
-      Scalar Eph = dev_params.E_secondary * 2.0f;
+      Scalar u = rng();
+      Scalar Eph = 2.5f + u * (dev_params.E_secondary - 1.0f) * 2.0f;
       Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
       // gamma = (gamma - std::abs(Eph));
       ptc.p1[tid] = p1 * pf / pi;
@@ -119,13 +123,13 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // subtract its energy as done above
       // if (std::abs(Eph) < dev_params.E_ph_min) continue;
 
+      u = rng();
       // Add the new photon
       // Scalar path = rad_model.draw_photon_freepath(Eph);
-      Scalar u = rng();
       // Scalar path =
       //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
       // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * (0.1f + 0.9f * u);
+      Scalar path = lph * (0.5f + 0.5f * u);
       if (path > dev_params.r_cutoff) continue;
       // Scalar path = dev_params.photon_path;
       // if (path > dev_params.lph_cutoff) continue;
@@ -189,12 +193,12 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
 
     if (photons.path_left[tid] <= 0.0f) {
       // if (*ptrAddr(rho0, c1, c2))
-      // Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)), 0.0001f);
-      // Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
-      // Scalar multiplicity = N / rho;
-      // if (N > 1.0e6f) {
+      // Scalar rho = max(std::abs(*ptrAddr(rho1, c1, c2) +
+      // *ptrAddr(rho0, c1, c2)), 0.0001f); Scalar N =
+      // max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2)); Scalar
+      // multiplicity = N / rho; if (N > 1.0e6f) {
       //   photons.cell[tid] = MAX_CELL;
-      //   continue; 
+      //   continue;
       // }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
@@ -226,7 +230,9 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 
   for (uint32_t tid = id; tid < ph_num; tid += blockDim.x * gridDim.x) {
     int pos_in_block = pair_pos[tid] - 1;
-    if (pos_in_block > -1 && photons.cell[tid] != MAX_CELL) {
+    uint32_t cell = photons.cell[tid];
+    if (pos_in_block > -1 && cell != MAX_CELL) {
+      if (!dev_mesh.is_in_bulk(cell)) continue;
       int start_pos = pair_cum[blockIdx.x] * 2;
 
       // Split the photon energy evenly between the pairs
@@ -234,6 +240,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       Scalar p2 = photons.p2[tid];
       Scalar p3 = photons.p3[tid];
       Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
+      if (E_ph2 <= 4.01f) E_ph2 = 4.01f;
       // Scalar new_p = std::sqrt(max(0.25f * E_ph * E_ph, 1.0f)
       // - 1.0f);
       Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
@@ -253,8 +260,15 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
       ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
-      ptc.E[offset_e] = ptc.E[offset_p] =
-          sqrt(1.0f + ratio * ratio * E_ph2);
+      Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
+      ptc.E[offset_e] = ptc.E[offset_p] = gamma;
+      if (gamma != gamma) {
+        printf(
+            "NaN detected in pair creation! ratio is %f, E_ph2 is %f, p1 is %f, "
+            "p2 is %f, p3 is %f\n",
+            ratio, E_ph2, p1, p2, p3);
+        asm("trap;");
+      }
 
 #ifndef NDEBUG
       assert(ptc.cell[offset_e] == MAX_CELL);
