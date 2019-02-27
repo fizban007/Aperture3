@@ -207,12 +207,15 @@ vay_push_2d(particle_data ptc, size_t num,
             square(dev_params.B0);
         Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
                          delta_p3 * delta_p3);
-        if (dp < p) {
-          p1 += delta_p1;
-          p2 += delta_p2;
-          p3 += delta_p3;
-          gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
-        }
+        // if (dp < p) {
+        p1 +=
+            (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 / dp);
+        p2 +=
+            (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 / dp);
+        p3 +=
+            (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 / dp);
+        gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+        // }
         // }
       }
     }
@@ -802,6 +805,46 @@ add_extra_particles(particle_data ptc, size_t num,
   }
 }
 
+__global__ void
+filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
+               cudaPitchedPtr A) {
+  // Load position parameters
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
+
+  // Do the actual computation here
+  (*ptrAddr(j_tmp, globalOffset)) =
+      0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset + sizeof(Scalar)) *
+      *ptrAddr(A, globalOffset + sizeof(Scalar));
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset - sizeof(Scalar)) *
+      *ptrAddr(A, globalOffset - sizeof(Scalar));
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset + j.pitch) *
+      *ptrAddr(A, globalOffset + A.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset - j.pitch) *
+      *ptrAddr(A, globalOffset - A.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset + sizeof(Scalar) + j.pitch) *
+      *ptrAddr(A, globalOffset + sizeof(Scalar) + j.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset - sizeof(Scalar) + j.pitch) *
+      *ptrAddr(A, globalOffset - sizeof(Scalar) + j.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset + sizeof(Scalar) - j.pitch) *
+      *ptrAddr(A, globalOffset + sizeof(Scalar) - A.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset - sizeof(Scalar) - j.pitch) *
+      *ptrAddr(A, globalOffset - sizeof(Scalar) - A.pitch);
+  (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
@@ -875,6 +918,17 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
       //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
       // CudaCheckError();
+      dim3 blockSize(32, 16);
+      dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+      for (int n = 0; n < m_env.params().current_smoothing; n++) {
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J.ptr(0), m_dens_e.ptr(), m_mesh_ptrs.A1_e);
+        data.J.data(0).copy_from(m_dens_e.data());
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J.ptr(1), m_dens_e.ptr(), m_mesh_ptrs.A2_e);
+        data.J.data(1).copy_from(m_dens_e.data());
+        CudaCheckError();
+      }
     }
     // Skip empty particle array
     if (data.photons.number() > 0) {

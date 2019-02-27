@@ -36,7 +36,7 @@ struct SimParamsBase {
 
   // simulation parameters
   int interpolation_order = 1;
-  int current_smoothing = 0;
+  int current_smoothing = 3;
   bool data_compress = true;
   LogLevel log_lvl = LogLevel::debug;
   size_t max_steps = 1000;
