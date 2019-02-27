@@ -179,13 +179,15 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
             .value_or(defaults.snapshot_interval);
     params.sort_interval = sim_table->get_as<int>("sort_interval")
                                .value_or(defaults.sort_interval);
+    params.current_smoothing =
+        sim_table->get_as<int>("current_smoothing")
+            .value_or(defaults.current_smoothing);
   }
 
   // Radiation transfer parameters
   params.n_gamma =
       config->get_as<int64_t>("n_gamma").value_or(defaults.n_gamma);
-  params.n_ep =
-      config->get_as<int64_t>("n_ep").value_or(defaults.n_ep);
+  params.n_ep = config->get_as<int64_t>("n_ep").value_or(defaults.n_ep);
 
   compute_derived_quantities(params);
 }
