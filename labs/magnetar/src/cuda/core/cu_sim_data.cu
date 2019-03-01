@@ -8,7 +8,7 @@ namespace Aperture {
 namespace Kernels {
 
 __global__ void
-fill_particles(particle_data ptc, Scalar weight) {
+fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
   for (int j =
            blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
        j < dev_mesh.dims[1] - dev_mesh.guard[1];
@@ -19,8 +19,8 @@ fill_particles(particle_data ptc, Scalar weight) {
          i += blockDim.x * gridDim.x) {
       uint32_t cell = i + j * dev_mesh.dims[0];
       Scalar theta = dev_mesh.pos(1, j, 0.5f);
-      for (int n = 0; n < 4; n++) {
-        size_t idx = cell * 10 + n * 2;
+      for (int n = 0; n < multiplicity; n++) {
+        size_t idx = cell * multiplicity * 2 + n * 2;
         ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
         ptc.x2[idx] = ptc.x2[idx + 1] = 0.5f;
         ptc.x3[idx] = ptc.x3[idx + 1] = 0.5f;
@@ -100,13 +100,13 @@ void
 cu_sim_data::initialize(const cu_sim_environment& env) {}
 
 void
-cu_sim_data::set_initial_condition(Scalar weight) {
-  Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(particles.data(), weight);
+cu_sim_data::set_initial_condition(Scalar weight, int multiplicity) {
+  Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(particles.data(), weight, multiplicity);
   cudaDeviceSynchronize();
   CudaCheckError();
 
   auto& mesh = E.grid().mesh();
-  particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 10);
+  particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 2 * multiplicity);
 }
 
 }  // namespace Aperture

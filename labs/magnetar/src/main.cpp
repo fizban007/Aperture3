@@ -103,7 +103,7 @@ main(int argc, char* argv[]) {
     //   data.particles.append({0.5, 0.5, 0.0}, {1000.0, 0.0, 0.0}, cell,
     //                         ParticleType::electron, 1000.0);
     // }
-    // data.set_initial_condition(100.0);
+    data.set_initial_condition(100.0, 2);
   }
 
   for (; step <= env.params().max_steps; step++) {
@@ -145,7 +145,7 @@ main(int argc, char* argv[]) {
     ptc_updater.update_particles(data, dt, step);
     ptc_updater.handle_boundary(data);
     if (step % 20 == 0) {
-      ptc_updater.annihilate_extra_pairs(data);
+      ptc_updater.annihilate_extra_pairs(data, dt);
     }
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);

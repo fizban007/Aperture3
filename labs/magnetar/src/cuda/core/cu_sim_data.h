@@ -36,7 +36,7 @@ struct cu_sim_data {
   double time = 0.0;
   int devId;
 
-  void set_initial_condition(Scalar weight);
+  void set_initial_condition(Scalar weight, int multiplicity);
 };
 
 }  // namespace Aperture

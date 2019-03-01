@@ -17,7 +17,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   virtual void handle_boundary(cu_sim_data& data);
   void inject_ptc(cu_sim_data& data, int inj_per_cell, Scalar p1,
                   Scalar p2, Scalar p3, Scalar w, Scalar omega);
-  void annihilate_extra_pairs(cu_sim_data& data);
+  void annihilate_extra_pairs(cu_sim_data& data, double dt);
 
  private:
   Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
@@ -25,6 +25,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   int m_threadsPerBlock, m_blocksPerGrid;
 
   cu_scalar_field<Scalar> m_dens_e, m_dens_p, m_balance;
+  cu_multi_array<int> m_annihilate;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture
