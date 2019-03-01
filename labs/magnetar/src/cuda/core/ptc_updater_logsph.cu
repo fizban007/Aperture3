@@ -851,22 +851,24 @@ add_extra_particles(particle_data ptc, size_t num,
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   int num_offset = n2 * dev_mesh.dims[0] + n1;
 
-  ptc.cell[num + num_offset] = num_offset;
-  ptc.x1[num + num_offset] = 0.5f;
-  ptc.x2[num + num_offset] = 0.5f;
-  ptc.x3[num + num_offset] = 0.0f;
-  ptc.p1[num + num_offset] = 0.0f;
-  ptc.p2[num + num_offset] = 0.0f;
-  ptc.p3[num + num_offset] = 0.0f;
-  ptc.E[num + num_offset] = 1.0f;
   Scalar w = *ptrAddr(balance, n1, n2);
-  ptc.weight[num + num_offset] = std::abs(w);
-  if (w > 0)
-    ptc.flag[num + num_offset] =
-        set_ptc_type_flag(0, ParticleType::positron);
-  else
-    ptc.flag[num + num_offset] =
-        set_ptc_type_flag(0, ParticleType::electron);
+  if (std::abs(w) > EPS) {
+    ptc.cell[num + num_offset] = num_offset;
+    ptc.x1[num + num_offset] = 0.5f;
+    ptc.x2[num + num_offset] = 0.5f;
+    ptc.x3[num + num_offset] = 0.0f;
+    ptc.p1[num + num_offset] = 0.0f;
+    ptc.p2[num + num_offset] = 0.0f;
+    ptc.p3[num + num_offset] = 0.0f;
+    ptc.E[num + num_offset] = 1.0f;
+    ptc.weight[num + num_offset] = std::abs(w);
+    if (w > 0)
+      ptc.flag[num + num_offset] =
+          set_ptc_type_flag(0, ParticleType::positron);
+    else
+      ptc.flag[num + num_offset] =
+          set_ptc_type_flag(0, ParticleType::electron);
+  }
 }
 
 __global__ void
