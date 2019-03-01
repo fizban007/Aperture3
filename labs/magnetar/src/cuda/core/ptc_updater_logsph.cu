@@ -869,6 +869,54 @@ add_extra_particles(particle_data ptc, size_t num,
         set_ptc_type_flag(0, ParticleType::electron);
 }
 
+__global__ void
+filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
+               cudaPitchedPtr A) {
+  // Load position parameters
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
+
+  size_t dr_plus =
+      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar) : 0);
+  size_t dr_minus =
+      (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+  size_t dt_plus =
+      (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+  size_t dt_minus =
+      (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  // Do the actual computation here
+  (*ptrAddr(j_tmp, globalOffset)) =
+      0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset + dr_plus) *
+      *ptrAddr(A, globalOffset + dr_plus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset - dr_minus) *
+      *ptrAddr(A, globalOffset - dr_minus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset + dt_plus) *
+      *ptrAddr(A, globalOffset + dt_plus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.125f * *ptrAddr(j, globalOffset - dt_minus) *
+      *ptrAddr(A, globalOffset - dt_minus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
+      *ptrAddr(A, globalOffset + dr_plus + dt_plus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset - dr_minus + dt_plus) *
+      *ptrAddr(A, globalOffset - dr_minus + dt_plus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset + dr_plus - dt_minus) *
+      *ptrAddr(A, globalOffset + dr_plus - dt_minus);
+  (*ptrAddr(j_tmp, globalOffset)) +=
+      0.0625f * *ptrAddr(j, globalOffset - dr_minus - dt_minus) *
+      *ptrAddr(A, globalOffset - dr_minus - dt_minus);
+  (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
+}
+
 }  // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
@@ -905,6 +953,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
+    auto &mesh = m_env.grid().mesh();
     data.photon_flux.assign_dev(0.0);
     // Skip empty particle array
     if (data.particles.number() > 0) {
@@ -932,6 +981,22 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
       //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
       // CudaCheckError();
+      dim3 blockSize(32, 16);
+      dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+      for (int n = 0; n < m_env.params().current_smoothing; n++) {
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J.ptr(0), m_dens_e.ptr(), m_mesh_ptrs.A1_e);
+        data.J.data(0).copy_from(m_dens_e.data());
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J.ptr(1), m_dens_e.ptr(), m_mesh_ptrs.A2_e);
+        data.J.data(1).copy_from(m_dens_e.data());
+        for (int sp = 0; sp < m_env.params().num_species; sp++) {
+          Kernels::filter_current<<<gridSize, blockSize>>>(
+              data.Rho[sp].ptr(), m_dens_e.ptr(), m_mesh_ptrs.dV);
+          data.Rho[sp].data().copy_from(m_dens_e.data());
+        }
+        CudaCheckError();
+      }
     }
     // Skip empty particle array
     if (data.photons.number() > 0) {
@@ -1003,6 +1068,8 @@ PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
   CudaCheckError();
 
   cudaDeviceSynchronize();
+  data.particles.set_num(data.particles.number() +
+                         mesh.reduced_dim(0) * mesh.reduced_dim(1));
 }
 
 }  // namespace Aperture
