@@ -38,9 +38,9 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
   void interpolate_field_values(fieldoutput<3>& field, int components, const T& t);
 
  private:
-  std::vector<Scalar> m_ptc_p, m_ph_p;
-  std::vector<Pos_t> m_ptc_x1, m_ph_x1;
-  std::vector<uint32_t> m_ptc_cell, m_ph_cell, m_ptc_flag, m_ph_flag;
+  std::vector<Scalar> m_ptc_p1, m_ptc_p2, m_ptc_p3;
+  std::vector<Pos_t> m_ptc_x1, m_ptc_x2;
+  std::vector<uint32_t> m_ptc_cell, m_ptc_flag;
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 
 

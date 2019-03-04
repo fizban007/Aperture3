@@ -62,6 +62,7 @@ main(int argc, char* argv[]) {
   exporter.add_field("num_p", diag.get_ptc_num(1));
   exporter.add_field("num_i", diag.get_ptc_num(2));
   exporter.add_array_output("ph_flux", data.photon_flux);
+  exporter.add_ptc_output_2d("particle", "ptc", &data.particles);
 
   if (env.params().is_restart) {
     Logger::print_info("======= THIS IS A RESTART =======");
@@ -130,6 +131,7 @@ main(int argc, char* argv[]) {
       // Logger::print_info("Finished computing flux");
 
       exporter.WriteOutput(step, time);
+      exporter.write_particles(step, time);
       exporter.writeXMF(step, time);
       rad.get_ph_events().initialize();
       rad.get_pair_events().initialize();

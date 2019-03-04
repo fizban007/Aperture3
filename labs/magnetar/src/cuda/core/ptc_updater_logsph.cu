@@ -2,12 +2,12 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/ptc_updater_helper.cuh"
-#include "ptc_updater_logsph.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
+#include "ptc_updater_logsph.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 
@@ -479,6 +479,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       Scalar theta = dev_mesh.pos(1, i, x2);
       // Scalar vphi = omega * r * cos(theta) * sin(theta);
       Scalar vphi = 0.0f;
+      float u = curand_uniform(&localState);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
@@ -494,7 +495,10 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.weight[offset + n * 2] =
           w * sin(theta) * std::abs(cos(theta));
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::electron);
+          bit_or(ParticleFlag::primary, (u < dev_params.track_percent
+                                             ? ParticleFlag::tracked
+                                             : ParticleFlag::nothing)),
+          ParticleType::electron);
 
       ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
@@ -511,7 +515,10 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.weight[offset + n * 2 + 1] =
           w * sin(theta) * std::abs(cos(theta));
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::ion);
+          bit_or(ParticleFlag::primary, (u < dev_params.track_percent
+                                             ? ParticleFlag::tracked
+                                             : ParticleFlag::nothing)),
+          ParticleType::ion);
     }
   }
   states[id] = localState;
@@ -882,13 +889,12 @@ filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
   size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
 
   size_t dr_plus =
-      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar) : 0);
-  size_t dr_minus =
-      (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
+                                                     : 0);
+  size_t dr_minus = (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
   size_t dt_plus =
       (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
-  size_t dt_minus =
-      (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  size_t dt_minus = (n2 > dev_mesh.guard[1] ? j.pitch : 0);
   // Do the actual computation here
   (*ptrAddr(j_tmp, globalOffset)) =
       0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);

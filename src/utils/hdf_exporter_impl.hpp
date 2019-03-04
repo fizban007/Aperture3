@@ -165,6 +165,24 @@ hdf_exporter<T>::add_ptc_output_1d(const std::string &name,
   dbPtcData1d.push_back(tmp_data);
 }
 
+template <typename T>
+void
+hdf_exporter<T>::add_ptc_output_2d(const std::string &name,
+                                   const std::string &type,
+                                   particle_interface *ptc) {
+  ptcoutput_2d tmp_data;
+  tmp_data.name = name;
+  tmp_data.type = type;
+  tmp_data.ptc = ptc;
+  tmp_data.x1 = std::vector<float>(MAX_TRACKED);
+  tmp_data.x2 = std::vector<float>(MAX_TRACKED);
+  tmp_data.p1 = std::vector<float>(MAX_TRACKED);
+  tmp_data.p2 = std::vector<float>(MAX_TRACKED);
+  tmp_data.p3 = std::vector<float>(MAX_TRACKED);
+
+  dbPtcData2d.push_back(tmp_data);
+}
+
 template <typename DerivedClass>
 template <typename T>
 void

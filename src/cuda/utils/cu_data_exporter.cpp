@@ -26,14 +26,13 @@ template class hdf_exporter<cu_data_exporter>;
 cu_data_exporter::cu_data_exporter(SimParams &params,
                                    uint32_t &timestep)
     : hdf_exporter(params, timestep),
-      m_ptc_p(params.max_ptc_number),
-      m_ph_p(params.max_photon_number),
+      m_ptc_p1(params.max_ptc_number),
+      m_ptc_p2(params.max_ptc_number),
+      m_ptc_p3(params.max_ptc_number),
       m_ptc_x1(params.max_ptc_number),
-      m_ph_x1(params.max_photon_number),
+      m_ptc_x2(params.max_ptc_number),
       m_ptc_cell(params.max_ptc_number),
-      m_ph_cell(params.max_photon_number),
-      m_ptc_flag(params.max_ptc_number),
-      m_ph_flag(params.max_photon_number) {}
+      m_ptc_flag(params.max_ptc_number) {}
 
 cu_data_exporter::~cu_data_exporter() {}
 
@@ -417,7 +416,7 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
                          ptc->number());
       cudaMemcpy(m_ptc_x1.data(), ptc->data().x1,
                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
-      cudaMemcpy(m_ptc_p.data(), ptc->data().p1,
+      cudaMemcpy(m_ptc_p1.data(), ptc->data().p1,
                  sizeof(Scalar) * ptc->number(),
                  cudaMemcpyDeviceToHost);
       cudaMemcpy(m_ptc_cell.data(), ptc->data().cell,
@@ -443,7 +442,7 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
               get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED) {
             Scalar x = mesh.pos(0, m_ptc_cell[n], m_ptc_x1[n]);
             ptcoutput.x[idx] = x;
-            ptcoutput.p[idx] = m_ptc_p[n];
+            ptcoutput.p[idx] = m_ptc_p1[n];
             idx += 1;
           }
         }
@@ -456,19 +455,75 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
 
         // Logger::print_info("Written {} tracked particles", idx);
       }
-      // hsize_t sizes[1] = {idx};
-      // H5::DataSpace space(1, sizes);
-      // H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-      //     name_x, H5::PredType::NATIVE_FLOAT, space));
-      // dataset_x->write((void *)ds.data_x.data(),
-      //                  H5::PredType::NATIVE_FLOAT);
-      // H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-      //     name_p, H5::PredType::NATIVE_FLOAT, space));
-      // dataset_p->write((void *)ds.data_p.data(),
-      //                  H5::PredType::NATIVE_FLOAT);
+    }
+  }
+  for (auto &ptcoutput : dbPtcData2d) {
+    Particles *ptc = dynamic_cast<Particles *>(ptcoutput.ptc);
+    if (ptc != nullptr) {
+      Logger::print_info("Copying {} ptc from dev to host",
+                         ptc->number());
+      cudaMemcpy(m_ptc_x1.data(), ptc->data().x1,
+                 sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_x2.data(), ptc->data().x2,
+                 sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_p1.data(), ptc->data().p1,
+                 sizeof(Scalar) * ptc->number(),
+                 cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_p2.data(), ptc->data().p2,
+                 sizeof(Scalar) * ptc->number(),
+                 cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_p3.data(), ptc->data().p3,
+                 sizeof(Scalar) * ptc->number(),
+                 cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_cell.data(), ptc->data().cell,
+                 sizeof(uint32_t) * ptc->number(),
+                 cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_flag.data(), ptc->data().flag,
+                 sizeof(uint32_t) * ptc->number(),
+                 cudaMemcpyDeviceToHost);
+      Logger::print_info("Writing tracked particles");
+      File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                                filePrefix, step)
+                        .c_str(),
+                    File::ReadWrite);
+      for (int sp = 0; sp < m_params.num_species; sp++) {
+        unsigned int idx = 0;
+        std::string name_x = NameStr((ParticleType)sp) + "_x";
+        std::string name_p = NameStr((ParticleType)sp) + "_p";
+        for (Index_t n = 0; n < ptc->number(); n++) {
+          if (m_ptc_cell[n] != MAX_CELL &&
+              // ptc->check_flag(n, ParticleFlag::tracked) &&
+              check_bit(m_ptc_flag[n], ParticleFlag::tracked) &&
+              // ptc->check_type(n) == (ParticleType)sp &&
+              get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED) {
+            Scalar x1 = mesh.pos(0, m_ptc_cell[n], m_ptc_x1[n]);
+            Scalar x2 = mesh.pos(1, m_ptc_cell[n], m_ptc_x2[n]);
+            ptcoutput.x1[idx] = x1;
+            ptcoutput.x2[idx] = x2;
+            ptcoutput.p1[idx] = m_ptc_p1[n];
+            ptcoutput.p2[idx] = m_ptc_p2[n];
+            ptcoutput.p3[idx] = m_ptc_p3[n];
+            idx += 1;
+          }
+        }
+        DataSet data_x1 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_x1", DataSpace{idx});
+        data_x1.write(ptcoutput.x1);
+        DataSet data_x2 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_x2", DataSpace{idx});
+        data_x2.write(ptcoutput.x2);
+        DataSet data_p1 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_p1", DataSpace{idx});
+        data_p1.write(ptcoutput.p1);
+        DataSet data_p2 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_p2", DataSpace{idx});
+        data_p2.write(ptcoutput.p2);
+        DataSet data_p3 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_p3", DataSpace{idx});
+        data_p3.write(ptcoutput.p3);
 
-      // delete dataset_x;
-      // delete dataset_p;
+        // Logger::print_info("Written {} tracked particles", idx);
+      }
     }
   }
 }
