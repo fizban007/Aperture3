@@ -98,7 +98,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       Scalar p2 = ptc.p2[tid];
       Scalar p3 = ptc.p3[tid];
       Scalar gamma = ptc.E[tid];
-      
+
       Scalar pi = std::sqrt(gamma * gamma - 1.0f);
       Scalar Eph = (gamma - pi * (2.0f * u - 1.0f)) *
                    (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * b));
@@ -207,7 +207,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
               size_t ptc_num, int* pair_pos, int* pair_count,
               int* pair_cum, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
+  CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL1D(dev_params,
   // dev_params.photon_path, rng); RadModel rad_model(dev_params, rng);
 
@@ -230,6 +230,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
       // int offset_p = ptc_num + start_pos + pos_in_block +
       // pair_count[blockIdx.x];
+      float u = rng();
 
       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
@@ -249,10 +250,18 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
 #endif
       ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
       ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
-      ptc.flag[offset_e] = set_ptc_type_flag(
-          bit_or(ParticleFlag::secondary), ParticleType::electron);
-      ptc.flag[offset_p] = set_ptc_type_flag(
-          bit_or(ParticleFlag::secondary), ParticleType::positron);
+      ptc.flag[offset_e] =
+          set_ptc_type_flag(bit_or(ParticleFlag::secondary,
+                                   (u < dev_params.track_percent
+                                        ? ParticleFlag::tracked
+                                        : ParticleFlag::nothing)),
+                            ParticleType::electron);
+      ptc.flag[offset_p] =
+          set_ptc_type_flag(bit_or(ParticleFlag::secondary,
+                                   (u < dev_params.track_percent
+                                        ? ParticleFlag::tracked
+                                        : ParticleFlag::nothing)),
+                            ParticleType::positron);
 
       // Set this photon to be empty
       photons.cell[tid] = MAX_CELL;
