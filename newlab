@@ -17,32 +17,32 @@ if [ $? -ne 0 ]; then
 fi
 
 cd "labs/$name"
-Lab_Path=$(pwd)
+# Lab_Path=$(pwd)
 
-# create delrun
-printf "%s\n" \
-    "#!/bin/bash"\
-    "# This script works only under the current directory."\
-    "# It deletes symlinks and their associated data directories."\
-    "# To avoid any catastrophical event, deletable symlinks must begin with Data20, followed by 6 digits, followed by -, followed by 4 digits."\
-    "regex='^Data20[0-9]{6}[-][0-9]{4}$'"\
-    "for i in \"\$@\""\
-    "do"\
-    "    if [[ \$i =~ \$regex && -L \$i ]]; then # -L checks symlink"\
-    "        rm -rf \$( cd \$i && pwd -P )"\
-    "        rm \$i"\
-    "    else"\
-    "        echo \"Ignored deleteion of \$i\""\
-    "    fi"\
-    "done"\
-    > delrun && chmod u+x delrun
+# # create delrun
+# printf "%s\n" \
+#     "#!/bin/bash"\
+#     "# This script works only under the current directory."\
+#     "# It deletes symlinks and their associated data directories."\
+#     "# To avoid any catastrophical event, deletable symlinks must begin with Data20, followed by 6 digits, followed by -, followed by 4 digits."\
+#     "regex='^Data20[0-9]{6}[-][0-9]{4}$'"\
+#     "for i in \"\$@\""\
+#     "do"\
+#     "    if [[ \$i =~ \$regex && -L \$i ]]; then # -L checks symlink"\
+#     "        rm -rf \$( cd \$i && pwd -P )"\
+#     "        rm \$i"\
+#     "    else"\
+#     "        echo \"Ignored deleteion of \$i\""\
+#     "    fi"\
+#     "done"\
+#     > delrun && chmod u+x delrun
 
 # create run_cmake
 printf "%s\n" \
     "#!/bin/bash"\
     "# This script works only under the current directory."\
     "opt=\$1"\
-    "lab_dir=$Lab_Path"\
+    "lab_dir=`pwd`"\
     ""\
     "if [ ! -z \$opt ] && [ \$opt = \"cmake\" ]; then"\
     "    # Run cmake with the correct definition of LAB_ROOT_DIR"\
