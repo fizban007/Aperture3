@@ -39,17 +39,17 @@ add_dependencies(check run_tests)
 
 # if(CUDA_FOUND)
 if (CMAKE_CUDA_COMPILER)
-  set(test_fd_src
-    "test.cpp" "test_finite_diff.cpp")
-  add_executable(test_fd ${test_fd_src})
+  # set(test_fd_src
+  #   "test.cpp" "test_finite_diff.cpp")
+  add_executable(test_fd "test.cpp")
+  target_sources(test_fd PRIVATE "test_finite_diff.cpp")
   target_link_libraries(test_fd
     PUBLIC cuAperture
     PUBLIC Aperture)
   add_dependencies(check test_fd)
 
   set(test_cuda_src
-    "test.cu" "test_multiarray.cu"
-    # "test_env.cu"
+    "test.cu" "test_multiarray.cu" "test_env.cpp" "test_config.cpp"
     )
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
