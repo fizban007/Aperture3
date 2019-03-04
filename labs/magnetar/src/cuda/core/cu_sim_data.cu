@@ -101,12 +101,27 @@ cu_sim_data::initialize(const cu_sim_environment& env) {}
 
 void
 cu_sim_data::set_initial_condition(Scalar weight, int multiplicity) {
+  CudaSafeCall(cudaSetDevice(devId));
   Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(particles.data(), weight, multiplicity);
   cudaDeviceSynchronize();
   CudaCheckError();
 
   auto& mesh = E.grid().mesh();
   particles.set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * 2 * multiplicity);
+}
+
+void
+cu_sim_data::init_bg_fields() {
+  CudaSafeCall(cudaSetDevice(devId));
+  Ebg = E;
+  Bbg = B;
+  Ebg.sync_to_host();
+  Bbg.sync_to_host();
+
+  E.assign(0.0);
+  B.assign(0.0);
+  E.sync_to_host();
+  B.sync_to_host();
 }
 
 }  // namespace Aperture

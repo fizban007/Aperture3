@@ -36,6 +36,7 @@ struct cu_sim_data {
   double time = 0.0;
   int devId;
 
+  void init_bg_fields();
   void set_initial_condition(Scalar weight, int multiplicity);
 };
 

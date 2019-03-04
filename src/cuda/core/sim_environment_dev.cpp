@@ -1,10 +1,10 @@
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
+#include "cuda/core/cu_sim_data.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/grids/grid_log_sph_dev.h"
-#include "cuda/core/cu_sim_data.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -25,6 +25,25 @@ cu_sim_environment::~cu_sim_environment() {}
 void
 cu_sim_environment::setup_env() {
   sim_environment::setup_env();
+
+  // Poll the system to detect how many GPUs are on the node
+  int n_devices;
+  cudaGetDeviceCount(&n_devices);
+  if (n_devices <= 0) {
+    Logger::err("No usable Cuda device found!!");
+    exit(1);
+  }
+  m_dev_ids.resize(n_devices);
+  Logger::print_info("Found the following Cuda devices:");
+  for (int i = 0; i < n_devices; i++) {
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, i);
+    Logger::print_info("    Device Number: {}", i);
+    Logger::print_info("    Device Name: {}", prop.name);
+    Logger::print_info("    Device Total Memory: {}",
+                       prop.totalGlobalMem);
+    m_dev_ids[i] = i;
+  }
 
   if (m_params.coord_system == "LogSpherical") {
     m_grid.reset(new Grid_LogSph_dev());
@@ -209,8 +228,8 @@ cu_sim_environment::setup_env() {
 // }
 
 // void
-// cu_sim_environment::set_initial_condition(cu_sim_data& data, const Index& start,
-// const Extent& extent) {}
+// cu_sim_environment::set_initial_condition(cu_sim_data& data, const
+// Index& start, const Extent& extent) {}
 
 // void
 // cu_sim_environment::add_fieldBC(fieldBC *bc) {
@@ -304,19 +323,7 @@ void
 cu_sim_environment::init_bg_fields(cu_sim_data& data) {
   // Initialize the background fields
   if (m_params.use_bg_fields) {
-    // data.Ebg = cu_vector_field<Scalar>(*m_grid);
-    // data.Bbg = cu_vector_field<Scalar>(*m_grid);
-    // init_dev_bg_fields(data.Ebg, data.Bbg);
-
-    data.Ebg = data.E;
-    data.Bbg = data.B;
-    data.Ebg.sync_to_host();
-    data.Bbg.sync_to_host();
-
-    data.E.assign(0.0);
-    data.B.assign(0.0);
-    data.E.sync_to_host();
-    data.B.sync_to_host();
+    data.init_bg_fields();
   }
 }
 
