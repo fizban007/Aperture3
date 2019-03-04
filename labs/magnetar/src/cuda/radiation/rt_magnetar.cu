@@ -156,8 +156,8 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
     int c1 = dev_mesh.get_c1(cell);
     int c2 = dev_mesh.get_c2(cell);
     // Remove photon if it is too close to the axis
-    if (c2 == dev_mesh.guard[1] ||
-        c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+    if (c2 <= dev_mesh.guard[1] + 4 ||
+        c2 >= dev_mesh.dims[1] - dev_mesh.guard[1] - 5) {
       photons.cell[tid] = MAX_CELL;
       continue;
     }
