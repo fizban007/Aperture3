@@ -158,6 +158,9 @@ vay_push_2d(particle_data ptc, size_t num,
       B1 /= q_over_m;
       B2 /= q_over_m;
       B3 /= q_over_m;
+      E1 /= q_over_m;
+      E2 /= q_over_m;
+      E3 /= q_over_m;
       Scalar gamma_thr_B = dev_params.gamma_thr * B / dev_params.BQ;
       // printf("B is %f\n", B);
       if (gamma_thr_B > 3.0f && gamma > gamma_thr_B &&
@@ -215,26 +218,26 @@ vay_push_2d(particle_data ptc, size_t num,
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
       {
-        Scalar res = dt * sqrt(tt / q_over_m / q_over_m) / gamma;
-        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
-        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
-        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
+        Scalar res = dt * B / gamma;
+        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
+        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
+        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
         Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
-        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
 
         Scalar delta_p1 =
             dev_params.rad_cooling_coef *
-            (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+            (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
              gamma * p1 * (tmp_sq - bE * bE)) /
             square(dev_params.B0);
         Scalar delta_p2 =
             dev_params.rad_cooling_coef *
-            (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+            (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
              gamma * p2 * (tmp_sq - bE * bE)) /
             square(dev_params.B0);
         Scalar delta_p3 =
             dev_params.rad_cooling_coef *
-            (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+            (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
              gamma * p3 * (tmp_sq - bE * bE)) /
             square(dev_params.B0);
         Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
