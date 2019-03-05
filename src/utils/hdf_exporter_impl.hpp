@@ -61,8 +61,10 @@ hdf_exporter<T>::hdf_exporter(SimParams &params, uint32_t &timestep)
     // grid = std::make_shared<Grid>();
     grid.reset(new Grid());
   }
+  orig_grid.reset(new Grid());
 
   grid->init(params);
+  orig_grid->init(params);
   for (int i = 0; i < grid->mesh().dim(); i++) {
     grid->mesh().dims[i] =
         params.N[i] / downsample + 2 * params.guard[i];
