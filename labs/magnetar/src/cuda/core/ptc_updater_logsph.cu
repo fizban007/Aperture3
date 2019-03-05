@@ -212,6 +212,43 @@ vay_push_2d(particle_data ptc, size_t num,
           // 1); atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
         }
       }
+
+      Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+      {
+        Scalar res = dt * sqrt(tt / q_over_m / q_over_m) / gamma;
+        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
+        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
+        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
+        Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
+        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+
+        Scalar delta_p1 =
+            dev_params.rad_cooling_coef *
+            (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+             gamma * p1 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar delta_p2 =
+            dev_params.rad_cooling_coef *
+            (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+             gamma * p2 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar delta_p3 =
+            dev_params.rad_cooling_coef *
+            (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+             gamma * p3 * (tmp_sq - bE * bE)) /
+            square(dev_params.B0);
+        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                         delta_p3 * delta_p3);
+        // if (dp < p) {
+        p1 +=
+            (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 / dp);
+        p2 +=
+            (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 / dp);
+        p3 +=
+            (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 / dp);
+        gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+        // }
+      }
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;

@@ -34,14 +34,14 @@ cu_sim_environment::setup_env() {
     exit(1);
   }
   m_dev_ids.resize(n_devices);
-  Logger::print_info("Found the following Cuda devices:");
+  Logger::print_info("Found {} Cuda devices:", n_devices);
   for (int i = 0; i < n_devices; i++) {
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, i);
     Logger::print_info("    Device Number: {}", i);
     Logger::print_info("    Device Name: {}", prop.name);
-    Logger::print_info("    Device Total Memory: {}",
-                       prop.totalGlobalMem);
+    Logger::print_info("    Device Total Memory: {}MiB",
+                       prop.totalGlobalMem / (1024*1024));
     m_dev_ids[i] = i;
   }
 
