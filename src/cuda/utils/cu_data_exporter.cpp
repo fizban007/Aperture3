@@ -408,7 +408,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<3> &field,
 
 void
 cu_data_exporter::write_particles(uint32_t step, double time) {
-  auto &mesh = grid->mesh();
+  auto &mesh = orig_grid->mesh();
   for (auto &ptcoutput : dbPtcData1d) {
     Particles_1D *ptc = dynamic_cast<Particles_1D *>(ptcoutput.ptc);
     if (ptc != nullptr) {
@@ -496,8 +496,10 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
               check_bit(m_ptc_flag[n], ParticleFlag::tracked) &&
               // ptc->check_type(n) == (ParticleType)sp &&
               get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED) {
-            Scalar x1 = mesh.pos(0, m_ptc_cell[n], m_ptc_x1[n]);
-            Scalar x2 = mesh.pos(1, m_ptc_cell[n], m_ptc_x2[n]);
+            int c1 = mesh.get_c1(m_ptc_cell[n]);
+            int c2 = mesh.get_c2(m_ptc_cell[n]);
+            Scalar x1 = mesh.pos(0, c1, m_ptc_x1[n]);
+            Scalar x2 = mesh.pos(1, c2, m_ptc_x2[n]);
             ptcoutput.x1[idx] = x1;
             ptcoutput.x2[idx] = x2;
             ptcoutput.p1[idx] = m_ptc_p1[n];

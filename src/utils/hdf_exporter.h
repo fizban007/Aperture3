@@ -136,41 +136,41 @@ class hdf_exporter {
   template <typename T>
   void add_array_output(const std::string& name, multi_array<T>& array);
 
-      // void AddArray(const std::string& name, float* data, int* dims,
-      //               int ndims);
-      // void AddArray(const std::string& name, double* data, int* dims,
-      //               int ndims);
-      // template <typename T>
-      // void AddArray(const std::string& name, cu_vector_field<T>&
-      // field,
-      //               int component);
-      // template <typename T>
-      // void AddArray(const std::string& name, cu_multi_array<T>&
-      // field);
+  // void AddArray(const std::string& name, float* data, int* dims,
+  //               int ndims);
+  // void AddArray(const std::string& name, double* data, int* dims,
+  //               int ndims);
+  // template <typename T>
+  // void AddArray(const std::string& name, cu_vector_field<T>&
+  // field,
+  //               int component);
+  // template <typename T>
+  // void AddArray(const std::string& name, cu_multi_array<T>&
+  // field);
 
-      // template <typename T>
-      // void AddField(const std::string& name, cu_scalar_field<T>&
-      // field, bool sync = true); template <typename T> void
-      // AddField(const std::string& name, cu_vector_field<T>& field,
-      // bool sync = true);
+  // template <typename T>
+  // void AddField(const std::string& name, cu_scalar_field<T>&
+  // field, bool sync = true); template <typename T> void
+  // AddField(const std::string& name, cu_vector_field<T>& field,
+  // bool sync = true);
 
-      // template <typename T>
-      // void InterpolateFieldValues(fieldoutput<2>& field, int
-      // components, T t); template <typename T> void
-      // InterpolateFieldValues(fieldoutput<3>& field, int components, T
-      // t);
+  // template <typename T>
+  // void InterpolateFieldValues(fieldoutput<2>& field, int
+  // components, T t); template <typename T> void
+  // InterpolateFieldValues(fieldoutput<3>& field, int components, T
+  // t);
 
-      // void AddParticleArray(const std::string& name, const Particles&
-      // ptc); void AddParticleArray(const std::string& name, const
-      // Photons& ptc); void AddParticleArray(const Photons& ptc);
+  // void AddParticleArray(const std::string& name, const Particles&
+  // ptc); void AddParticleArray(const std::string& name, const
+  // Photons& ptc); void AddParticleArray(const Photons& ptc);
 
-      // void CopyConfig(const std::string& file);
-      // void CopyMain();
+  // void CopyConfig(const std::string& file);
+  // void CopyMain();
 
-      // void setGrid(const Grid& g) { grid = g; }
-      protected
-      : std::string
-        outputDirectory;  //!< Sets the directory of all the data files
+  // void setGrid(const Grid& g) { grid = g; }
+ protected:
+  std::string
+      outputDirectory;  //!< Sets the directory of all the data files
   std::string subDirectory;  //!< Sets the directory of current rank
   std::string subName;
   std::string filePrefix;  //!< Sets the common prefix of the data files
@@ -195,6 +195,7 @@ class hdf_exporter {
 
   // Grid grid;
   std::unique_ptr<Grid> grid;
+  std::unique_ptr<Grid> orig_grid;
   int downsample_factor;
   std::ofstream xmf;
 };  // ----- end of class hdf_exporter -----
