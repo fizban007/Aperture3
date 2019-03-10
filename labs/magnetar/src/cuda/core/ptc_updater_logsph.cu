@@ -17,39 +17,36 @@ namespace Aperture {
 
 namespace Kernels {
 
-HD_INLINE void
-cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
-            Scalar x3) {
+HD_INLINE void cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1,
+                           Scalar x2, Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
-  v1 =
-      v1n * sin(x2) * cos(x3) + v2n * sin(x2) * sin(x3) + v3n * cos(x2);
-  v2 =
-      v1n * cos(x2) * cos(x3) + v2n * cos(x2) * sin(x3) - v3n * sin(x2);
-  v3 = -v1n * sin(x3) + v2n * cos(x3);
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
+  v1 = v1n * s2 * c3 + v2n * s2 * s3 + v3n * c2;
+  v2 = v1n * c2 * c3 + v2n * c2 * s3 - v3n * s2;
+  v3 = -v1n * s3 + v2n * c3;
 }
 
-HD_INLINE void
-logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
-            Scalar x3) {
+HD_INLINE void logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1,
+                           Scalar x2, Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
-  v1 =
-      v1n * sin(x2) * cos(x3) + v2n * cos(x2) * cos(x3) - v3n * sin(x3);
-  v2 =
-      v1n * sin(x2) * sin(x3) + v2n * cos(x2) * sin(x3) + v3n * cos(x3);
-  v3 = v1n * cos(x2) - v2n * sin(x2);
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
+  v1 = v1n * s2 * c3 + v2n * c2 * c3 - v3n * s3;
+  v2 = v1n * s2 * s3 + v2n * c2 * s3 + v3n * c3;
+  v3 = v1n * c2 - v2n * s2;
 }
 
-__global__ void
-vay_push_2d(particle_data ptc, size_t num,
-            PtcUpdaterDev::fields_data fields, cudaPitchedPtr ph_flux,
-            curandState *states, Scalar dt) {
+__global__ void vay_push_2d(particle_data ptc, size_t num,
+                            PtcUpdaterDev::fields_data fields,
+                            cudaPitchedPtr ph_flux, curandState *states,
+                            Scalar dt) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
     // Skip empty particles
-    if (c == MAX_CELL || idx >= num) continue;
+    if (c == MAX_CELL || idx >= num)
+      continue;
 
     // Load particle quantities
     Interpolator2D<spline_t> interp;
@@ -63,36 +60,30 @@ vay_push_2d(particle_data ptc, size_t num,
     // step 0: Grab E & M fields at the particle position
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
-      Scalar E1 =
-          (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
-          // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
-          //        Stagger(0b110))) *
-          q_over_m;
-      Scalar E2 =
-          (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
-          // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
-          //        Stagger(0b101))) *
-          q_over_m;
-      Scalar E3 =
-          (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
-          // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
-          //        Stagger(0b011))) *
-          q_over_m;
+      Scalar E1 = (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
+                  // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
+                  //        Stagger(0b110))) *
+                  q_over_m;
+      Scalar E2 = (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
+                  // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
+                  //        Stagger(0b101))) *
+                  q_over_m;
+      Scalar E3 = (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
+                  // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
+                  //        Stagger(0b011))) *
+                  q_over_m;
       Scalar B1 =
           (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
-           interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
-                  Stagger(0b001))) *
+           interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001))) *
           q_over_m;
       Scalar B2 =
           (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
-           interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
-                  Stagger(0b010))) *
+           interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010))) *
           q_over_m;
-      Scalar B3 =
-          (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
-          // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
-          //        Stagger(0b100))) *
-          q_over_m;
+      Scalar B3 = (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
+                  // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
+                  //        Stagger(0b100))) *
+                  q_over_m;
 
       // printf("B1 = %f, B2 = %f, B3 = %f\n", B1, B2, B3);
       // printf("E1 = %f, E2 = %f, E3 = %f\n", E1, E2, E3);
@@ -112,20 +103,13 @@ vay_push_2d(particle_data ptc, size_t num,
 
       Scalar sigma = 1.0f + up1 * up1 + up2 * up2 + up3 * up3 - tt;
       Scalar inv_gamma2 =
-          2.0f /
-          (sigma + std::sqrt(sigma * sigma + 4.0f * (tt + ut * ut)));
+          2.0f / (sigma + std::sqrt(sigma * sigma + 4.0f * (tt + ut * ut)));
       Scalar s = 1.0f / (1.0f + inv_gamma2 * tt);
       gamma = 1.0f / std::sqrt(inv_gamma2);
 
-      p1 =
-          (up1 + B1 * ut * inv_gamma2 + (up2 * B3 - up3 * B2) / gamma) *
-          s;
-      p2 =
-          (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) *
-          s;
-      p3 =
-          (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
-          s;
+      p1 = (up1 + B1 * ut * inv_gamma2 + (up2 * B3 - up3 * B2) / gamma) * s;
+      p2 = (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) * s;
+      p3 = (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) * s;
 
       // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
       // %d\n", p1, p2, p3,
@@ -166,12 +150,11 @@ vay_push_2d(particle_data ptc, size_t num,
       if (gamma_thr_B > 3.0f && gamma > gamma_thr_B &&
           sp != (int)ParticleType::ion) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
-      } else if (dev_params.rad_cooling_on &&
-                 sp != (int)ParticleType::ion) {
+      } else if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         // Process resonant drag
         // Scalar p_mag = std::abs(pdotB / B);
-        Scalar p_mag_signed = sgn(pdotB / q_over_m) * sgn(B1) *
-                              std::abs(pdotB / q_over_m) / B;
+        Scalar p_mag_signed =
+            sgn(pdotB / q_over_m) * sgn(B1) * std::abs(pdotB / q_over_m) / B;
         // printf("p_mag_signed is %f\n", p_mag_signed);
         Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
         Scalar mu = std::abs(B1 / B);
@@ -184,7 +167,8 @@ vay_push_2d(particle_data ptc, size_t num,
           // printf("coef is %f\n", coef);
           // printf("drag coef is %f\n", dev_params.res_drag_coef);
           Scalar D = coef * (g * mu - p_mag_signed);
-          if (B1 < 0.0f) D *= -1.0f;
+          if (B1 < 0.0f)
+            D *= -1.0f;
           // printf("D is %f\n", D);
           p1 += dt * B1 * D / B;
           p2 += dt * B2 * D / B;
@@ -192,63 +176,55 @@ vay_push_2d(particle_data ptc, size_t num,
           // printf("drag on p1 is %f\n", dt * B1 * D / B);
           gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
 
-          // Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu /
-          // g)); Scalar angle =
-          //     acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) /
-          //     B);
-          // Scalar theta_p = 2.0f * CONST_PI *
-          // curand_uniform(&localState); Scalar u = std::cos(theta_p);
-          // Scalar beta = sqrt(1.0f - 1.0f / square(g));
-          // angle = angle + sgn(theta_p - CONST_PI) *
-          //                     std::acos((u + beta) / (1.0f + beta *
-          //                     u));
-          // angle = std::acos(std::cos(angle));
-          // Scalar Eph =
-          //     (g - std::abs(p_mag_signed) * u) *
-          //     (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-          // Eph = std::log(Eph) / std::log(10.0f);
-          // if (Eph > 0.0f) Eph = 0.0f;
-          // if (Eph < -9.0f) Eph = -9.0f;
-          // int n0 = ((Eph + 9.0f) / 9.0f *
-          //           (ph_flux.xsize / sizeof(float) - 1));
-          // int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize -
-          // 1); atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
+          Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
+          Scalar angle =
+              acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) / B);
+          Scalar theta_p = 2.0f * CONST_PI * curand_uniform(&localState);
+          Scalar u = std::cos(theta_p);
+          Scalar beta = sqrt(1.0f - 1.0f / square(g));
+          angle = angle + sgn(theta_p - CONST_PI) *
+                              std::acos((u + beta) / (1.0f + beta * u));
+          angle = std::acos(std::cos(angle));
+          Scalar Eph = (g - std::abs(p_mag_signed) * u) *
+                       (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
+          Eph = std::log(Eph) / std::log(10.0f);
+          if (Eph > 0.0f)
+            Eph = 0.0f;
+          if (Eph < -9.0f)
+            Eph = -9.0f;
+          int n0 = ((Eph + 9.0f) / 9.0f * (ph_flux.xsize / sizeof(float) - 1));
+          int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize - 1);
+          atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
         }
       }
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
       {
-        Scalar res = dt * B / gamma;
+        // Scalar res = dt * B / gamma;
         Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
         Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
         Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
         Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
         Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
 
-        Scalar delta_p1 =
-            dev_params.rad_cooling_coef *
-            (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
-             gamma * p1 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p2 =
-            dev_params.rad_cooling_coef *
-            (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
-             gamma * p2 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p3 =
-            dev_params.rad_cooling_coef *
-            (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
-             gamma * p3 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
+        Scalar delta_p1 = dev_params.rad_cooling_coef *
+                          (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
+                           gamma * p1 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
+        Scalar delta_p2 = dev_params.rad_cooling_coef *
+                          (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
+                           gamma * p2 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
+        Scalar delta_p3 = dev_params.rad_cooling_coef *
+                          (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
+                           gamma * p3 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
         Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
                          delta_p3 * delta_p3);
         // if (dp < p) {
-        p1 +=
-            (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 / dp);
-        p2 +=
-            (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 / dp);
-        p3 +=
-            (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 / dp);
+        p1 += (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 / dp);
+        p2 += (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 / dp);
+        p3 += (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 / dp);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
         // }
       }
@@ -262,18 +238,17 @@ vay_push_2d(particle_data ptc, size_t num,
   states[id] = localState;
 }
 
-__global__ void
-move_photons(photon_data photons, size_t num, Scalar dt) {
+__global__ void move_photons(photon_data photons, size_t num, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
     // Skip empty particles
-    if (c == MAX_CELL) continue;
+    if (c == MAX_CELL)
+      continue;
     // Load particle quantities
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
-    auto v1 = photons.p1[idx], v2 = photons.p2[idx],
-         v3 = photons.p3[idx];
+    auto v1 = photons.p1[idx], v2 = photons.p2[idx], v3 = photons.p3[idx];
     Scalar E = std::sqrt(v1 * v1 + v2 * v2 + v3 * v3);
     v1 = v1 / E;
     v2 = v2 / E;
@@ -305,7 +280,8 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
     Scalar r2p = acos(z / r1p);
     r1p = log(r1p);
     Scalar r3p = atan(y / x);
-    if (x < 0.0f) v1 *= -1.0f;
+    if (x < 0.0f)
+      v1 *= -1.0f;
 
     cart2logsph(v1, v2, v3, r1p, r2p, r3p);
     photons.p1[idx] = v1 * E;
@@ -330,8 +306,7 @@ move_photons(photon_data photons, size_t num, Scalar dt) {
   }
 }
 
-__global__ void
-__launch_bounds__(512, 4)
+__global__ void __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
                                PtcUpdaterDev::fields_data fields,
                                Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
@@ -340,7 +315,8 @@ __launch_bounds__(512, 4)
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
     // Skip empty particles
-    if (c == MAX_CELL || idx >= num) continue;
+    if (c == MAX_CELL || idx >= num)
+      continue;
 
     // Load particle quantities
     Interpolator2D<spline_t> interp;
@@ -354,8 +330,7 @@ __launch_bounds__(512, 4)
     auto flag = ptc.flag[idx];
     int sp = get_ptc_type(flag);
     auto w = ptc.weight[idx];
-    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx],
-         old_x3 = ptc.x3[idx];
+    auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx], old_x3 = ptc.x3[idx];
 
     v1 = v1 / gamma;
     v2 = v2 / gamma;
@@ -379,8 +354,8 @@ __launch_bounds__(512, 4)
     Scalar r1p = sqrt(x * x + y * y + z * z);
     Scalar r2p = acos(z / r1p);
     r1p = log(r1p);
-    Scalar r3p = atan(y / x);
-    if (x < 0.0f) v1 *= -1.0f;
+    Scalar r3p = atan2(y, x);
+    // if (x < 0.0f) v1 *= -1.0f;
 
     // printf("new position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
 
@@ -418,7 +393,8 @@ __launch_bounds__(512, 4)
     ptc.x3[idx] = r3p;
 
     // step 2: Deposit current
-    if (check_bit(flag, ParticleFlag::ignore_current)) continue;
+    if (check_bit(flag, ParticleFlag::ignore_current))
+      continue;
     // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
     // {0.0f};
     Scalar weight = -dev_charges[sp] * w;
@@ -442,8 +418,7 @@ __launch_bounds__(512, 4)
         int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
-                  weight * djx);
+        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)), weight * djx);
 
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
@@ -464,13 +439,12 @@ __launch_bounds__(512, 4)
   }
 }
 
-__global__ void
-convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2,
-          PtcUpdaterDev::fields_data fields) {
-  for (int j = blockIdx.y * blockDim.y + threadIdx.y;
-       j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-         i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+__global__ void convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2,
+                          PtcUpdaterDev::fields_data fields) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < dev_mesh.dims[1];
+       j += blockDim.y * gridDim.y) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < dev_mesh.dims[0];
+         i += blockDim.x * gridDim.x) {
       size_t offset_f = j * fields.J1.pitch + i * sizeof(Scalar);
       size_t offset_d = j * j1.pitch + i * sizeof(double);
       (*ptrAddr(fields.J1, offset_f)) =
@@ -481,31 +455,27 @@ convert_j(cudaPitchedPtr j1, cudaPitchedPtr j2,
   }
 }
 
-__global__ void
-process_j(PtcUpdaterDev::fields_data fields,
-          Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
-  for (int j = blockIdx.y * blockDim.y + threadIdx.y;
-       j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-         i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+__global__ void process_j(PtcUpdaterDev::fields_data fields,
+                          Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < dev_mesh.dims[1];
+       j += blockDim.y * gridDim.y) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < dev_mesh.dims[0];
+         i += blockDim.x * gridDim.x) {
       size_t offset = j * fields.J1.pitch + i * sizeof(Scalar);
       Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
-      (*ptrAddr(fields.J1, offset)) *=
-          w / *ptrAddr(mesh_ptrs.A1_e, offset);
-      (*ptrAddr(fields.J2, offset)) *=
-          w / *ptrAddr(mesh_ptrs.A2_e, offset);
+      (*ptrAddr(fields.J1, offset)) *= w / *ptrAddr(mesh_ptrs.A1_e, offset);
+      (*ptrAddr(fields.J2, offset)) *= w / *ptrAddr(mesh_ptrs.A2_e, offset);
       for (int n = 0; n < dev_params.num_species; n++) {
-        (*ptrAddr(fields.Rho[n], offset)) /=
-            *ptrAddr(mesh_ptrs.dV, offset);
+        (*ptrAddr(fields.Rho[n], offset)) /= *ptrAddr(mesh_ptrs.dV, offset);
       }
     }
   }
 }
 
-__global__ void
-inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
-           Scalar p2, Scalar p3, Scalar w, cudaPitchedPtr rho0,
-           cudaPitchedPtr rho1, curandState *states, Scalar omega) {
+__global__ void inject_ptc(particle_data ptc, size_t num, int inj_per_cell,
+                           Scalar p1, Scalar p2, Scalar p3, Scalar w,
+                           cudaPitchedPtr rho0, cudaPitchedPtr rho1,
+                           curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i = dev_mesh.guard[1] + 1 + id;
@@ -516,67 +486,63 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
     Scalar dens = max(-*ptrAddr(rho0, dev_mesh.guard[0] + 2, i),
                       *ptrAddr(rho1, dev_mesh.guard[0] + 2, i));
-    if (dens > 0.2 * square(dev_mesh.dims[1] / 3.14f)) continue;
+    if (dens > 0.2 * square(dev_mesh.dims[1] / 3.14f))
+      continue;
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
       // Scalar vphi = omega * r * cos(theta) * sin(theta);
       Scalar vphi = 0.0f;
       float u = curand_uniform(&localState);
+      float x3 = -0.05f + u * 0.1f;
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
-      ptc.x3[offset + n * 2] = 0.0f;
+      ptc.x3[offset + n * 2] = x3;
       ptc.p1[offset + n * 2] = p1;
       ptc.p2[offset + n * 2] = p2;
       ptc.p3[offset + n * 2] = vphi;
-      ptc.E[offset + n * 2] =
-          sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
+      ptc.E[offset + n * 2] = sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
       // printf("inject E is %f\n", ptc.E[offset + n * 2]);
       // ptc.p3[offset + n * 2] = p3;
-      ptc.cell[offset + n * 2] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
-      ptc.weight[offset + n * 2] =
-          w * sin(theta) * std::abs(cos(theta));
+      ptc.cell[offset + n * 2] = dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
+      ptc.weight[offset + n * 2] = w * sin(theta) * std::abs(cos(theta));
+      u = curand_uniform(&localState);
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary, (u < dev_params.track_percent
-                                             ? ParticleFlag::tracked
-                                             : ParticleFlag::nothing)),
+          bit_or(ParticleFlag::primary,
+                 (u < dev_params.track_percent ? ParticleFlag::tracked
+                                               : ParticleFlag::nothing)),
           ParticleType::electron);
 
       ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
-      ptc.x3[offset + n * 2 + 1] = 0.0f;
+      ptc.x3[offset + n * 2 + 1] = x3;
       ptc.p1[offset + n * 2 + 1] = p1;
       ptc.p2[offset + n * 2 + 1] = p2;
       ptc.p3[offset + n * 2 + 1] = vphi;
-      ptc.E[offset + n * 2 + 1] =
-          sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
+      ptc.E[offset + n * 2 + 1] = sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
       // printf("inject E is %f\n", ptc.E[offset + n * 2 + 1]);
       // ptc.p3[offset + n * 2 + 1] = p3;
-      ptc.cell[offset + n * 2 + 1] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
-      ptc.weight[offset + n * 2 + 1] =
-          w * sin(theta) * std::abs(cos(theta));
+      ptc.cell[offset + n * 2 + 1] = dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
+      ptc.weight[offset + n * 2 + 1] = w * sin(theta) * std::abs(cos(theta));
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary, (u < dev_params.track_percent
-                                             ? ParticleFlag::tracked
-                                             : ParticleFlag::nothing)),
+          bit_or(ParticleFlag::primary,
+                 (u < dev_params.track_percent ? ParticleFlag::tracked
+                                               : ParticleFlag::nothing)),
           ParticleType::ion);
     }
   }
   states[id] = localState;
 }
 
-__global__ void
-boundary_rho(PtcUpdaterDev::fields_data fields,
-             Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-       i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+__global__ void boundary_rho(PtcUpdaterDev::fields_data fields,
+                             Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < dev_mesh.dims[0];
+       i += blockDim.x * gridDim.x) {
     size_t offset_0 =
         i * sizeof(Scalar) + dev_mesh.guard[1] * fields.Rho[0].pitch;
-    size_t offset_pi = i * sizeof(Scalar) +
-                       (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) *
-                           fields.Rho[0].pitch;
+    size_t offset_pi =
+        i * sizeof(Scalar) +
+        (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) * fields.Rho[0].pitch;
     for (int n = 0; n < dev_params.num_species; n++) {
       // (*ptrAddr(fields.Rho[n], offset_0)) +=
       //     *ptrAddr(fields.Rho[n], offset_0 - 2 * fields.Rho[n].pitch)
@@ -617,17 +583,19 @@ boundary_rho(PtcUpdaterDev::fields_data fields,
   }
 }
 
-__global__ void
-annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
-                 cudaPitchedPtr j2, cudaPitchedPtr j3,
-                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+__global__ void annihilate_pairs(particle_data ptc, size_t num,
+                                 cudaPitchedPtr j1, cudaPitchedPtr j2,
+                                 cudaPitchedPtr j3,
+                                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
+                                 Scalar dt) {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     // First do a deposit before annihilation
     auto c = ptc.cell[idx];
     auto flag = ptc.flag[idx];
     // Skip empty particles
-    if (c == MAX_CELL) continue;
+    if (c == MAX_CELL)
+      continue;
 
     if (check_bit(flag, ParticleFlag::annihilate)) {
       // Load particle quantities
@@ -666,20 +634,18 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
             int offset = j_offset + (i + c1) * sizeof(Scalar);
             Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
             djx += val0;
-            atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)),
-                      weight * djx * dev_mesh.delta[0] *
-                          dev_mesh.delta[1] /
-                          (dt * *ptrAddr(mesh_ptrs.A1_e,
-                                         offset + sizeof(Scalar))));
+            atomicAdd(
+                ptrAddr(j1, offset + sizeof(Scalar)),
+                weight * djx * dev_mesh.delta[0] * dev_mesh.delta[1] /
+                    (dt * *ptrAddr(mesh_ptrs.A1_e, offset + sizeof(Scalar))));
 
             // j2 is movement in theta
             Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
             djy[i + 1] += val1;
-            atomicAdd(
-                ptrAddr(j2, offset + j2.pitch),
-                weight * djy[i + 1] * dev_mesh.delta[0] *
-                    dev_mesh.delta[1] /
-                    (dt * *ptrAddr(mesh_ptrs.A2_e, offset + j2.pitch)));
+            atomicAdd(ptrAddr(j2, offset + j2.pitch),
+                      weight * djy[i + 1] * dev_mesh.delta[0] *
+                          dev_mesh.delta[1] /
+                          (dt * *ptrAddr(mesh_ptrs.A2_e, offset + j2.pitch)));
           }
         }
       }
@@ -691,18 +657,21 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
   }
 }
 
-__global__ void
-flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
-                  cudaPitchedPtr dens_p, cudaPitchedPtr balance,
-                  cudaPitchedPtr annihilate) {
+__global__ void flag_annihilation(particle_data ptc, size_t num,
+                                  cudaPitchedPtr dens_e, cudaPitchedPtr dens_p,
+                                  cudaPitchedPtr balance, cudaPitchedPtr weight,
+                                  cudaPitchedPtr phi,
+                                  cudaPitchedPtr annihilate) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     auto c = ptc.cell[i];
     // Skip empty particles
-    if (c == MAX_CELL) continue;
+    if (c == MAX_CELL)
+      continue;
 
     auto flag = ptc.flag[i];
-    if (get_ptc_type(flag) > 1) continue;  // ignore ions
+    if (get_ptc_type(flag) > 1)
+      continue; // ignore ions
     auto w = ptc.weight[i];
 
     int c1 = dev_mesh.get_c1(c);
@@ -711,18 +680,21 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
     int ann = *(int *)((char *)annihilate.ptr + c1 * sizeof(int) +
                        c2 * annihilate.pitch);
     Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+    size_t offset = c1 * sizeof(Scalar) + c2 * dens_e.pitch;
     Scalar n;
     if (ann != 0) {
       if (get_ptc_type(flag) == (int)ParticleType::electron)
-        n = atomicAdd(ptrAddr(dens_e, c1, c2), w);
-      else  // if (get_ptc_type(flag) == (int)ParticleType::positron)
-        n = atomicAdd(ptrAddr(dens_p, c1, c2), w);
+        n = atomicAdd(ptrAddr(dens_e, offset), w);
+      else // if (get_ptc_type(flag) == (int)ParticleType::positron)
+        n = atomicAdd(ptrAddr(dens_p, offset), w);
       if (n < n_min) {
         set_bit(ptc.flag[i], ParticleFlag::annihilate);
-        atomicAdd(ptrAddr(balance, c1, c2),
+        atomicAdd(ptrAddr(balance, offset),
                   w * (get_ptc_type(flag) == (int)ParticleType::electron
                            ? -1.0f
                            : 1.0f));
+        atomicAdd(ptrAddr(weight, offset), w);
+        atomicAdd(ptrAddr(phi, offset), w * ptc.x3[i]);
       }
     }
     // Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
@@ -751,17 +723,19 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
   // imbalance back in as an extra particle
 }
 
-__global__ void
-check_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
-                   cudaPitchedPtr dens_p, cudaPitchedPtr annihilate) {
+__global__ void check_annihilation(particle_data ptc, size_t num,
+                                   cudaPitchedPtr dens_e, cudaPitchedPtr dens_p,
+                                   cudaPitchedPtr annihilate) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     auto c = ptc.cell[i];
     // Skip empty particles
-    if (c == MAX_CELL) continue;
+    if (c == MAX_CELL)
+      continue;
 
     auto flag = ptc.flag[i];
-    if (get_ptc_type(flag) > 1) continue;  // ignore ions
+    if (get_ptc_type(flag) > 1)
+      continue; // ignore ions
     auto w = ptc.weight[i];
 
     int c1 = dev_mesh.get_c1(c);
@@ -892,9 +866,9 @@ check_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
 //   // imbalance back in as an extra particle
 // }
 
-__global__ void
-add_extra_particles(particle_data ptc, size_t num,
-                    cudaPitchedPtr balance) {
+__global__ void add_extra_particles(particle_data ptc, size_t num,
+                                    cudaPitchedPtr balance,
+                                    cudaPitchedPtr weight, cudaPitchedPtr phi) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -902,28 +876,26 @@ add_extra_particles(particle_data ptc, size_t num,
   int num_offset = n2 * dev_mesh.dims[0] + n1;
 
   Scalar w = *ptrAddr(balance, n1, n2);
+  Scalar ptc_phi = *ptrAddr(phi, n1, n2) / w;
   if (std::abs(w) > EPS) {
     ptc.cell[num + num_offset] = num_offset;
     ptc.x1[num + num_offset] = 0.5f;
     ptc.x2[num + num_offset] = 0.5f;
-    ptc.x3[num + num_offset] = 0.0f;
+    ptc.x3[num + num_offset] = ptc_phi;
     ptc.p1[num + num_offset] = 0.0f;
     ptc.p2[num + num_offset] = 0.0f;
     ptc.p3[num + num_offset] = 0.0f;
     ptc.E[num + num_offset] = 1.0f;
     ptc.weight[num + num_offset] = std::abs(w);
     if (w > 0)
-      ptc.flag[num + num_offset] =
-          set_ptc_type_flag(0, ParticleType::positron);
+      ptc.flag[num + num_offset] = set_ptc_type_flag(0, ParticleType::positron);
     else
-      ptc.flag[num + num_offset] =
-          set_ptc_type_flag(0, ParticleType::electron);
+      ptc.flag[num + num_offset] = set_ptc_type_flag(0, ParticleType::electron);
   }
 }
 
-__global__ void
-filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
-               cudaPitchedPtr A) {
+__global__ void filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
+                               cudaPitchedPtr A) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -932,8 +904,7 @@ filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
   size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
 
   size_t dr_plus =
-      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
-                                                     : 0);
+      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar) : 0);
   size_t dr_minus = (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
   size_t dt_plus =
       (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
@@ -941,18 +912,18 @@ filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
   // Do the actual computation here
   (*ptrAddr(j_tmp, globalOffset)) =
       0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + dr_plus) *
-      *ptrAddr(A, globalOffset + dr_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - dr_minus) *
-      *ptrAddr(A, globalOffset - dr_minus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + dt_plus) *
-      *ptrAddr(A, globalOffset + dt_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - dt_minus) *
-      *ptrAddr(A, globalOffset - dt_minus);
+  (*ptrAddr(j_tmp, globalOffset)) += 0.125f *
+                                     *ptrAddr(j, globalOffset + dr_plus) *
+                                     *ptrAddr(A, globalOffset + dr_plus);
+  (*ptrAddr(j_tmp, globalOffset)) += 0.125f *
+                                     *ptrAddr(j, globalOffset - dr_minus) *
+                                     *ptrAddr(A, globalOffset - dr_minus);
+  (*ptrAddr(j_tmp, globalOffset)) += 0.125f *
+                                     *ptrAddr(j, globalOffset + dt_plus) *
+                                     *ptrAddr(A, globalOffset + dt_plus);
+  (*ptrAddr(j_tmp, globalOffset)) += 0.125f *
+                                     *ptrAddr(j, globalOffset - dt_minus) *
+                                     *ptrAddr(A, globalOffset - dt_minus);
   (*ptrAddr(j_tmp, globalOffset)) +=
       0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
       *ptrAddr(A, globalOffset + dr_plus + dt_plus);
@@ -968,27 +939,23 @@ filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
   (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
 }
 
-}  // namespace Kernels
+} // namespace Kernels
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
-    : PtcUpdaterDev(env),
-      d_rand_states(nullptr),
-      m_threadsPerBlock(256),
-      m_blocksPerGrid(256),
-      m_dens_e(env.local_grid()),
-      m_dens_p(env.local_grid()),
-      m_balance(env.local_grid()),
+    : PtcUpdaterDev(env), d_rand_states(nullptr), m_threadsPerBlock(256),
+      m_blocksPerGrid(256), m_dens_e(env.local_grid()),
+      m_dens_p(env.local_grid()), m_balance(env.local_grid()),
+      m_weight(env.local_grid()), m_phi(env.local_grid()),
       m_annihilate(env.local_grid().extent()) {
   const Grid_LogSph_dev &grid =
       dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;
-  CudaSafeCall(cudaMalloc(
-      &d_rand_states,
-      m_threadsPerBlock * m_blocksPerGrid * sizeof(curandState)));
-  init_rand_states((curandState *)d_rand_states, seed,
-                   m_threadsPerBlock, m_blocksPerGrid);
+  CudaSafeCall(cudaMalloc(&d_rand_states, m_threadsPerBlock * m_blocksPerGrid *
+                                              sizeof(curandState)));
+  init_rand_states((curandState *)d_rand_states, seed, m_threadsPerBlock,
+                   m_blocksPerGrid);
 
   // m_J1.initialize();
   // m_J2.initialize();
@@ -998,9 +965,8 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
   cudaFree((curandState *)d_rand_states);
 }
 
-void
-PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
-                                   uint32_t step) {
+void PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
+                                        uint32_t step) {
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
@@ -1008,9 +974,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
     data.photon_flux.assign_dev(0.0);
     // Skip empty particle array
     if (data.particles.number() > 0) {
-      Logger::print_info(
-          "Updating {} particles in log spherical coordinates",
-          data.particles.number());
+      Logger::print_info("Updating {} particles in log spherical coordinates",
+                         data.particles.number());
       Kernels::vay_push_2d<<<256, 256>>>(
           data.particles.data(), data.particles.number(), m_dev_fields,
           data.photon_flux.data_d(), (curandState *)d_rand_states, dt);
@@ -1025,8 +990,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
           data.particles.data(), data.particles.number(), m_dev_fields,
           m_mesh_ptrs, dt);
       CudaCheckError();
-      Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
-          m_dev_fields, m_mesh_ptrs, dt);
+      Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(m_dev_fields,
+                                                         m_mesh_ptrs, dt);
       CudaCheckError();
 
       // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
@@ -1051,9 +1016,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
     }
     // Skip empty particle array
     if (data.photons.number() > 0) {
-      Logger::print_info(
-          "Updating {} photons in log spherical coordinates",
-          data.photons.number());
+      Logger::print_info("Updating {} photons in log spherical coordinates",
+                         data.photons.number());
       Kernels::move_photons<<<256, 512>>>(data.photons.data(),
                                           data.photons.number(), dt);
       CudaCheckError();
@@ -1062,8 +1026,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   cudaDeviceSynchronize();
 }
 
-void
-PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
+void PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   data.particles.clear_guard_cells();
   data.photons.clear_guard_cells();
 
@@ -1072,14 +1035,13 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   cudaDeviceSynchronize();
 }
 
-void
-PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
-                             Scalar p1, Scalar p2, Scalar p3, Scalar w,
-                             Scalar omega) {
+void PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
+                                  Scalar p1, Scalar p2, Scalar p3, Scalar w,
+                                  Scalar omega) {
   Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
-      data.particles.data(), data.particles.number(), inj_per_cell, p1,
-      p2, p3, w, data.Rho[0].ptr(), data.Rho[2].ptr(),
-      (curandState *)d_rand_states, omega);
+      data.particles.data(), data.particles.number(), inj_per_cell, p1, p2, p3,
+      w, data.Rho[0].ptr(), data.Rho[2].ptr(), (curandState *)d_rand_states,
+      omega);
   CudaCheckError();
 
   data.particles.set_num(data.particles.number() +
@@ -1087,8 +1049,7 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
                              data.E.grid().mesh().reduced_dim(1));
 }
 
-void
-PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
+void PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
   m_dens_e.data().assign_dev(0.0);
   m_dens_p.data().assign_dev(0.0);
   m_annihilate.assign_dev(0);
@@ -1101,9 +1062,12 @@ PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
   m_dens_e.data().assign_dev(0.0);
   m_dens_p.data().assign_dev(0.0);
   m_balance.data().assign_dev(0.0);
+  m_weight.data().assign_dev(0.0);
+  m_phi.data().assign_dev(0.0);
   Kernels::flag_annihilation<<<256, 512>>>(
       data.particles.data(), data.particles.number(), m_dens_e.ptr(),
-      m_dens_p.ptr(), m_balance.ptr(), m_annihilate.data_d());
+      m_dens_p.ptr(), m_balance.ptr(), m_weight.ptr(), m_phi.ptr(),
+      m_annihilate.data_d());
   CudaCheckError();
 
   Kernels::annihilate_pairs<<<256, 512>>>(
@@ -1116,7 +1080,8 @@ PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
   Kernels::add_extra_particles<<<gridSize, blockSize>>>(
-      data.particles.data(), data.particles.number(), m_balance.ptr());
+      data.particles.data(), data.particles.number(), m_balance.ptr(),
+      m_weight.ptr(), m_phi.ptr());
   CudaCheckError();
 
   cudaDeviceSynchronize();
@@ -1124,4 +1089,4 @@ PtcUpdaterLogSph::annihilate_extra_pairs(cu_sim_data &data, double dt) {
                          mesh.reduced_dim(0) * mesh.reduced_dim(1));
 }
 
-}  // namespace Aperture
+} // namespace Aperture
