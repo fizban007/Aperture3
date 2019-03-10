@@ -128,6 +128,7 @@ main(int argc, char* argv[]) {
       cudaDeviceSynchronize();
       dynamic_cast<const Grid_LogSph_dev*>(&env.local_grid())
           ->compute_flux(data.flux, data.B, data.Bbg);
+      data.photon_flux.sync_to_host();
       // Logger::print_info("Finished computing flux");
 
       exporter.WriteOutput(step, time);

@@ -141,21 +141,21 @@ vay_push_2d(particle_data ptc, size_t num,
       }
 
       Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
-      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
-        Scalar pp1 = p1 - B1 * pdotB / tt;
-        Scalar pp2 = p2 - B2 * pdotB / tt;
-        Scalar pp3 = p3 - B3 * pdotB / tt;
-        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
-        // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-        // printf("pp * dt is %f\n", pp * dt);
+      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      //   Scalar pp1 = p1 - B1 * pdotB / tt;
+      //   Scalar pp2 = p2 - B2 * pdotB / tt;
+      //   Scalar pp3 = p3 - B3 * pdotB / tt;
+      //   Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
+      //   // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+      //   // printf("pp * dt is %f\n", pp * dt);
 
-        p1 -= pp1 * dt * dev_params.rad_cooling_coef;
-        p2 -= pp2 * dt * dev_params.rad_cooling_coef;
-        p3 -= pp3 * dt * dev_params.rad_cooling_coef;
-        // dev_params.rad_cooling_coef;
-        // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
-        //       dev_params.rad_cooling_coef;
-      }
+      //   p1 -= pp1 * dt * dev_params.rad_cooling_coef;
+      //   p2 -= pp2 * dt * dev_params.rad_cooling_coef;
+      //   p3 -= pp3 * dt * dev_params.rad_cooling_coef;
+      //   // dev_params.rad_cooling_coef;
+      //   // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
+      //   //       dev_params.rad_cooling_coef;
+      // }
       Scalar B = sqrt(tt) / std::abs(q_over_m);
       B1 /= q_over_m;
       B2 /= q_over_m;
