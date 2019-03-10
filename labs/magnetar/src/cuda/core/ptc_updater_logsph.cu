@@ -166,8 +166,8 @@ vay_push_2d(particle_data ptc, size_t num,
       if (gamma_thr_B > 3.0f && gamma > gamma_thr_B &&
           sp != (int)ParticleType::ion) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
-      } else if (dev_params.rad_cooling_on &&
-                 sp != (int)ParticleType::ion) {
+      }
+      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         // Process resonant drag
         // Scalar p_mag = std::abs(pdotB / B);
         Scalar p_mag_signed = sgn(pdotB / q_over_m) * sgn(B1) *
@@ -177,6 +177,7 @@ vay_push_2d(particle_data ptc, size_t num,
         Scalar mu = std::abs(B1 / B);
         Scalar y = (B / dev_params.BQ) /
                    (dev_params.star_kT * (g - p_mag_signed * mu));
+        // printf("g is %f, y is %f\n", g, y);
         if (y < 20.0f) {
           // printf("y is %f\n", y);
           Scalar coef = dev_params.res_drag_coef * y * y * y /
@@ -192,66 +193,78 @@ vay_push_2d(particle_data ptc, size_t num,
           // printf("drag on p1 is %f\n", dt * B1 * D / B);
           gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
 
-          // Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu /
-          // g)); Scalar angle =
-          //     acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) /
-          //     B);
-          // Scalar theta_p = 2.0f * CONST_PI *
-          // curand_uniform(&localState); Scalar u = std::cos(theta_p);
-          // Scalar beta = sqrt(1.0f - 1.0f / square(g));
+          Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
+          Scalar angle = acos(sgn(pdotB) *
+                              (B1 * cos(theta) - B2 * sin(theta)) / B);
+          // Scalar theta_p =
+          //     2.0f * CONST_PI * curand_uniform(&localState);
+          Scalar theta_p = CONST_PI * curand_uniform(&localState);
+          Scalar phi_p = 2.0f * CONST_PI * curand_uniform(&localState);
+          Scalar u = std::cos(theta_p);
+          Scalar beta = sqrt(1.0f - 1.0f / square(g));
           // angle = angle + sgn(theta_p - CONST_PI) *
           //                     std::acos((u + beta) / (1.0f + beta *
           //                     u));
-          // angle = std::acos(std::cos(angle));
-          // Scalar Eph =
-          //     (g - std::abs(p_mag_signed) * u) *
-          //     (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-          // Eph = std::log(Eph) / std::log(10.0f);
-          // if (Eph > 0.0f) Eph = 0.0f;
-          // if (Eph < -9.0f) Eph = -9.0f;
-          // int n0 = ((Eph + 9.0f) / 9.0f *
-          //           (ph_flux.xsize / sizeof(float) - 1));
-          // int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize -
-          // 1); atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
+          // angle = angle + (2.0f*phi_p - 1.0f) * std::acos((u + beta)
+          // / (1.0f + beta * u));
+          Scalar cos_angle =
+              std::cos(angle) * std::cos(theta_p) +
+              std::sin(angle) * std::sin(theta_p) * std::cos(phi_p);
+          // angle =
+          angle = std::acos(cos_angle);
+          Scalar Eph =
+              (g - std::abs(p_mag_signed) * u) *
+              (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
+          if (Eph < 1.0f) {
+            Eph = std::log(Eph) / std::log(10.0f);
+            if (Eph > 2.0f) Eph = 2.0f;
+            if (Eph < -6.0f) Eph = -6.0f;
+            int n0 = ((Eph + 6.0f) / 8.0f *
+                      (ph_flux.xsize / sizeof(float) - 1));
+            int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize - 1);
+            auto w = ptc.weight[idx];
+            // printf("n0 is %d, n1 is %d, Ndot is %f\n", n0, n1, Ndot);
+            atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt * w);
+          }
         }
       }
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-      {
-        Scalar res = dt * B / gamma;
-        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
-        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
-        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
-        Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
-        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
+      // {
+      //   Scalar res = dt * B / gamma;
+      //   Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
+      //   Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
+      //   Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
+      //   Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
+      //   Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
 
-        Scalar delta_p1 =
-            dev_params.rad_cooling_coef *
-            (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
-             gamma * p1 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p2 =
-            dev_params.rad_cooling_coef *
-            (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
-             gamma * p2 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p3 =
-            dev_params.rad_cooling_coef *
-            (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
-             gamma * p3 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-                         delta_p3 * delta_p3);
-        // if (dp < p) {
-        p1 +=
-            (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 / dp);
-        p2 +=
-            (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 / dp);
-        p3 +=
-            (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 / dp);
-        gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
-        // }
-      }
+      //   Scalar delta_p1 = dev_params.rad_cooling_coef *
+      //                     (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
+      //                      gamma * p1 * (tmp_sq - bE * bE)) /
+      //                     square(dev_params.B0);
+      //   Scalar delta_p2 = dev_params.rad_cooling_coef *
+      //                     (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
+      //                      gamma * p2 * (tmp_sq - bE * bE)) /
+      //                     square(dev_params.B0);
+      //   Scalar delta_p3 = dev_params.rad_cooling_coef *
+      //                     (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
+      //                      gamma * p3 * (tmp_sq - bE * bE)) /
+      //                     square(dev_params.B0);
+      //   Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+      //                    delta_p3 * delta_p3);
+      //   // if (dp < p) {
+      //   p1 +=
+      //       (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 /
+      //       dp);
+      //   p2 +=
+      //       (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 /
+      //       dp);
+      //   p3 +=
+      //       (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 /
+      //       dp);
+      //   gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+      //   // }
+      // }
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
