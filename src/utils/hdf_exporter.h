@@ -95,6 +95,7 @@ struct ptcoutput_2d {
   particle_interface* ptc;
   std::vector<float> x1;
   std::vector<float> x2;
+  std::vector<float> x3;
   std::vector<float> p1;
   std::vector<float> p2;
   std::vector<float> p3;

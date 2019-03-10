@@ -39,7 +39,7 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
 
  private:
   std::vector<Scalar> m_ptc_p1, m_ptc_p2, m_ptc_p3;
-  std::vector<Pos_t> m_ptc_x1, m_ptc_x2;
+  std::vector<Pos_t> m_ptc_x1, m_ptc_x2, m_ptc_x3;
   std::vector<uint32_t> m_ptc_cell, m_ptc_flag;
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 

@@ -178,6 +178,7 @@ hdf_exporter<T>::add_ptc_output_2d(const std::string &name,
   tmp_data.ptc = ptc;
   tmp_data.x1 = std::vector<float>(MAX_TRACKED);
   tmp_data.x2 = std::vector<float>(MAX_TRACKED);
+  tmp_data.x3 = std::vector<float>(MAX_TRACKED);
   tmp_data.p1 = std::vector<float>(MAX_TRACKED);
   tmp_data.p2 = std::vector<float>(MAX_TRACKED);
   tmp_data.p3 = std::vector<float>(MAX_TRACKED);
