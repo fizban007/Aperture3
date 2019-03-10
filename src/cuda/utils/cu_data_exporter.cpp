@@ -31,6 +31,7 @@ cu_data_exporter::cu_data_exporter(SimParams &params,
       m_ptc_p3(params.max_ptc_number),
       m_ptc_x1(params.max_ptc_number),
       m_ptc_x2(params.max_ptc_number),
+      m_ptc_x3(params.max_ptc_number),
       m_ptc_cell(params.max_ptc_number),
       m_ptc_flag(params.max_ptc_number) {}
 
@@ -466,6 +467,8 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
       cudaMemcpy(m_ptc_x2.data(), ptc->data().x2,
                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
+      cudaMemcpy(m_ptc_x3.data(), ptc->data().x3,
+                 sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
       cudaMemcpy(m_ptc_p1.data(), ptc->data().p1,
                  sizeof(Scalar) * ptc->number(),
                  cudaMemcpyDeviceToHost);
@@ -488,8 +491,8 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
                     File::ReadWrite);
       for (int sp = 0; sp < m_params.num_species; sp++) {
         unsigned int idx = 0;
-        std::string name_x = NameStr((ParticleType)sp) + "_x";
-        std::string name_p = NameStr((ParticleType)sp) + "_p";
+        // std::string name_x = NameStr((ParticleType)sp) + "_x";
+        // std::string name_p = NameStr((ParticleType)sp) + "_p";
         for (Index_t n = 0; n < ptc->number(); n++) {
           if (m_ptc_cell[n] != MAX_CELL &&
               // ptc->check_flag(n, ParticleFlag::tracked) &&
@@ -502,18 +505,23 @@ cu_data_exporter::write_particles(uint32_t step, double time) {
             Scalar x2 = mesh.pos(1, c2, m_ptc_x2[n]);
             ptcoutput.x1[idx] = x1;
             ptcoutput.x2[idx] = x2;
+            ptcoutput.x3[idx] = m_ptc_x3[n];
             ptcoutput.p1[idx] = m_ptc_p1[n];
             ptcoutput.p2[idx] = m_ptc_p2[n];
             ptcoutput.p3[idx] = m_ptc_p3[n];
             idx += 1;
           }
         }
+        Logger::print_info("Writing {} tracked {}", idx, NameStr((ParticleType)sp));
         DataSet data_x1 =
             datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_x1", DataSpace{idx});
         data_x1.write(ptcoutput.x1);
         DataSet data_x2 =
             datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_x2", DataSpace{idx});
         data_x2.write(ptcoutput.x2);
+        DataSet data_x3 =
+            datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_x3", DataSpace{idx});
+        data_x3.write(ptcoutput.x3);
         DataSet data_p1 =
             datafile.createDataSet<float>(NameStr((ParticleType)sp) + "_p1", DataSpace{idx});
         data_p1.write(ptcoutput.p1);
