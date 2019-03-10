@@ -123,21 +123,21 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
       }
 
       Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
-      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
-        Scalar pp1 = p1 - B1 * pdotB / tt;
-        Scalar pp2 = p2 - B2 * pdotB / tt;
-        Scalar pp3 = p3 - B3 * pdotB / tt;
-        Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
-        // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-        // printf("pp * dt is %f\n", pp * dt);
+      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      //   Scalar pp1 = p1 - B1 * pdotB / tt;
+      //   Scalar pp2 = p2 - B2 * pdotB / tt;
+      //   Scalar pp3 = p3 - B3 * pdotB / tt;
+      //   Scalar pp = sqrt(pp1 * pp1 + pp2 * pp2 + pp3 * pp3);
+      //   // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+      //   // printf("pp * dt is %f\n", pp * dt);
 
-        p1 -= pp1 * dt * dev_params.rad_cooling_coef;
-        p2 -= pp2 * dt * dev_params.rad_cooling_coef;
-        p3 -= pp3 * dt * dev_params.rad_cooling_coef;
-        // dev_params.rad_cooling_coef;
-        // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
-        //       dev_params.rad_cooling_coef;
-      }
+      //   p1 -= pp1 * dt * dev_params.rad_cooling_coef;
+      //   p2 -= pp2 * dt * dev_params.rad_cooling_coef;
+      //   p3 -= pp3 * dt * dev_params.rad_cooling_coef;
+      //   // dev_params.rad_cooling_coef;
+      //   // p3 -= pp3 * (2.0f * dt * pp * tt / 3.0f) *
+      //   //       dev_params.rad_cooling_coef;
+      // }
       Scalar B = sqrt(tt) / std::abs(q_over_m);
       B1 /= q_over_m;
       B2 /= q_over_m;
@@ -150,7 +150,8 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
       if (gamma_thr_B > 3.0f && gamma > gamma_thr_B &&
           sp != (int)ParticleType::ion) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
-      } else if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      }
+      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         // Process resonant drag
         // Scalar p_mag = std::abs(pdotB / B);
         Scalar p_mag_signed =
@@ -160,6 +161,7 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
         Scalar mu = std::abs(B1 / B);
         Scalar y = (B / dev_params.BQ) /
                    (dev_params.star_kT * (g - p_mag_signed * mu));
+        // printf("g is %f, y is %f\n", g, y);
         if (y < 20.0f) {
           // printf("y is %f\n", y);
           Scalar coef = dev_params.res_drag_coef * y * y * y /
@@ -177,24 +179,38 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
           gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
 
           Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
-          Scalar angle =
-              acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) / B);
-          Scalar theta_p = 2.0f * CONST_PI * curand_uniform(&localState);
+          Scalar angle = acos(sgn(pdotB) *
+                              (B1 * cos(theta) - B2 * sin(theta)) / B);
+          // Scalar theta_p =
+          //     2.0f * CONST_PI * curand_uniform(&localState);
+          Scalar theta_p = CONST_PI * curand_uniform(&localState);
+          Scalar phi_p = 2.0f * CONST_PI * curand_uniform(&localState);
           Scalar u = std::cos(theta_p);
           Scalar beta = sqrt(1.0f - 1.0f / square(g));
-          angle = angle + sgn(theta_p - CONST_PI) *
-                              std::acos((u + beta) / (1.0f + beta * u));
-          angle = std::acos(std::cos(angle));
-          Scalar Eph = (g - std::abs(p_mag_signed) * u) *
-                       (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-          Eph = std::log(Eph) / std::log(10.0f);
-          if (Eph > 0.0f)
-            Eph = 0.0f;
-          if (Eph < -9.0f)
-            Eph = -9.0f;
-          int n0 = ((Eph + 9.0f) / 9.0f * (ph_flux.xsize / sizeof(float) - 1));
-          int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize - 1);
-          atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt);
+          // angle = angle + sgn(theta_p - CONST_PI) *
+          //                     std::acos((u + beta) / (1.0f + beta *
+          //                     u));
+          // angle = angle + (2.0f*phi_p - 1.0f) * std::acos((u + beta)
+          // / (1.0f + beta * u));
+          Scalar cos_angle =
+              std::cos(angle) * std::cos(theta_p) +
+              std::sin(angle) * std::sin(theta_p) * std::cos(phi_p);
+          // angle =
+          angle = std::acos(cos_angle);
+          Scalar Eph =
+              (g - std::abs(p_mag_signed) * u) *
+              (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
+          if (Eph < 1.0f || B < 0.2*dev_params.BQ) {
+            Eph = std::log(Eph) / std::log(10.0f);
+            if (Eph > 2.0f) Eph = 2.0f;
+            if (Eph < -6.0f) Eph = -6.0f;
+            int n0 = ((Eph + 6.0f) / 8.0f *
+                      (ph_flux.xsize / sizeof(float) - 1));
+            int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize - 1);
+            auto w = ptc.weight[idx];
+            // printf("n0 is %d, n1 is %d, Ndot is %f\n", n0, n1, Ndot);
+            atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt * w);
+          }
         }
       }
 
