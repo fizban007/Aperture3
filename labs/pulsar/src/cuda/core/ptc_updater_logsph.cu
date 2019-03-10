@@ -23,22 +23,24 @@ HD_INLINE void
 cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
             Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
   v1 =
-      v1n * sin(x2) * cos(x3) + v2n * sin(x2) * sin(x3) + v3n * cos(x2);
+      v1n * s2 * c3 + v2n * s2 * s3 + v3n * c2;
   v2 =
-      v1n * cos(x2) * cos(x3) + v2n * cos(x2) * sin(x3) - v3n * sin(x2);
-  v3 = -v1n * sin(x3) + v2n * cos(x3);
+      v1n * c2 * c3 + v2n * c2 * s3 - v3n * s2;
+  v3 = -v1n * s3 + v2n * c3;
 }
 
 HD_INLINE void
 logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
             Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
   v1 =
-      v1n * sin(x2) * cos(x3) + v2n * cos(x2) * cos(x3) - v3n * sin(x3);
+      v1n * s2 * c3 + v2n * c2 * c3 - v3n * s3;
   v2 =
-      v1n * sin(x2) * sin(x3) + v2n * cos(x2) * sin(x3) + v3n * cos(x3);
-  v3 = v1n * cos(x2) - v2n * sin(x2);
+      v1n * s2 * s3 + v2n * c2 * s3 + v3n * c3;
+  v3 = v1n * c2 - v2n * s2;
 }
 
 __global__ void
@@ -701,7 +703,7 @@ flag_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
     Scalar sin_t = std::sin(dev_mesh.pos(1, c2, 0.5f));
     int ann = *(int *)((char *)annihilate.ptr + c1 * sizeof(int) +
                        c2 * annihilate.pitch);
-    Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+    Scalar n_min = 0.1 * square(dev_mesh.inv_delta[0]) * sin_t;
     Scalar n;
     if (ann != 0) {
       if (get_ptc_type(flag) == (int)ParticleType::electron)
@@ -768,7 +770,7 @@ check_annihilation(particle_data ptc, size_t num, cudaPitchedPtr dens_e,
       n_e = atomicAdd(ptrAddr(dens_e, c1, c2), w);
     else if (get_ptc_type(flag) == (int)ParticleType::positron)
       n_p = atomicAdd(ptrAddr(dens_p, c1, c2), w);
-    Scalar n_min = 0.2 * square(dev_mesh.inv_delta[0]) * sin_t;
+    Scalar n_min = 0.1 * square(dev_mesh.inv_delta[0]) * sin_t;
 
     if (n_e > n_min && n_p > n_min && b == 0) {
       atomicExch((int *)((char *)annihilate.ptr + offset), 1);
@@ -815,33 +817,41 @@ filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp,
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
 
+  size_t dr_plus =
+      (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar) : 0);
+  size_t dr_minus =
+      (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+  size_t dt_plus =
+      (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+  size_t dt_minus =
+      (n2 > dev_mesh.guard[1] ? j.pitch : 0);
   // Do the actual computation here
   (*ptrAddr(j_tmp, globalOffset)) =
       0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + sizeof(Scalar)) *
-      *ptrAddr(A, globalOffset + sizeof(Scalar));
+      0.125f * *ptrAddr(j, globalOffset + dr_plus) *
+      *ptrAddr(A, globalOffset + dr_plus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - sizeof(Scalar)) *
-      *ptrAddr(A, globalOffset - sizeof(Scalar));
+      0.125f * *ptrAddr(j, globalOffset - dr_minus) *
+      *ptrAddr(A, globalOffset - dr_minus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + j.pitch) *
-      *ptrAddr(A, globalOffset + A.pitch);
+      0.125f * *ptrAddr(j, globalOffset + dt_plus) *
+      *ptrAddr(A, globalOffset + dt_plus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - j.pitch) *
-      *ptrAddr(A, globalOffset - A.pitch);
+      0.125f * *ptrAddr(j, globalOffset - dt_minus) *
+      *ptrAddr(A, globalOffset - dt_minus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset + sizeof(Scalar) + j.pitch) *
-      *ptrAddr(A, globalOffset + sizeof(Scalar) + j.pitch);
+      0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
+      *ptrAddr(A, globalOffset + dr_plus + dt_plus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset - sizeof(Scalar) + j.pitch) *
-      *ptrAddr(A, globalOffset - sizeof(Scalar) + j.pitch);
+      0.0625f * *ptrAddr(j, globalOffset - dr_minus + dt_plus) *
+      *ptrAddr(A, globalOffset - dr_minus + dt_plus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset + sizeof(Scalar) - j.pitch) *
-      *ptrAddr(A, globalOffset + sizeof(Scalar) - A.pitch);
+      0.0625f * *ptrAddr(j, globalOffset + dr_plus - dt_minus) *
+      *ptrAddr(A, globalOffset + dr_plus - dt_minus);
   (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset - sizeof(Scalar) - j.pitch) *
-      *ptrAddr(A, globalOffset - sizeof(Scalar) - A.pitch);
+      0.0625f * *ptrAddr(j, globalOffset - dr_minus - dt_minus) *
+      *ptrAddr(A, globalOffset - dr_minus - dt_minus);
   (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
 }
 
@@ -927,6 +937,11 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         Kernels::filter_current<<<gridSize, blockSize>>>(
             data.J.ptr(1), m_dens_e.ptr(), m_mesh_ptrs.A2_e);
         data.J.data(1).copy_from(m_dens_e.data());
+        for (int sp = 0; sp < m_env.params().num_species; sp++) {
+          Kernels::filter_current<<<gridSize, blockSize>>>(
+              data.Rho[sp].ptr(), m_dens_e.ptr(), m_mesh_ptrs.dV);
+          data.Rho[sp].data().copy_from(m_dens_e.data());
+        }
         CudaCheckError();
       }
     }
