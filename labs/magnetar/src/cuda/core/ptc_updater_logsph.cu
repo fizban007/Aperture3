@@ -21,22 +21,24 @@ HD_INLINE void
 cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
             Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
   v1 =
-      v1n * sin(x2) * cos(x3) + v2n * sin(x2) * sin(x3) + v3n * cos(x2);
+      v1n * s2 * c3 + v2n * s2 * s3 + v3n * c2;
   v2 =
-      v1n * cos(x2) * cos(x3) + v2n * cos(x2) * sin(x3) - v3n * sin(x2);
-  v3 = -v1n * sin(x3) + v2n * cos(x3);
+      v1n * c2 * c3 + v2n * c2 * s3 - v3n * s2;
+  v3 = -v1n * s3 + v2n * c3;
 }
 
 HD_INLINE void
 logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
             Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
   v1 =
-      v1n * sin(x2) * cos(x3) + v2n * cos(x2) * cos(x3) - v3n * sin(x3);
+      v1n * s2 * c3 + v2n * c2 * c3 - v3n * s3;
   v2 =
-      v1n * sin(x2) * sin(x3) + v2n * cos(x2) * sin(x3) + v3n * cos(x3);
-  v3 = v1n * cos(x2) - v2n * sin(x2);
+      v1n * s2 * s3 + v2n * c2 * s3 + v3n * c3;
+  v3 = v1n * c2 - v2n * s2;
 }
 
 __global__ void
@@ -215,7 +217,7 @@ vay_push_2d(particle_data ptc, size_t num,
           Scalar Eph =
               (g - std::abs(p_mag_signed) * u) *
               (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-          if (Eph < 1.0f) {
+          if (Eph < 1.0f || B < 0.2*dev_params.BQ) {
             Eph = std::log(Eph) / std::log(10.0f);
             if (Eph > 2.0f) Eph = 2.0f;
             if (Eph < -6.0f) Eph = -6.0f;
@@ -230,41 +232,41 @@ vay_push_2d(particle_data ptc, size_t num,
       }
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-      // {
-      //   Scalar res = dt * B / gamma;
-      //   Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
-      //   Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
-      //   Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
-      //   Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
-      //   Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
+      {
+        Scalar res = dt * B / gamma;
+        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma);
+        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma);
+        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma);
+        Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
+        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / gamma;
 
-      //   Scalar delta_p1 = dev_params.rad_cooling_coef *
-      //                     (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
-      //                      gamma * p1 * (tmp_sq - bE * bE)) /
-      //                     square(dev_params.B0);
-      //   Scalar delta_p2 = dev_params.rad_cooling_coef *
-      //                     (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
-      //                      gamma * p2 * (tmp_sq - bE * bE)) /
-      //                     square(dev_params.B0);
-      //   Scalar delta_p3 = dev_params.rad_cooling_coef *
-      //                     (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
-      //                      gamma * p3 * (tmp_sq - bE * bE)) /
-      //                     square(dev_params.B0);
-      //   Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-      //                    delta_p3 * delta_p3);
-      //   // if (dp < p) {
-      //   p1 +=
-      //       (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 /
-      //       dp);
-      //   p2 +=
-      //       (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 /
-      //       dp);
-      //   p3 +=
-      //       (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 /
-      //       dp);
-      //   gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
-      //   // }
-      // }
+        Scalar delta_p1 = dev_params.rad_cooling_coef *
+                          (((tmp2 * B3 - tmp3 * B2) + bE * E1) -
+                           gamma * p1 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
+        Scalar delta_p2 = dev_params.rad_cooling_coef *
+                          (((tmp3 * B1 - tmp1 * B3) + bE * E2) -
+                           gamma * p2 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
+        Scalar delta_p3 = dev_params.rad_cooling_coef *
+                          (((tmp1 * B2 - tmp2 * B1) + bE * E3) -
+                           gamma * p3 * (tmp_sq - bE * bE)) /
+                          square(dev_params.B0);
+        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                         delta_p3 * delta_p3);
+        // if (dp < p) {
+        p1 +=
+            (dp < p || dp < 1e-5 ? delta_p1 : 0.5 * p * delta_p1 /
+            dp);
+        p2 +=
+            (dp < p || dp < 1e-5 ? delta_p2 : 0.5 * p * delta_p2 /
+            dp);
+        p3 +=
+            (dp < p || dp < 1e-5 ? delta_p3 : 0.5 * p * delta_p3 /
+            dp);
+        gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+        // }
+      }
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
