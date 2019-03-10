@@ -114,6 +114,9 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       if (Eph < dev_params.E_ph_min) continue;
+      if (c2 < dev_mesh.guard[1] + 20)
+          // c2 >= dev_mesh.dims[1] - dev_mesh.guard[1] - 20)
+        continue;
 
       // Add the new photon
       int offset = ph_num + start_pos + pos_in_block;

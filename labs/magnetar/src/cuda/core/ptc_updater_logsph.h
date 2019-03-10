@@ -24,7 +24,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  cu_scalar_field<Scalar> m_dens_e, m_dens_p, m_balance;
+  cu_scalar_field<Scalar> m_dens_e, m_dens_p, m_balance, m_weight, m_phi;
   cu_multi_array<int> m_annihilate;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 

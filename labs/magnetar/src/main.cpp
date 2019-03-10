@@ -104,7 +104,7 @@ main(int argc, char* argv[]) {
     //   data.particles.append({0.5, 0.5, 0.0}, {1000.0, 0.0, 0.0}, cell,
     //                         ParticleType::electron, 1000.0);
     // }
-    data.set_initial_condition(100.0, 2);
+    // data.set_initial_condition(100.0, 2);
   }
 
   for (; step <= env.params().max_steps; step++) {
@@ -114,10 +114,10 @@ main(int argc, char* argv[]) {
     Logger::print_info("=== At timestep {}, time = {} ===", step, time);
 
     Scalar omega = 0.0;
-    if (time <= 30.0) {
-      omega = env.params().omega * (time / 30.0);
-    } else if (time <= 60.0) {
-      omega = env.params().omega * (1.0 - (time - 30.0) / 30.0);
+    if (time <= 25.0) {
+      omega = env.params().omega * (time / 25.0);
+    } else if (time <= 50.0) {
+      omega = env.params().omega * (1.0 - (time - 25.0) / 25.0);
     } else {
       omega = 0.0;
     }
@@ -141,14 +141,14 @@ main(int argc, char* argv[]) {
 
     timer::stamp();
     // Inject particles
-    if (step % 4 == 0)
-      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 100.0, omega);
+    if (step % 5 == 0)
+      ptc_updater.inject_ptc(data, 2, 0.0, 0.0, 0.0, 100.0, omega);
     // Update particles (push and deposit)
     ptc_updater.update_particles(data, dt, step);
     ptc_updater.handle_boundary(data);
-    if (step % 20 == 0) {
-      ptc_updater.annihilate_extra_pairs(data, dt);
-    }
+    // if (step % 20 == 0) {
+    //   ptc_updater.annihilate_extra_pairs(data, dt);
+    // }
     auto t_ptc = timer::get_duration_since_stamp("us");
     Logger::print_info("Ptc Update took {}us", t_ptc);
 
