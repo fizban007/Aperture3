@@ -65,7 +65,7 @@ ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
   using namespace simd;
 
   auto& ptc = data.particles;
-  auto& mesh = m_env.grid().mesh();
+  auto& mesh = data.grid->mesh();
 
   if (ptc.number() > 0) {
     //    int vec_width = 8;
@@ -197,7 +197,7 @@ void
 ptc_updater_default::esirkepov_deposit(sim_data& data, double dt,
                                        uint32_t step) {
   auto& ptc = data.particles;
-  auto& mesh = m_env.grid().mesh();
+  auto& mesh = data.grid->mesh();
   if (ptc.number() > 0) {
 #pragma omp simd
     for (size_t idx = 0; idx < ptc.number(); idx++) {

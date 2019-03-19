@@ -87,20 +87,20 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/data/cu_multi_array.cu"
     "cuda/grids/grid_log_sph_dev.cpp"
     "cuda/grids/grid_1dgr_dev.cpp"
-    "cuda/core/field_solver_log_sph.cu"
-    "cuda/core/field_solver_1dgr.cu"
+    # "cuda/core/field_solver_log_sph.cu"
+    # "cuda/core/field_solver_1dgr.cu"
     "cuda/core/sim_environment_dev.cpp"
     "cuda/core/cu_sim_data.cu"
     "cuda/core/cu_sim_data1d.cu"
-    "cuda/core/additional_diagnostics.cu"
-    "cuda/core/ptc_updater_dev.cu"
-    "cuda/core/ptc_updater_logsph.cu"
-    "cuda/core/ptc_updater_1dgr.cu"
-    "cuda/core/finite_diff.cu"
+    # "cuda/core/additional_diagnostics.cu"
+    # "cuda/core/ptc_updater_dev.cu"
+    # "cuda/core/ptc_updater_logsph.cu"
+    # "cuda/core/ptc_updater_1dgr.cu"
+    # "cuda/core/finite_diff.cu"
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
     # "algorithms/ptc_pusher_geodesic.cpp"
-    "cuda/utils/cu_data_exporter.cpp"
+    # "cuda/utils/cu_data_exporter.cpp"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
     "cuda/radiation/rt_ic.cu"
@@ -130,11 +130,11 @@ if (CMAKE_CUDA_COMPILER)
   target_link_libraries(aperture cuAperture)
 endif()
 
-if (LAB_ROOT_DIR)
-else()
-  add_executable(aperture1D "main_1d.cpp")
-  target_link_libraries(aperture1D Aperture)
-endif()
+# if (LAB_ROOT_DIR)
+# else()
+#   add_executable(aperture1D "main_1d.cpp")
+#   target_link_libraries(aperture1D Aperture)
+# endif()
 
 # if (CUDA_FOUND)
 #   target_link_libraries(aperture Pulsar_dev)

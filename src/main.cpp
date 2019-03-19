@@ -28,7 +28,7 @@ main(int argc, char* argv[]) {
   sim_data data(env);
 
   // Initialize the field solver
-  field_solver_default solver(env.grid());
+  // field_solver_default solver(env.grid());
 
   // Initialize data exporter
   data_exporter exporter(env.params(), step);

@@ -15,7 +15,6 @@ if(NOT WIN32)
 endif()
 
 # Set CXX flags
-# set(CMAKE_CXX_COMPILER "/opt/intel/bin/icpc")
 set(CMAKE_CXX_STANDARD 14)
 set(CXX_EXTRA_FLAGS "-DBOOST_ALL_NO_LIB=1 -DBOOST_NO_CXX14_CONSTEXPR")
 # message(${CMAKE_CXX_COMPILER})
@@ -69,7 +68,6 @@ set(CATCH_INCLUDE_DIR deps/catch/single_include)
 set(FADBAD_INCLUDE_DIR deps/FADBAD++)
 set(CUB_INCLUDE_DIR deps/cub)
 set(VECTOR_INCLUDE_DIR deps/vectorclass)
-# set(INTEGRATE_INCLUDE_DIR deps/integrate/src)
 
 include_directories(${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} ${CUB_INCLUDE_DIR} ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${VECTOR_INCLUDE_DIR} include src)
 
@@ -84,35 +82,25 @@ if (use_cuda)
     set(CMAKE_CUDA_FLAGS "-lcublas -lcurand -Xcompiler -fPIC -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored -Xcudafe --diag_suppress=code_is_unreachable")
     set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
     set(CMAKE_CUDA_FLAGS_RELEASE "-lineinfo -O3 -DNDEBUG")
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
     macro(add_cuda_target cuda_target)
       add_library(${cuda_target} ${${cuda_target}_src})
       # target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
-      set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 14)
-      set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-      set_property(TARGET ${cuda_target} PROPERTY PROPERTIES POSITION_INDEPENDENT_CODE ON)
-      # RELEASE -DNDEBUG -O2 -Xptxas="-v"
-      # RELEASE -DNDEBUG -O3
-      # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
     endmacro()
     macro(add_cuda_executable cuda_target)
       add_executable(${cuda_target} ${${cuda_target}_src})
       # target_compile_options(${cuda_target} PRIVATE "-arch=compute_61;-code=sm_61;-lineinfo")
-      set_property(TARGET ${cuda_target} PROPERTY CUDA_STANDARD 14)
-      set_property(TARGET ${cuda_target} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-      set_property(TARGET ${cuda_target} PROPERTY PROPERTIES POSITION_INDEPENDENT_CODE ON)
-      # RELEASE -DNDEBUG -O2 -Xptxas="-v"
-      # RELEASE -DNDEBUG -O3
-      # DEBUG -g -G -Xcompiler -rdynamic -lineinfo)
     endmacro()
   endif()
 endif()
 
-if(USE_DOUBLE)
+if(use_double)
   add_definitions(-DUSE_DOUBLE)
 endif()
 add_subdirectory(deps/fmt)
 add_subdirectory(src)
-# add_subdirectory(tests)
 # add_subdirectory(tools)
 
 if (build_tests)
@@ -121,10 +109,3 @@ if (build_tests)
 
   add_subdirectory(tests)
 endif()
-
-# This is to get all header files recognized by QtCreator
-# file(GLOB_RECURSE headers "include/*.h" "include/*/*.h" "include/*.hpp" "include/*/*.hpp" "src/*.h" "src/*/*.h" "src/*.hpp" "src/*/*.hpp")
-# add_custom_target(myIncludes SOURCES ${headers})
-
-# find_package(Cuda REQUIRED)
-# if (CUDA_FOUND)

@@ -30,12 +30,11 @@ class cu_multi_array : public multi_array<T> {
 
   /// Main constructor, initializes with given width, height, and
   /// depth of the array. Allocate memory in the initialization.
-  explicit cu_multi_array(int width, int height = 1, int depth = 1,
-                      int deviceId = 0);
+  explicit cu_multi_array(int width, int height = 1, int depth = 1);
 
   /// Alternative main constructor, takes in an @ref Extent object and
   /// initializes an array of the corresponding extent.
-  explicit cu_multi_array(const Extent& extent, int deviceId = 0);
+  explicit cu_multi_array(const Extent& extent);
 
   /// Standard copy constructor.
   cu_multi_array(const self_type& other);
@@ -102,14 +101,13 @@ class cu_multi_array : public multi_array<T> {
   void assign_dev(const data_type& value);
 
   /// Resize the array.
-  void resize(int width, int height = 1, int depth = 1,
-              int deviceId = 0);
+  void resize(int width, int height = 1, int depth = 1);
 
   /// Resize the array according to an \ref Extent object.
-  void resize(Extent extent, int deviceId = 0);
+  void resize(Extent extent);
 
   /// Sync the content between host and device
-  void sync_to_device(int devId);
+  // void sync_to_device(int devId);
 
   /// Sync the content between host and device
   void sync_to_device();
@@ -118,7 +116,7 @@ class cu_multi_array : public multi_array<T> {
   void sync_to_host();
 
   /// Allocate memory on both host and device
-  void alloc_mem(const Extent& ext, int deviceId = 0);
+  void alloc_mem(const Extent& ext);
 
   /// Free memory on both host and device
   void free_mem();
@@ -129,11 +127,11 @@ class cu_multi_array : public multi_array<T> {
   // cudaPitchedPtr data_d() { return _data_d; }
   cudaPitchedPtr& data_d() { return _data_d; }
   const cudaPitchedPtr& data_d() const { return _data_d; }
-  int devId() const { return _devId; }
+  // int devId() const { return _devId; }
 
  private:
   cudaPitchedPtr _data_d;  ///< Pointer to the data stored on the GPU
-  int _devId = 0;  ///< Id of the GPU where the memory is allocated
+  // int _devId = 0;  ///< Id of the GPU where the memory is allocated
 
 };  // ----- end of class multi_array -----
 
