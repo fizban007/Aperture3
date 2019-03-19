@@ -45,19 +45,24 @@ cu_sim_environment::setup_env() {
     m_dev_ids[i] = i;
   }
 
-  if (m_params.coord_system == "LogSpherical") {
-    m_grid.reset(new Grid_LogSph_dev());
-    m_grid->init(m_params);
-  } else if (m_params.coord_system == "1DGR" && m_grid->dim() == 1) {
-    m_grid.reset(new Grid_1dGR_dev());
-    m_grid->init(m_params);
+  // if (m_params.coord_system == "LogSpherical") {
+  //   m_grid.reset(new Grid_LogSph_dev());
+  //   m_grid->init(m_params);
+  // } else if (m_params.coord_system == "1DGR" && m_grid->dim() == 1) {
+  //   m_grid.reset(new Grid_1dGR_dev());
+  //   m_grid->init(m_params);
+  // }
+
+  for (int i = 0; i < n_devices; i++) {
+    int dev_id = m_dev_ids[i];
+    CudaSafeCall(cudaSetDevice(dev_id));
+    
+    init_dev_params(m_params);
+    // init_dev_mesh(m_grid->mesh());
+
+    init_dev_charges(m_charges.data());
+    init_dev_masses(m_masses.data());
   }
-
-  init_dev_params(m_params);
-  init_dev_mesh(m_grid->mesh());
-
-  init_dev_charges(m_charges.data());
-  init_dev_masses(m_masses.data());
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -319,12 +324,12 @@ cu_sim_environment::check_dev_params(SimParams& params) {
   get_dev_params(params);
 }
 
-void
-cu_sim_environment::init_bg_fields(cu_sim_data& data) {
-  // Initialize the background fields
-  if (m_params.use_bg_fields) {
-    data.init_bg_fields();
-  }
-}
+// void
+// cu_sim_environment::init_bg_fields(cu_sim_data& data) {
+//   // Initialize the background fields
+//   if (m_params.use_bg_fields) {
+//     data.init_bg_fields();
+//   }
+// }
 
 }  // namespace Aperture

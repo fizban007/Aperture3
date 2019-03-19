@@ -16,7 +16,7 @@ rad_transfer_1d::emit_photons(sim_data& data) {
   auto& photons = data.photons;
   auto& ptc = data.particles;
   auto& ptcdata = ptc.data();
-  auto& mesh = m_env.grid().mesh();
+  auto& mesh = data.grid->mesh();
 
   uint32_t num_ph = 0;
   for (Index_t idx = 0; idx < ptc.number(); idx++) {

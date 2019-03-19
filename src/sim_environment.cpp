@@ -67,28 +67,10 @@ sim_environment::~sim_environment() {}
 
 void
 sim_environment::setup_env() {
-  // SimParamsBase* h_params = &m_params;
-
-  // Copy the parameters to cuda constant memory
-  // cudaMemcpyToSymbol(dev_params, (void*)&m_params,
-  // sizeof(SimParamsBase)); CudaCheckError();
-  // init_dev_params(m_params);
-
-  // Setup the grid
-  if (m_params.coord_system == "Cartesian") {
-    m_grid.reset(new Grid());
-  } else if (m_params.coord_system == "LogSpherical") {
-    m_grid.reset(new Grid_LogSph());
-  } else {
-    m_grid.reset(new Grid());
-  }
+  // Init a dummy grid to store the mesh of the grid on this node
+  m_grid.reset(new Grid());
   m_grid->init(m_params);
-  std::cout << "Grid dimension is " << m_grid->dim() << std::endl;
-  if (m_grid->mesh().delta[0] < m_params.delta_t) {
-    std::cerr << "Grid spacing should be larger than delta_t! Aborting!"
-              << std::endl;
-    abort();
-  }
+
   // std::cout << m_grid.mesh().dims[0] << ", " << m_grid.mesh().dims[1]
   // << std::endl; std::cout << "size of quadmesh is " <<
   // sizeof(Quadmesh) << std::endl; cudaMemcpyToSymbol(dev_mesh,

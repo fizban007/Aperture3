@@ -48,16 +48,16 @@ struct Data {
     // c.sync_to_host();
   }
 
-  void prefetch(int deviceId) {
+  void sync_to_device() {
     // cudaMemPrefetchAsync(a.data(), memSize, deviceId);
     // cudaMemPrefetchAsync(b.data(), memSize, deviceId);
     // cudaMemPrefetchAsync(c.data(), memSize, deviceId);
-    a.sync_to_device(deviceId);
-    b.sync_to_device(deviceId);
-    c.sync_to_device(deviceId);
+    a.sync_to_device();
+    b.sync_to_device();
+    c.sync_to_device();
   }
 
-  void prefetch() {
+  void sync_to_host() {
     // cudaMemPrefetchAsync(c.data(), memSize, cudaCpuDeviceId);
     c.sync_to_host();
   }
@@ -129,7 +129,7 @@ TEST_CASE("Map Array Multiply", "[MultiArray]") {
   data.b.assign(1.5);
   std::cout << data.a.extent() << std::endl;
 
-  data.prefetch(deviceId);
+  data.sync_to_device();
 
   // dim3 blockSize(32, 32);
   // dim3 gridSize(32, 32);
@@ -140,7 +140,7 @@ TEST_CASE("Map Array Multiply", "[MultiArray]") {
       data.a.extent(), Op_Multiply<Scalar>());
   CudaCheckError();
 
-  data.prefetch();
+  data.sync_to_host();
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 

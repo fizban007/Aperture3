@@ -43,7 +43,7 @@ class sim_environment {
   const SimParams& params() const { return m_params; }
   // const ConfigFile& conf_file() const { return m_conf_file; }
   const Grid& grid() const { return *m_grid; }
-  const Grid& local_grid() const { return *m_grid; }
+  // const Grid& local_grid() const { return *m_grid; }
   const Quadmesh& mesh() const { return m_grid->mesh(); }
 
   const float* charges() const { return m_charges.data(); }

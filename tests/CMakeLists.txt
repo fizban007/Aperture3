@@ -9,24 +9,16 @@ add_custom_target(check)
 # add_executable(test_free_path "test_free_path.cpp")
 # target_link_libraries(test_free_path ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt Aperture)
 
-set(tests_src
-  "test.cpp"
-  # "test_AD.cpp"
-  # "test_config.cpp"
-  # "test_env.cpp"
+# add_executable(tests ${tests_src})
+add_executable(tests "test.cpp")
+target_sources(tests PRIVATE
   "test_stagger.cpp"
-  # "test_particles.cpp"
   "test_multi_array.cpp"
   "test_fields.cpp"
   "test_field_solver.cpp"
   "test_avx.cpp"
   "test_ptc_update.cpp"
-  # "test_finite_diff.cpp"
-  # "test_ffe.cpp" "test_ffe2d.cpp"
-  # "test_IC_PL.cpp"
-  # "test_pair_creation.cpp"
-  )
-add_executable(tests ${tests_src})
+)
 target_link_libraries(tests
   # PUBLIC AperCuda
   PUBLIC Aperture)
@@ -39,21 +31,20 @@ add_dependencies(check run_tests)
 
 # if(CUDA_FOUND)
 if (CMAKE_CUDA_COMPILER)
-  # set(test_fd_src
-  #   "test.cpp" "test_finite_diff.cpp")
-  add_executable(test_fd "test.cpp")
-  target_sources(test_fd PRIVATE "test_finite_diff.cpp")
-  target_link_libraries(test_fd
-    PUBLIC cuAperture
-    PUBLIC Aperture)
-  add_dependencies(check test_fd)
+  # add_executable(test_fd "test.cpp")
+  # target_sources(test_fd PRIVATE "test_finite_diff.cpp")
+  # target_link_libraries(test_fd
+  #   PUBLIC cuAperture
+  #   PUBLIC Aperture)
+  # add_dependencies(check test_fd)
 
-  set(test_cuda_src
-    "test.cu" "test_multiarray.cu" "test_env.cpp" "test_config.cpp"
-    )
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
-  add_cuda_executable(test_cuda)
+  add_executable(test_cuda "test.cu")
+  target_sources(test_cuda PRIVATE
+    "test_multiarray.cu"
+    "test_env.cpp"
+    "test_config.cpp")
   set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
     PUBLIC cuAperture

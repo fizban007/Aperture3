@@ -298,7 +298,7 @@ void
 cu_scalar_field<T>::resize(const Grid& grid) {
   this->m_grid = &grid;
   this->m_grid_size = grid.size();
-  m_array.resize(grid.extent(), m_array.devId());
+  m_array.resize(grid.extent());
 }
 
 template <typename T>

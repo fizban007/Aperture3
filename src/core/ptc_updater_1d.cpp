@@ -29,7 +29,7 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
 
   auto& ptc = data.particles;
   auto& photons = data.photons;
-  auto& mesh = m_env.grid().mesh();
+  auto& mesh = data.grid->mesh();
   if (mesh.dim() != 1) {
     Logger::print_info("Grid is not 1d, doing nothing in push");
     return;
@@ -116,7 +116,7 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
 void
 ptc_updater_1d::deposit(sim_data& data, double dt, uint32_t step) {
   auto& ptc = data.particles;
-  auto& mesh = m_env.grid().mesh();
+  auto& mesh = data.grid->mesh();
   if (mesh.dim() != 1) {
     Logger::print_info("Grid is not 1d, doing nothing in deposit");
     return;

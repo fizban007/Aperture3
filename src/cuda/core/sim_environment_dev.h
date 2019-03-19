@@ -35,7 +35,7 @@ class cu_sim_environment : public sim_environment {
   cu_sim_environment(cu_sim_environment const&) = delete;
   cu_sim_environment& operator=(cu_sim_environment const&) = delete;
 
-  void init_bg_fields(cu_sim_data& data);
+  // void init_bg_fields(cu_sim_data& data);
 
   void check_dev_mesh(Quadmesh& mesh);
   void check_dev_params(SimParams& params);
@@ -43,6 +43,9 @@ class cu_sim_environment : public sim_environment {
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
+
+  const std::vector<int>& dev_map() const { return m_dev_ids; }
+  std::vector<int>& dev_map() { return m_dev_ids; }
 
  private:
   void setup_env();
