@@ -216,13 +216,11 @@ cu_sim_environment::get_sub_guard_cells(
 }
 
 void
-cu_sim_environment::send_sub_guard_cells_left(cudaPitchedPtr p_src,
-                                              cudaPitchedPtr p_dst,
-                                              const Quadmesh& mesh_src,
-                                              const Quadmesh& mesh_dst,
-                                              int buffer_id) {
+cu_sim_environment::send_sub_guard_cells_left(
+    cu_multi_array<Scalar>& src, cu_multi_array<Scalar>& dst,
+    const Quadmesh& mesh_src, const Quadmesh& mesh_dst, int buffer_id) {
   cudaMemcpy3DParms myParms = {};
-  myParms.srcPtr = p_src;
+  myParms.srcPtr = src.data_d();
   myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
   myParms.kind = cudaMemcpyDeviceToDevice;
   if (mesh_src.dim() == 2) {
@@ -239,17 +237,25 @@ cu_sim_environment::send_sub_guard_cells_left(cudaPitchedPtr p_src,
   }
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
-  // TODO: add the addition call
+  // Add the buffer to the target
+  if (mesh_src.dim() == 2) {
+    dst.add_from(m_sub_buffer[buffer_id], Index{0, 0, 0},
+                 Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1], 0},
+                 Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
+  } else if (mesh_src.dim() == 3) {
+    dst.add_from(
+        m_sub_buffer[buffer_id], Index{0, 0, 0},
+        Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
+        Extent{mesh_dst.dims[0], mesh_dst.dims[1], mesh_dst.guard[1]});
+  }
 }
 
 void
-cu_sim_environment::send_sub_guard_cells_right(cudaPitchedPtr p_src,
-                                               cudaPitchedPtr p_dst,
-                                               const Quadmesh& mesh_src,
-                                               const Quadmesh& mesh_dst,
-                                               int buffer_id) {
+cu_sim_environment::send_sub_guard_cells_right(
+    cu_multi_array<Scalar>& src, cu_multi_array<Scalar>& dst,
+    const Quadmesh& mesh_src, const Quadmesh& mesh_dst, int buffer_id) {
   cudaMemcpy3DParms myParms = {};
-  myParms.srcPtr = p_src;
+  myParms.srcPtr = src.data_d();
   myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
   myParms.kind = cudaMemcpyDeviceToDevice;
   if (mesh_src.dim() == 2) {
@@ -259,16 +265,50 @@ cu_sim_environment::send_sub_guard_cells_right(cudaPitchedPtr p_src,
     myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
                                      mesh_src.guard[1], 1);
   } else if (mesh_src.dim() == 3) {
-    myParms.srcPos = make_cudaPos(0, 0, mesh_src.dims[2] - mesh_src.guard[2]);
-    myParms.dstPos =
-        make_cudaPos(0, 0, 0);
+    myParms.srcPos =
+        make_cudaPos(0, 0, mesh_src.dims[2] - mesh_src.guard[2]);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
     myParms.extent =
         make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
                         mesh_src.dims[1], mesh_src.guard[2]);
   }
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
-  // TODO: addition call
+  // Add the buffer to the target
+  if (mesh_src.dim() == 2) {
+    dst.add_from(m_sub_buffer[buffer_id], Index{0, 0, 0},
+                 Index{0, mesh_dst.guard[1], 0},
+                 Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
+  } else if (mesh_src.dim() == 3) {
+    dst.add_from(
+        m_sub_buffer[buffer_id], Index{0, 0, 0},
+        Index{0, 0, mesh_dst.guard[2]},
+        Extent{mesh_dst.dims[0], mesh_dst.dims[1], mesh_dst.guard[1]});
+  }
+}
+
+void
+cu_sim_environment::send_sub_guard_cells(
+    std::vector<cu_scalar_field<Scalar>>& field) {
+  if (m_dev_map.size() <= 1) return;
+  if (m_super_grid->dim() == 1) {
+    Logger::print_err("1D communication is not implemented yet!");
+  } else {
+    // Sending right to left
+    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+      send_sub_guard_cells_left(field[n].data(), field[n - 1].data(),
+                                field[n].grid().mesh(),
+                                field[n - 1].grid().mesh(), n);
+      // field[n - 1].data().add_from(m_sub_buffer[n], {0, 0, 0}, {},
+      // Extent ext)
+    }
+    // Sending left to right
+    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+      send_sub_guard_cells_right(field[n].data(), field[n + 1].data(),
+                                 field[n].grid().mesh(),
+                                 field[n + 1].grid().mesh(), n);
+    }
+  }
 }
 
 // void
