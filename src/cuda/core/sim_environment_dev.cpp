@@ -33,7 +33,7 @@ cu_sim_environment::setup_env() {
     Logger::err("No usable Cuda device found!!");
     exit(1);
   }
-  m_dev_ids.resize(n_devices);
+  m_dev_map.resize(n_devices);
   Logger::print_info("Found {} Cuda devices:", n_devices);
   for (int i = 0; i < n_devices; i++) {
     cudaDeviceProp prop;
@@ -41,13 +41,13 @@ cu_sim_environment::setup_env() {
     Logger::print_info("    Device Number: {}", i);
     Logger::print_info("    Device Name: {}", prop.name);
     Logger::print_info("    Device Total Memory: {}MiB",
-                       prop.totalGlobalMem / (1024*1024));
-    m_dev_ids[i] = i;
+                       prop.totalGlobalMem / (1024 * 1024));
+    m_dev_map[i] = i;
   }
 
   m_sub_params.resize(n_devices);
   for (int i = 0; i < n_devices; i++) {
-    int dev_id = m_dev_ids[i];
+    int dev_id = m_dev_map[i];
     CudaSafeCall(cudaSetDevice(dev_id));
 
     m_sub_params[i] = m_params;
@@ -98,6 +98,108 @@ cu_sim_environment::setup_env() {
   // m_conf_file.data().log_file);
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 }
+
+void
+cu_sim_environment::get_sub_guard_cells_left(cudaPitchedPtr p_src,
+                                             cudaPitchedPtr p_dst,
+                                             const Quadmesh& mesh_src,
+                                             const Quadmesh& mesh_dst) {
+  cudaMemcpy3DParms myParms = {};
+  myParms.srcPtr = p_src;
+  myParms.dstPtr = p_dst;
+  myParms.kind = cudaMemcpyDeviceToDevice;
+  if (mesh_src.dim() == 2) {
+    myParms.srcPos = make_cudaPos(0, mesh_src.guard[1], 0);
+    myParms.dstPos =
+        make_cudaPos(0, mesh_dst.dims[1] - mesh_dst.guard[1], 0);
+    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                                     mesh_src.guard[1], 1);
+  } else if (mesh_src.dim() == 3) {
+    myParms.srcPos = make_cudaPos(0, 0, mesh_src.guard[2]);
+    myParms.dstPos =
+        make_cudaPos(0, 0, mesh_dst.dims[2] - mesh_dst.guard[2]);
+    myParms.extent =
+        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                        mesh_src.dims[1], mesh_src.guard[2]);
+  }
+
+  CudaSafeCall(cudaMemcpy3D(&myParms));
+}
+
+void
+cu_sim_environment::get_sub_guard_cells_right(
+    cudaPitchedPtr p_src, cudaPitchedPtr p_dst,
+    const Quadmesh& mesh_src, const Quadmesh& mesh_dst) {
+  cudaMemcpy3DParms myParms = {};
+  myParms.srcPtr = p_src;
+  myParms.dstPtr = p_dst;
+  myParms.kind = cudaMemcpyDeviceToDevice;
+  if (mesh_src.dim() == 2) {
+    myParms.srcPos =
+        make_cudaPos(0, mesh_src.dims[1] - 2 * mesh_src.guard[1], 0);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
+    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                                     mesh_src.guard[1], 1);
+  } else if (mesh_src.dim() == 3) {
+    myParms.srcPos =
+        make_cudaPos(0, 0, mesh_src.dims[2] - 2 * mesh_src.guard[2]);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
+    myParms.extent =
+        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                        mesh_src.dims[1], mesh_src.guard[2]);
+  }
+
+  CudaSafeCall(cudaMemcpy3D(&myParms));
+}
+
+void
+cu_sim_environment::get_sub_guard_cells(
+    std::vector<cu_scalar_field<Scalar>>& field) {
+  if (m_dev_map.size() <= 1) return;
+  if (m_super_grid->dim() == 1) {
+    Logger::print_err("1D communication is not implemented yet!");
+  } else {
+    // Sending right to left
+    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+      get_sub_guard_cells_left(field[n].ptr(), field[n - 1].ptr(),
+                               field[n].grid().mesh(),
+                               field[n - 1].grid().mesh());
+    }
+    // Sending left to right
+    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+      get_sub_guard_cells_right(field[n].ptr(), field[n + 1].ptr(),
+                                field[n].grid().mesh(),
+                                field[n + 1].grid().mesh());
+    }
+  }
+}
+
+void
+cu_sim_environment::get_sub_guard_cells(
+    std::vector<cu_vector_field<Scalar>>& field) {
+  if (m_dev_map.size() <= 1) return;
+  if (m_super_grid->dim() == 1) {
+    Logger::print_err("1D communication is not implemented yet!");
+  } else {
+    // Sending right to left
+    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+      for (int i = 0; i < VECTOR_DIM; i++) {
+        get_sub_guard_cells_left(field[n].ptr(i), field[n - 1].ptr(i),
+                                 field[n].grid().mesh(),
+                                 field[n - 1].grid().mesh());
+      }
+    }
+    // Sending left to right
+    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+      for (int i = 0; i < VECTOR_DIM; i++) {
+        get_sub_guard_cells_right(field[n].ptr(i), field[n + 1].ptr(i),
+                                  field[n].grid().mesh(),
+                                  field[n + 1].grid().mesh());
+      }
+    }
+  }
+}
+
 // void
 // cu_sim_environment::setup_domain(int num_nodes) {
 //   int ndims = m_super_grid.dim();

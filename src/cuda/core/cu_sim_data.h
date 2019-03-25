@@ -1,8 +1,8 @@
 #ifndef _CU_SIM_DATA_H_
 #define _CU_SIM_DATA_H_
 
-#include "core/grid.h"
 #include "core/enum_types.h"
+#include "core/grid.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/particles_dev.h"
@@ -17,6 +17,15 @@ struct cu_sim_data {
   ~cu_sim_data();
 
   void initialize(const cu_sim_environment& env);
+
+  void init_grid(const cu_sim_environment& env);
+  // void init_bg_fields();
+  // void set_initial_condition(Scalar weight, int multiplicity);
+  void fill_multiplicity(Scalar weight, int multiplicity);
+  template <class Func>
+  void init_bg_B_field(int component, const Func& f);
+  template <class Func>
+  void init_bg_E_field(int component, const Func& f);
 
   const cu_sim_environment& env;
   std::vector<cu_vector_field<Scalar>> E;
@@ -39,15 +48,6 @@ struct cu_sim_data {
   double time = 0.0;
   // int devId;
   std::vector<int> dev_map;
-
-  void init_grid(const cu_sim_environment& env);
-  // void init_bg_fields();
-  // void set_initial_condition(Scalar weight, int multiplicity);
-  void fill_multiplicity(Scalar weight, int multiplicity);
-  template <class Func>
-  void init_bg_B_field(int component, const Func& f);
-  template <class Func>
-  void init_bg_E_field(int component, const Func& f);
 };
 
 }  // namespace Aperture
