@@ -119,7 +119,7 @@ sim_environment::setup_env() {
 
 void
 sim_environment::setup_domain(int num_nodes) {
-  int ndims = m_grid->dim();
+  int ndims = m_super_grid->dim();
 
   // Start to create dims from scratch
   int dims[3] = {1, 1, 1};

@@ -41,6 +41,7 @@ set(Aperture_src
   "utils/logger.cpp"
   "utils/timer.cpp"
   "utils/mpi_helper.cpp"
+  "utils/mpi_comm.cpp"
   "utils/memory.cpp"
   "utils/filesystem.cpp"
   "core/multi_array.cpp"

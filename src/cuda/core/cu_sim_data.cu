@@ -1,9 +1,9 @@
 #include "cu_sim_data.h"
-#include "cuda/grids/grid_1dgr_dev.h"
-#include "cuda/grids/grid_log_sph_dev.h"
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/grids/grid_1dgr_dev.h"
+#include "cuda/grids/grid_log_sph_dev.h"
 
 namespace Aperture {
 
@@ -101,26 +101,14 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
     CudaCheckError();
 
     auto& mesh = grid[n]->mesh();
-    particles[n].set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) * multiplicity);
+    particles[n].set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) *
+                         multiplicity);
   }
 }
 
-// void
-// cu_sim_data::init_bg_fields() {
-//   CudaSafeCall(cudaSetDevice(devId));
-//   Ebg = E;
-//   Bbg = B;
-//   Ebg.sync_to_host();
-//   Bbg.sync_to_host();
-
-//   E.assign(0.0);
-//   B.assign(0.0);
-//   E.sync_to_host();
-//   B.sync_to_host();
-// }
-
 void
 cu_sim_data::init_grid(const cu_sim_environment& env) {
+  grid.resize(dev_map.size());
   for (int n = 0; n < dev_map.size(); n++) {
     int dev_id = dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
@@ -130,14 +118,18 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
       grid[n].reset(new Grid());
     } else if (env.params().coord_system == "LogSpherical") {
       grid[n].reset(new Grid_LogSph_dev());
-    } else if (env.params().coord_system == "1DGR" && grid[n]->dim() == 1) {
+    } else if (env.params().coord_system == "1DGR" &&
+               grid[n]->dim() == 1) {
       grid[n].reset(new Grid_1dGR_dev());
     } else {
       grid[n].reset(new Grid());
     }
     grid[n]->init(env.sub_params(n));
-    Logger::print_info("Grid dimension for dev {} is {}", dev_id,
-                       grid[n]->dim());
+    auto& mesh = grid[n]->mesh();
+    Logger::print_debug("Grid dimension for dev {} is {}x{}x{}", dev_id,
+                        mesh.dims[0], mesh.dims[1], mesh.dims[2]);
+    Logger::print_debug("Grid lower are {}, {}, {}", mesh.lower[0],
+                        mesh.lower[1], mesh.lower[2]);
     if (grid[n]->mesh().delta[0] < env.params().delta_t) {
       std::cerr
           << "Grid spacing should be larger than delta_t! Aborting!"
@@ -147,5 +139,8 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
     init_dev_mesh(grid[n]->mesh());
   }
 }
+
+
+
 
 }  // namespace Aperture
