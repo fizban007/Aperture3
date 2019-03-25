@@ -145,6 +145,59 @@ map_array_binary_op_2d(cudaPitchedPtr input, cudaPitchedPtr output,
 
 template <typename T, typename BinaryOp>
 __global__ void
+map_array_binary_op(cudaPitchedPtr input, cudaPitchedPtr output,
+                    Index pos_in, Index pos_out, const Extent ext,
+                    BinaryOp op) {
+  for (int k = blockIdx.z * blockDim.z + threadIdx.z; k < ext.z;
+       k += blockDim.z * gridDim.z) {
+    char* slice_in = ((char*)input.ptr) + k * input.pitch * ext.y;
+    char* slice_out = ((char*)output.ptr) + k * output.pitch * ext.y;
+    for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
+         j += blockDim.y * gridDim.y) {
+      T* row_in = (T*)(slice_in + j * input.pitch);
+      T* row_out = (T*)(slice_out + j * output.pitch);
+      for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+           i += blockDim.x * gridDim.x) {
+        // size_t idx = i + j * ext.x + k * ext.x * ext.y;
+        // op(output[idx], input[idx]);
+        op(row_out[i], row_in[i]);
+      }
+    }
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void
+map_array_binary_op_2d(cudaPitchedPtr input, cudaPitchedPtr output,
+                       Index pos_in, Index pos_out, const Extent ext,
+                       BinaryOp op) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y; j < ext.y;
+       j += blockDim.y * gridDim.y) {
+    T* row_in = (T*)((char*)input.ptr + (j + pos_in.y) * input.pitch);
+    T* row_out =
+        (T*)((char*)output.ptr + (j + pos_out.y) * output.pitch);
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+         i += blockDim.x * gridDim.x) {
+      op(row_out[i + pos_out.x], row_in[i + pos_in.x]);
+    }
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void
+map_array_binary_op_1d(cudaPitchedPtr input, cudaPitchedPtr output,
+                       Index pos_in, Index pos_out, const Extent ext,
+                       BinaryOp op) {
+  T* row_in = (T*)input.ptr;
+  T* row_out = (T*)output.ptr;
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < ext.x;
+       i += blockDim.x * gridDim.x) {
+    op(row_out[i + pos_out.x], row_in[i + pos_in.x]);
+  }
+}
+
+template <typename T, typename BinaryOp>
+__global__ void
 map_array_binary_op(cudaPitchedPtr a, cudaPitchedPtr b,
                     cudaPitchedPtr output, const Extent ext,
                     BinaryOp op) {
