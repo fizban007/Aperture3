@@ -4,6 +4,7 @@
 #include "commandline_args.h"
 #include "config_file.h"
 #include "core/grid.h"
+#include "cuda/data/cu_multi_array.h"
 #include "cuda/data/fields_dev.h"
 #include "sim_environment.h"
 #include "sim_params.h"
@@ -68,6 +69,19 @@ class cu_sim_environment : public sim_environment {
                                  const Quadmesh& mesh_src,
                                  const Quadmesh& mesh_dst);
 
+  void send_sub_guard_cells_left(cudaPitchedPtr p_src,
+                                 cudaPitchedPtr p_dst,
+                                 const Quadmesh& mesh_src,
+                                 const Quadmesh& mesh_dst,
+                                 int buffer_id);
+
+  void send_sub_guard_cells_right(cudaPitchedPtr p_src,
+                                  cudaPitchedPtr p_dst,
+                                  const Quadmesh& mesh_src,
+                                  const Quadmesh& mesh_dst,
+                                  int buffer_id);
+
+  std::vector<cu_multi_array<Scalar>> m_sub_buffer;
   std::vector<int> m_dev_map;
   std::vector<SimParams> m_sub_params;
 };  // ----- end of class cu_sim_environment -----

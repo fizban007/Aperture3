@@ -227,6 +227,12 @@ cu_multi_array<T>::sync_to_host() {
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
 
+template <typename T>
+void
+cu_multi_array<T>::add_from(const cu_multi_array<T>& src, Index src_pos,
+                            Index pos, Extent ext) {
+}
+
 }  // namespace Aperture
 
 #endif  // _CU_MULTI_ARRAY_IMPL_H_
