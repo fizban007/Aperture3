@@ -214,7 +214,7 @@ MPICommBase::gather(const T* send_buf, int sendcount, int root) const {
   int error_code = MPI_Gather((void*)send_buf, sendcount, type, NULL, 0,
                               MPI_INT, root, _comm);
 
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 template <typename T>
@@ -227,7 +227,7 @@ MPICommBase::gather_inplace(T* recv_buf, int recvcount,
   int error_code = MPI_Gather(MPI_IN_PLACE, 0, MPI_INT, (void*)recv_buf,
                               recvcount, type, root, _comm);
 
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 template <typename T>
@@ -240,7 +240,7 @@ MPICommBase::gatherv(const T* send_buf, int sendcount, T* recv_buf,
       MPI_Gatherv((void*)send_buf, sendcount, type, (void*)recv_buf,
                   recvcounts, displs, type, root, _comm);
 
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 // this version is mostly used by non-root processes becuase in this
@@ -253,7 +253,7 @@ MPICommBase::gatherv(const T* send_buf, int sendcount, int root) const {
   int error_code = MPI_Gatherv((void*)send_buf, sendcount, type, NULL,
                                NULL, NULL, MPI_INT, root, _comm);
 
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 // this version is called by root in an in-place manner
@@ -267,7 +267,7 @@ MPICommBase::gatherv_inplace(T* recv_buf, int* recvcounts, int* displs,
       MPI_Gatherv(MPI_IN_PLACE, 0, MPI_INT, (void*)recv_buf, recvcounts,
                   displs, type, root, _comm);
 
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 }
 
 void
@@ -285,7 +285,7 @@ MPICommBase::probe(int source, int tag) const {
   MPI_Status status;
 
   int error_code = MPI_Probe(source, tag, _comm, &status);
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 
   return status;
 }
@@ -400,7 +400,7 @@ MPICommCartesian::create_cart(int ndims, int dims[], bool periodic[],
 
   int error_code =
       MPI_Cart_create(comm_tmp, _ndims, _dims, is_periodic, 1, &_comm);
-  MPI_Helper::handle_mpi_error(error_code, *this);
+  MPI_Helper::handle_mpi_error(error_code, _rank);
 
   MPI_Comm_rank(_comm, &_rank);  // need to do this after
                                  // MPI_Cart_create if reorder is true

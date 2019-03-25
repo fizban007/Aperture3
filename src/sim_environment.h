@@ -12,7 +12,7 @@
 #include <random>
 #include <string>
 // #include "utils/hdf_exporter.h"
-// #include "utils/mpi_comm.h"
+#include "utils/mpi_comm.h"
 
 namespace Aperture {
 
@@ -30,8 +30,9 @@ class sim_environment {
 
   void setup_domain(int num_nodes);
   void setup_domain(int dimx, int dimy, int dimz = 1);
-  void setup_local_grid(Grid& local_grid, const Grid& super_grid,
-                        const domain_info& info);
+  // void setup_local_grid(Grid& local_grid, const Grid& super_grid,
+  //                       const domain_info& info);
+  void setup_local_grid();
 
   /// generate a random number between 0 and 1, useful for setting up
   /// things
@@ -43,7 +44,8 @@ class sim_environment {
   const SimParams& params() const { return m_params; }
   // const ConfigFile& conf_file() const { return m_conf_file; }
   const Grid& grid() const { return *m_grid; }
-  // const Grid& local_grid() const { return *m_grid; }
+  const Grid& super_grid() const { return *m_super_grid; }
+  const Grid& local_grid() const { return *m_grid; }
   const Quadmesh& mesh() const { return m_grid->mesh(); }
 
   const float* charges() const { return m_charges.data(); }
@@ -53,7 +55,6 @@ class sim_environment {
   float masse(int sp) const { return m_masses[sp]; }
   float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
-  // const Grid& super_grid() const { return m_super_grid; }
   // MetricType metric_type() const { return m_metric_type; }
 
   // DataExporter& exporter() { return *m_exporter; }
@@ -79,6 +80,7 @@ class sim_environment {
   ConfigFile m_conf_file;
 
   std::unique_ptr<Grid> m_grid;
+  std::unique_ptr<Grid> m_super_grid;
   // Grid m_local_grid, m_local_grid_dual;
   // Grid m_super_grid;
   // Grid m_data_grid, m_data_super_grid;
@@ -87,7 +89,7 @@ class sim_environment {
   domain_info m_domain_info;
   // BoundaryConditions m_bc;
 
-  // std::unique_ptr<MPIComm> m_comm;
+  std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;
   // std::unique_ptr<InitialCondition> m_ic;
   std::default_random_engine m_generator;

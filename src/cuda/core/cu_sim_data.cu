@@ -135,7 +135,7 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
     } else {
       grid[n].reset(new Grid());
     }
-    grid[n]->init(env.params());
+    grid[n]->init(env.sub_params(n));
     Logger::print_info("Grid dimension for dev {} is {}", dev_id,
                        grid[n]->dim());
     if (grid[n]->mesh().delta[0] < env.params().delta_t) {

@@ -46,11 +46,14 @@ class cu_sim_environment : public sim_environment {
 
   const std::vector<int>& dev_map() const { return m_dev_ids; }
   std::vector<int>& dev_map() { return m_dev_ids; }
+  SimParams& sub_params(int i) { return m_sub_params[i]; }
+  const SimParams& sub_params(int i) const { return m_sub_params[i]; }
 
  private:
   void setup_env();
 
   std::vector<int> m_dev_ids;
+  std::vector<SimParams> m_sub_params;
 };  // ----- end of class cu_sim_environment -----
 }  // namespace Aperture
 

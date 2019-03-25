@@ -45,19 +45,20 @@ cu_sim_environment::setup_env() {
     m_dev_ids[i] = i;
   }
 
-  // if (m_params.coord_system == "LogSpherical") {
-  //   m_grid.reset(new Grid_LogSph_dev());
-  //   m_grid->init(m_params);
-  // } else if (m_params.coord_system == "1DGR" && m_grid->dim() == 1) {
-  //   m_grid.reset(new Grid_1dGR_dev());
-  //   m_grid->init(m_params);
-  // }
-
+  m_sub_params.resize(n_devices);
   for (int i = 0; i < n_devices; i++) {
     int dev_id = m_dev_ids[i];
     CudaSafeCall(cudaSetDevice(dev_id));
-    
-    init_dev_params(m_params);
+
+    m_sub_params[i] = m_params;
+
+    // TODO: Reprocess the params here!
+    int d = m_grid->dim() - 1;
+    m_sub_params[i].N[d] /= n_devices;
+    m_sub_params[i].size[d] /= n_devices;
+    m_sub_params[i].lower[d] += i * m_sub_params[i].size[d];
+
+    init_dev_params(m_sub_params[i]);
     // init_dev_mesh(m_grid->mesh());
 
     init_dev_charges(m_charges.data());
