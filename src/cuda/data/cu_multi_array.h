@@ -1,8 +1,8 @@
 #ifndef _CU_MULTI_ARRAY_H_
 #define _CU_MULTI_ARRAY_H_
 
-#include "core/vec3.h"
 #include "core/multi_array.h"
+#include "core/vec3.h"
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
@@ -105,6 +105,10 @@ class cu_multi_array : public multi_array<T> {
 
   /// Resize the array according to an \ref Extent object.
   void resize(Extent extent);
+
+  /// Add a portion of another multi_array to this one
+  void add_from(const cu_multi_array<T>& src, Index src_pos, Index pos,
+                Extent ext);
 
   /// Sync the content between host and device
   // void sync_to_device(int devId);

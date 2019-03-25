@@ -46,6 +46,7 @@ cu_sim_environment::setup_env() {
   }
 
   m_sub_params.resize(n_devices);
+  // m_sub_buffer.resize(n_devices);
   for (int i = 0; i < n_devices; i++) {
     int dev_id = m_dev_map[i];
     CudaSafeCall(cudaSetDevice(dev_id));
@@ -63,6 +64,20 @@ cu_sim_environment::setup_env() {
 
     init_dev_charges(m_charges.data());
     init_dev_masses(m_masses.data());
+
+    if (m_super_grid->dim() == 1) {
+      m_sub_buffer.emplace_back(Extent{m_sub_params[i].guard[0], 1, 1});
+    } else if (m_super_grid->dim() == 2) {
+      m_sub_buffer.emplace_back(
+          Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+                 m_sub_params[i].guard[1], 1});
+    } else if (m_super_grid->dim() == 3) {
+      m_sub_buffer.emplace_back(Extent{
+          m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+          m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
+          m_sub_params[i].guard[2],
+      });
+    }
   }
 
   // Obtain the metric type and setup the grid mesh
@@ -198,6 +213,62 @@ cu_sim_environment::get_sub_guard_cells(
       }
     }
   }
+}
+
+void
+cu_sim_environment::send_sub_guard_cells_left(cudaPitchedPtr p_src,
+                                              cudaPitchedPtr p_dst,
+                                              const Quadmesh& mesh_src,
+                                              const Quadmesh& mesh_dst,
+                                              int buffer_id) {
+  cudaMemcpy3DParms myParms = {};
+  myParms.srcPtr = p_src;
+  myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
+  myParms.kind = cudaMemcpyDeviceToDevice;
+  if (mesh_src.dim() == 2) {
+    myParms.srcPos = make_cudaPos(0, 0, 0);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
+    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                                     mesh_src.guard[1], 1);
+  } else if (mesh_src.dim() == 3) {
+    myParms.srcPos = make_cudaPos(0, 0, 0);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
+    myParms.extent =
+        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                        mesh_src.dims[1], mesh_src.guard[2]);
+  }
+
+  CudaSafeCall(cudaMemcpy3D(&myParms));
+  // TODO: add the addition call
+}
+
+void
+cu_sim_environment::send_sub_guard_cells_right(cudaPitchedPtr p_src,
+                                               cudaPitchedPtr p_dst,
+                                               const Quadmesh& mesh_src,
+                                               const Quadmesh& mesh_dst,
+                                               int buffer_id) {
+  cudaMemcpy3DParms myParms = {};
+  myParms.srcPtr = p_src;
+  myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
+  myParms.kind = cudaMemcpyDeviceToDevice;
+  if (mesh_src.dim() == 2) {
+    myParms.srcPos =
+        make_cudaPos(0, mesh_src.dims[1] - mesh_src.guard[1], 0);
+    myParms.dstPos = make_cudaPos(0, 0, 0);
+    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                                     mesh_src.guard[1], 1);
+  } else if (mesh_src.dim() == 3) {
+    myParms.srcPos = make_cudaPos(0, 0, mesh_src.dims[2] - mesh_src.guard[2]);
+    myParms.dstPos =
+        make_cudaPos(0, 0, 0);
+    myParms.extent =
+        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+                        mesh_src.dims[1], mesh_src.guard[2]);
+  }
+
+  CudaSafeCall(cudaMemcpy3D(&myParms));
+  // TODO: addition call
 }
 
 // void
