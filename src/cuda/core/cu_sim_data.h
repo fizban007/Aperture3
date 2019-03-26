@@ -27,6 +27,8 @@ struct cu_sim_data {
   template <class Func>
   void init_bg_E_field(int component, const Func& f);
 
+  void send_particles();
+
   const cu_sim_environment& env;
   std::vector<cu_vector_field<Scalar>> E;
   std::vector<cu_vector_field<Scalar>> B;
