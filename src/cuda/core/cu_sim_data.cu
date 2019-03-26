@@ -41,6 +41,73 @@ fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
   }
 }
 
+__global__ void
+send_particles(particle_data ptc_src, size_t num_src,
+               particle_data ptc_dst, size_t num_dst, int* ptc_sent,
+               int dim, int dir) {
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
+       i += blockDim.x * gridDim.x) {
+    uint32_t cell = ptc_src.cell[i];
+    int c;
+    if (dim == 0) {
+      c = dev_mesh.get_c1(cell);
+    } else if (dim == 1) {
+      c = dev_mesh.get_c2(cell);
+    } else if (dim == 2) {
+      c = dev_mesh.get_c3(cell);
+    }
+    if ((dir == 0 && c < dev_mesh.guard[dim]) ||
+        (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim])) {
+      size_t pos = atomicAdd(ptc_sent, 1) + num_dst;
+      ptc_src.cell[i] = MAX_CELL;
+      ptc_dst.cell[pos] = cell;
+      ptc_dst.x1[pos] = ptc_src.x1[i];
+      ptc_dst.x2[pos] = ptc_src.x2[i];
+      ptc_dst.x3[pos] = ptc_src.x3[i];
+      ptc_dst.p1[pos] = ptc_src.p1[i];
+      ptc_dst.p2[pos] = ptc_src.p2[i];
+      ptc_dst.p3[pos] = ptc_src.p3[i];
+      ptc_dst.E[pos] = ptc_src.E[i];
+      ptc_dst.weight[pos] = ptc_src.weight[i];
+      ptc_dst.flag[pos] = ptc_src.flag[i];
+    }
+  }
+}
+
+__global__ void
+send_photons(photon_data ptc_src, size_t num_src,
+               photon_data ptc_dst, size_t num_dst, int* ptc_sent,
+               int dim, int dir) {
+  for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
+       i += blockDim.x * gridDim.x) {
+    uint32_t cell = ptc_src.cell[i];
+    int c;
+    if (dim == 0) {
+      c = dev_mesh.get_c1(cell);
+    } else if (dim == 1) {
+      c = dev_mesh.get_c2(cell);
+    } else if (dim == 2) {
+      c = dev_mesh.get_c3(cell);
+    }
+    if ((dir == 0 && c < dev_mesh.guard[dim]) ||
+        (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim])) {
+      size_t pos = atomicAdd(ptc_sent, 1) + num_dst;
+      ptc_src.cell[i] = MAX_CELL;
+      ptc_dst.cell[pos] = cell;
+      ptc_dst.x1[pos] = ptc_src.x1[i];
+      ptc_dst.x2[pos] = ptc_src.x2[i];
+      ptc_dst.x3[pos] = ptc_src.x3[i];
+      ptc_dst.p1[pos] = ptc_src.p1[i];
+      ptc_dst.p2[pos] = ptc_src.p2[i];
+      ptc_dst.p3[pos] = ptc_src.p3[i];
+      ptc_dst.E[pos] = ptc_src.E[i];
+      ptc_dst.weight[pos] = ptc_src.weight[i];
+      ptc_dst.path_left[pos] = ptc_src.path_left[i];
+      ptc_dst.flag[pos] = ptc_src.flag[i];
+    }
+  }
+}
+
 }  // namespace Kernels
 
 cu_sim_data::cu_sim_data(const cu_sim_environment& e)
@@ -140,7 +207,78 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
   }
 }
 
-
-
+void
+cu_sim_data::send_particles() {
+  std::vector<int*> ptc_sent_left(dev_map.size());
+  std::vector<int*> ptc_sent_right(dev_map.size());
+  std::vector<int*> ph_sent_left(dev_map.size());
+  std::vector<int*> ph_sent_right(dev_map.size());
+  for (int i = 0; i < dev_map.size(); i++) {
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    CudaSafeCall(cudaMallocManaged(&(ptc_sent_left[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ptc_sent_right[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ph_sent_left[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ph_sent_right[i]), sizeof(int)));
+  }
+  for (int i = 0; i < dev_map.size(); i++) {
+    if (particles[i].number() == 0) continue;
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    if (i > 0) {
+      // Send particles left
+      Kernels::send_particles<<<256, 512>>>(
+          particles[i].data(), particles[i].number(),
+          particles[i - 1].data(), particles[i - 1].number(),
+          ptc_sent_left[i], grid[0]->dim() - 1, 0);
+      CudaCheckError();
+    }
+    if (i < dev_map.size() - 1) {
+      // Send particles right
+      Kernels::send_particles<<<256, 512>>>(
+          particles[i].data(), particles[i].number(),
+          particles[i + 1].data(), particles[i + 1].number(),
+          ptc_sent_right[i], grid[0]->dim() - 1, 1);
+      CudaCheckError();
+    }
+  }
+  for (int i = 0; i < dev_map.size(); i++) {
+    if (photons[i].number() == 0) continue;
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    if (i > 0) {
+      // Send particles left
+      Kernels::send_photons<<<256, 512>>>(
+          photons[i].data(), photons[i].number(),
+          photons[i - 1].data(), photons[i - 1].number(),
+          ph_sent_left[i], grid[0]->dim() - 1, 0);
+      CudaCheckError();
+    }
+    if (i < dev_map.size() - 1) {
+      // Send particles right
+      Kernels::send_photons<<<256, 512>>>(
+          photons[i].data(), photons[i].number(),
+          photons[i + 1].data(), photons[i + 1].number(),
+          ph_sent_right[i], grid[0]->dim() - 1, 1);
+      CudaCheckError();
+    }
+  }
+  for (int i = 0; i < dev_map.size(); i++) {
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    CudaSafeCall(cudaDeviceSynchronize());
+    if (i > 0) {
+      particles[i - 1].set_num(particles[i - 1].number() + *ptc_sent_left[i]);
+      photons[i - 1].set_num(photons[i - 1].number() + *ph_sent_left[i]);
+    }
+    if (i < dev_map.size() - 1) {
+      particles[i + 1].set_num(particles[i + 1].number() + *ptc_sent_right[i]);
+      photons[i + 1].set_num(photons[i + 1].number() + *ph_sent_right[i]);
+    }
+  }
+  for (int i = 0; i < dev_map.size(); i++) {
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    CudaSafeCall(cudaFree(ptc_sent_left[i]));
+    CudaSafeCall(cudaFree(ptc_sent_right[i]));
+    CudaSafeCall(cudaFree(ph_sent_left[i]));
+    CudaSafeCall(cudaFree(ph_sent_right[i]));
+  }
+}
 
 }  // namespace Aperture
