@@ -303,8 +303,6 @@ cu_sim_environment::send_sub_guard_cells(
       send_sub_guard_cells_left(field[n].data(), field[n - 1].data(),
                                 field[n].grid().mesh(),
                                 field[n - 1].grid().mesh(), n);
-      // field[n - 1].data().add_from(m_sub_buffer[n], {0, 0, 0}, {},
-      // Extent ext)
     }
     // Sending left to right
     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
