@@ -239,10 +239,12 @@ cu_sim_environment::send_sub_guard_cells_left(
   CudaSafeCall(cudaMemcpy3D(&myParms));
   // Add the buffer to the target
   if (mesh_src.dim() == 2) {
+    CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
     dst.add_from(m_sub_buffer[buffer_id], Index{0, 0, 0},
                  Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1], 0},
                  Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
   } else if (mesh_src.dim() == 3) {
+    CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
     dst.add_from(
         m_sub_buffer[buffer_id], Index{0, 0, 0},
         Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
@@ -276,10 +278,12 @@ cu_sim_environment::send_sub_guard_cells_right(
   CudaSafeCall(cudaMemcpy3D(&myParms));
   // Add the buffer to the target
   if (mesh_src.dim() == 2) {
+    CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
     dst.add_from(m_sub_buffer[buffer_id], Index{0, 0, 0},
                  Index{0, mesh_dst.guard[1], 0},
                  Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
   } else if (mesh_src.dim() == 3) {
+    CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
     dst.add_from(
         m_sub_buffer[buffer_id], Index{0, 0, 0},
         Index{0, 0, mesh_dst.guard[2]},
