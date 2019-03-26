@@ -56,7 +56,7 @@ struct sample_gamma_dist {
 
   template <typename F>
   sample_gamma_dist(const F& f) : dist_(500), gammas_(500) {
-    // g_min = f.emin();
+    g_min = f.emin();
     dg_ = (std::log(g_max) - std::log(g_min)) / (dist_.size() - 1.0);
     for (int n = 0; n < dist_.size(); n++) {
       gammas_[n] = std::exp(std::log(g_min) + n * dg_);
@@ -141,7 +141,7 @@ main(int argc, char* argv[]) {
   cu_array<Scalar> eph_M(N_samples);
   cu_array<Scalar> eph_PL1(N_samples);
   cu_array<Scalar> eph_PL2(N_samples);
-  
+
   sample_gamma_dist DM(maxwellian(10.0));
   sample_gamma_dist DP1(power_law(1.0, 10.0));
   sample_gamma_dist DP2(power_law(2.0, 10.0));
@@ -213,5 +213,22 @@ main(int argc, char* argv[]) {
   DataSet data_e_PL2 = datafile.createDataSet<Scalar>(
       "test_e_PL2", DataSpace::From(test_e_PL2));
   data_e_PL2.write(test_e_PL2);
+
+  cu_array<Scalar> g_mono(N_samples);
+  cu_array<Scalar> eph_mono(N_samples);
+  std::vector<Scalar> test_mono(N_samples);
+  for (int n = 1; n <= 5; n++) {
+    g_mono.assign_dev(pow(10.0, n));
+    ic.generate_photon_energies(eph_mono, g_mono);
+    cudaDeviceSynchronize();
+    eph_mono.sync_to_host();
+    for (uint32_t i = 0; i < N_samples; i++) {
+      test_mono[i] = eph_mono[i];
+    }
+    DataSet data_mono = datafile.createDataSet<Scalar>(
+        fmt::format("mono1e{}", n), DataSpace::From(test_mono));
+    data_mono.write(test_mono);
+  }
+
   return 0;
 }
