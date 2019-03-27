@@ -52,6 +52,12 @@ Photons::Photons(const cu_sim_environment& env)
 Photons::Photons(const SimParams& params)
     : particle_base_dev<single_photon_t>(params.max_photon_number) {}
 
+// Photons::Photons(const Photons& other)
+//     : particle_base_dev<single_photon_t>(other) {}
+
+Photons::Photons(Photons&& other)
+    : particle_base_dev<single_photon_t>(std::move(other)) {}
+
 Photons::~Photons() {}
 
 void
@@ -67,6 +73,7 @@ void
 Photons::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
                 Scalar path_left, int cell, Scalar weight,
                 uint32_t flag) {
+  CudaSafeCall(cudaSetDevice(m_devId));
   Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, path_left, cell,
                                 weight, flag);
   CudaCheckError();

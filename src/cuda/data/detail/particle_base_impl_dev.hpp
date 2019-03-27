@@ -133,6 +133,7 @@ template <typename ParticleClass>
 particle_base_dev<ParticleClass>::particle_base_dev(std::size_t max_num)
     : particle_interface(max_num) {
   std::cout << "New particle array with size " << max_num << std::endl;
+  CudaSafeCall(cudaGetDevice(&m_devId));
   alloc_mem(max_num);
   // auto alloc = alloc_cuda_managed(max_num);
   auto alloc = alloc_cuda_device(max_num);
@@ -149,6 +150,8 @@ particle_base_dev<ParticleClass>::particle_base_dev(
   std::size_t n = other.m_size;
   m_size = n;
   m_number = other.m_number;
+  m_devId = other.m_devId;
+  CudaSafeCall(cudaSetDevice(m_devId));
   // m_sorted = other.m_sorted;
 
   alloc_mem(n);
@@ -167,6 +170,8 @@ particle_base_dev<ParticleClass>::particle_base_dev(
     particle_base_dev<ParticleClass>&& other) {
   m_size = other.m_size;
   m_number = other.m_number;
+  m_devId = other.m_devId;
+  CudaSafeCall(cudaSetDevice(m_devId));
   // m_sorted = other.m_sorted;
 
   // m_data_ptr = other.m_data_ptr;
@@ -186,6 +191,7 @@ particle_base_dev<ParticleClass>::particle_base_dev(
 
 template <typename ParticleClass>
 particle_base_dev<ParticleClass>::~particle_base_dev() {
+  CudaSafeCall(cudaSetDevice(m_devId));
   free_mem();
   free_cuda()(m_index);
   free_cuda()(m_tmp_data_ptr);
@@ -213,6 +219,7 @@ particle_base_dev<ParticleClass>::initialize() {
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::resize(std::size_t max_num) {
+  CudaSafeCall(cudaSetDevice(m_devId));
   m_size = max_num;
   if (m_number > max_num) m_number = max_num;
   free_mem();
@@ -234,9 +241,10 @@ particle_base_dev<ParticleClass>::resize(std::size_t max_num) {
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::erase(std::size_t pos,
-                                    std::size_t amount) {
+                                        std::size_t amount) {
+  CudaSafeCall(cudaSetDevice(m_devId));
   if (pos + amount > m_size) amount = m_size - pos;
-  std::cout << "Erasing from " << pos << " for " << amount
+  std::cout << "Erasing from index " << pos << " for " << amount
             << " number of particles" << std::endl;
 
   auto ptc = ParticleClass{};
@@ -288,6 +296,7 @@ void
 particle_base_dev<ParticleClass>::copy_from(
     const particle_base_dev<ParticleClass>& other, std::size_t num,
     std::size_t src_pos, std::size_t dest_pos) {
+  CudaSafeCall(cudaSetDevice(m_devId));
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_size) num = m_size - dest_pos;
   for_each_arg(m_data, other.m_data,
@@ -334,6 +343,7 @@ particle_base_dev<ParticleClass>::copy_from(
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::sort_by_cell() {
+  CudaSafeCall(cudaSetDevice(m_devId));
   // Generate particle index array
   auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
   auto ptr_idx = thrust::device_pointer_cast(m_index);
@@ -714,6 +724,7 @@ particle_base_dev<ParticleClass>::rearrange_arrays(
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::clear_guard_cells() {
+  CudaSafeCall(cudaSetDevice(m_devId));
   erase_ptc_in_guard_cells(m_data.cell, m_number);
 }
 

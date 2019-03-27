@@ -135,7 +135,7 @@ class cu_multi_array : public multi_array<T> {
 
  private:
   cudaPitchedPtr _data_d;  ///< Pointer to the data stored on the GPU
-  // int _devId = 0;  ///< Id of the GPU where the memory is allocated
+  int _devId = 0;  ///< Id of the GPU where the memory is allocated
 
 };  // ----- end of class multi_array -----
 
