@@ -88,7 +88,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/data/cu_multi_array.cu"
     "cuda/grids/grid_log_sph_dev.cpp"
     "cuda/grids/grid_1dgr_dev.cpp"
-    # "cuda/core/field_solver_log_sph.cu"
+    "cuda/core/field_solver_log_sph.cu"
     # "cuda/core/field_solver_1dgr.cu"
     "cuda/core/sim_environment_dev.cpp"
     "cuda/core/cu_sim_data.cu"

@@ -55,6 +55,7 @@ cu_sim_environment::setup_env() {
   }
 
   m_sub_params.resize(n_devices);
+  m_boundary_info.resize(n_devices);
   // m_sub_buffer.resize(n_devices);
   for (int i = 0; i < n_devices; i++) {
     int dev_id = m_dev_map[i];
@@ -67,7 +68,6 @@ cu_sim_environment::setup_env() {
 
     m_sub_params[i] = m_params;
 
-    // TODO: Reprocess the params here!
     int d = m_grid->dim() - 1;
     m_sub_params[i].N[d] /= n_devices;
     m_sub_params[i].size[d] /= n_devices;
@@ -91,6 +91,24 @@ cu_sim_environment::setup_env() {
           m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
           m_sub_params[i].guard[2],
       });
+    }
+
+    // Process boundary info
+    int highest_dim = m_domain_info.dim - 1;
+    for (int dim = 0; dim < highest_dim; dim++) {
+      m_boundary_info[i][dim * 2] = m_domain_info.is_boundary[dim * 2];
+      m_boundary_info[i][dim * 2 + 1] =
+          m_domain_info.is_boundary[dim * 2 + 1];
+    }
+    if (i == 0) {
+      m_boundary_info[i][highest_dim * 2] =
+          m_domain_info.is_boundary[highest_dim * 2];
+    } else if (i == n_devices - 1) {
+      m_boundary_info[i][highest_dim * 2 + 1] =
+          m_domain_info.is_boundary[highest_dim * 2 + 1];
+    } else {
+      m_boundary_info[i][highest_dim * 2] =
+          m_boundary_info[i][highest_dim * 2 + 1] = false;
     }
   }
 
@@ -133,7 +151,7 @@ cu_sim_environment::get_sub_guard_cells_left(cudaPitchedPtr p_src,
                                              cudaPitchedPtr p_dst,
                                              const Quadmesh& mesh_src,
                                              const Quadmesh& mesh_dst,
-                                             int src_dev, int dst_dev) {
+                                             int src_dev, int dst_dev) const {
   cudaMemcpy3DPeerParms myParms = {};
   myParms.srcPtr = p_src;
   myParms.dstPtr = p_dst;
@@ -164,7 +182,7 @@ cu_sim_environment::get_sub_guard_cells_right(cudaPitchedPtr p_src,
                                               const Quadmesh& mesh_src,
                                               const Quadmesh& mesh_dst,
                                               int src_dev,
-                                              int dst_dev) {
+                                              int dst_dev) const {
   cudaMemcpy3DPeerParms myParms = {};
   myParms.srcPtr = p_src;
   myParms.dstPtr = p_dst;
@@ -191,7 +209,7 @@ cu_sim_environment::get_sub_guard_cells_right(cudaPitchedPtr p_src,
 
 void
 cu_sim_environment::get_sub_guard_cells(
-    std::vector<cu_scalar_field<Scalar>>& field) {
+    std::vector<cu_scalar_field<Scalar>>& field) const {
   if (m_dev_map.size() <= 1) return;
   if (m_super_grid->dim() == 1) {
     Logger::print_err("1D communication is not implemented yet!");
@@ -215,7 +233,7 @@ cu_sim_environment::get_sub_guard_cells(
 
 void
 cu_sim_environment::get_sub_guard_cells(
-    std::vector<cu_vector_field<Scalar>>& field) {
+    std::vector<cu_vector_field<Scalar>>& field) const {
   if (m_dev_map.size() <= 1) return;
   if (m_super_grid->dim() == 1) {
     Logger::print_err("1D communication is not implemented yet!");
@@ -245,7 +263,7 @@ void
 cu_sim_environment::send_sub_guard_cells_left(
     cu_multi_array<Scalar>& src, cu_multi_array<Scalar>& dst,
     const Quadmesh& mesh_src, const Quadmesh& mesh_dst, int buffer_id,
-    int src_dev, int dst_dev) {
+    int src_dev, int dst_dev) const {
   cudaMemcpy3DPeerParms myParms = {};
   myParms.srcPtr = src.data_d();
   myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
@@ -285,7 +303,7 @@ void
 cu_sim_environment::send_sub_guard_cells_right(
     cu_multi_array<Scalar>& src, cu_multi_array<Scalar>& dst,
     const Quadmesh& mesh_src, const Quadmesh& mesh_dst, int buffer_id,
-    int src_dev, int dst_dev) {
+    int src_dev, int dst_dev) const {
   cudaMemcpy3DPeerParms myParms = {};
   myParms.srcPtr = src.data_d();
   myParms.dstPtr = m_sub_buffer[buffer_id].data_d();
@@ -325,7 +343,7 @@ cu_sim_environment::send_sub_guard_cells_right(
 
 void
 cu_sim_environment::send_sub_guard_cells(
-    std::vector<cu_scalar_field<Scalar>>& field) {
+    std::vector<cu_scalar_field<Scalar>>& field) const {
   if (m_dev_map.size() <= 1) return;
   if (m_super_grid->dim() == 1) {
     Logger::print_err("1D communication is not implemented yet!");
@@ -349,7 +367,7 @@ cu_sim_environment::send_sub_guard_cells(
 
 void
 cu_sim_environment::send_sub_guard_cells(
-    std::vector<cu_vector_field<Scalar>>& field) {
+    std::vector<cu_vector_field<Scalar>>& field) const {
   if (m_dev_map.size() <= 1) return;
   if (m_super_grid->dim() == 1) {
     Logger::print_err("1D communication is not implemented yet!");
