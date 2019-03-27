@@ -4,6 +4,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/grids/grid_log_sph_dev.h"
+#include "cuda/utils/iterate_devices.h"
 
 namespace Aperture {
 
@@ -48,19 +49,22 @@ send_particles(particle_data ptc_src, size_t num_src,
   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
        i += blockDim.x * gridDim.x) {
     uint32_t cell = ptc_src.cell[i];
-    int c;
+    int c, delta_cell;
     if (dim == 0) {
       c = dev_mesh.get_c1(cell);
+      delta_cell = dev_mesh.reduced_dim(0);
     } else if (dim == 1) {
       c = dev_mesh.get_c2(cell);
+      delta_cell = dev_mesh.reduced_dim(1) * dev_mesh.dims[0];
     } else if (dim == 2) {
       c = dev_mesh.get_c3(cell);
+      delta_cell = dev_mesh.reduced_dim(2) * dev_mesh.dims[0] * dev_mesh.dims[1];
     }
     if ((dir == 0 && c < dev_mesh.guard[dim]) ||
         (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim])) {
       size_t pos = atomicAdd(ptc_sent, 1) + num_dst;
       ptc_src.cell[i] = MAX_CELL;
-      ptc_dst.cell[pos] = cell;
+      ptc_dst.cell[pos] = cell + (dir == 0 ? 1 : -1) * delta_cell;
       ptc_dst.x1[pos] = ptc_src.x1[i];
       ptc_dst.x2[pos] = ptc_src.x2[i];
       ptc_dst.x3[pos] = ptc_src.x3[i];
@@ -75,9 +79,8 @@ send_particles(particle_data ptc_src, size_t num_src,
 }
 
 __global__ void
-send_photons(photon_data ptc_src, size_t num_src,
-               photon_data ptc_dst, size_t num_dst, int* ptc_sent,
-               int dim, int dir) {
+send_photons(photon_data ptc_src, size_t num_src, photon_data ptc_dst,
+             size_t num_dst, int* ptc_sent, int dim, int dir) {
   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
        i += blockDim.x * gridDim.x) {
     uint32_t cell = ptc_src.cell[i];
@@ -113,7 +116,7 @@ send_photons(photon_data ptc_src, size_t num_src,
 cu_sim_data::cu_sim_data(const cu_sim_environment& e)
     : env(e), dev_map(e.dev_map()) {
   num_species = env.params().num_species;
-  Rho.resize(dev_map.size());
+  Rho.resize(num_species);
   initialize(e);
 }
 
@@ -127,27 +130,43 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
     // structure
     int dev_id = dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
+    Logger::print_debug("using device {}", dev_id);
+    auto& mesh = grid[n]->mesh();
+    Logger::print_debug("Mesh dims are {}x{}x{}", mesh.dims[0],
+                        mesh.dims[1], mesh.dims[2]);
     E.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize E");
     E[n].initialize();
     B.emplace_back(*grid[n]);
     B[n].set_field_type(FieldType::B);
+    // Logger::print_debug("initialize B");
     B[n].initialize();
     Ebg.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize Ebg");
     Ebg[n].initialize();
     Bbg.emplace_back(*grid[n]);
+    Bbg[n].set_field_type(FieldType::B);
+    // Logger::print_debug("initialize Bbg");
     Bbg[n].initialize();
     J.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize J");
     J[n].initialize();
     flux.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize flux");
     flux[n].initialize();
 
     for (int i = 0; i < num_species; i++) {
-      Rho[n].emplace_back(*grid[n]);
-      Rho[n][i].initialize();
-      Rho[n][i].sync_to_host();
+      Rho[i].emplace_back(*grid[n]);
+      // Logger::print_debug("initialize Rho[{}]", i);
+      Rho[i][n].initialize();
+      Rho[i][n].sync_to_host();
     }
 
     init_dev_bg_fields(Ebg[n], Bbg[n]);
+
+    particles.emplace_back(env.sub_params(n).max_ptc_number);
+    photons.emplace_back(env.sub_params(n).max_photon_number);
+    // Logger::print_debug("synchronizing the device");
   }
 
   for (int n = 0; n < dev_map.size(); n++) {
@@ -246,17 +265,17 @@ cu_sim_data::send_particles() {
     if (i > 0) {
       // Send particles left
       Kernels::send_photons<<<256, 512>>>(
-          photons[i].data(), photons[i].number(),
-          photons[i - 1].data(), photons[i - 1].number(),
-          ph_sent_left[i], grid[0]->dim() - 1, 0);
+          photons[i].data(), photons[i].number(), photons[i - 1].data(),
+          photons[i - 1].number(), ph_sent_left[i], grid[0]->dim() - 1,
+          0);
       CudaCheckError();
     }
     if (i < dev_map.size() - 1) {
       // Send particles right
       Kernels::send_photons<<<256, 512>>>(
-          photons[i].data(), photons[i].number(),
-          photons[i + 1].data(), photons[i + 1].number(),
-          ph_sent_right[i], grid[0]->dim() - 1, 1);
+          photons[i].data(), photons[i].number(), photons[i + 1].data(),
+          photons[i + 1].number(), ph_sent_right[i], grid[0]->dim() - 1,
+          1);
       CudaCheckError();
     }
   }
@@ -264,12 +283,16 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaSetDevice(dev_map[i]));
     CudaSafeCall(cudaDeviceSynchronize());
     if (i > 0) {
-      particles[i - 1].set_num(particles[i - 1].number() + *ptc_sent_left[i]);
-      photons[i - 1].set_num(photons[i - 1].number() + *ph_sent_left[i]);
+      particles[i - 1].set_num(particles[i - 1].number() +
+                               *ptc_sent_left[i]);
+      photons[i - 1].set_num(photons[i - 1].number() +
+                             *ph_sent_left[i]);
     }
     if (i < dev_map.size() - 1) {
-      particles[i + 1].set_num(particles[i + 1].number() + *ptc_sent_right[i]);
-      photons[i + 1].set_num(photons[i + 1].number() + *ph_sent_right[i]);
+      particles[i + 1].set_num(particles[i + 1].number() +
+                               *ptc_sent_right[i]);
+      photons[i + 1].set_num(photons[i + 1].number() +
+                             *ph_sent_right[i]);
     }
   }
   for (int i = 0; i < dev_map.size(); i++) {

@@ -25,7 +25,7 @@ class cu_scalar_field : public field_base {
   // Constructors and destructor
   cu_scalar_field();
   cu_scalar_field(const grid_type &grid, Stagger stagger = Stagger(0));
-  cu_scalar_field(const self_type &field);
+  cu_scalar_field(const self_type &field) = delete;
   cu_scalar_field(self_type &&field);
   virtual ~cu_scalar_field();
 
@@ -95,7 +95,7 @@ class cu_vector_field : public field_base {
   /// Constructors and Destructor
   cu_vector_field();
   cu_vector_field(const grid_type &grid);
-  cu_vector_field(const self_type &field);
+  cu_vector_field(const self_type &field) = delete;
   cu_vector_field(self_type &&field);
   virtual ~cu_vector_field();
 

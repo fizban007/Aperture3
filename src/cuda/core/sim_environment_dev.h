@@ -63,23 +63,27 @@ class cu_sim_environment : public sim_environment {
   void get_sub_guard_cells_left(cudaPitchedPtr p_src,
                                 cudaPitchedPtr p_dst,
                                 const Quadmesh& mesh_src,
-                                const Quadmesh& mesh_dst);
+                                const Quadmesh& mesh_dst, int src_dev,
+                                int dst_dev);
   void get_sub_guard_cells_right(cudaPitchedPtr p_src,
                                  cudaPitchedPtr p_dst,
                                  const Quadmesh& mesh_src,
-                                 const Quadmesh& mesh_dst);
+                                 const Quadmesh& mesh_dst, int src_dev,
+                                 int dst_dev);
 
   void send_sub_guard_cells_left(cu_multi_array<Scalar>& src,
                                  cu_multi_array<Scalar>& dst,
                                  const Quadmesh& mesh_src,
                                  const Quadmesh& mesh_dst,
-                                 int buffer_id);
+                                 int buffer_id, int src_dev,
+                                 int dst_dev);
 
   void send_sub_guard_cells_right(cu_multi_array<Scalar>& src,
                                   cu_multi_array<Scalar>& dst,
                                   const Quadmesh& mesh_src,
                                   const Quadmesh& mesh_dst,
-                                  int buffer_id);
+                                  int buffer_id, int src_dev,
+                                  int dst_dev);
 
   std::vector<cu_multi_array<Scalar>> m_sub_buffer;
   std::vector<int> m_dev_map;

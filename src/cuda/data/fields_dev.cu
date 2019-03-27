@@ -5,6 +5,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data/detail/multi_array_utils.cuh"
 #include "cuda/data/fields_dev.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -236,11 +237,11 @@ cu_scalar_field<T>::cu_scalar_field(const grid_type& grid,
   m_stagger = Stagger(0b111);
 }
 
-template <typename T>
-cu_scalar_field<T>::cu_scalar_field(const self_type& field)
-    : field_base(*field.m_grid),
-      m_array(field.m_array),
-      m_stagger(field.m_stagger) {}
+// template <typename T>
+// cu_scalar_field<T>::cu_scalar_field(const self_type& field)
+//     : field_base(*field.m_grid),
+//       m_array(field.m_array),
+//       m_stagger(field.m_stagger) {}
 
 template <typename T>
 cu_scalar_field<T>::cu_scalar_field(self_type&& field)
@@ -256,6 +257,7 @@ void
 cu_scalar_field<T>::initialize() {
   // Assign the field to zero, whatever 0 corresponds to for type #T
   m_array.assign_dev(static_cast<T>(0));
+  // CudaSafeCall(cudaDeviceSynchronize());
 }
 
 template <typename T>
@@ -263,6 +265,7 @@ void
 cu_scalar_field<T>::assign(data_type value) {
   // Assign a uniform value to the array
   m_array.assign_dev(value);
+  // CudaSafeCall(cudaDeviceSynchronize());
 }
 
 template <typename T>
@@ -466,7 +469,8 @@ cu_vector_field<T>::cu_vector_field(const grid_type& grid)
     : field_base(grid) {
   m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
-    m_array[i] = std::move(array_type(grid.extent()));
+    // Logger::print_debug("resizing {}", i);
+    m_array[i].resize(grid.extent());
     // Default initialize to face-centered
     m_stagger[i] = Stagger();
     // m_stagger[i].set_bit(i, true);
@@ -476,14 +480,15 @@ cu_vector_field<T>::cu_vector_field(const grid_type& grid)
   // init_array_ptrs();
 }
 
-template <typename T>
-cu_vector_field<T>::cu_vector_field(const self_type& field)
-    : field_base(*field.m_grid),
-      m_array(field.m_array),
-      m_stagger(field.m_stagger),
-      m_type(field.m_type) {
-  // init_array_ptrs();
-}
+// template <typename T>
+// cu_vector_field<T>::cu_vector_field(const self_type& field)
+//     : field_base(*field.m_grid),
+//       m_array(field.m_array),
+//       m_stagger(field.m_stagger),
+//       m_type(field.m_type) {
+//   // init_array_ptrs();
+//   Logger::print_debug("Triggered copy");
+// }
 
 template <typename T>
 cu_vector_field<T>::cu_vector_field(self_type&& field)
@@ -492,6 +497,7 @@ cu_vector_field<T>::cu_vector_field(self_type&& field)
       m_stagger(field.m_stagger),
       m_type(field.m_type) {
   // init_array_ptrs();
+  Logger::print_debug("Triggered move");
 }
 
 template <typename T>
@@ -533,6 +539,7 @@ cu_vector_field<T>::initialize() {
   for (int i = 0; i < VECTOR_DIM; ++i) {
     m_array[i].assign_dev(static_cast<T>(0));
   }
+  // CudaSafeCall(cudaDeviceSynchronize());
 }
 
 // template <typename T>
@@ -580,6 +587,7 @@ template <typename T>
 void
 cu_vector_field<T>::assign(data_type value, int n) {
   m_array[n].assign_dev(value);
+  // CudaSafeCall(cudaDeviceSynchronize());
 }
 
 template <typename T>
@@ -588,6 +596,7 @@ cu_vector_field<T>::assign(data_type value) {
   for (int i = 0; i < VECTOR_DIM; i++) {
     m_array[i].assign_dev(value);
   }
+  // CudaSafeCall(cudaDeviceSynchronize());
 }
 
 template <typename T>

@@ -48,7 +48,9 @@ template class particle_base_dev<single_photon_t>;
 Particles::Particles() {}
 
 Particles::Particles(std::size_t max_num)
-    : particle_base_dev<single_particle_t>(max_num) {}
+    : particle_base_dev<single_particle_t>(max_num) {
+
+}
 
 // Particles::Particles(const cu_sim_environment& env, ParticleType
 // type)
@@ -56,8 +58,8 @@ Particles::Particles(const SimParams& params)
     : particle_base_dev<single_particle_t>(
           (std::size_t)params.max_ptc_number) {}
 
-Particles::Particles(const Particles& other)
-    : particle_base_dev<single_particle_t>(other) {}
+// Particles::Particles(const Particles& other)
+//     : particle_base_dev<single_particle_t>(other) {}
 
 Particles::Particles(Particles&& other)
     : particle_base_dev<single_particle_t>(std::move(other)) {}
@@ -89,6 +91,7 @@ void
 Particles::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p, int cell,
                   ParticleType type, Scalar weight, uint32_t flag) {
   // put(m_number, x, p, cell, type, weight, flag);
+  CudaSafeCall(cudaSetDevice(m_devId));
   Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type,
                                 weight, flag);
   CudaCheckError();
@@ -109,6 +112,7 @@ void
 Particles::compute_spectrum(int num_bins, std::vector<Scalar>& energies,
                             std::vector<uint32_t>& nums,
                             ParticleFlag flag) {
+  CudaSafeCall(cudaSetDevice(m_devId));
   // Assume the particle energies have been computed
   energies.resize(num_bins, 0.0);
   nums.resize(num_bins, 0);

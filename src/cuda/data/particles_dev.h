@@ -23,7 +23,7 @@ class Particles : public particle_base_dev<single_particle_t> {
   Particles();
   Particles(std::size_t max_num);
   Particles(const SimParams& params);
-  Particles(const Particles& other);
+  Particles(const Particles& other) = delete;
   Particles(Particles&& other);
   virtual ~Particles();
 

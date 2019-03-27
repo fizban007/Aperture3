@@ -22,7 +22,7 @@ class Photons : public particle_base_dev<single_photon_t> {
   Photons(std::size_t max_num);
   Photons(const cu_sim_environment& env);
   Photons(const SimParams& params);
-  Photons(const Photons& other);
+  Photons(const Photons& other) = delete;
   Photons(Photons&& other);
   virtual ~Photons();
 

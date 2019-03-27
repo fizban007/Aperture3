@@ -25,6 +25,7 @@ class particle_base_dev : public particle_interface {
   void* m_tmp_data_ptr = nullptr;
   array_type m_data;
   Index_t* m_index = nullptr;
+  int m_devId;
   // std::vector<Index_t> m_index, m_index_bak;
   // bool m_sorted;
 
