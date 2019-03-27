@@ -35,6 +35,8 @@ struct cu_sim_data {
   std::vector<cu_vector_field<Scalar>> J;
   std::vector<cu_scalar_field<Scalar>> flux;
   std::vector<std::vector<cu_scalar_field<Scalar>>> Rho;
+  std::vector<cu_scalar_field<Scalar>> divE;
+  std::vector<cu_scalar_field<Scalar>> divB;
   // std::vector<cu_scalar_field<Scalar>> Rho_avg;
   // std::vector<cu_scalar_field<Scalar>> J_s;
   // std::vector<cu_scalar_field<Scalar>> J_avg;

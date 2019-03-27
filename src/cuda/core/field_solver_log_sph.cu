@@ -1,12 +1,13 @@
+#include "core/detail/multi_array_utils.hpp"
+#include "cuda/constant_mem.h"
 #include "cuda/core/field_solver_helper.cuh"
 #include "cuda/core/field_solver_log_sph.h"
 #include "cuda/core/finite_diff.h"
-#include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
-#include "cuda/ptr_util.h"
-#include "core/detail/multi_array_utils.hpp"
 #include "cuda/data/field_data.h"
 #include "cuda/data/fields_utils.h"
+#include "cuda/ptr_util.h"
+#include "cuda/utils/iterate_devices.h"
 #include "utils/timer.h"
 
 namespace Aperture {
@@ -19,8 +20,8 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
                  cudaPitchedPtr b2, cudaPitchedPtr b3,
                  cudaPitchedPtr j1, cudaPitchedPtr j2,
-                 cudaPitchedPtr j3, Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
-                 Scalar dt) {
+                 cudaPitchedPtr j3,
+                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -266,8 +267,9 @@ stellar_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
 }
 
 __global__ void
-axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
-              cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3) {
+axis_boundary_lower(cudaPitchedPtr e1, cudaPitchedPtr e2,
+                    cudaPitchedPtr e3, cudaPitchedPtr b1,
+                    cudaPitchedPtr b2, cudaPitchedPtr b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     (*ptrAddr(e3, i, dev_mesh.guard[1] - 1)) = 0.0f;
@@ -291,6 +293,15 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
     // (*ptrAddr(e3,
     //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
     //               i * sizeof(Scalar))) = 0.0f;
+  }
+}
+
+__global__ void
+axis_boundary_upper(cudaPitchedPtr e1, cudaPitchedPtr e2,
+                    cudaPitchedPtr e3, cudaPitchedPtr b1,
+                    cudaPitchedPtr b2, cudaPitchedPtr b3) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     (*ptrAddr(e3, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1)) = 0.0f;
     (*ptrAddr(e2, i, dev_mesh.dims[1] - dev_mesh.guard[1])) =
         -*ptrAddr(e2, i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
@@ -327,7 +338,6 @@ axis_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
     //                 i * sizeof(Scalar));
   }
 }
-
 __global__ void
 outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
@@ -402,7 +412,8 @@ relax_electric_potential(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
 __global__ void
 correct_E_field(cudaPitchedPtr e1, cudaPitchedPtr e2,
-                cudaPitchedPtr dphi, Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+                cudaPitchedPtr dphi,
+                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -433,119 +444,188 @@ correct_E_field(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
 }  // namespace Kernels
 
-FieldSolver_LogSph::FieldSolver_LogSph(const Grid_LogSph_dev& g)
-    : m_grid(g), m_divE(g), m_divB(g), m_phi_e(g) {
-  m_divB.set_stagger(0b000);
-}
+FieldSolver_LogSph::FieldSolver_LogSph() {}
 
-FieldSolver_LogSph::~FieldSolver_LogSph() {
-  if (m_dev_rho != nullptr) {
-    CudaSafeCall(cudaFree(m_dev_rho));
-  }
-}
+FieldSolver_LogSph::~FieldSolver_LogSph() {}
 
 void
 FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
                                   double time) {
-  update_fields(data.E, data.B, data.J, dt, time);
-}
+  // Only implemented 2D!
+  if (data.env.grid().dim() != 2) return;
 
-void
-FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
-                                  const vfield_t& J, double dt,
-                                  double time) {
+  // update_fields(data.E, data.B, data.J, dt, time);
   Logger::print_info("Updating fields");
-  auto mesh_ptrs = m_grid.get_mesh_ptrs();
-  auto& mesh = m_grid.mesh();
+  for_each_device(data.dev_map, [&data, dt, time](int n) {
+    const Grid_LogSph_dev& grid =
+        *dynamic_cast<const Grid_LogSph_dev*>(data.grid[n].get());
+    auto mesh_ptrs = grid.get_mesh_ptrs();
+    auto& mesh = grid.mesh();
 
-  if (m_grid.dim() == 2) {
-    // We only implemented 2d at the moment
     dim3 blockSize(32, 16);
     dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
     // Update B
     Kernels::compute_b_update<<<gridSize, blockSize>>>(
-        E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-        mesh_ptrs, dt);
+        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), mesh_ptrs,
+        dt);
     CudaCheckError();
-    cudaDeviceSynchronize();
+  });
 
-    // Update E
+  data.env.get_sub_guard_cells(data.E);
+
+  for_each_device(data.dev_map, [&data, dt, time](int n) {
+    const Grid_LogSph_dev& grid =
+        *dynamic_cast<const Grid_LogSph_dev*>(data.grid[n].get());
+    auto mesh_ptrs = grid.get_mesh_ptrs();
+    auto& mesh = grid.mesh();
+
+    dim3 blockSize(32, 16);
+    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+    // Update B
     Kernels::compute_e_update<<<gridSize, blockSize>>>(
-        E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-        J.ptr(0), J.ptr(1), J.ptr(2), mesh_ptrs, dt);
+        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2),
+        data.J[n].ptr(0), data.J[n].ptr(1), data.J[n].ptr(2), mesh_ptrs,
+        dt);
     CudaCheckError();
-    // cudaDeviceSynchronize();
+  });
 
-    // if (m_comm_callback_vfield != nullptr) {
-    //   m_comm_callback_vfield(E);
-    //   m_comm_callback_vfield(B);
-    // }
+  data.env.get_sub_guard_cells(data.B);
 
-    // Compute divE
+  for_each_device(data.dev_map, [&data](int n) {
+    const Grid_LogSph_dev& grid =
+        *dynamic_cast<const Grid_LogSph_dev*>(data.grid[n].get());
+    auto mesh_ptrs = grid.get_mesh_ptrs();
+    auto& mesh = grid.mesh();
+
+    dim3 blockSize(32, 16);
+    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+    // Update B
     Kernels::compute_divs<<<gridSize, blockSize>>>(
-        E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-        m_divE.ptr(), m_divB.ptr(), mesh_ptrs);
+        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2),
+        data.divE[n].ptr(), data.divB[n].ptr(), mesh_ptrs);
     CudaCheckError();
-  }
+  });
 }
+
+// void
+// FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
+//                                   const vfield_t& J, sfield_t& divE,
+//                                   sfielt_t& divB, double dt,
+//                                   double time) {
+//   Logger::print_info("Updating fields");
+//   auto mesh_ptrs = m_grid.get_mesh_ptrs();
+//   auto& mesh = m_grid.mesh();
+
+//   if (m_grid.dim() == 2) {
+//     // We only implemented 2d at the moment
+//     dim3 blockSize(32, 16);
+//     dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) /
+//     16);
+//     // Update B
+//     Kernels::compute_b_update<<<gridSize, blockSize>>>(
+//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+//         mesh_ptrs, dt);
+//     CudaCheckError();
+//     // cudaDeviceSynchronize();
+
+//     // Update E
+//     Kernels::compute_e_update<<<gridSize, blockSize>>>(
+//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+//         J.ptr(0), J.ptr(1), J.ptr(2), mesh_ptrs, dt);
+//     CudaCheckError();
+//     // cudaDeviceSynchronize();
+
+//     // if (m_comm_callback_vfield != nullptr) {
+//     //   m_comm_callback_vfield(E);
+//     //   m_comm_callback_vfield(B);
+//     // }
+
+//     // Compute divE
+//     Kernels::compute_divs<<<gridSize, blockSize>>>(
+//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
+//         m_divE.ptr(), m_divB.ptr(), mesh_ptrs);
+//     CudaCheckError();
+//   }
+// }
 
 void
 FieldSolver_LogSph::set_background_j(const vfield_t& J) {}
 
 void
-FieldSolver_LogSph::boundary_conditions(cu_sim_data& data, double omega) {
+FieldSolver_LogSph::boundary_conditions(cu_sim_data& data,
+                                        double omega) {
+  for (int n = 0; n < data.dev_map.size(); n++) {
+    int dev_id = data.dev_map[n];
+    CudaSafeCall(cudaSetDevice(dev_id));
+    if (data.env.is_boundary(n, 0)) {
+      Kernels::stellar_boundary<<<32, 256>>>(
+          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), omega);
+      CudaCheckError();
+    }
+
+    if (data.env.is_boundary(n, 1)) {
+      Kernels::outflow_boundary<<<32, 256>>>(
+          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
+      CudaCheckError();
+    }
+
+    if (data.env.is_boundary(n, 2)) {
+      Kernels::axis_boundary_lower<<<32, 256>>>(
+          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
+      CudaCheckError();
+    }
+
+    if (data.env.is_boundary(n, 3)) {
+      Kernels::axis_boundary_upper<<<32, 256>>>(
+          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
+          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
+      CudaCheckError();
+    }
+  }
   // Logger::print_info("omega is {}", omega);
-  Kernels::stellar_boundary<<<32, 256>>>(
-      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
-      data.B.ptr(1), data.B.ptr(2), omega);
-  CudaCheckError();
-
-  Kernels::axis_boundary<<<32, 256>>>(data.E.ptr(0), data.E.ptr(1),
-                                      data.E.ptr(2), data.B.ptr(0),
-                                      data.B.ptr(1), data.B.ptr(2));
-  CudaCheckError();
-
-  Kernels::outflow_boundary<<<32, 256>>>(data.E.ptr(0), data.E.ptr(1),
-                                         data.E.ptr(2), data.B.ptr(0),
-                                         data.B.ptr(1), data.B.ptr(2));
-  CudaCheckError();
 }
 
-void
-FieldSolver_LogSph::clean_divergence(cu_sim_data& data) {
-  init_dev_rho(data);
-  m_phi_e.initialize();
+// void
+// FieldSolver_LogSph::clean_divergence(cu_sim_data& data) {
+//   init_dev_rho(data);
+//   m_phi_e.initialize();
 
-  auto& mesh = m_grid.mesh();
-  auto mesh_ptrs = m_grid.get_mesh_ptrs();
+//   auto& mesh = m_grid.mesh();
+//   auto mesh_ptrs = m_grid.get_mesh_ptrs();
 
-  dim3 blockSize(32, 16);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+//   dim3 blockSize(32, 16);
+//   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
-  for (int n = 0; n < 1; n++) {
-    Kernels::relax_electric_potential<<<gridSize, blockSize>>>(
-        data.E.ptr(0), data.E.ptr(1), m_dev_rho, m_phi_e.ptr(),
-        mesh_ptrs);
-    CudaCheckError();
+//   for (int n = 0; n < 1; n++) {
+//     Kernels::relax_electric_potential<<<gridSize, blockSize>>>(
+//         data.E.ptr(0), data.E.ptr(1), m_dev_rho, m_phi_e.ptr(),
+//         mesh_ptrs);
+//     CudaCheckError();
 
-    Kernels::correct_E_field<<<gridSize, blockSize>>>(
-        data.E.ptr(0), data.E.ptr(1), m_phi_e.ptr(), mesh_ptrs);
-    CudaCheckError();
-  }
-}
+//     Kernels::correct_E_field<<<gridSize, blockSize>>>(
+//         data.E.ptr(0), data.E.ptr(1), m_phi_e.ptr(), mesh_ptrs);
+//     CudaCheckError();
+//   }
+// }
 
-void
-FieldSolver_LogSph::init_dev_rho(cu_sim_data& data) {
-  if (!m_rho_initialized) {
-    if (m_dev_rho == nullptr) {
-      CudaSafeCall(cudaMallocManaged(
-          &m_dev_rho, data.num_species * sizeof(cudaPitchedPtr)));
-    }
-    for (int i = 0; i < data.num_species; i++) {
-      m_dev_rho[i] = data.Rho[i].ptr();
-    }
-    m_rho_initialized = true;
-  }
-}
+// void
+// FieldSolver_LogSph::init_dev_rho(cu_sim_data& data) {
+//   if (!m_rho_initialized) {
+//     if (m_dev_rho == nullptr) {
+//       CudaSafeCall(cudaMallocManaged(
+//           &m_dev_rho, data.num_species * sizeof(cudaPitchedPtr)));
+//     }
+//     for (int i = 0; i < data.num_species; i++) {
+//       m_dev_rho[i] = data.Rho[i].ptr();
+//     }
+//     m_rho_initialized = true;
+//   }
+// }
 
 }  // namespace Aperture

@@ -155,6 +155,10 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
     // Logger::print_debug("initialize flux");
     flux[n].initialize();
 
+    divE.emplace_back(*grid[n]);
+    divB.emplace_back(*grid[n]);
+    divB[n].set_stagger(0b000);
+
     for (int i = 0; i < num_species; i++) {
       Rho[i].emplace_back(*grid[n]);
       // Logger::print_debug("initialize Rho[{}]", i);

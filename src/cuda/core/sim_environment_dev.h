@@ -45,17 +45,18 @@ class cu_sim_environment : public sim_environment {
   // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
 
-  void get_sub_guard_cells(std::vector<cu_vector_field<Scalar>>& field);
-  void get_sub_guard_cells(std::vector<cu_scalar_field<Scalar>>& field);
+  void get_sub_guard_cells(std::vector<cu_vector_field<Scalar>>& field) const;
+  void get_sub_guard_cells(std::vector<cu_scalar_field<Scalar>>& field) const;
   void send_sub_guard_cells(
-      std::vector<cu_vector_field<Scalar>>& field);
+      std::vector<cu_vector_field<Scalar>>& field) const;
   void send_sub_guard_cells(
-      std::vector<cu_scalar_field<Scalar>>& field);
+      std::vector<cu_scalar_field<Scalar>>& field) const;
 
   const std::vector<int>& dev_map() const { return m_dev_map; }
   std::vector<int>& dev_map() { return m_dev_map; }
   SimParams& sub_params(int i) { return m_sub_params[i]; }
   const SimParams& sub_params(int i) const { return m_sub_params[i]; }
+  bool is_boundary(int n, int bdy) const { return m_boundary_info[n][bdy]; }
 
  private:
   void setup_env();
@@ -64,30 +65,31 @@ class cu_sim_environment : public sim_environment {
                                 cudaPitchedPtr p_dst,
                                 const Quadmesh& mesh_src,
                                 const Quadmesh& mesh_dst, int src_dev,
-                                int dst_dev);
+                                int dst_dev) const;
   void get_sub_guard_cells_right(cudaPitchedPtr p_src,
                                  cudaPitchedPtr p_dst,
                                  const Quadmesh& mesh_src,
                                  const Quadmesh& mesh_dst, int src_dev,
-                                 int dst_dev);
+                                 int dst_dev) const;
 
   void send_sub_guard_cells_left(cu_multi_array<Scalar>& src,
                                  cu_multi_array<Scalar>& dst,
                                  const Quadmesh& mesh_src,
                                  const Quadmesh& mesh_dst,
                                  int buffer_id, int src_dev,
-                                 int dst_dev);
+                                 int dst_dev) const;
 
   void send_sub_guard_cells_right(cu_multi_array<Scalar>& src,
                                   cu_multi_array<Scalar>& dst,
                                   const Quadmesh& mesh_src,
                                   const Quadmesh& mesh_dst,
                                   int buffer_id, int src_dev,
-                                  int dst_dev);
+                                  int dst_dev) const;
 
   std::vector<cu_multi_array<Scalar>> m_sub_buffer;
   std::vector<int> m_dev_map;
   std::vector<SimParams> m_sub_params;
+  std::vector<std::array<bool, 6>> m_boundary_info;
 };  // ----- end of class cu_sim_environment -----
 }  // namespace Aperture
 
