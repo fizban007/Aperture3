@@ -123,27 +123,6 @@ hdf_exporter<T>::add_field_output(const std::string &name,
     }
     dbFields1d.push_back(std::move(tempData));
   }
-  //   if (grid->dim() == 3) {
-  //     fieldoutput<3> tempData;
-  //     tempData.name = name;
-  //     tempData.type = TypeName<T>::Get();
-  //     tempData.field = &field;
-  //     tempData.f.resize(1);
-  //     tempData.f[0].resize(
-  //         boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
-  //     tempData.sync = sync;
-  //     dbFields3d.push_back(std::move(tempData));
-  //   } else if (grid->dim() == 2) {
-  //     fieldoutput<2> tempData;
-  //     tempData.name = name;
-  //     tempData.type = TypeName<T>::Get();
-  //     tempData.field = &field;
-  //     tempData.f.resize(1);
-  //     tempData.f[0].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
-  //     tempData.sync = sync;
-  //     dbFields2d.push_back(std::move(tempData));
-  //   }
-  // }
 }
 
 template <typename T>
