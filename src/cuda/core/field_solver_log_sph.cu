@@ -591,41 +591,5 @@ FieldSolver_LogSph::boundary_conditions(cu_sim_data& data,
   // Logger::print_info("omega is {}", omega);
 }
 
-// void
-// FieldSolver_LogSph::clean_divergence(cu_sim_data& data) {
-//   init_dev_rho(data);
-//   m_phi_e.initialize();
-
-//   auto& mesh = m_grid.mesh();
-//   auto mesh_ptrs = m_grid.get_mesh_ptrs();
-
-//   dim3 blockSize(32, 16);
-//   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-
-//   for (int n = 0; n < 1; n++) {
-//     Kernels::relax_electric_potential<<<gridSize, blockSize>>>(
-//         data.E.ptr(0), data.E.ptr(1), m_dev_rho, m_phi_e.ptr(),
-//         mesh_ptrs);
-//     CudaCheckError();
-
-//     Kernels::correct_E_field<<<gridSize, blockSize>>>(
-//         data.E.ptr(0), data.E.ptr(1), m_phi_e.ptr(), mesh_ptrs);
-//     CudaCheckError();
-//   }
-// }
-
-// void
-// FieldSolver_LogSph::init_dev_rho(cu_sim_data& data) {
-//   if (!m_rho_initialized) {
-//     if (m_dev_rho == nullptr) {
-//       CudaSafeCall(cudaMallocManaged(
-//           &m_dev_rho, data.num_species * sizeof(cudaPitchedPtr)));
-//     }
-//     for (int i = 0; i < data.num_species; i++) {
-//       m_dev_rho[i] = data.Rho[i].ptr();
-//     }
-//     m_rho_initialized = true;
-//   }
-// }
 
 }  // namespace Aperture

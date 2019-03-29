@@ -32,33 +32,6 @@ struct dataset {
   T* data;
 };
 
-// template <typename Ptc>
-// struct ptcoutput {
-//   std::string name;
-//   const Ptc* ptc;
-//   std::vector<float> data_x;
-//   std::vector<float> data_p;
-// };
-
-// template <>
-// struct ptcoutput<Photons> {
-//   std::string name;
-//   const Photons* ptc;
-//   std::vector<float> data_x;
-//   std::vector<float> data_p;
-//   std::vector<float> data_l;
-// };
-
-// template <typename T, int n>
-// struct vfieldoutput {
-//   std::string name;
-//   cu_vector_field<T>* field;
-//   boost::multi_array<float, n> f1;
-//   boost::multi_array<float, n> f2;
-//   boost::multi_array<float, n> f3;
-//   bool sync;
-// };
-
 template <int n>
 struct fieldoutput {
   std::string name;
