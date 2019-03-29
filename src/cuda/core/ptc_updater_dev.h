@@ -1,6 +1,8 @@
 #ifndef _PTC_UPDATER_DEV_H_
 #define _PTC_UPDATER_DEV_H_
 
+#include <vector>
+
 namespace Aperture {
 
 struct cu_sim_data;
@@ -12,8 +14,8 @@ class PtcUpdaterDev {
   virtual ~PtcUpdaterDev();
 
   virtual void update_particles(cu_sim_data& data, double dt,
-                                uint32_t step = 0);
-  virtual void handle_boundary(cu_sim_data& data);
+                                uint32_t step = 0) = 0;
+  virtual void handle_boundary(cu_sim_data& data) = 0;
 
   struct fields_data {
     cudaPitchedPtr E1, E2, E3;
@@ -27,8 +29,8 @@ class PtcUpdaterDev {
 
   const cu_sim_environment& m_env;
 
-  fields_data m_dev_fields;
-  Extent m_extent;
+  std::vector<fields_data> m_dev_fields;
+  // std::vector<Extent> m_extent;
   bool m_fields_initialized;
 };  // ----- end of class PtcUpdaterDev -----
 

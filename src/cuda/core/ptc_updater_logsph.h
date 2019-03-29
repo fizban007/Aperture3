@@ -13,19 +13,19 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   virtual ~PtcUpdaterLogSph();
 
   virtual void update_particles(cu_sim_data& data, double dt,
-                                uint32_t step = 0);
-  virtual void handle_boundary(cu_sim_data& data);
+                                uint32_t step = 0) override;
+  virtual void handle_boundary(cu_sim_data& data) override;
   void inject_ptc(cu_sim_data& data, int inj_per_cell, Scalar p1,
                   Scalar p2, Scalar p3, Scalar w, Scalar omega);
-  void annihilate_extra_pairs(cu_sim_data& data);
+  // void annihilate_extra_pairs(cu_sim_data& data);
 
  private:
-  Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
-  void* d_rand_states;
+  // Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
+  std::vector<void*> d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  cu_scalar_field<double> m_J1, m_J2;
-  cu_scalar_field<Scalar> m_dens, m_balance;
+  // cu_scalar_field<double> m_J1, m_J2;
+  // cu_scalar_field<Scalar> m_dens, m_balance;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture
