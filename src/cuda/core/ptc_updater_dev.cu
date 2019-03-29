@@ -19,8 +19,8 @@ namespace Kernels {
 
 HOST_DEVICE void
 vay_push_2d(Scalar &p1, Scalar &p2, Scalar &p3, Scalar &gamma,
-            PtcUpdaterDev::fields_data &fields, Pos_t x1, Pos_t x2, int c1, int c2,
-            Scalar q_over_m) {
+            PtcUpdaterDev::fields_data &fields, Pos_t x1, Pos_t x2,
+            int c1, int c2, Scalar q_over_m) {
   Interpolator2D<spline_t> interp;
   Scalar E1 =
       interp(fields.E1, x1, x2, c1, c2, Stagger(0b001)) * q_over_m;
@@ -66,8 +66,8 @@ ptc_movement_2d(Pos_t &new_x1, Pos_t &new_x2, Pos_t &new_x3, Scalar p1,
 __global__ void
 // __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
 __launch_bounds__(128, 4)
-    update_particles(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
-                     Scalar dt) {
+    update_particles(particle_data ptc, size_t num,
+                     PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -245,8 +245,8 @@ __launch_bounds__(MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MP)
 }
 
 __global__ void
-update_particles_2d(particle_data ptc, size_t num, PtcUpdaterDev::fields_data fields,
-                    Scalar dt) {
+update_particles_2d(particle_data ptc, size_t num,
+                    PtcUpdaterDev::fields_data fields, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -387,74 +387,86 @@ update_particles_1d(particle_data ptc, size_t num, const Scalar *E1,
 
 PtcUpdaterDev::PtcUpdaterDev(const cu_sim_environment &env)
     : m_env(env) {
-  m_extent = m_env.grid().extent();
+  // m_extent = m_env.grid().extent();
+  unsigned int num_devs = env.dev_map().size();
+  m_dev_fields.resize(num_devs);
+  // m_extent.resize(num_devs);
   // FIXME: select the correct device?
-  CudaSafeCall(cudaMallocManaged(
-      &m_dev_fields.Rho,
-      m_env.params().num_species * sizeof(cudaPitchedPtr)));
+  for (unsigned int n = 0; n < num_devs; n++) {
+    int dev_id = env.dev_map()[n];
+    CudaSafeCall(cudaSetDevice(dev_id));
+    CudaSafeCall(cudaMallocManaged(
+        &m_dev_fields[n].Rho,
+        m_env.params().num_species * sizeof(cudaPitchedPtr)));
+  }
   m_fields_initialized = false;
 }
 
 PtcUpdaterDev::~PtcUpdaterDev() {
-  // FIXME: select the correct device
-  CudaSafeCall(cudaFree(m_dev_fields.Rho));
+  for (unsigned int n = 0; n < m_dev_fields.size(); n++) {
+    int dev_id = m_env.dev_map()[n];
+    CudaSafeCall(cudaSetDevice(dev_id));
+    CudaSafeCall(cudaFree(m_dev_fields[n].Rho));
+  }
 }
 
 void
 PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
   if (!m_fields_initialized) {
-    m_dev_fields.E1 = data.E.ptr(0);
-    m_dev_fields.E2 = data.E.ptr(1);
-    m_dev_fields.E3 = data.E.ptr(2);
-    m_dev_fields.B1 = data.B.ptr(0);
-    m_dev_fields.B2 = data.B.ptr(1);
-    m_dev_fields.B3 = data.B.ptr(2);
-    m_dev_fields.J1 = data.J.ptr(0);
-    m_dev_fields.J2 = data.J.ptr(1);
-    m_dev_fields.J3 = data.J.ptr(2);
-    for (int i = 0; i < data.num_species; i++) {
-      m_dev_fields.Rho[i] = data.Rho[i].ptr();
+    for (unsigned int n = 0; n < data.dev_map.size(); n++) {
+      m_dev_fields[n].E1 = data.E[n].ptr(0);
+      m_dev_fields[n].E2 = data.E[n].ptr(1);
+      m_dev_fields[n].E3 = data.E[n].ptr(2);
+      m_dev_fields[n].B1 = data.B[n].ptr(0);
+      m_dev_fields[n].B2 = data.B[n].ptr(1);
+      m_dev_fields[n].B3 = data.B[n].ptr(2);
+      m_dev_fields[n].J1 = data.J[n].ptr(0);
+      m_dev_fields[n].J2 = data.J[n].ptr(1);
+      m_dev_fields[n].J3 = data.J[n].ptr(2);
+      for (int i = 0; i < data.num_species; i++) {
+        m_dev_fields[n].Rho[i] = data.Rho[n][i].ptr();
+      }
     }
-    m_fields_initialized = true;
   }
+  m_fields_initialized = true;
 }
 
-void
-PtcUpdaterDev::update_particles(cu_sim_data &data, double dt,
-                                uint32_t step) {
-  Logger::print_info("Updating particles");
-  // Track the right fields
-  initialize_dev_fields(data);
+// void
+// PtcUpdaterDev::update_particles(cu_sim_data &data, double dt,
+//                                 uint32_t step) {
+//   Logger::print_info("Updating particles");
+//   // Track the right fields
+//   initialize_dev_fields(data);
 
-  if (m_env.grid().dim() == 1) {
-    Kernels::update_particles_1d<<<512, 512>>>(
-        data.particles.data(), data.particles.number(),
-        (const Scalar *)data.E.ptr(0).ptr, (Scalar *)data.J.ptr(0).ptr,
-        (Scalar *)data.Rho[0].ptr().ptr, dt);
-    CudaCheckError();
-  } else if (m_env.grid().dim() == 2) {
-    Kernels::update_particles_2d<<<256, 256>>>(data.particles.data(),
-                                               data.particles.number(),
-                                               m_dev_fields, dt);
-    CudaCheckError();
-  } else if (m_env.grid().dim() == 3) {
-    Kernels::update_particles<<<256, 128>>>(data.particles.data(),
-                                            data.particles.number(),
-                                            m_dev_fields, dt);
-    CudaCheckError();
+//   if (m_env.grid().dim() == 1) {
+//     Kernels::update_particles_1d<<<512, 512>>>(
+//         data.particles.data(), data.particles.number(),
+//         (const Scalar *)data.E.ptr(0).ptr, (Scalar *)data.J.ptr(0).ptr,
+//         (Scalar *)data.Rho[0].ptr().ptr, dt);
+//     CudaCheckError();
+//   } else if (m_env.grid().dim() == 2) {
+//     Kernels::update_particles_2d<<<256, 256>>>(data.particles.data(),
+//                                                data.particles.number(),
+//                                                m_dev_fields, dt);
+//     CudaCheckError();
+//   } else if (m_env.grid().dim() == 3) {
+//     Kernels::update_particles<<<256, 128>>>(data.particles.data(),
+//                                             data.particles.number(),
+//                                             m_dev_fields, dt);
+//     CudaCheckError();
 
-    Kernels::deposit_current_3d<<<256, 256>>>(data.particles.data(),
-                                              data.particles.number(),
-                                              m_dev_fields, dt);
-    CudaCheckError();
-  }
-  cudaDeviceSynchronize();
-}
+//     Kernels::deposit_current_3d<<<256, 256>>>(data.particles.data(),
+//                                               data.particles.number(),
+//                                               m_dev_fields, dt);
+//     CudaCheckError();
+//   }
+//   cudaDeviceSynchronize();
+// }
 
-void
-PtcUpdaterDev::handle_boundary(cu_sim_data &data) {
-  erase_ptc_in_guard_cells(data.particles.data().cell,
-                           data.particles.number());
-}
+// void
+// PtcUpdaterDev::handle_boundary(cu_sim_data &data) {
+//   // erase_ptc_in_guard_cells(data.particles.data().cell,
+//   //                          data.particles.number());
+// }
 
 }  // namespace Aperture
