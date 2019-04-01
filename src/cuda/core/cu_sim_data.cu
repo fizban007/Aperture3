@@ -117,6 +117,7 @@ cu_sim_data::cu_sim_data(const cu_sim_environment& e)
     : env(e), dev_map(e.dev_map()) {
   num_species = env.params().num_species;
   Rho.resize(num_species);
+  gamma.resize(num_species);
   initialize(e);
 }
 
@@ -159,11 +160,21 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
     divB.emplace_back(*grid[n]);
     divB[n].set_stagger(0b000);
 
+    photon_produced.emplace_back(*grid[n]);
+    photon_produced[n].initialize();
+    pair_produced.emplace_back(*grid[n]);
+    pair_produced[n].initialize();
+    photon_num.emplace_back(*grid[n]);
+    photon_num[n].initialize();
+
     for (int i = 0; i < num_species; i++) {
       Rho[i].emplace_back(*grid[n]);
       // Logger::print_debug("initialize Rho[{}]", i);
       Rho[i][n].initialize();
       Rho[i][n].sync_to_host();
+      gamma[i].emplace_back(*grid[n]);
+      gamma[i][n].initialize();
+      gamma[i][n].sync_to_host();
     }
 
     init_dev_bg_fields(Ebg[n], Bbg[n]);
@@ -199,6 +210,8 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
 void
 cu_sim_data::init_grid(const cu_sim_environment& env) {
   grid.resize(dev_map.size());
+  int last_dim = env.grid().dim() - 1;
+  int offset = 0;
   for (int n = 0; n < dev_map.size(); n++) {
     int dev_id = dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
@@ -216,6 +229,8 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
     }
     grid[n]->init(env.sub_params(n));
     auto& mesh = grid[n]->mesh();
+    mesh.offset[last_dim] = offset;
+    offset += mesh.reduced_dim(last_dim);
     Logger::print_debug("Grid dimension for dev {} is {}x{}x{}", dev_id,
                         mesh.dims[0], mesh.dims[1], mesh.dims[2]);
     Logger::print_debug("Grid lower are {}, {}, {}", mesh.lower[0],
@@ -306,6 +321,14 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaFree(ph_sent_left[i]));
     CudaSafeCall(cudaFree(ph_sent_right[i]));
   }
+}
+
+void
+cu_sim_data::sort_particles() {
+  for_each_device(dev_map, [this](int n){
+      particles[n].sort_by_cell();
+      photons[n].sort_by_cell();
+    });
 }
 
 }  // namespace Aperture

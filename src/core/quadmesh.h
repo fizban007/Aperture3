@@ -25,6 +25,7 @@ struct Quadmesh {
   Scalar sizes[3];  //!< Size of the grid in coordinate space
 
   int tileSize[3];
+  int offset[3];
   int dimension;
 
   HOST_DEVICE Quadmesh() {  //!< Default constructor

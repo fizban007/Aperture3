@@ -18,19 +18,19 @@ class RadiationTransferPulsar {
   void emit_photons(cu_sim_data& data);
   void produce_pairs(cu_sim_data& data);
 
-  cu_scalar_field<Scalar>& get_pair_events() { return m_pair_events; }
-  cu_scalar_field<Scalar>& get_ph_events() { return m_ph_events; }
+  // cu_scalar_field<Scalar>& get_pair_events() { return m_pair_events; }
+  // cu_scalar_field<Scalar>& get_ph_events() { return m_ph_events; }
 
  private:
   const cu_sim_environment& m_env;
-  void* d_rand_states;
+  std::vector<void*> d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
-  cu_array<int> m_numPerBlock;
-  cu_array<int> m_cumNumPerBlock;
-  cu_array<int> m_posInBlock;
+  std::vector<cu_array<int>> m_numPerBlock;
+  std::vector<cu_array<int>> m_cumNumPerBlock;
+  std::vector<cu_array<int>> m_posInBlock;
 
-  cu_scalar_field<Scalar> m_pair_events;
-  cu_scalar_field<Scalar> m_ph_events;
+  // cu_scalar_field<Scalar> m_pair_events;
+  // cu_scalar_field<Scalar> m_ph_events;
 };  // ----- end of class RadiationTransferPulsar -----
 
 }  // namespace Aperture
