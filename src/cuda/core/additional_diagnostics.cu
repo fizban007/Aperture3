@@ -5,6 +5,7 @@
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/ptr_util.h"
+#include "cuda/utils/iterate_devices.h"
 
 namespace Aperture {
 
@@ -60,48 +61,49 @@ collect_photon_diagnostics(photon_data photons, size_t num,
 
 AdditionalDiagnostics::AdditionalDiagnostics(
     const cu_sim_environment& env)
-    : m_env(env), m_ph_num(env.local_grid()) {
-  CudaSafeCall(cudaMallocManaged(
-      &m_dev_gamma,
-      m_env.params().num_species * sizeof(cudaPitchedPtr)));
-  CudaSafeCall(cudaMallocManaged(
-      &m_dev_ptc_num,
-      m_env.params().num_species * sizeof(cudaPitchedPtr)));
-
-  for (int i = 0; i < m_env.params().num_species; i++) {
-    m_gamma.emplace_back(m_env.local_grid());
-    m_ptc_num.emplace_back(m_env.local_grid());
-  }
-  for (int i = 0; i < m_env.params().num_species; i++) {
-    m_dev_gamma[i] = m_gamma[i].ptr();
-    m_dev_ptc_num[i] = m_ptc_num[i].ptr();
-  }
+    : m_env(env) {
+  unsigned int num_devs = env.dev_map().size();
+  m_dev_gamma.resize(num_devs);
+  m_dev_ptc_num.resize(num_devs);
+  for_each_device(env.dev_map(), [this](int n) {
+    CudaSafeCall(cudaMallocManaged(
+        m_dev_gamma[n],
+        sizeof(cudaPitchedPtr) * env.params().num_species));
+    CudaSafeCall(cudaMallocManaged(
+        m_dev_ptc_num[n],
+        sizeof(cudaPitchedPtr) * env.params().num_speciesnum_devs));
+  });
 }
 
 AdditionalDiagnostics::~AdditionalDiagnostics() {
-  CudaSafeCall(cudaFree(m_dev_gamma));
-  CudaSafeCall(cudaFree(m_dev_ptc_num));
+  for_each_device(m_env.dev_map(), [this](int n) {
+    CudaSafeCall(cudaFree(m_dev_gamma[n]));
+    CudaSafeCall(cudaFree(m_dev_ptc_num[n]));
+  });
 }
 
 void
-AdditionalDiagnostics::collect_diagnostics(const cu_sim_data& data) {
-  m_ph_num.initialize();
-  for (int i = 0; i < m_env.params().num_species; i++) {
-    m_gamma[i].initialize();
-    m_ptc_num[i].initialize();
-  }
-  Kernels::collect_ptc_diagnostics<<<256, 512>>>(
-      data.particles.data(), data.particles.number(), m_dev_gamma,
-      m_dev_ptc_num);
-  CudaCheckError();
+AdditionalDiagnostics::collect_diagnostics(cu_sim_data& data) {
+  for_each_device(data.dev_map, [this, &data](int n) {
+    data.photon_num[n].initialize();
+    data.photon_produced[n].initialize();
+    data.pair_produced[n].initialize();
+    for (int i = 0; i < data.env.params().num_species; i++) {
+      data.gamma[i][n].initialize();
+    }
+    Kernels::collect_ptc_diagnostics<<<256, 512>>>(
+        data.particles[n].data(), data.particles[n].number(),
+        m_dev_gamma[n], m_dev_ptc_num[n]);
+    CudaCheckError();
+    Kernels::collect_photon_diagnostics<<<256, 512>>>(
+        data.photons[n].data(), data.photons[n].number(),
+        data.photon_num[n].ptr());
+    CudaCheckError();
+    for (int i = 0; i < m_env.params().num_species; i++) {
+      data.gamma[i][n].divideBy(data.photon_num[i][n]);
+    }
+  });
 
-  Kernels::collect_photon_diagnostics<<<256, 512>>>(
-      data.photons.data(), data.photons.number(), m_ph_num.ptr());
-  CudaCheckError();
-
-  for (int i = 0; i < m_env.params().num_species; i++) {
-    m_gamma[i].divideBy(m_ptc_num[i]);
-  }
   cudaDeviceSynchronize();
 }
 

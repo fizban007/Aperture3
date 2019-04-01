@@ -95,36 +95,62 @@ cu_data_exporter::add_field(const std::string &name,
   //                  grid->dim(), sync);
 }
 
+void
+cu_data_exporter::set_mesh(cu_sim_data &data) {
+  m_submesh.resize(data.dev_map.size());
+  m_submesh_out.resize(data.dev_map.size());
+  for (unsigned int n = 0; n < m_submesh.size(); n++) {
+    m_submesh[n] = data.grid[n]->mesh();
+    m_submesh_out[n] = data.grid[n]->mesh();
+    for (int i = 0; i < m_submesh[n].dim(); i++) {
+      m_submesh_out[n].dims[i] =
+          m_submesh[n].guard[i] * 2 +
+          m_submesh[n].reduced_dim(i) / data.env.params().downsample;
+      m_submesh_out[n].delta[i] *= data.env.params().downsample;
+      m_submesh_out[n].inv_delta[i] /= data.env.params().downsample;
+      m_submesh_out[n].offset[i] /= data.env.params().downsample;
+    }
+  }
+}
+
 // void
 // cu_data_exporter::write_snapshot(cu_sim_environment &env,
-//                                  cu_sim_data &data, uint32_t timestep) {
+//                                  cu_sim_data &data, uint32_t
+//                                  timestep) {
 //   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
-//       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
-//       File::ReadWrite | File::Create | File::Truncate);
+//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
+//       timestep) fmt::format("{}snapshot.h5",
+//       outputDirectory).c_str(), File::ReadWrite | File::Create |
+//       File::Truncate);
 
 //   // Write background fields from environment
 //   // size_t grid_size = data.E.grid().size();
 //   size_t grid_size = data.E.data(0).size();
 //   data.Ebg.sync_to_host();
 //   DataSet data_bg_E1 =
-//       snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E1",
+//       DataSpace(grid_size));
 //   data_bg_E1.write((char *)data.Ebg.data(0).data());
 //   DataSet data_bg_E2 =
-//       snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E2",
+//       DataSpace(grid_size));
 //   data_bg_E2.write((char *)data.Ebg.data(1).data());
 //   DataSet data_bg_E3 =
-//       snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_E3",
+//       DataSpace(grid_size));
 //   data_bg_E3.write((char *)data.Ebg.data(2).data());
 //   data.Bbg.sync_to_host();
 //   DataSet data_bg_B1 =
-//       snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B1",
+//       DataSpace(grid_size));
 //   data_bg_B1.write((char *)data.Bbg.data(0).data());
 //   DataSet data_bg_B2 =
-//       snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B2",
+//       DataSpace(grid_size));
 //   data_bg_B2.write((char *)data.Bbg.data(1).data());
 //   DataSet data_bg_B3 =
-//       snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(grid_size));
+//       snapshotfile.createDataSet<Scalar>("bg_B3",
+//       DataSpace(grid_size));
 //   data_bg_B3.write((char *)data.Bbg.data(2).data());
 
 //   // Write sim data
@@ -188,7 +214,8 @@ cu_data_exporter::add_field(const std::string &name,
 //       data.particles.data(),
 //       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ptc_data = snapshotfile.createDataSet<x_type>(
 //             fmt::format("ptc_{}", name), DataSpace(ptcNum));
 //         cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
@@ -199,7 +226,8 @@ cu_data_exporter::add_field(const std::string &name,
 //       data.photons.data(),
 //       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ph_data = snapshotfile.createDataSet<x_type>(
 //             fmt::format("ph_{}", name), DataSpace(phNum));
 //         cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
@@ -218,9 +246,9 @@ cu_data_exporter::add_field(const std::string &name,
 //                                      cu_sim_data &data,
 //                                      uint32_t &timestep) {
 //   File snapshotfile(
-//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory, timestep)
-//       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
-//       File::ReadOnly);
+//       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
+//       timestep) fmt::format("{}snapshot.h5",
+//       outputDirectory).c_str(), File::ReadOnly);
 
 //   // size_t grid_size = data.E.grid().size();
 //   size_t ptcNum, phNum;
@@ -245,7 +273,8 @@ cu_data_exporter::add_field(const std::string &name,
 //       data.particles.data(),
 //       [&snapshotfile, &buffer, &ptcNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ptc_data =
 //             snapshotfile.getDataSet(fmt::format("ptc_{}", name));
 //         ptc_data.read(reinterpret_cast<x_type *>(buffer.data()));
@@ -256,7 +285,8 @@ cu_data_exporter::add_field(const std::string &name,
 //       data.photons.data(),
 //       [&snapshotfile, &buffer, &phNum](const char *name, auto &x) {
 //         typedef
-//             typename std::remove_reference<decltype(*x)>::type x_type;
+//             typename std::remove_reference<decltype(*x)>::type
+//             x_type;
 //         DataSet ph_data =
 //             snapshotfile.getDataSet(fmt::format("ph_{}", name));
 //         ph_data.read(reinterpret_cast<x_type *>(buffer.data()));
@@ -304,8 +334,8 @@ cu_data_exporter::add_field(const std::string &name,
 //   data.J.sync_to_device();
 
 //   for (int i = 0; i < data.num_species; i++) {
-//     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
-//     data_rho.read((char *)data.Rho[i].data().data());
+//     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}",
+//     i)); data_rho.read((char *)data.Rho[i].data().data());
 //     data.Rho[i].sync_to_device();
 //   }
 // }
@@ -449,134 +479,209 @@ cu_data_exporter::interpolate_field_values(fieldoutput<3> &field,
                                            int components, const T &t) {
 }
 
-// void
-// cu_data_exporter::write_particles(uint32_t step, double time) {
-//   auto &mesh = orig_grid->mesh();
-//   for (auto &ptcoutput : dbPtcData1d) {
-//     Particles_1D *ptc = dynamic_cast<Particles_1D *>(ptcoutput.ptc);
-//     if (ptc != nullptr) {
-//       Logger::print_info("Writing tracked particles");
-//       File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-//                                 filePrefix, step)
-//                         .c_str(),
-//                     File::ReadWrite);
-//       for (int sp = 0; sp < m_params.num_species; sp++) {
-//         unsigned int idx = 0;
-//         std::string name_x = NameStr((ParticleType)sp) + "_x";
-//         std::string name_p = NameStr((ParticleType)sp) + "_p";
-//         for (Index_t n = 0; n < ptc->number(); n++) {
-//           if (m_ptc_cell[n] != MAX_CELL &&
-//               // ptc->check_flag(n, ParticleFlag::tracked) &&
-//               check_bit(m_ptc_flag[n], ParticleFlag::tracked) &&
-//               // ptc->check_type(n) == (ParticleType)sp &&
-//               get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED) {
-//             Scalar x = mesh.pos(0, m_ptc_cell[n], m_ptc_x1[n]);
-//             ptcoutput.x[idx] = x;
-//             ptcoutput.p[idx] = m_ptc_p1[n];
-//             idx += 1;
-//           }
-//         }
-//         DataSet data_x =
-//             datafile.createDataSet<float>(name_x, DataSpace{idx});
-//         data_x.write(ptcoutput.x);
-//         DataSet data_p =
-//             datafile.createDataSet<float>(name_p, DataSpace{idx});
-//         data_p.write(ptcoutput.p);
+void
+cu_data_exporter::write_particles(cu_sim_data &data, uint32_t step,
+                                  double time) {
+  // auto &mesh = orig_grid->mesh();
+  // for (auto &ptcoutput : dbPtcData1d) {
+  //   Particles_1D *ptc = dynamic_cast<Particles_1D *>(ptcoutput.ptc);
+  //   if (ptc != nullptr) {
+  //     Logger::print_info("Writing tracked particles");
+  //     File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+  //                               filePrefix, step)
+  //                       .c_str(),
+  //                   File::ReadWrite);
+  //     for (int sp = 0; sp < m_params.num_species; sp++) {
+  //       unsigned int idx = 0;
+  //       std::string name_x = NameStr((ParticleType)sp) + "_x";
+  //       std::string name_p = NameStr((ParticleType)sp) + "_p";
+  //       for (Index_t n = 0; n < ptc->number(); n++) {
+  //         if (m_ptc_cell[n] != MAX_CELL &&
+  //             // ptc->check_flag(n, ParticleFlag::tracked) &&
+  //             check_bit(m_ptc_flag[n], ParticleFlag::tracked) &&
+  //             // ptc->check_type(n) == (ParticleType)sp &&
+  //             get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED)
+  //             {
+  //           Scalar x = mesh.pos(0, m_ptc_cell[n], m_ptc_x1[n]);
+  //           ptcoutput.x[idx] = x;
+  //           ptcoutput.p[idx] = m_ptc_p1[n];
+  //           idx += 1;
+  //         }
+  //       }
+  //       DataSet data_x =
+  //           datafile.createDataSet<float>(name_x, DataSpace{idx});
+  //       data_x.write(ptcoutput.x);
+  //       DataSet data_p =
+  //           datafile.createDataSet<float>(name_p, DataSpace{idx});
+  //       data_p.write(ptcoutput.p);
 
-//         // Logger::print_info("Written {} tracked particles", idx);
-//       }
-//     }
-//   }
-//   for (auto &ptcoutput : dbPtcData2d) {
-//     Particles *ptc = dynamic_cast<Particles *>(ptcoutput.ptc);
-//     if (ptc != nullptr) {
-//       Logger::print_info("Copying {} ptc from dev to host",
-//                          ptc->number());
-//       cudaMemcpy(m_ptc_x1.data(), ptc->data().x1,
-//                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_x2.data(), ptc->data().x2,
-//                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_x3.data(), ptc->data().x3,
-//                  sizeof(Pos_t) * ptc->number(), cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_p1.data(), ptc->data().p1,
-//                  sizeof(Scalar) * ptc->number(),
-//                  cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_p2.data(), ptc->data().p2,
-//                  sizeof(Scalar) * ptc->number(),
-//                  cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_p3.data(), ptc->data().p3,
-//                  sizeof(Scalar) * ptc->number(),
-//                  cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_cell.data(), ptc->data().cell,
-//                  sizeof(uint32_t) * ptc->number(),
-//                  cudaMemcpyDeviceToHost);
-//       cudaMemcpy(m_ptc_flag.data(), ptc->data().flag,
-//                  sizeof(uint32_t) * ptc->number(),
-//                  cudaMemcpyDeviceToHost);
-//       Logger::print_info("Writing tracked particles");
-//       File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-//                                 filePrefix, step)
-//                         .c_str(),
-//                     File::ReadWrite);
-//       for (int sp = 0; sp < m_params.num_species; sp++) {
-//         unsigned int idx = 0;
-//         // std::string name_x = NameStr((ParticleType)sp) + "_x";
-//         // std::string name_p = NameStr((ParticleType)sp) + "_p";
-//         for (Index_t n = 0; n < ptc->number(); n++) {
-//           if (m_ptc_cell[n] != MAX_CELL &&
-//               // ptc->check_flag(n, ParticleFlag::tracked) &&
-//               check_bit(m_ptc_flag[n], ParticleFlag::tracked) &&
-//               // ptc->check_type(n) == (ParticleType)sp &&
-//               get_ptc_type(m_ptc_flag[n]) == sp && idx < MAX_TRACKED) {
-//             int c1 = mesh.get_c1(m_ptc_cell[n]);
-//             int c2 = mesh.get_c2(m_ptc_cell[n]);
-//             Scalar x1 = mesh.pos(0, c1, m_ptc_x1[n]);
-//             Scalar x2 = mesh.pos(1, c2, m_ptc_x2[n]);
-//             ptcoutput.x1[idx] = x1;
-//             ptcoutput.x2[idx] = x2;
-//             ptcoutput.x3[idx] = m_ptc_x3[n];
-//             ptcoutput.p1[idx] = m_ptc_p1[n];
-//             ptcoutput.p2[idx] = m_ptc_p2[n];
-//             ptcoutput.p3[idx] = m_ptc_p3[n];
-//             idx += 1;
-//           }
-//         }
-//         Logger::print_info("Writing {} tracked {}", idx,
-//                            NameStr((ParticleType)sp));
-//         DataSet data_x1 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_x1", DataSpace{idx});
-//         data_x1.write(ptcoutput.x1);
-//         DataSet data_x2 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_x2", DataSpace{idx});
-//         data_x2.write(ptcoutput.x2);
-//         DataSet data_x3 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_x3", DataSpace{idx});
-//         data_x3.write(ptcoutput.x3);
-//         DataSet data_p1 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_p1", DataSpace{idx});
-//         data_p1.write(ptcoutput.p1);
-//         DataSet data_p2 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_p2", DataSpace{idx});
-//         data_p2.write(ptcoutput.p2);
-//         DataSet data_p3 = datafile.createDataSet<float>(
-//             NameStr((ParticleType)sp) + "_p3", DataSpace{idx});
-//         data_p3.write(ptcoutput.p3);
+  //       // Logger::print_info("Written {} tracked particles", idx);
+  //     }
+  //   }
+  // }
+  Logger::print_info("Writing tracked particles");
+  File datafile(
+      fmt::format("{}{}{:06d}.h5", outputDirectory, filePrefix, step)
+          .c_str(),
+      File::ReadWrite);
+  for (auto &ptcoutput : m_ptcdata) {
+    for (int sp = 0; sp < m_params.num_species; sp++) {
+      unsigned int idx = 0;
+      for (unsigned int dev = 0; dev < m_submesh.size(); dev++) {
+        Particles *ptc = dynamic_cast<Particles *>(ptcoutput.ptc[dev]);
+        if (ptc != nullptr) {
+          auto &data = ptc->data();
+          auto &mesh = m_submesh[dev];
+          // std::string name_x = NameStr((ParticleType)sp) + "_x";
+          // std::string name_p = NameStr((ParticleType)sp) + "_p";
+          for (Index_t n = 0; n < ptc->number(); n++) {
+            if (data.cell[n] != MAX_CELL &&
+                check_bit(data.flag[n], ParticleFlag::tracked) &&
+                get_ptc_type(data.flag[n]) == sp && idx < MAX_TRACKED) {
+              int c1 = mesh.get_c1(data.cell[n]);
+              int c2 = mesh.get_c2(data.cell[n]);
+              Scalar x1 = mesh.pos(0, c1, data.x1[n]);
+              Scalar x2 = mesh.pos(1, c2, data.x2[n]);
+              ptcoutput.x1[idx] = x1;
+              ptcoutput.x2[idx] = x2;
+              ptcoutput.x3[idx] = data.x3[n];
+              ptcoutput.p1[idx] = data.p1[n];
+              ptcoutput.p2[idx] = data.p2[n];
+              ptcoutput.p3[idx] = data.p3[n];
+              idx += 1;
+            }
+          }
+        }
+      }
+      Logger::print_info("Writing {} tracked {}", idx,
+                         NameStr((ParticleType)sp));
+      DataSet data_x1 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_x1", DataSpace{idx});
+      data_x1.write(ptcoutput.x1);
+      DataSet data_x2 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_x2", DataSpace{idx});
+      data_x2.write(ptcoutput.x2);
+      DataSet data_x3 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_x3", DataSpace{idx});
+      data_x3.write(ptcoutput.x3);
+      DataSet data_p1 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_p1", DataSpace{idx});
+      data_p1.write(ptcoutput.p1);
+      DataSet data_p2 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_p2", DataSpace{idx});
+      data_p2.write(ptcoutput.p2);
+      DataSet data_p3 = datafile.createDataSet<float>(
+          NameStr((ParticleType)sp) + "_p3", DataSpace{idx});
+      data_p3.write(ptcoutput.p3);
+    }
+  }
+}
 
-//         // Logger::print_info("Written {} tracked particles", idx);
-//       }
-//     }
-//   }
-// }
+void
+cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
+                               double time) {
+  if (!checkDirectories()) createDirectories();
+  File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                            filePrefix, timestep)
+                    .c_str(),
+                File::ReadWrite | File::Create | File::Truncate);
+  for (auto &f : m_fields_1d) {
+  }
+  for (auto &f : m_fields_2d) {
+    int components = f.f.size();
+    for (unsigned int n = 0; n < f.field.size(); n++) {
+      if (components == 1) {
+        auto fptr = dynamic_cast<cu_scalar_field<Scalar> *>(f.field[n]);
+        if (f.sync) fptr->sync_to_host();
+        auto &mesh = fptr->grid().mesh();
+#pragma omp simd collapse(2)
+        for (int j = 0; j < mesh.reduced_dim(1);
+             j += downsample_factor) {
+          for (int i = 0; i < mesh.reduced_dim(0);
+               i += downsample_factor) {
+            f.f[0][j / downsample_factor + mesh.guard[1] +
+                   m_submesh_out[n].offset[1]]
+               [i / downsample_factor + mesh.guard[0] +
+                m_submesh_out[n].offset[0]] =
+                (*fptr)(i + mesh.guard[0], j + mesh.guard[1]);
+          }
+        }
+      } else if (components == 3) {
+        auto fptr = dynamic_cast<cu_vector_field<Scalar> *>(f.field[n]);
+        if (f.sync) fptr->sync_to_host();
+        auto &mesh = fptr->grid().mesh();
+#pragma omp simd collapse(2)
+        for (int j = 0; j < mesh.reduced_dim(1);
+             j += downsample_factor) {
+          for (int i = 0; i < mesh.reduced_dim(0);
+               i += downsample_factor) {
+            f.f[0][j / downsample_factor + mesh.guard[1] +
+                   m_submesh_out[n].offset[1]]
+               [i / downsample_factor + mesh.guard[0] +
+                m_submesh_out[n].offset[0]] =
+                (*fptr)(0, i + mesh.guard[0], j + mesh.guard[1]);
+            f.f[1][j / downsample_factor + mesh.guard[1] +
+                   m_submesh_out[n].offset[1]]
+               [i / downsample_factor + mesh.guard[0] +
+                m_submesh_out[n].offset[0]] =
+                (*fptr)(1, i + mesh.guard[0], j + mesh.guard[1]);
+            f.f[2][j / downsample_factor + mesh.guard[1] +
+                   m_submesh_out[n].offset[1]]
+               [i / downsample_factor + mesh.guard[0] +
+                m_submesh_out[n].offset[0]] =
+                (*fptr)(2, i + mesh.guard[0], j + mesh.guard[1]);
+          }
+        }
+      }
+    }
+    if (components == 1) {
+      // Logger::print_info("Creating dataset for {}", f.name);
+      DataSet data = datafile.createDataSet<float>(
+          f.name, DataSpace::From(f.f[0]));
+      data.write(f.f[0]);
+    } else {
+      // Logger::print_info("Creating dataset for {}", f.name);
+      for (int n = 0; n < components; n++) {
+        // Logger::print_info("{}, {}", n, f.f[n].size());
+        DataSet data = datafile.createDataSet<float>(
+            f.name + std::to_string(n + 1), DataSpace::From(f.f[n]));
+        // Logger::print_info("dataset created");
+        data.write(f.f[n]);
+      }
+    }
+  }
+}
+
+void
+cu_data_exporter::prepare_output(cu_sim_data &data) {
+  set_mesh(data);
+  add_field("E", data.E, true);
+  add_field("B", data.B, true);
+  add_field("B_bg", data.Bbg, true);
+  add_field("J", data.J, true);
+  add_field("flux", data.flux, true);
+  add_field("Rho_e", data.Rho[0], true);
+  add_field("Rho_p", data.Rho[1], true);
+  if (data.env.params().num_species > 2)
+    add_field("Rho_i", data.Rho[2], true);
+  add_field("photon_produced", data.photon_produced, true);
+  add_field("pair_produced", data.pair_produced, true);
+  add_field("photon_num", data.photon_num, true);
+}
 
 // Explicit instantiation of templates
 template void cu_data_exporter::add_field<float>(
-    const std::string &name, std::vector<cu_scalar_field<float>> &field, bool sync);
+    const std::string &name, std::vector<cu_scalar_field<float>> &field,
+    bool sync);
 template void cu_data_exporter::add_field<float>(
-    const std::string &name, std::vector<cu_vector_field<float>> &field, bool sync);
+    const std::string &name, std::vector<cu_vector_field<float>> &field,
+    bool sync);
 template void cu_data_exporter::add_field<double>(
-    const std::string &name, std::vector<cu_scalar_field<double>> &field, bool sync);
+    const std::string &name,
+    std::vector<cu_scalar_field<double>> &field, bool sync);
 template void cu_data_exporter::add_field<double>(
-    const std::string &name, std::vector<cu_vector_field<double>> &field, bool sync);
+    const std::string &name,
+    std::vector<cu_vector_field<double>> &field, bool sync);
 
 template void cu_data_exporter::interpolate_field_values<float>(
     fieldoutput<2> &field, int components, const float &t);
@@ -586,5 +691,3 @@ template void hdf_exporter<cu_data_exporter>::add_array_output<float>(
     const std::string &name, multi_array<float> &array);
 
 }  // namespace Aperture
-
-// namespace Aperture

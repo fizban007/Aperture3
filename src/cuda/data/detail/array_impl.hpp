@@ -19,10 +19,10 @@ cu_array<T>::cu_array(size_t length, int devId) {
   alloc_mem(length, devId);
 }
 
-template <typename T>
-cu_array<T>::cu_array(const self_type& other) {
-  alloc_mem(other.m_length, other.m_devId);
-}
+// template <typename T>
+// cu_array<T>::cu_array(const self_type& other) {
+//   alloc_mem(other.m_length, other.m_devId);
+// }
 
 template <typename T>
 cu_array<T>::cu_array(self_type&& other) {

@@ -93,7 +93,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/core/sim_environment_dev.cpp"
     "cuda/core/cu_sim_data.cu"
     "cuda/core/cu_sim_data1d.cu"
-    # "cuda/core/additional_diagnostics.cu"
+    "cuda/core/additional_diagnostics.cu"
     "cuda/core/ptc_updater_dev.cu"
     "cuda/core/ptc_updater_logsph.cu"
     # "cuda/core/ptc_updater_1dgr.cu"

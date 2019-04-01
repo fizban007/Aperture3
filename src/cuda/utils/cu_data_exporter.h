@@ -44,8 +44,10 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
                       uint32_t timestep);
   void load_from_snapshot(cu_sim_environment& env, cu_sim_data& data,
                           uint32_t& timestep);
-  void write_particles(uint32_t step, double time);
-  void write_output(uint32_t timestep, double time);
+  void write_particles(cu_sim_data& data, uint32_t step, double time);
+  void write_output(cu_sim_data& data, uint32_t timestep, double time);
+  void set_mesh(cu_sim_data& data);
+  void prepare_output(cu_sim_data& data);
 
   template <int n>
   struct cu_fieldoutput {
@@ -105,6 +107,8 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
   std::vector<cu_arrayoutput<float, 2>> m_float_2d;
   std::vector<cu_ptcoutput> m_ptcdata;
   std::vector<cu_ptcoutput_1d> m_ptcdata_1d;
+  std::vector<Quadmesh> m_submesh;
+  std::vector<Quadmesh> m_submesh_out;
 };  // ----- end of class cu_data_exporter : public hdf_exporter -----
 
 }  // namespace Aperture

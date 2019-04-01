@@ -28,6 +28,7 @@ struct cu_sim_data {
   void init_bg_E_field(int component, const Func& f);
 
   void send_particles();
+  void sort_particles();
 
   const cu_sim_environment& env;
   std::vector<cu_vector_field<Scalar>> E;
@@ -35,8 +36,13 @@ struct cu_sim_data {
   std::vector<cu_vector_field<Scalar>> J;
   std::vector<cu_scalar_field<Scalar>> flux;
   std::vector<std::vector<cu_scalar_field<Scalar>>> Rho;
+  std::vector<std::vector<cu_scalar_field<Scalar>>> gamma;
+  // std::vector<std::vector<cu_scalar_field<Scalar>>> num;
   std::vector<cu_scalar_field<Scalar>> divE;
   std::vector<cu_scalar_field<Scalar>> divB;
+  std::vector<cu_scalar_field<Scalar>> photon_produced;
+  std::vector<cu_scalar_field<Scalar>> pair_produced;
+  std::vector<cu_scalar_field<Scalar>> photon_num;
   // std::vector<cu_scalar_field<Scalar>> Rho_avg;
   // std::vector<cu_scalar_field<Scalar>> J_s;
   // std::vector<cu_scalar_field<Scalar>> J_avg;
