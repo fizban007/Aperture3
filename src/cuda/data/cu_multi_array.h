@@ -37,7 +37,7 @@ class cu_multi_array : public multi_array<T> {
   explicit cu_multi_array(const Extent& extent);
 
   /// Standard copy constructor.
-  cu_multi_array(const self_type& other);
+  // cu_multi_array(const self_type& other);
 
   /// Standard move constructor.
   cu_multi_array(self_type&& other);
@@ -131,7 +131,7 @@ class cu_multi_array : public multi_array<T> {
   // cudaPitchedPtr data_d() { return _data_d; }
   cudaPitchedPtr& data_d() { return _data_d; }
   const cudaPitchedPtr& data_d() const { return _data_d; }
-  // int devId() const { return _devId; }
+  int devId() const { return _devId; }
 
  private:
   cudaPitchedPtr _data_d;  ///< Pointer to the data stored on the GPU

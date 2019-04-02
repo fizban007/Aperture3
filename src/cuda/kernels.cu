@@ -32,7 +32,6 @@ erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
       if (!dev_mesh.is_in_bulk(c))
       // int c1 = dev_mesh.get_c1(c);
       // int c2 = dev_mesh.get_c2(c);
-      // printf("%d %d\n", c1, c2);
       // if (c1 < dev_mesh.guard[0] ||
       //     c1 >= dev_mesh.dims[0] - dev_mesh.guard[0] ||
       //     c2 < dev_mesh.guard[1] ||
@@ -83,7 +82,7 @@ void
 compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   Kernels::compute_tile<<<256, 256>>>(tile, cell, num);
   // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -91,7 +90,7 @@ void
 erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
   Kernels::erase_ptc_in_guard_cells<<<512, 512>>>(cell, num);
   // Wait for GPU to finish
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -101,7 +100,7 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
   Kernels::compute_energy_histogram<<<512, 512>>>(hist, E, num,
                                                   num_bins, Emax);
   // Wait for GPU to finish
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -112,7 +111,7 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
   Kernels::compute_energy_histogram<<<512, 512>>>(
       hist, E, num, num_bins, Emax, flags, flag);
   // Wait for GPU to finish
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 

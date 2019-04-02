@@ -423,7 +423,7 @@ hdf_exporter<T>::writeXMFHead(std::ofstream &fs) {
 
 template <typename T>
 void
-hdf_exporter<T>::writeXMFStep(std::ofstream &fs, int step,
+hdf_exporter<T>::writeXMFStep(std::ofstream &fs, uint32_t step,
                               double time) {
   std::string dim_str;
   auto &mesh = grid->mesh();
@@ -646,14 +646,15 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
   if (!xmf.is_open()) {
     xmf.open(outputDirectory + "data.xmf");
   }
+  T *self = static_cast<T *>(this);
   if (step == 0) {
     writeXMFHead(xmf);
-    writeXMFStep(xmf, step, time);
+    self->writeXMFStep(xmf, step, time);
     writeXMFTail(xmf);
   } else {
     // long pos = xmf.tellp();
     xmf.seekp(-26, std::ios_base::end);
-    writeXMFStep(xmf, step, time);
+    self->writeXMFStep(xmf, step, time);
     writeXMFTail(xmf);
   }
 }

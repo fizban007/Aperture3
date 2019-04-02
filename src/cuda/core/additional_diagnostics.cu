@@ -67,11 +67,11 @@ AdditionalDiagnostics::AdditionalDiagnostics(
   m_dev_ptc_num.resize(num_devs);
   for_each_device(env.dev_map(), [this](int n) {
     CudaSafeCall(cudaMallocManaged(
-        m_dev_gamma[n],
-        sizeof(cudaPitchedPtr) * env.params().num_species));
+        &m_dev_gamma[n],
+        sizeof(cudaPitchedPtr) * m_env.params().num_species));
     CudaSafeCall(cudaMallocManaged(
-        m_dev_ptc_num[n],
-        sizeof(cudaPitchedPtr) * env.params().num_speciesnum_devs));
+        &m_dev_ptc_num[n],
+        sizeof(cudaPitchedPtr) * m_env.params().num_species));
   });
 }
 
@@ -84,12 +84,13 @@ AdditionalDiagnostics::~AdditionalDiagnostics() {
 
 void
 AdditionalDiagnostics::collect_diagnostics(cu_sim_data& data) {
+  init_pointers(data);
   for_each_device(data.dev_map, [this, &data](int n) {
     data.photon_num[n].initialize();
-    data.photon_produced[n].initialize();
-    data.pair_produced[n].initialize();
+
     for (int i = 0; i < data.env.params().num_species; i++) {
       data.gamma[i][n].initialize();
+      data.ptc_num[i][n].initialize();
     }
     Kernels::collect_ptc_diagnostics<<<256, 512>>>(
         data.particles[n].data(), data.particles[n].number(),
@@ -100,11 +101,23 @@ AdditionalDiagnostics::collect_diagnostics(cu_sim_data& data) {
         data.photon_num[n].ptr());
     CudaCheckError();
     for (int i = 0; i < m_env.params().num_species; i++) {
-      data.gamma[i][n].divideBy(data.photon_num[i][n]);
+      data.gamma[i][n].divideBy(data.ptc_num[i][n]);
     }
   });
 
   cudaDeviceSynchronize();
+}
+
+void
+AdditionalDiagnostics::init_pointers(cu_sim_data& data) {
+  if (!m_initialized) {
+    for_each_device(data.dev_map, [this, &data](int n){
+        for (int i = 0; i < m_env.params().num_species; i++)  {
+          m_dev_gamma[n][i] = data.gamma[i][n].ptr();
+          m_dev_ptc_num[n][i] = data.ptc_num[i][n].ptr();
+        }
+      });
+  }
 }
 
 }  // namespace Aperture

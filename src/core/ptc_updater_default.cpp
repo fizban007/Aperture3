@@ -67,130 +67,130 @@ ptc_updater_default::push(sim_data& data, double dt, uint32_t step) {
   auto& ptc = data.particles;
   auto& mesh = data.grid->mesh();
 
-  if (ptc.number() > 0) {
-    //    int vec_width = 8;
-    Logger::print_info("vec_width is {}", vec_width);
-    for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
-      // Interpolate field values to particle position
-      Vec_idx_type c;
-      c.load_a(ptc.data().cell + idx);
-      // Mask for empty particles. Do not write results to these
-      // particles
-      // Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
-      auto d = c / mesh.dims[0];
-      auto c1s = c - d * mesh.dims[0];
-      uint32_t empty_offset =
-          1 * sizeof(Scalar) +
-          (1 + mesh.dims[1]) * data.E.data(0).pitch();
-#ifdef USE_DOUBLE
-      Vec_ui_type offsets =
-          extend_low(c1s * sizeof(double) + d * data.E.data(0).pitch());
-      Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
-#else
-      Vec_ui_type offsets =
-          c1s * sizeof(float) + d * data.E.data(0).pitch();
-      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
-#endif
-      offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
+//   if (ptc.number() > 0) {
+//     //    int vec_width = 8;
+//     Logger::print_info("vec_width is {}", vec_width);
+//     for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
+//       // Interpolate field values to particle position
+//       Vec_idx_type c;
+//       c.load_a(ptc.data().cell + idx);
+//       // Mask for empty particles. Do not write results to these
+//       // particles
+//       // Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+//       auto d = c / mesh.dims[0];
+//       auto c1s = c - d * mesh.dims[0];
+//       uint32_t empty_offset =
+//           1 * sizeof(Scalar) +
+//           (1 + mesh.dims[1]) * data.E.data(0).pitch();
+// #ifdef USE_DOUBLE
+//       Vec_ui_type offsets =
+//           extend_low(c1s * sizeof(double) + d * data.E.data(0).pitch());
+//       Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
+// #else
+//       Vec_ui_type offsets =
+//           c1s * sizeof(float) + d * data.E.data(0).pitch();
+//       Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+// #endif
+//       offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
-#ifndef USE_DOUBLE
-      Vec_f_type x1;
-      x1.maskload_a(ptc.data().x1 + idx, empty_mask);
-      Vec_f_type x2;
-      x2.maskload_a(ptc.data().x2 + idx, empty_mask);
-      Vec_f_type x3;
-      x3.maskload_a(ptc.data().x3 + idx, empty_mask);
+// #ifndef USE_DOUBLE
+//       Vec_f_type x1;
+//       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
+//       Vec_f_type x2;
+//       x2.maskload_a(ptc.data().x2 + idx, empty_mask);
+//       Vec_f_type x3;
+//       x3.maskload_a(ptc.data().x3 + idx, empty_mask);
 
-      // Find q_over_m of the current particle species
-      Vec_ui_type flag;
-      flag.maskload_a((int*)(ptc.data().flag + idx), empty_mask);
-      Vec_i_type sp = get_ptc_type(flag);
-      Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
+//       // Find q_over_m of the current particle species
+//       Vec_ui_type flag;
+//       flag.maskload_a((int*)(ptc.data().flag + idx), empty_mask);
+//       Vec_i_type sp = get_ptc_type(flag);
+//       Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
 
-      Vec_f_type E1 = interpolate_3d(data.E.data(0), offsets, x1, x2,
-                                     x3, data.E.stagger(0)) *
-                      q_over_m * 2.0f;
-      Vec_f_type E2 = interpolate_3d(data.E.data(1), offsets, x1, x2,
-                                     x3, data.E.stagger(1)) *
-                      q_over_m * 2.0f;
-      Vec_f_type E3 = interpolate_3d(data.E.data(2), offsets, x1, x2,
-                                     x3, data.E.stagger(2)) *
-                      q_over_m * 2.0f;
-      Vec_f_type B1 = interpolate_3d(data.B.data(0), offsets, x1, x2,
-                                     x3, data.B.stagger(0)) *
-                      q_over_m;
-      Vec_f_type B2 = interpolate_3d(data.B.data(1), offsets, x1, x2,
-                                     x3, data.B.stagger(1)) *
-                      q_over_m;
-      Vec_f_type B3 = interpolate_3d(data.B.data(2), offsets, x1, x2,
-                                     x3, data.B.stagger(2)) *
-                      q_over_m;
+//       Vec_f_type E1 = interpolate_3d(data.E.data(0), offsets, x1, x2,
+//                                      x3, data.E.stagger(0)) *
+//                       q_over_m * 2.0f;
+//       Vec_f_type E2 = interpolate_3d(data.E.data(1), offsets, x1, x2,
+//                                      x3, data.E.stagger(1)) *
+//                       q_over_m * 2.0f;
+//       Vec_f_type E3 = interpolate_3d(data.E.data(2), offsets, x1, x2,
+//                                      x3, data.E.stagger(2)) *
+//                       q_over_m * 2.0f;
+//       Vec_f_type B1 = interpolate_3d(data.B.data(0), offsets, x1, x2,
+//                                      x3, data.B.stagger(0)) *
+//                       q_over_m;
+//       Vec_f_type B2 = interpolate_3d(data.B.data(1), offsets, x1, x2,
+//                                      x3, data.B.stagger(1)) *
+//                       q_over_m;
+//       Vec_f_type B3 = interpolate_3d(data.B.data(2), offsets, x1, x2,
+//                                      x3, data.B.stagger(2)) *
+//                       q_over_m;
 
-      Vec_f_type p1;
-      p1.maskload_a(ptc.data().p1 + idx, empty_mask);
-      Vec_f_type p2;
-      p2.maskload_a(ptc.data().p2 + idx, empty_mask);
-      Vec_f_type p3;
-      p3.maskload_a(ptc.data().p3 + idx, empty_mask);
-      Vec_f_type gamma;
-      gamma.maskload_a(ptc.data().E + idx, empty_mask);
+//       Vec_f_type p1;
+//       p1.maskload_a(ptc.data().p1 + idx, empty_mask);
+//       Vec_f_type p2;
+//       p2.maskload_a(ptc.data().p2 + idx, empty_mask);
+//       Vec_f_type p3;
+//       p3.maskload_a(ptc.data().p3 + idx, empty_mask);
+//       Vec_f_type gamma;
+//       gamma.maskload_a(ptc.data().E + idx, empty_mask);
 
-      // Vay push
-      Vec_f_type up1 = p1 + E1 + mul_add(p2, B3, -p3 * B2) / gamma;
-      Vec_f_type up2 = p2 + E2 + mul_add(p3, B1, -p1 * B3) / gamma;
-      Vec_f_type up3 = p3 + E3 + mul_add(p1, B2, -p2 * B1) / gamma;
+//       // Vay push
+//       Vec_f_type up1 = p1 + E1 + mul_add(p2, B3, -p3 * B2) / gamma;
+//       Vec_f_type up2 = p2 + E2 + mul_add(p3, B1, -p1 * B3) / gamma;
+//       Vec_f_type up3 = p3 + E3 + mul_add(p1, B2, -p2 * B1) / gamma;
 
-      Vec_f_type tt = mul_add(B1, B1, mul_add(B2, B2, B3 * B3));
-      Vec_f_type ut = mul_add(up1, B1, mul_add(up2, B2, up3 * B3));
+//       Vec_f_type tt = mul_add(B1, B1, mul_add(B2, B2, B3 * B3));
+//       Vec_f_type ut = mul_add(up1, B1, mul_add(up2, B2, up3 * B3));
 
-      Vec_f_type sigma = mul_add(
-          up1, up1,
-          mul_add(up2, up2, mul_add(up3, up3, Vec_f_type(1.0f) - tt)));
-      Vec_f_type inv_gamma2 =
-          Vec_f_type(2.0f) /
-          (sigma +
-           sqrt(mul_add(sigma, sigma, mul_add(ut, ut, tt) * 4.0f)));
-      Vec_f_type s =
-          Vec_f_type(1.0f) / mul_add(inv_gamma2, tt, Vec_f_type(1.0f));
-      Vec_f_type inv_gamma = sqrt(inv_gamma2);
-      gamma = Vec_f_type(1.0f) / inv_gamma;
+//       Vec_f_type sigma = mul_add(
+//           up1, up1,
+//           mul_add(up2, up2, mul_add(up3, up3, Vec_f_type(1.0f) - tt)));
+//       Vec_f_type inv_gamma2 =
+//           Vec_f_type(2.0f) /
+//           (sigma +
+//            sqrt(mul_add(sigma, sigma, mul_add(ut, ut, tt) * 4.0f)));
+//       Vec_f_type s =
+//           Vec_f_type(1.0f) / mul_add(inv_gamma2, tt, Vec_f_type(1.0f));
+//       Vec_f_type inv_gamma = sqrt(inv_gamma2);
+//       gamma = Vec_f_type(1.0f) / inv_gamma;
 
-      gamma.maskstore_a(ptc.data().E + idx, empty_mask);
+//       gamma.maskstore_a(ptc.data().E + idx, empty_mask);
 
-      p1 = s * mul_add(mul_add(up2, B3, -up3 * B2), inv_gamma,
-                       mul_add(B1 * ut, inv_gamma2, up1));
-      p2 = s * mul_add(mul_add(up3, B1, -up1 * B3), inv_gamma,
-                       mul_add(B2 * ut, inv_gamma2, up2));
-      p3 = s * mul_add(mul_add(up1, B2, -up2 * B1), inv_gamma,
-                       mul_add(B3 * ut, inv_gamma2, up3));
-      // p2 = s * (mul_add(B2 * ut, inv_gamma2, up2) +
-      //           mul_add(up3, B1, -up1 * B3) * inv_gamma);
-      // p3 = s * (mul_add(B3 * ut, inv_gamma2, up3) +
-      //           mul_add(up1, B2, -up2 * B1) * inv_gamma);
-      // Vec_f_type pm1 = p1 + E1;
-      // Vec_f_type pm2 = p2 + E2;
-      // Vec_f_type pm3 = p3 + E3;
-      // Vec_f_type gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3
-      // + 1.0f);
+//       p1 = s * mul_add(mul_add(up2, B3, -up3 * B2), inv_gamma,
+//                        mul_add(B1 * ut, inv_gamma2, up1));
+//       p2 = s * mul_add(mul_add(up3, B1, -up1 * B3), inv_gamma,
+//                        mul_add(B2 * ut, inv_gamma2, up2));
+//       p3 = s * mul_add(mul_add(up1, B2, -up2 * B1), inv_gamma,
+//                        mul_add(B3 * ut, inv_gamma2, up3));
+//       // p2 = s * (mul_add(B2 * ut, inv_gamma2, up2) +
+//       //           mul_add(up3, B1, -up1 * B3) * inv_gamma);
+//       // p3 = s * (mul_add(B3 * ut, inv_gamma2, up3) +
+//       //           mul_add(up1, B2, -up2 * B1) * inv_gamma);
+//       // Vec_f_type pm1 = p1 + E1;
+//       // Vec_f_type pm2 = p2 + E2;
+//       // Vec_f_type pm3 = p3 + E3;
+//       // Vec_f_type gamma = sqrt(pm1 * pm1 + pm2 * pm2 + pm3 * pm3
+//       // + 1.0f);
 
-      // gamma.store_a(ptc.data().E + idx);
+//       // gamma.store_a(ptc.data().E + idx);
 
-      // Vec_f_type pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
-      // Vec_f_type pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
-      // Vec_f_type pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
-      // Vec_f_type t2p1 =
-      //     (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
+//       // Vec_f_type pp1 = pm1 + (pm2 * B3 - pm3 * B2) / gamma;
+//       // Vec_f_type pp2 = pm2 + (pm3 * B1 - pm1 * B3) / gamma;
+//       // Vec_f_type pp3 = pm3 + (pm1 * B2 - pm2 * B1) / gamma;
+//       // Vec_f_type t2p1 =
+//       //     (B1 * B1 + B2 * B2 + B3 * B3) / (gamma * gamma) + 1.0f;
 
-      // p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
-      // p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
-      // p3 = E3 + pm3 + (pp1 * B2 - pp2 * B1) / t2p1 * 2.0f;
+//       // p1 = E1 + pm1 + (pp2 * B3 - pp3 * B2) / t2p1 * 2.0f;
+//       // p2 = E2 + pm2 + (pp3 * B1 - pp1 * B3) / t2p1 * 2.0f;
+//       // p3 = E3 + pm3 + (pp1 * B2 - pp2 * B1) / t2p1 * 2.0f;
 
-      p1.maskstore_a(ptc.data().p1 + idx, empty_mask);
-      p2.maskstore_a(ptc.data().p2 + idx, empty_mask);
-      p3.maskstore_a(ptc.data().p3 + idx, empty_mask);
-#endif
-    }
-  }
+//       p1.maskstore_a(ptc.data().p1 + idx, empty_mask);
+//       p2.maskstore_a(ptc.data().p2 + idx, empty_mask);
+//       p3.maskstore_a(ptc.data().p3 + idx, empty_mask);
+// #endif
+//     }
+//   }
 }
 
 void

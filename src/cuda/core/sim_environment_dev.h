@@ -45,8 +45,10 @@ class cu_sim_environment : public sim_environment {
   // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
 
-  void get_sub_guard_cells(std::vector<cu_vector_field<Scalar>>& field) const;
-  void get_sub_guard_cells(std::vector<cu_scalar_field<Scalar>>& field) const;
+  void get_sub_guard_cells(
+      std::vector<cu_vector_field<Scalar>>& field) const;
+  void get_sub_guard_cells(
+      std::vector<cu_scalar_field<Scalar>>& field) const;
   void send_sub_guard_cells(
       std::vector<cu_vector_field<Scalar>>& field) const;
   void send_sub_guard_cells(
@@ -56,7 +58,9 @@ class cu_sim_environment : public sim_environment {
   std::vector<int>& dev_map() { return m_dev_map; }
   SimParams& sub_params(int i) { return m_sub_params[i]; }
   const SimParams& sub_params(int i) const { return m_sub_params[i]; }
-  bool is_boundary(int n, int bdy) const { return m_boundary_info[n][bdy]; }
+  bool is_boundary(int n, int bdy) const {
+    return m_boundary_info[n][bdy];
+  }
 
  private:
   void setup_env();
@@ -77,16 +81,23 @@ class cu_sim_environment : public sim_environment {
                                  const Quadmesh& mesh_src,
                                  const Quadmesh& mesh_dst,
                                  int buffer_id, int src_dev,
-                                 int dst_dev) const;
+                                 int dst_dev, bool stagger) const;
 
   void send_sub_guard_cells_right(cu_multi_array<Scalar>& src,
                                   cu_multi_array<Scalar>& dst,
                                   const Quadmesh& mesh_src,
                                   const Quadmesh& mesh_dst,
                                   int buffer_id, int src_dev,
-                                  int dst_dev) const;
+                                  int dst_dev, bool stagger) const;
+  void add_from_buffer_left(cu_multi_array<Scalar>& dst,
+                            const Quadmesh& mesh_dst, int buffer_id,
+                            bool stagger) const;
+  void add_from_buffer_right(cu_multi_array<Scalar>& dst,
+                             const Quadmesh& mesh_dst, int buffer_id,
+                             bool stagger) const;
 
-  std::vector<cu_multi_array<Scalar>> m_sub_buffer;
+  std::vector<cu_multi_array<Scalar>> m_sub_buffer_left;
+  std::vector<cu_multi_array<Scalar>> m_sub_buffer_right;
   std::vector<int> m_dev_map;
   std::vector<SimParams> m_sub_params;
   std::vector<std::array<bool, 6>> m_boundary_info;

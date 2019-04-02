@@ -48,6 +48,7 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
   void write_output(cu_sim_data& data, uint32_t timestep, double time);
   void set_mesh(cu_sim_data& data);
   void prepare_output(cu_sim_data& data);
+  void writeXMFStep(std::ofstream &f, uint32_t step, double time);
 
   template <int n>
   struct cu_fieldoutput {

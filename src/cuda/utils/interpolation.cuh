@@ -135,7 +135,7 @@ struct Interpolator2D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(cudaPitchedPtr& f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
                                 int c1, int c2, Stagger stagger) const {
     Scalar result = 0.0f;
     // for (int j = c2 - Interp::radius;
