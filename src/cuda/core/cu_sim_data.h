@@ -71,6 +71,9 @@ struct cu_sim_data {
 
   std::vector<Particles> particles;
   std::vector<Photons> photons;
+
+  std::vector<Particles> ptc_buffer;
+  std::vector<Photons> ph_buffer;
   int num_species;
   double time = 0.0;
   // int devId;
