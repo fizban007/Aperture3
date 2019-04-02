@@ -41,6 +41,7 @@ struct Quadmesh {
       sizes[i] = 0.0;
       tileSize[i] = 1;
       inv_delta[i] = 1.0;
+      offset[i] = 0;
     }
     dimension = 1;
 #endif  // __CUDACC__
@@ -60,6 +61,7 @@ struct Quadmesh {
       lower[i] = 0.0;
       sizes[i] = delta[i] * dims[i];
       tileSize[i] = 1;
+      offset[i] = 0;
     }
     dimension = dim();
   }
@@ -74,6 +76,7 @@ struct Quadmesh {
       lower[i] = m.lower[i];
       sizes[i] = m.sizes[i];
       tileSize[i] = m.tileSize[i];
+      offset[i] = m.offset[i];
     }
     dimension = m.dimension;
     return *this;
@@ -87,6 +90,7 @@ struct Quadmesh {
       result = result && (guard[i] == m.guard[i]);
       result = result && (sizes[i] == m.sizes[i]);
       result = result && (lower[i] == m.lower[i]);
+      result = result && (offset[i] == m.offset[i]);
       // result = result && (tileSize[i] == m.tileSize[i]);
     }
     result = result && (dimension == m.dimension);

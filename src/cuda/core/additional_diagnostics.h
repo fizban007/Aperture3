@@ -31,6 +31,7 @@ class AdditionalDiagnostics
 
   std::vector<cudaPitchedPtr*> m_dev_gamma;
   std::vector<cudaPitchedPtr*> m_dev_ptc_num;
+  bool m_initialized = false;
 }; // ----- end of class AdditionalDiagnostics -----
 
 

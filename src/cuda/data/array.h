@@ -20,7 +20,7 @@ class cu_array {
   cu_array();
 
   explicit cu_array(size_t length, int devId = 0);
-  cu_array(const self_type& other);
+  // cu_array(const self_type& other);
   cu_array(self_type&& other);
 
   ~cu_array();

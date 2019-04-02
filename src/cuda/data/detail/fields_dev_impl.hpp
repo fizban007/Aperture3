@@ -2,6 +2,7 @@
 #define _FIELDS_DEV_IMPL_H_
 
 #include "cuda/data/fields_dev.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -36,6 +37,7 @@ cu_vector_field<T>::initialize(int component, const Func& f) {
       for (int i = 0; i < m_grid->extent().width(); ++i) {
         double x1 = m_grid->mesh().pos(0, i, m_stagger[component][0]);
         m_array[component](i, j, k) = f(x1, x2, x3);
+        // Logger::print_debug("x is ({}, {}, {}), f is {}", x1, x2, x3, f(x1, x2, x3));
       }
     }
   }

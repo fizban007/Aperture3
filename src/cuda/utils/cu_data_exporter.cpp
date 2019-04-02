@@ -42,9 +42,11 @@ cu_data_exporter::add_cu_field_output(const std::string &name,
     tempData.type = type;
     tempData.field = field;
     tempData.sync = sync;
-    tempData.f.resize(1);
-    tempData.f[0].resize(
-        boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    tempData.f.resize(num_components);
+    for (int i = 0; i < num_components; i++) {
+      tempData.f[i].resize(
+          boost::extents[mesh.dims[2]][mesh.dims[1]][mesh.dims[0]]);
+    }
     m_fields_3d.push_back(std::move(tempData));
   } else if (dim == 2) {
     cu_fieldoutput<2> tempData;
@@ -52,8 +54,10 @@ cu_data_exporter::add_cu_field_output(const std::string &name,
     tempData.type = type;
     tempData.field = field;
     tempData.sync = sync;
-    tempData.f.resize(1);
-    tempData.f[0].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    tempData.f.resize(num_components);
+    for (int i = 0; i < num_components; i++) {
+      tempData.f[i].resize(boost::extents[mesh.dims[1]][mesh.dims[0]]);
+    }
     m_fields_2d.push_back(std::move(tempData));
   } else if (dim == 1) {
     cu_fieldoutput<1> tempData;
@@ -61,8 +65,10 @@ cu_data_exporter::add_cu_field_output(const std::string &name,
     tempData.type = type;
     tempData.field = field;
     tempData.sync = sync;
-    tempData.f.resize(1);
-    tempData.f[0].resize(boost::extents[mesh.dims[0]]);
+    tempData.f.resize(num_components);
+    for (int i = 0; i < num_components; i++) {
+      tempData.f[i].resize(boost::extents[mesh.dims[0]]);
+    }
     m_fields_1d.push_back(std::move(tempData));
   }
 }
@@ -75,6 +81,9 @@ cu_data_exporter::add_field(const std::string &name,
   std::vector<field_base *> field_ptr(field.size());
   for (unsigned int i = 0; i < field.size(); i++) {
     field_ptr[i] = &field[i];
+    // Logger::print_info("grid is {}x{}",
+    // field_ptr[i]->grid().extent().x,
+    // field_ptr[i]->grid().extent().y);
   }
   add_cu_field_output(name, TypeName<T>::Get(), 1, field_ptr,
                       grid->dim(), sync);
@@ -592,6 +601,8 @@ cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
     for (unsigned int n = 0; n < f.field.size(); n++) {
       if (components == 1) {
         auto fptr = dynamic_cast<cu_scalar_field<Scalar> *>(f.field[n]);
+        // Logger::print_info("grid is {}x{}", fptr->grid().extent().x,
+        //                    fptr->grid().extent().y);
         if (f.sync) fptr->sync_to_host();
         auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
@@ -610,6 +621,8 @@ cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
         auto fptr = dynamic_cast<cu_vector_field<Scalar> *>(f.field[n]);
         if (f.sync) fptr->sync_to_host();
         auto &mesh = fptr->grid().mesh();
+        // Logger::print_debug("offset[0] is {}, offset[1] is {}", m_submesh_out[n].offset[0],
+        //                     m_submesh_out[n].offset[1]);
 #pragma omp simd collapse(2)
         for (int j = 0; j < mesh.reduced_dim(1);
              j += downsample_factor) {
@@ -667,6 +680,216 @@ cu_data_exporter::prepare_output(cu_sim_data &data) {
   add_field("photon_produced", data.photon_produced, true);
   add_field("pair_produced", data.pair_produced, true);
   add_field("photon_num", data.photon_num, true);
+}
+
+void
+cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
+                               double time) {
+  std::string dim_str;
+  auto &mesh = grid->mesh();
+  if (grid->dim() == 3) {
+    dim_str = fmt::format("{} {} {}", mesh.dims[2], mesh.dims[1],
+                          mesh.dims[0]);
+  } else if (grid->dim() == 2) {
+    dim_str = fmt::format("{} {}", mesh.dims[1], mesh.dims[0]);
+  } else if (grid->dim() == 1) {
+    dim_str = fmt::format("{} 1", mesh.dims[0]);
+  }
+
+  fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
+  fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>"
+     << std::endl;
+  if (grid->dim() == 3) {
+    fs << "  <Topology Type=\"3DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y_Z\">" << std::endl;
+  } else if (grid->dim() == 2) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  } else if (grid->dim() == 1) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\"" << dim_str
+       << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  }
+  fs << "    <DataItem Dimensions=\"" << dim_str
+     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+     << std::endl;
+  fs << "      mesh.h5:x1" << std::endl;
+  fs << "    </DataItem>" << std::endl;
+  if (grid->dim() >= 2) {
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x2" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+  if (grid->dim() >= 3) {
+    fs << "    <DataItem Dimensions=\"" << dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x3" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+
+  fs << "  </Geometry>" << std::endl;
+
+  for (auto &f : m_fields_2d) {
+    if (f.f.size() == 1) {
+      fs << "  <Attribute Name=\"" << f.name
+         << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+      fs << "    <DataItem Dimensions=\"" << dim_str
+         << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+         << std::endl;
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+                        f.name)
+         << std::endl;
+      fs << "    </DataItem>" << std::endl;
+      fs << "  </Attribute>" << std::endl;
+    } else if (f.f.size() == 3) {
+      for (int i = 0; i < 3; i++) {
+        fs << "  <Attribute Name=\"" << f.name << i + 1
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
+           << std::endl;
+        fs << "    <DataItem Dimensions=\"" << dim_str
+           << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+           << std::endl;
+        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
+                          f.name, i + 1)
+           << std::endl;
+        fs << "    </DataItem>" << std::endl;
+        fs << "  </Attribute>" << std::endl;
+      }
+    }
+  }
+
+  for (auto &f : m_fields_1d) {
+    if (f.f.size() == 1) {
+      fs << "  <Attribute Name=\"" << f.name
+         << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+      fs << "    <DataItem Dimensions=\"" << dim_str
+         << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+         << std::endl;
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+                        f.name)
+         << std::endl;
+      fs << "    </DataItem>" << std::endl;
+      fs << "  </Attribute>" << std::endl;
+    } else if (f.f.size() == 3) {
+      for (int i = 0; i < 1; i++) {
+        fs << "  <Attribute Name=\"" << f.name << i + 1
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
+           << std::endl;
+        fs << "    <DataItem Dimensions=\"" << dim_str
+           << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+           << std::endl;
+        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
+                          f.name, i + 1)
+           << std::endl;
+        fs << "    </DataItem>" << std::endl;
+        fs << "  </Attribute>" << std::endl;
+      }
+    }
+  }
+  // for (auto &sf : dbScalars2d) {
+  //   fs << "  <Attribute Name=\"" << sf.name
+  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+  //   sf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  // }
+  // for (auto &sf : dbScalars3d) {
+  //   fs << "  <Attribute Name=\"" << sf.name
+  //      << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
+  //   sf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  // }
+  // for (auto &vf : dbVectors2d) {
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}1", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}2", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}3", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  // }
+
+  // for (auto &vf : dbVectors3d) {
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "1\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}1", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "2\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}2", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  //   fs << "  <Attribute Name=\"" << vf.name
+  //      << "3\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //      std::endl;
+  //   fs << "    <DataItem Dimensions=\"" << dim_str
+  //      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //      << std::endl;
+  //   fs << fmt::format("      {}{:06d}.h5:{}3", filePrefix, step,
+  //                     vf.name)
+  //      << std::endl;
+  //   fs << "    </DataItem>" << std::endl;
+  //   fs << "  </Attribute>" << std::endl;
+  // }
+
+  fs << "</Grid>" << std::endl;
 }
 
 // Explicit instantiation of templates

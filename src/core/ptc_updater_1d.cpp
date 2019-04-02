@@ -34,83 +34,83 @@ ptc_updater_1d::push(sim_data& data, double dt, uint32_t step) {
     Logger::print_info("Grid is not 1d, doing nothing in push");
     return;
   }
-  if (ptc.number() > 0) {
-    for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
-      // Interpolate field values to particle position
-      Vec_idx_type c;
-      c.load_a(ptc.data().cell + idx);
-      uint32_t empty_offset = sizeof(Scalar);
-#ifdef USE_DOUBLE
-      Vec_ui_type offsets = extend_low(c * sizeof(double));
-      Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
-#else
-      Vec_ui_type offsets = c * sizeof(float);
-      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
-#endif
-      offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
+//   if (ptc.number() > 0) {
+//     for (size_t idx = 0; idx < ptc.number(); idx += vec_width) {
+//       // Interpolate field values to particle position
+//       Vec_idx_type c;
+//       c.load_a(ptc.data().cell + idx);
+//       uint32_t empty_offset = sizeof(Scalar);
+// #ifdef USE_DOUBLE
+//       Vec_ui_type offsets = extend_low(c * sizeof(double));
+//       Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
+// #else
+//       Vec_ui_type offsets = c * sizeof(float);
+//       Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+// #endif
+//       offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
-#ifndef USE_DOUBLE
-      Vec_f_type x1;
-      x1.maskload_a(ptc.data().x1 + idx, empty_mask);
+// #ifndef USE_DOUBLE
+//       Vec_f_type x1;
+//       x1.maskload_a(ptc.data().x1 + idx, empty_mask);
 
-      // Find q_over_m of the current particle species
-      Vec_ui_type flag;
-      flag.maskload_a((int*)(ptc.data().flag + idx), empty_mask);
-      Vec_i_type sp = get_ptc_type(flag);
-      Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
+//       // Find q_over_m of the current particle species
+//       Vec_ui_type flag;
+//       flag.maskload_a((int*)(ptc.data().flag + idx), empty_mask);
+//       Vec_i_type sp = get_ptc_type(flag);
+//       Vec_f_type q_over_m = lookup<vec_width>(sp, m_env.q_over_m());
 
-      Vec_f_type E0 = gather((Scalar*)data.E.data(0).data(),
-                             offsets - sizeof(Scalar), 1);
-      Vec_f_type E1 =
-          gather((Scalar*)data.E.data(0).data(), offsets, 1);
+//       Vec_f_type E0 = gather((Scalar*)data.E.data(0).data(),
+//                              offsets - sizeof(Scalar), 1);
+//       Vec_f_type E1 =
+//           gather((Scalar*)data.E.data(0).data(), offsets, 1);
 
-      Vec_f_type E = lerp(x1, E0, E1);
+//       Vec_f_type E = lerp(x1, E0, E1);
 
-      Vec_f_type p1;
-      p1.maskload_a(ptc.data().p1 + idx, empty_mask);
+//       Vec_f_type p1;
+//       p1.maskload_a(ptc.data().p1 + idx, empty_mask);
 
-      p1 += E * q_over_m * dt;
+//       p1 += E * q_over_m * dt;
 
-      p1.maskstore_a(ptc.data().p1 + idx, empty_mask);
+//       p1.maskstore_a(ptc.data().p1 + idx, empty_mask);
 
-      auto gamma = sqrt(mul_add(p1, p1, Vec_f_type(1.0)));
+//       auto gamma = sqrt(mul_add(p1, p1, Vec_f_type(1.0)));
 
-      gamma.maskstore_a(ptc.data().E + idx, empty_mask);
-#endif
-    }
-  }
-  if (photons.number() > 0) {
-    for (size_t idx = 0; idx < photons.number(); idx += vec_width) {
-      // Interpolate field values to particle position
-      Vec_idx_type c;
-      c.load_a(photons.data().cell + idx);
-      uint32_t empty_offset = sizeof(Scalar);
-#ifdef USE_DOUBLE
-      Vec_ui_type offsets = extend_low(c * sizeof(double));
-      Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
-#else
-      Vec_ui_type offsets = c * sizeof(float);
-      Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
-#endif
-      offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
+//       gamma.maskstore_a(ptc.data().E + idx, empty_mask);
+// #endif
+//     }
+//   }
+//   if (photons.number() > 0) {
+//     for (size_t idx = 0; idx < photons.number(); idx += vec_width) {
+//       // Interpolate field values to particle position
+//       Vec_idx_type c;
+//       c.load_a(photons.data().cell + idx);
+//       uint32_t empty_offset = sizeof(Scalar);
+// #ifdef USE_DOUBLE
+//       Vec_ui_type offsets = extend_low(c * sizeof(double));
+//       Vec_ib_type empty_mask = (extend_low(c) != Vec_ui_type(MAX_CELL));
+// #else
+//       Vec_ui_type offsets = c * sizeof(float);
+//       Vec_ib_type empty_mask = (c != Vec_ui_type(MAX_CELL));
+// #endif
+//       offsets = select(~empty_mask, Vec_ui_type(empty_offset), offsets);
 
-#ifndef USE_DOUBLE
-      Vec_f_type x1;
-      x1.maskload_a(photons.data().x1 + idx, empty_mask);
-      Vec_f_type path;
-      path.maskload_a(photons.data().path_left + idx, empty_mask);
+// #ifndef USE_DOUBLE
+//       Vec_f_type x1;
+//       x1.maskload_a(photons.data().x1 + idx, empty_mask);
+//       Vec_f_type path;
+//       path.maskload_a(photons.data().path_left + idx, empty_mask);
 
-      Vec_f_type p1;
-      p1.maskload_a(photons.data().p1 + idx, empty_mask);
+//       Vec_f_type p1;
+//       p1.maskload_a(photons.data().p1 + idx, empty_mask);
 
-      x1 += p1 * dt / abs(p1);
-      path -= dt;
+//       x1 += p1 * dt / abs(p1);
+//       path -= dt;
 
-      x1.maskstore_a(photons.data().x1 + idx, empty_mask);
-      path.maskstore_a(photons.data().path_left + idx, empty_mask);
-#endif
-    }
-  }
+//       x1.maskstore_a(photons.data().x1 + idx, empty_mask);
+//       path.maskstore_a(photons.data().path_left + idx, empty_mask);
+// #endif
+//     }
+//   }
 }
 
 void

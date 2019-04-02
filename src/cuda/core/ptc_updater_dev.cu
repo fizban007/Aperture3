@@ -8,6 +8,7 @@
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
+#include "cuda/utils/iterate_devices.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 
@@ -383,6 +384,11 @@ update_particles_1d(particle_data ptc, size_t num, const Scalar *E1,
   }
 }
 
+__global__ void
+check_dev_fields(cudaPitchedPtr p) {
+  printf("%lu, %lu, %lu\n", p.pitch, p.xsize, p.ysize);
+}
+
 }  // namespace Kernels
 
 PtcUpdaterDev::PtcUpdaterDev(const cu_sim_environment &env)
@@ -413,7 +419,7 @@ PtcUpdaterDev::~PtcUpdaterDev() {
 void
 PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
   if (!m_fields_initialized) {
-    for (unsigned int n = 0; n < data.dev_map.size(); n++) {
+    for_each_device(data.dev_map, [this, &data](int n) {
       m_dev_fields[n].E1 = data.E[n].ptr(0);
       m_dev_fields[n].E2 = data.E[n].ptr(1);
       m_dev_fields[n].E3 = data.E[n].ptr(2);
@@ -424,9 +430,21 @@ PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
       m_dev_fields[n].J2 = data.J[n].ptr(1);
       m_dev_fields[n].J3 = data.J[n].ptr(2);
       for (int i = 0; i < data.num_species; i++) {
-        m_dev_fields[n].Rho[i] = data.Rho[n][i].ptr();
+        m_dev_fields[n].Rho[i] = data.Rho[i][n].ptr();
       }
-    }
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].E1);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].E2);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].E3);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].B1);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].B2);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].B3);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].J1);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].J2);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].J3);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].Rho[0]);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].Rho[1]);
+      // Kernels::check_dev_fields<<<1, 1>>>(m_dev_fields[n].Rho[2]);
+    });
   }
   m_fields_initialized = true;
 }
@@ -441,8 +459,8 @@ PtcUpdaterDev::initialize_dev_fields(cu_sim_data &data) {
 //   if (m_env.grid().dim() == 1) {
 //     Kernels::update_particles_1d<<<512, 512>>>(
 //         data.particles.data(), data.particles.number(),
-//         (const Scalar *)data.E.ptr(0).ptr, (Scalar *)data.J.ptr(0).ptr,
-//         (Scalar *)data.Rho[0].ptr().ptr, dt);
+//         (const Scalar *)data.E.ptr(0).ptr, (Scalar
+//         *)data.J.ptr(0).ptr, (Scalar *)data.Rho[0].ptr().ptr, dt);
 //     CudaCheckError();
 //   } else if (m_env.grid().dim() == 2) {
 //     Kernels::update_particles_2d<<<256, 256>>>(data.particles.data(),

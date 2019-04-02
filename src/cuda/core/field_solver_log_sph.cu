@@ -31,7 +31,8 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+  // if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+  if (std::abs(dev_mesh.pos(1, n2, true) - CONST_PI) < 1.0e-5) {
     (*ptrAddr(e1, globalOffset)) +=
         dt *
         (-4.0f * *ptrAddr(b3, globalOffset) /
@@ -75,8 +76,10 @@ compute_e_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
 
   __syncthreads();
   // Extra work for the axis
-  // if (threadIdx.y == 0 && blockIdx.y == 0) {
-  if (n2 == dev_mesh.guard[1]) {
+  // if (n2 == dev_mesh.guard[1]) {
+  //   printf("pos2 is at %f\n", std::abs(dev_mesh.pos(1, n2, true)));
+  // }
+  if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) < 1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
@@ -151,7 +154,8 @@ compute_b_update(cudaPitchedPtr e1, cudaPitchedPtr e2,
   __syncthreads();
 
   // Extra work for the axis at theta = 0
-  if (threadIdx.y == 0 && blockIdx.y == 0) {
+  // if (threadIdx.y == 0 && blockIdx.y == 0) {
+  if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) < 1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * b1.pitch + n1 * sizeof(Scalar);
 
@@ -183,7 +187,8 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
 
-  if (n1 > dev_mesh.guard[0] + 1) {
+  // if (n1 > dev_mesh.guard[0] + 1) {
+  if (dev_mesh.pos(0, n1, 1) > dev_mesh.delta[0]) {
     (*ptrAddr(divE, globalOffset)) =
         (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
              *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
@@ -196,7 +201,8 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
         (*ptrAddr(mesh_ptrs.dV, globalOffset) * dev_mesh.delta[0] *
          dev_mesh.delta[1]);
 
-    if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+    // if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
+    if (std::abs(dev_mesh.pos(1, n2, 1) - dev_mesh.sizes[1] + dev_mesh.lower[1]) < 1.0e-5) {
       (*ptrAddr(divE, globalOffset)) =
           (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
                *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
@@ -223,7 +229,8 @@ compute_divs(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
        dev_mesh.delta[1]);
 
   __syncthreads();
-  if (n2 == dev_mesh.guard[1]) {
+  // if (n2 == dev_mesh.guard[1]) {
+  if (std::abs(dev_mesh.pos(1, n2, 1)) - dev_mesh.delta[1] < 1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
@@ -338,6 +345,7 @@ axis_boundary_upper(cudaPitchedPtr e1, cudaPitchedPtr e2,
     //                 i * sizeof(Scalar));
   }
 }
+
 __global__ void
 outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
                  cudaPitchedPtr e3, cudaPitchedPtr b1,
@@ -360,87 +368,87 @@ outflow_boundary(cudaPitchedPtr e1, cudaPitchedPtr e2,
   }
 }
 
-__global__ void
-relax_electric_potential(cudaPitchedPtr e1, cudaPitchedPtr e2,
-                         cudaPitchedPtr* rho, cudaPitchedPtr dphi,
-                         Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
-  int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x, c2 = threadIdx.y;
-  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
-  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+// __global__ void
+// relax_electric_potential(cudaPitchedPtr e1, cudaPitchedPtr e2,
+//                          cudaPitchedPtr* rho, cudaPitchedPtr dphi,
+//                          Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+//   int t1 = blockIdx.x, t2 = blockIdx.y;
+//   int c1 = threadIdx.x, c2 = threadIdx.y;
+//   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+//   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+//   size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
-  // (*ptrAddr(dphi, globalOffset));
-  Scalar rho_total = 0.0f;
-  for (int n = 0; n < dev_params.num_species; n++) {
-    rho_total += *ptrAddr(rho[n], globalOffset);
-  }
-  Scalar diff = *ptrAddr(mesh_ptrs.dV, globalOffset) * rho_total;
-  // dev_mesh.delta[0] * dev_mesh.delta[1] * rho_total;
-  if (n1 > dev_mesh.guard[0] + 1) {
-    diff -=
-        (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
-             *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
-         *ptrAddr(e1, globalOffset) *
-             *ptrAddr(mesh_ptrs.A1_e, globalOffset) +
-         *ptrAddr(e2, globalOffset + e2.pitch) *
-             *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch) -
-         *ptrAddr(e2, globalOffset) *
-             *ptrAddr(mesh_ptrs.A2_e, globalOffset));
-  }
-  Scalar r0 = std::exp(dev_mesh.pos(0, n1, false));
-  Scalar r1s = std::exp(dev_mesh.pos(0, n1 + 1, false));
-  Scalar r1 = std::exp(dev_mesh.pos(0, n1, true));
+//   // (*ptrAddr(dphi, globalOffset));
+//   Scalar rho_total = 0.0f;
+//   for (int n = 0; n < dev_params.num_species; n++) {
+//     rho_total += *ptrAddr(rho[n], globalOffset);
+//   }
+//   Scalar diff = *ptrAddr(mesh_ptrs.dV, globalOffset) * rho_total;
+//   // dev_mesh.delta[0] * dev_mesh.delta[1] * rho_total;
+//   if (n1 > dev_mesh.guard[0] + 1) {
+//     diff -=
+//         (*ptrAddr(e1, globalOffset + sizeof(Scalar)) *
+//              *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) -
+//          *ptrAddr(e1, globalOffset) *
+//              *ptrAddr(mesh_ptrs.A1_e, globalOffset) +
+//          *ptrAddr(e2, globalOffset + e2.pitch) *
+//              *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch) -
+//          *ptrAddr(e2, globalOffset) *
+//              *ptrAddr(mesh_ptrs.A2_e, globalOffset));
+//   }
+//   Scalar r0 = std::exp(dev_mesh.pos(0, n1, false));
+//   Scalar r1s = std::exp(dev_mesh.pos(0, n1 + 1, false));
+//   Scalar r1 = std::exp(dev_mesh.pos(0, n1, true));
 
-  Scalar Ar1 =
-      *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) / r1s;
-  Scalar Ar0 = *ptrAddr(mesh_ptrs.A1_e, globalOffset) / r0;
-  Scalar At1 = *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch) / r1;
-  Scalar At0 = *ptrAddr(mesh_ptrs.A2_e, globalOffset) / r1;
+//   Scalar Ar1 =
+//       *ptrAddr(mesh_ptrs.A1_e, globalOffset + sizeof(Scalar)) / r1s;
+//   Scalar Ar0 = *ptrAddr(mesh_ptrs.A1_e, globalOffset) / r0;
+//   Scalar At1 = *ptrAddr(mesh_ptrs.A2_e, globalOffset + e2.pitch) / r1;
+//   Scalar At0 = *ptrAddr(mesh_ptrs.A2_e, globalOffset) / r1;
 
-  Scalar Atot = (Ar1 + Ar0 + At1 + At0);
+//   Scalar Atot = (Ar1 + Ar0 + At1 + At0);
 
-  if (n1 > dev_mesh.guard[0] + 1) {
-    (*ptrAddr(dphi, globalOffset)) =
-        (diff + (Ar1 * *ptrAddr(dphi, globalOffset + sizeof(Scalar)) +
-                 Ar0 * *ptrAddr(dphi, globalOffset - sizeof(Scalar)) +
-                 At1 * *ptrAddr(dphi, globalOffset + dphi.pitch) +
-                 At0 * *ptrAddr(dphi, globalOffset - dphi.pitch))) /
-        Atot;
-  }
-}
+//   if (n1 > dev_mesh.guard[0] + 1) {
+//     (*ptrAddr(dphi, globalOffset)) =
+//         (diff + (Ar1 * *ptrAddr(dphi, globalOffset + sizeof(Scalar)) +
+//                  Ar0 * *ptrAddr(dphi, globalOffset - sizeof(Scalar)) +
+//                  At1 * *ptrAddr(dphi, globalOffset + dphi.pitch) +
+//                  At0 * *ptrAddr(dphi, globalOffset - dphi.pitch))) /
+//         Atot;
+//   }
+// }
 
-__global__ void
-correct_E_field(cudaPitchedPtr e1, cudaPitchedPtr e2,
-                cudaPitchedPtr dphi,
-                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
-  int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x, c2 = threadIdx.y;
-  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
-  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+// __global__ void
+// correct_E_field(cudaPitchedPtr e1, cudaPitchedPtr e2,
+//                 cudaPitchedPtr dphi,
+//                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+//   int t1 = blockIdx.x, t2 = blockIdx.y;
+//   int c1 = threadIdx.x, c2 = threadIdx.y;
+//   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+//   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+//   size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
-  if (n1 > dev_mesh.guard[0] + 1) {
-    (*ptrAddr(e1, globalOffset)) -=
-        (*ptrAddr(dphi, globalOffset) -
-         *ptrAddr(dphi, globalOffset - sizeof(Scalar))) /
-        (std::exp(dev_mesh.pos(0, n1, false)) * dev_mesh.delta[0]);
-    (*ptrAddr(e2, globalOffset)) -=
-        (*ptrAddr(dphi, globalOffset) -
-         *ptrAddr(dphi, globalOffset - dphi.pitch)) /
-        (std::exp(dev_mesh.pos(0, n1, true)) * dev_mesh.delta[1]);
+//   if (n1 > dev_mesh.guard[0] + 1) {
+//     (*ptrAddr(e1, globalOffset)) -=
+//         (*ptrAddr(dphi, globalOffset) -
+//          *ptrAddr(dphi, globalOffset - sizeof(Scalar))) /
+//         (std::exp(dev_mesh.pos(0, n1, false)) * dev_mesh.delta[0]);
+//     (*ptrAddr(e2, globalOffset)) -=
+//         (*ptrAddr(dphi, globalOffset) -
+//          *ptrAddr(dphi, globalOffset - dphi.pitch)) /
+//         (std::exp(dev_mesh.pos(0, n1, true)) * dev_mesh.delta[1]);
 
-    if (blockIdx.y == 0 && threadIdx.y == 0) {
-      n2 = dev_mesh.guard[1] - 1;
-      globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+//     if (blockIdx.y == 0 && threadIdx.y == 0) {
+//       n2 = dev_mesh.guard[1] - 1;
+//       globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
 
-      (*ptrAddr(e1, globalOffset)) -=
-          (*ptrAddr(dphi, globalOffset) -
-           *ptrAddr(dphi, globalOffset - sizeof(Scalar))) /
-          (std::exp(dev_mesh.pos(0, n1, false)) * dev_mesh.delta[0]);
-    }
-  }
-}
+//       (*ptrAddr(e1, globalOffset)) -=
+//           (*ptrAddr(dphi, globalOffset) -
+//            *ptrAddr(dphi, globalOffset - sizeof(Scalar))) /
+//           (std::exp(dev_mesh.pos(0, n1, false)) * dev_mesh.delta[0]);
+//     }
+//   }
+// }
 
 }  // namespace Kernels
 
@@ -456,6 +464,8 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
 
   // update_fields(data.E, data.B, data.J, dt, time);
   Logger::print_info("Updating fields");
+  data.env.get_sub_guard_cells(data.E);
+
   for_each_device(data.dev_map, [&data, dt, time](int n) {
     const Grid_LogSph_dev& grid =
         *dynamic_cast<const Grid_LogSph_dev*>(data.grid[n].get());
@@ -472,8 +482,8 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
     CudaCheckError();
   });
 
-  data.env.get_sub_guard_cells(data.E);
-
+  data.env.get_sub_guard_cells(data.B);
+  data.env.get_sub_guard_cells(data.J);
   for_each_device(data.dev_map, [&data, dt, time](int n) {
     const Grid_LogSph_dev& grid =
         *dynamic_cast<const Grid_LogSph_dev*>(data.grid[n].get());
@@ -491,7 +501,7 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
     CudaCheckError();
   });
 
-  data.env.get_sub_guard_cells(data.B);
+  data.env.get_sub_guard_cells(data.E);
 
   for_each_device(data.dev_map, [&data](int n) {
     const Grid_LogSph_dev& grid =
@@ -560,28 +570,29 @@ FieldSolver_LogSph::boundary_conditions(cu_sim_data& data,
   for (int n = 0; n < data.dev_map.size(); n++) {
     int dev_id = data.dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
-    if (data.env.is_boundary(n, 0)) {
+    if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
+      // Logger::print_debug("Processing field boundary {} on device {}", (int)BoundaryPos::lower0, n);
       Kernels::stellar_boundary<<<32, 256>>>(
           data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
           data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), omega);
       CudaCheckError();
     }
 
-    if (data.env.is_boundary(n, 1)) {
+    if (data.env.is_boundary(n, (int)BoundaryPos::upper0)) {
       Kernels::outflow_boundary<<<32, 256>>>(
           data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
           data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
       CudaCheckError();
     }
 
-    if (data.env.is_boundary(n, 2)) {
+    if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
       Kernels::axis_boundary_lower<<<32, 256>>>(
           data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
           data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
       CudaCheckError();
     }
 
-    if (data.env.is_boundary(n, 3)) {
+    if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
       Kernels::axis_boundary_upper<<<32, 256>>>(
           data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
           data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));

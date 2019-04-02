@@ -39,18 +39,18 @@ template <typename T>
 cu_multi_array<T>::cu_multi_array(const Extent& extent)
     : cu_multi_array(extent.width(), extent.height(), extent.depth()) {}
 
-template <typename T>
-cu_multi_array<T>::cu_multi_array(const self_type& other)
-    : multi_array<T>(other),
-      _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)) {
-  // _data = new T[_size];
-  // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T),
-  // 64));
-  Logger::print_debug("Copying multi_array from dev {}", other._devId);
-  CudaSafeCall(cudaSetDevice(other._devId));
-  alloc_mem(this->_extent);
-  copy_from(other);
-}
+// template <typename T>
+// cu_multi_array<T>::cu_multi_array(const self_type& other)
+//     : multi_array<T>(other),
+//       _data_d(make_cudaPitchedPtr(nullptr, 0, 0, 0)) {
+//   // _data = new T[_size];
+//   // _data = reinterpret_cast<T*>(aligned_malloc(_size * sizeof(T),
+//   // 64));
+//   Logger::print_debug("Copying multi_array from dev {}", other._devId);
+//   CudaSafeCall(cudaSetDevice(other._devId));
+//   alloc_mem(this->_extent);
+//   copy_from(other);
+// }
 
 template <typename T>
 cu_multi_array<T>::cu_multi_array(self_type&& other)

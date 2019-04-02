@@ -4,20 +4,35 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/grids/grid_log_sph_dev.h"
+#include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
 
 namespace Aperture {
 
 namespace Kernels {
 
-__global__ void
-fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
-  for (int j =
-           blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
-       j < dev_mesh.dims[1] - dev_mesh.guard[1];
-       j += blockDim.y * gridDim.y) {
-    for (int i =
-             blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+__global__ void check_bg_fields() {
+  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B1.pitch,
+         dev_bg_fields.B1.xsize, dev_bg_fields.B1.ysize);
+  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B2.pitch,
+         dev_bg_fields.B2.xsize, dev_bg_fields.B2.ysize);
+  printf("bg B0 value is %f\n", *ptrAddr(dev_bg_fields.B1, 5, 4));
+}
+
+__global__ void check_dev_mesh() {
+  printf("%d %d\n", dev_mesh.dims[0], dev_mesh.dims[1]);
+  printf("%f %f\n", dev_mesh.lower[0], dev_mesh.lower[1]);
+}
+
+__global__ void check_mesh_ptrs(Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
+  printf("mesh ptr %lu, %lu\n", mesh_ptrs.A1_e.pitch, mesh_ptrs.dV.pitch);
+}
+
+__global__ void fill_particles(particle_data ptc, Scalar weight,
+                               int multiplicity) {
+  for (int j = blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
+       j < dev_mesh.dims[1] - dev_mesh.guard[1]; j += blockDim.y * gridDim.y) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
          i < dev_mesh.dims[0] - dev_mesh.guard[0];
          i += blockDim.x * gridDim.x) {
       uint32_t cell = i + j * dev_mesh.dims[0];
@@ -35,17 +50,15 @@ fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
         ptc.cell[idx] = ptc.cell[idx + 1] = cell;
         ptc.weight[idx] = ptc.weight[idx + 1] = weight * sin(theta);
         ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
-        ptc.flag[idx + 1] =
-            set_ptc_type_flag(0, ParticleType::positron);
+        ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
       }
     }
   }
 }
 
-__global__ void
-send_particles(particle_data ptc_src, size_t num_src,
-               particle_data ptc_dst, size_t num_dst, int* ptc_sent,
-               int dim, int dir) {
+__global__ void send_particles(particle_data ptc_src, size_t num_src,
+                               particle_data ptc_dst, size_t num_dst,
+                               int *ptc_sent, int dim, int dir) {
   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
        i += blockDim.x * gridDim.x) {
     uint32_t cell = ptc_src.cell[i];
@@ -58,7 +71,8 @@ send_particles(particle_data ptc_src, size_t num_src,
       delta_cell = dev_mesh.reduced_dim(1) * dev_mesh.dims[0];
     } else if (dim == 2) {
       c = dev_mesh.get_c3(cell);
-      delta_cell = dev_mesh.reduced_dim(2) * dev_mesh.dims[0] * dev_mesh.dims[1];
+      delta_cell =
+          dev_mesh.reduced_dim(2) * dev_mesh.dims[0] * dev_mesh.dims[1];
     }
     if ((dir == 0 && c < dev_mesh.guard[dim]) ||
         (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim])) {
@@ -78,9 +92,9 @@ send_particles(particle_data ptc_src, size_t num_src,
   }
 }
 
-__global__ void
-send_photons(photon_data ptc_src, size_t num_src, photon_data ptc_dst,
-             size_t num_dst, int* ptc_sent, int dim, int dir) {
+__global__ void send_photons(photon_data ptc_src, size_t num_src,
+                             photon_data ptc_dst, size_t num_dst, int *ptc_sent,
+                             int dim, int dir) {
   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
        i += blockDim.x * gridDim.x) {
     uint32_t cell = ptc_src.cell[i];
@@ -111,20 +125,20 @@ send_photons(photon_data ptc_src, size_t num_src, photon_data ptc_dst,
   }
 }
 
-}  // namespace Kernels
+} // namespace Kernels
 
-cu_sim_data::cu_sim_data(const cu_sim_environment& e)
+cu_sim_data::cu_sim_data(const cu_sim_environment &e)
     : env(e), dev_map(e.dev_map()) {
   num_species = env.params().num_species;
   Rho.resize(num_species);
   gamma.resize(num_species);
+  ptc_num.resize(num_species);
   initialize(e);
 }
 
 cu_sim_data::~cu_sim_data() {}
 
-void
-cu_sim_data::initialize(const cu_sim_environment& env) {
+void cu_sim_data::initialize(const cu_sim_environment &env) {
   init_grid(env);
   for (int n = 0; n < dev_map.size(); n++) {
     // Loop over the devices on the node to initialize each data
@@ -132,9 +146,9 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
     int dev_id = dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
     Logger::print_debug("using device {}", dev_id);
-    auto& mesh = grid[n]->mesh();
-    Logger::print_debug("Mesh dims are {}x{}x{}", mesh.dims[0],
-                        mesh.dims[1], mesh.dims[2]);
+    auto &mesh = grid[n]->mesh();
+    Logger::print_debug("Mesh dims are {}x{}x{}", mesh.dims[0], mesh.dims[1],
+                        mesh.dims[2]);
     E.emplace_back(*grid[n]);
     // Logger::print_debug("initialize E");
     E[n].initialize();
@@ -161,10 +175,13 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
     divB[n].set_stagger(0b000);
 
     photon_produced.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize photon_produced");
     photon_produced[n].initialize();
     pair_produced.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize pair_produced");
     pair_produced[n].initialize();
     photon_num.emplace_back(*grid[n]);
+    // Logger::print_debug("initialize photon_num");
     photon_num[n].initialize();
 
     for (int i = 0; i < num_species; i++) {
@@ -175,11 +192,16 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
       gamma[i].emplace_back(*grid[n]);
       gamma[i][n].initialize();
       gamma[i][n].sync_to_host();
+      ptc_num[i].emplace_back(*grid[n]);
+      ptc_num[i][n].initialize();
+      ptc_num[i][n].sync_to_host();
     }
 
-    init_dev_bg_fields(Ebg[n], Bbg[n]);
+    // init_dev_bg_fields(Ebg[n], Bbg[n]);
 
+    Logger::print_debug("initializing particles");
     particles.emplace_back(env.sub_params(n).max_ptc_number);
+    Logger::print_debug("initializing photons");
     photons.emplace_back(env.sub_params(n).max_photon_number);
     // Logger::print_debug("synchronizing the device");
   }
@@ -191,8 +213,7 @@ cu_sim_data::initialize(const cu_sim_environment& env) {
   }
 }
 
-void
-cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
+void cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   for (int n = 0; n < dev_map.size(); n++) {
     int dev_id = dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
@@ -201,14 +222,13 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
     // cudaDeviceSynchronize();
     CudaCheckError();
 
-    auto& mesh = grid[n]->mesh();
+    auto &mesh = grid[n]->mesh();
     particles[n].set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) *
                          multiplicity);
   }
 }
 
-void
-cu_sim_data::init_grid(const cu_sim_environment& env) {
+void cu_sim_data::init_grid(const cu_sim_environment &env) {
   grid.resize(dev_map.size());
   int last_dim = env.grid().dim() - 1;
   int offset = 0;
@@ -221,14 +241,13 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
       grid[n].reset(new Grid());
     } else if (env.params().coord_system == "LogSpherical") {
       grid[n].reset(new Grid_LogSph_dev());
-    } else if (env.params().coord_system == "1DGR" &&
-               grid[n]->dim() == 1) {
+    } else if (env.params().coord_system == "1DGR" && grid[n]->dim() == 1) {
       grid[n].reset(new Grid_1dGR_dev());
     } else {
       grid[n].reset(new Grid());
     }
     grid[n]->init(env.sub_params(n));
-    auto& mesh = grid[n]->mesh();
+    auto &mesh = grid[n]->mesh();
     mesh.offset[last_dim] = offset;
     offset += mesh.reduced_dim(last_dim);
     Logger::print_debug("Grid dimension for dev {} is {}x{}x{}", dev_id,
@@ -236,65 +255,65 @@ cu_sim_data::init_grid(const cu_sim_environment& env) {
     Logger::print_debug("Grid lower are {}, {}, {}", mesh.lower[0],
                         mesh.lower[1], mesh.lower[2]);
     if (grid[n]->mesh().delta[0] < env.params().delta_t) {
-      std::cerr
-          << "Grid spacing should be larger than delta_t! Aborting!"
-          << std::endl;
+      std::cerr << "Grid spacing should be larger than delta_t! Aborting!"
+                << std::endl;
       abort();
     }
     init_dev_mesh(grid[n]->mesh());
   }
+  // check_dev_mesh();
+  // check_mesh_ptrs();
 }
 
-void
-cu_sim_data::send_particles() {
-  std::vector<int*> ptc_sent_left(dev_map.size());
-  std::vector<int*> ptc_sent_right(dev_map.size());
-  std::vector<int*> ph_sent_left(dev_map.size());
-  std::vector<int*> ph_sent_right(dev_map.size());
+void cu_sim_data::send_particles() {
+  std::vector<int *> ptc_recv_left(dev_map.size());
+  std::vector<int *> ptc_recv_right(dev_map.size());
+  std::vector<int *> ph_recv_left(dev_map.size());
+  std::vector<int *> ph_recv_right(dev_map.size());
   for (int i = 0; i < dev_map.size(); i++) {
     CudaSafeCall(cudaSetDevice(dev_map[i]));
-    CudaSafeCall(cudaMallocManaged(&(ptc_sent_left[i]), sizeof(int)));
-    CudaSafeCall(cudaMallocManaged(&(ptc_sent_right[i]), sizeof(int)));
-    CudaSafeCall(cudaMallocManaged(&(ph_sent_left[i]), sizeof(int)));
-    CudaSafeCall(cudaMallocManaged(&(ph_sent_right[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ptc_recv_left[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ptc_recv_right[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ph_recv_left[i]), sizeof(int)));
+    CudaSafeCall(cudaMallocManaged(&(ph_recv_right[i]), sizeof(int)));
   }
   for (int i = 0; i < dev_map.size(); i++) {
-    if (particles[i].number() == 0) continue;
+    if (particles[i].number() == 0)
+      continue;
     CudaSafeCall(cudaSetDevice(dev_map[i]));
     if (i > 0) {
-      // Send particles left
+      // Send particles right
       Kernels::send_particles<<<256, 512>>>(
-          particles[i].data(), particles[i].number(),
           particles[i - 1].data(), particles[i - 1].number(),
-          ptc_sent_left[i], grid[0]->dim() - 1, 0);
+          particles[i].data(), particles[i].number(), ptc_recv_left[i],
+          grid[0]->dim() - 1, 1);
       CudaCheckError();
     }
     if (i < dev_map.size() - 1) {
-      // Send particles right
+      // Send particles left
       Kernels::send_particles<<<256, 512>>>(
-          particles[i].data(), particles[i].number(),
           particles[i + 1].data(), particles[i + 1].number(),
-          ptc_sent_right[i], grid[0]->dim() - 1, 1);
+          particles[i].data(), particles[i].number(), ptc_recv_right[i],
+          grid[0]->dim() - 1, 0);
       CudaCheckError();
     }
   }
   for (int i = 0; i < dev_map.size(); i++) {
-    if (photons[i].number() == 0) continue;
+    if (photons[i].number() == 0)
+      continue;
     CudaSafeCall(cudaSetDevice(dev_map[i]));
     if (i > 0) {
-      // Send particles left
+      // Send particles right
       Kernels::send_photons<<<256, 512>>>(
-          photons[i].data(), photons[i].number(), photons[i - 1].data(),
-          photons[i - 1].number(), ph_sent_left[i], grid[0]->dim() - 1,
-          0);
+          photons[i - 1].data(), photons[i - 1].number(), photons[i].data(),
+          photons[i].number(), ph_recv_left[i], grid[0]->dim() - 1, 1);
       CudaCheckError();
     }
     if (i < dev_map.size() - 1) {
-      // Send particles right
+      // Send particles left
       Kernels::send_photons<<<256, 512>>>(
-          photons[i].data(), photons[i].number(), photons[i + 1].data(),
-          photons[i + 1].number(), ph_sent_right[i], grid[0]->dim() - 1,
-          1);
+          photons[i + 1].data(), photons[i + 1].number(), photons[i].data(),
+          photons[i].number(), ph_recv_right[i], grid[0]->dim() - 1, 0);
       CudaCheckError();
     }
   }
@@ -302,33 +321,55 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaSetDevice(dev_map[i]));
     CudaSafeCall(cudaDeviceSynchronize());
     if (i > 0) {
-      particles[i - 1].set_num(particles[i - 1].number() +
-                               *ptc_sent_left[i]);
-      photons[i - 1].set_num(photons[i - 1].number() +
-                             *ph_sent_left[i]);
+      particles[i].set_num(particles[i].number() + *ptc_recv_left[i]);
+      photons[i].set_num(photons[i].number() + *ph_recv_left[i]);
     }
     if (i < dev_map.size() - 1) {
-      particles[i + 1].set_num(particles[i + 1].number() +
-                               *ptc_sent_right[i]);
-      photons[i + 1].set_num(photons[i + 1].number() +
-                             *ph_sent_right[i]);
+      particles[i].set_num(particles[i].number() + *ptc_recv_right[i]);
+      photons[i].set_num(photons[i].number() +
+                             *ph_recv_right[i]);
     }
   }
   for (int i = 0; i < dev_map.size(); i++) {
     CudaSafeCall(cudaSetDevice(dev_map[i]));
-    CudaSafeCall(cudaFree(ptc_sent_left[i]));
-    CudaSafeCall(cudaFree(ptc_sent_right[i]));
-    CudaSafeCall(cudaFree(ph_sent_left[i]));
-    CudaSafeCall(cudaFree(ph_sent_right[i]));
+    CudaSafeCall(cudaFree(ptc_recv_left[i]));
+    CudaSafeCall(cudaFree(ptc_recv_right[i]));
+    CudaSafeCall(cudaFree(ph_recv_left[i]));
+    CudaSafeCall(cudaFree(ph_recv_right[i]));
   }
 }
 
-void
-cu_sim_data::sort_particles() {
-  for_each_device(dev_map, [this](int n){
-      particles[n].sort_by_cell();
-      photons[n].sort_by_cell();
-    });
+void cu_sim_data::sort_particles() {
+  for_each_device(dev_map, [this](int n) {
+    particles[n].sort_by_cell();
+    photons[n].sort_by_cell();
+  });
 }
 
-}  // namespace Aperture
+void cu_sim_data::init_bg_fields() {
+  for_each_device(dev_map, [this](int n) {
+    Logger::print_debug("on host, B0 is {}", Bbg[n](0, 5, 4));
+    init_dev_bg_fields(Ebg[n], Bbg[n]);
+    Kernels::check_bg_fields<<<1, 1>>>();
+    CudaCheckError();
+  });
+}
+
+void cu_sim_data::check_dev_mesh() {
+  for_each_device(dev_map, [this](int n) {
+    Kernels::check_dev_mesh<<<1, 1>>>();
+    CudaCheckError();
+  });
+}
+
+void cu_sim_data::check_mesh_ptrs() {
+  for_each_device(dev_map, [this](int n) {
+    const Grid_LogSph_dev &g =
+        *dynamic_cast<const Grid_LogSph_dev *>(grid[n].get());
+    auto mesh_ptrs = g.get_mesh_ptrs();
+    Kernels::check_mesh_ptrs<<<1, 1>>>(mesh_ptrs);
+    CudaCheckError();
+  });
+}
+
+} // namespace Aperture

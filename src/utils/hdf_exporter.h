@@ -87,7 +87,7 @@ class hdf_exporter {
 
   void writeConfig(const SimParams& params);
   void writeXMFHead(std::ofstream& fs);
-  void writeXMFStep(std::ofstream& fs, int step, double time);
+  void writeXMFStep(std::ofstream& fs, uint32_t step, double time);
   void writeXMFTail(std::ofstream& fs);
   void writeXMF(uint32_t step, double time);
   void prepareXMFrestart(uint32_t restart_step, int data_interval);
