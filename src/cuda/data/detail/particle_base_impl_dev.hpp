@@ -352,7 +352,7 @@ particle_base_dev<ParticleClass>::sort_by_cell() {
 
   // Sort the index array by key
   thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 
   // Move the rest of particle array using the new index
   rearrange_arrays("cell");
@@ -366,7 +366,7 @@ particle_base_dev<ParticleClass>::sort_by_cell() {
 
   // Logger::print_info("Sorting complete, there are {} particles in the
   // pool", m_number);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -756,7 +756,7 @@ particle_base_dev<ParticleClass>::compute_spectrum(
   thrust::device_ptr<uint32_t> ptr_energies =
       thrust::device_pointer_cast(d_energies);
   thrust::fill_n(ptr_energies, num_bins, 0);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 
   compute_energy_histogram(d_energies, m_data.E, m_number, num_bins,
                            E_max);
