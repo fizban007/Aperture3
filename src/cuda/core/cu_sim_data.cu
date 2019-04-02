@@ -461,7 +461,7 @@ cu_sim_data::send_particles() {
           typedef typename std::remove_reference<decltype(*x1)>::type
               x_type;
           CudaSafeCall(cudaMemcpyPeer(
-              x1 + particles[n - 1].number(), dev_map[n - 1], x2,
+              x1 + photons[n - 1].number(), dev_map[n - 1], x2,
               dev_map[n], *ph_send_left[n] * sizeof(x_type)));
         });
     photons[n - 1].set_num(photons[n - 1].number() + *ph_send_left[n]);
@@ -474,7 +474,7 @@ cu_sim_data::send_particles() {
           typedef typename std::remove_reference<decltype(*x1)>::type
               x_type;
           CudaSafeCall(cudaMemcpyPeer(
-              x1 + particles[n + 1].number(), dev_map[n + 1], x2,
+              x1 + photons[n + 1].number(), dev_map[n + 1], x2,
               dev_map[n], *ph_send_right[n] * sizeof(x_type)));
         });
     photons[n + 1].set_num(photons[n + 1].number() + *ph_send_right[n]);
