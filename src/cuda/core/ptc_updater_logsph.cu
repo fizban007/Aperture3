@@ -772,13 +772,13 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
                           // (int)BoundaryPos::lower1, n);
       Kernels::axis_rho_lower<<<32, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
-      cudaDeviceSynchronize();
+      // cudaDeviceSynchronize();
     } else if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
       Logger::print_debug("Processing boundary {} on device {}",
                           (int)BoundaryPos::upper1, n);
       Kernels::axis_rho_upper<<<32, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
-      cudaDeviceSynchronize();
+      // cudaDeviceSynchronize();
     }
   });
 }

@@ -104,7 +104,7 @@ Particles::compute_energies() {
   Kernels::compute_ptc_energies<<<512, 512>>>(
       m_data.p1, m_data.p2, m_data.p3, m_data.E, m_number);
   // Wait for GPU to finish
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -136,7 +136,7 @@ Particles::compute_spectrum(int num_bins, std::vector<Scalar>& energies,
   thrust::device_ptr<uint32_t> ptr_energies =
       thrust::device_pointer_cast(d_energies);
   thrust::fill_n(ptr_energies, num_bins, 0);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 
   compute_energy_histogram(d_energies, m_data.E, m_number, num_bins,
                            E_max, m_data.flag, flag);
