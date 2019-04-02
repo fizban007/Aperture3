@@ -7,6 +7,7 @@
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
 #include "visit_struct/visit_struct.hpp"
+#include "utils/timer.h"
 
 namespace Aperture {
 
@@ -387,6 +388,7 @@ cu_sim_data::init_grid(const cu_sim_environment &env) {
 
 void
 cu_sim_data::send_particles() {
+  timer::stamp("send_ptc");
   std::vector<int *> ptc_send_left(dev_map.size());
   std::vector<int *> ptc_send_right(dev_map.size());
   std::vector<int *> ph_send_left(dev_map.size());
@@ -546,6 +548,7 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaFree(ph_send_right[i]));
   }
   CudaSafeCall(cudaDeviceSynchronize());
+  timer::show_duration_since_stamp("Sending particles", "ms", "send_ptc");
 }
 
 void
