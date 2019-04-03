@@ -140,33 +140,23 @@ main(int argc, char* argv[]) {
     }
 
     // Inject particles
-    timer::stamp();
     if (step % 1 == 0)
-      ptc_updater.inject_ptc(data, 4, 0.0, 0.0, 0.0, 1.0, omega);
+      ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 1.0, omega);
 
     // Update particles (push and deposit)
     ptc_updater.update_particles(data, dt, step);
-    ptc_updater.handle_boundary(data);
-    auto t_ptc = timer::get_duration_since_stamp("us");
-    Logger::print_info("Ptc Update took {}us", t_ptc);
+    // ptc_updater.handle_boundary(data);
 
     // Update field values and handle field boundary conditions
-    timer::stamp();
     field_solver.update_fields(data, dt, time);
     field_solver.boundary_conditions(data, omega);
-
-    auto t_field = timer::get_duration_since_stamp("us");
-    Logger::print_info("Field Update took {}us", t_field);
 
     // Create photons and pairs
     rad.emit_photons(data);
     rad.produce_pairs(data);
 
     if (step % env.params().sort_interval == 0 && step != 0) {
-      timer::stamp();
       data.sort_particles();
-      auto t_sort = timer::get_duration_since_stamp("us");
-      Logger::print_info("Ptc sort took {}us", t_sort);
     }
 
     // if (step % env.params().snapshot_interval == 0 && step > 0) {

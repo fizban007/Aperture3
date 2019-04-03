@@ -724,7 +724,7 @@ particle_base_dev<ParticleClass>::rearrange_arrays(
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::clear_guard_cells() {
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   erase_ptc_in_guard_cells(m_data.cell, m_number);
 }
 

@@ -5,7 +5,7 @@
 #include "utils/logger.h"
 #include "utils/memory.h"
 
-#define ALIGNMENT 64
+#define ALIGNMENT 512
 
 namespace Aperture {
 

@@ -461,9 +461,10 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
                                   double time) {
   // Only implemented 2D!
   if (data.env.grid().dim() != 2) return;
+  timer::stamp("field_update");
 
   // update_fields(data.E, data.B, data.J, dt, time);
-  Logger::print_info("Updating fields");
+  // Logger::print_info("Updating fields");
   data.env.get_sub_guard_cells(data.E);
 
   for_each_device(data.dev_map, [&data, dt, time](int n) {
@@ -518,6 +519,9 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
         data.divE[n].ptr(), data.divB[n].ptr(), mesh_ptrs);
     CudaCheckError();
   });
+
+  CudaSafeCall(cudaDeviceSynchronize());
+  timer::show_duration_since_stamp("Field update", "us", "field_update");
 }
 
 // void

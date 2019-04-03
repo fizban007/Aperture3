@@ -119,6 +119,10 @@ cu_sim_environment::setup_env() {
       m_boundary_info[i][highest_dim * 2] =
           m_boundary_info[i][highest_dim * 2 + 1] = false;
     }
+    for (int j = 0; j < 6; j++) {
+      Logger::print_debug("boundary info on dev {} at {} is {}", i, j,
+                          m_boundary_info[i][j]);
+    }
   }
 
   // Obtain the metric type and setup the grid mesh
@@ -448,28 +452,22 @@ cu_sim_environment::send_sub_guard_cells(
       // Sending left to right
       for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
         CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-        // for (int i = 0; i < VECTOR_DIM; i++) {
         send_sub_guard_cells_right(
             field[n].data(i), field[n + 1].data(i),
             field[n].grid().mesh(), field[n + 1].grid().mesh(), n + 1,
             n, n + 1, field[n].stagger(i)[last_dim]);
-        // }
       }
       for (unsigned int n = 1; n < m_dev_map.size(); n++) {
         CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-        // for (int i = 0; i < VECTOR_DIM; i++) {
         add_from_buffer_left(field[n - 1].data(i),
                              field[n - 1].grid().mesh(), n - 1,
                              field[n - 1].stagger(i)[last_dim]);
-        // }
       }
       for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
         CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-        // for (int i = 0; i < VECTOR_DIM; i++) {
         add_from_buffer_right(field[n + 1].data(i),
                               field[n + 1].grid().mesh(), n + 1,
                               field[n + 1].stagger(i)[last_dim]);
-        // }
       }
       cudaDeviceSynchronize();
     }
