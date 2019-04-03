@@ -254,7 +254,18 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       // Scalar new_p = std::sqrt(max(0.25f * E_ph * E_ph, 1.0f)
       // - 1.0f);
       Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
+      Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
 
+      if (gamma != gamma) {
+        printf(
+            "NaN detected in pair creation! ratio is %f, E_ph2 is %f, "
+            "p1 is "
+            "%f, "
+            "p2 is %f, p3 is %f\n",
+            ratio, E_ph2, p1, p2, p3);
+        // asm("trap;");
+        continue;
+      }
       // Add the two new particles
       int offset_e = ptc_num + start_pos + pos_in_block * 2;
       int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
@@ -270,17 +281,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
       ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
-      Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
       ptc.E[offset_e] = ptc.E[offset_p] = gamma;
-      if (gamma != gamma) {
-        printf(
-            "NaN detected in pair creation! ratio is %f, E_ph2 is %f, "
-            "p1 is "
-            "%f, "
-            "p2 is %f, p3 is %f\n",
-            ratio, E_ph2, p1, p2, p3);
-        asm("trap;");
-      }
 
 #ifndef NDEBUG
       assert(ptc.cell[offset_e] == MAX_CELL);

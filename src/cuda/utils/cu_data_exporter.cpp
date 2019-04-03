@@ -680,6 +680,8 @@ cu_data_exporter::prepare_output(cu_sim_data &data) {
   add_field("photon_produced", data.photon_produced, true);
   add_field("pair_produced", data.pair_produced, true);
   add_field("photon_num", data.photon_num, true);
+  add_field("divE", data.divE, true);
+  add_field("divB", data.divB, true);
 }
 
 void
