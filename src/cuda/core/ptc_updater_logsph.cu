@@ -504,7 +504,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
           dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2 + 1] = w * sin(theta);
       ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::positron);
+          bit_or(ParticleFlag::primary), ParticleType::ion);
     }
   }
   states[id] = localState;
