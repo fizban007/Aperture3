@@ -10,6 +10,7 @@
 #include "cuda/utils/interpolation.cuh"
 #include "cuda/utils/iterate_devices.h"
 #include "utils/logger.h"
+#include "utils/timer.h"
 #include "utils/util_functions.h"
 
 #define DEPOSIT_EPS 1.0e-10f
@@ -263,8 +264,8 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
     if (dev_mesh.pos(1, c2 + dc2, new_x2) < 0.0f) {
       dc2 += 1;
       new_x2 = 1.0f - new_x2;
-    // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
-    //            axis1) {
+      // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
+      //            axis1) {
     } else if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
       dc2 -= 1;
       new_x2 = 1.0f - new_x2;
@@ -355,8 +356,8 @@ __launch_bounds__(512, 4)
     if (dev_mesh.pos(1, c2 + dc2, new_x2) < 0.0f) {
       dc2 += 1;
       new_x2 = 1.0f - new_x2;
-    // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
-    //            axis1) {
+      // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
+      //            axis1) {
     } else if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
       dc2 -= 1;
       new_x2 = 1.0f - new_x2;
@@ -367,7 +368,8 @@ __launch_bounds__(512, 4)
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = r3p;
-    // printf("c1 %d, c2 %d, x1 %f, x2 %f, v1 %f, v2 %f\n", c1, c2, new_x1,
+    // printf("c1 %d, c2 %d, x1 %f, x2 %f, v1 %f, v2 %f\n", c1, c2,
+    // new_x1,
     //        new_x2, v1, v2);
 
     // step 2: Deposit current
@@ -518,6 +520,8 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
     size_t offset_0 =
         i * sizeof(Scalar) + dev_mesh.guard[1] * fields.J3.pitch;
     (*ptrAddr(fields.J3, offset_0 - fields.J3.pitch)) = 0.0f;
+    (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) -=
+        *ptrAddr(fields.J2, offset_0 - 2 * fields.J2.pitch);
   }
 }
 
@@ -526,13 +530,21 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    size_t offset_pi = i * sizeof(Scalar) +
-                       (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) *
-                           fields.J3.pitch;
-    // (*ptrAddr(fields.J2, offset_pi + fields.J2.pitch)) -=
-    //     *ptrAddr(fields.J2, offset_pi + 2 * fields.J2.pitch);
+    if (i >= dev_mesh.dims[0]) continue;
+    // Scalar *row = (Scalar *)((char *)fields.J2.ptr +
+    //                          (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J2.pitch);
+    size_t offset_pi =
+        i * sizeof(Scalar) +
+        (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J3.pitch;
+    (*ptrAddr(fields.J2, offset_pi)) -=
+        *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
 
-    // (*ptrAddr(fields.J3, offset_pi + fields.J3.pitch)) = 0.0f;
+    (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
+    // printf("%d, %d, %lu, %lu, %lu\n", i,
+    //        (dev_mesh.dims[1] - dev_mesh.guard[1] - 1),
+    //        fields.J3.pitch, fields.J3.xsize, fields.J3.ysize);
+    // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
+    // row[i] = 0.0f;
   }
 }
 
@@ -699,6 +711,7 @@ PtcUpdaterLogSph::~PtcUpdaterLogSph() {
 void
 PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
                                    uint32_t step) {
+  timer::stamp("ptc_update");
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
@@ -754,8 +767,10 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       CudaCheckError();
     });
   }
-  cudaDeviceSynchronize();
+  CudaSafeCall(cudaDeviceSynchronize());
   data.send_particles();
+  handle_boundary(data);
+  timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
 }
 
 void
@@ -763,24 +778,30 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   for_each_device(data.dev_map, [this, &data](int n) {
     data.particles[n].clear_guard_cells();
     data.photons[n].clear_guard_cells();
-    const Grid_LogSph_dev &grid =
-        *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-    auto mesh_ptrs = grid.get_mesh_ptrs();
+    });
+  CudaSafeCall(cudaDeviceSynchronize());
+  for_each_device(data.dev_map, [this, &data](int n) {
+    const Grid_LogSph_dev *grid =
+        dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
+    auto mesh_ptrs = grid->get_mesh_ptrs();
 
     if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
+      // CudaSafeCall(cudaSetDevice(n));
       // Logger::print_debug("Processing boundary {} on device {}",
-                          // (int)BoundaryPos::lower1, n);
-      Kernels::axis_rho_lower<<<32, 512>>>(m_dev_fields[n], mesh_ptrs);
+      // (int)BoundaryPos::lower1, n);
+      Kernels::axis_rho_lower<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
       // cudaDeviceSynchronize();
     } else if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
-      Logger::print_debug("Processing boundary {} on device {}",
-                          (int)BoundaryPos::upper1, n);
-      Kernels::axis_rho_upper<<<32, 512>>>(m_dev_fields[n], mesh_ptrs);
+      // CudaSafeCall(cudaSetDevice(n));
+      // Logger::print_debug("Processing boundary {} on device {}",
+      //                     (int)BoundaryPos::upper1, n);
+      Kernels::axis_rho_upper<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
       // cudaDeviceSynchronize();
     }
   });
+  CudaSafeCall(cudaDeviceSynchronize());
 }
 
 void

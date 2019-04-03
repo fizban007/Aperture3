@@ -405,7 +405,7 @@ cu_sim_data::send_particles() {
     *ph_send_right[i] = 0;
   }
   int last_dim = grid[0]->dim() - 1;
-  Logger::print_debug("last_dim is {}", last_dim);
+  // Logger::print_debug("last_dim is {}", last_dim);
   for (int n = 0; n < dev_map.size(); n++) {
     CudaSafeCall(cudaSetDevice(dev_map[n]));
     Kernels::send_particles<<<256, 512>>>(
@@ -479,6 +479,7 @@ cu_sim_data::send_particles() {
         });
     photons[n + 1].set_num(photons[n + 1].number() + *ph_send_right[n]);
   }
+  CudaSafeCall(cudaDeviceSynchronize());
   // for (int i = 0; i < dev_map.size(); i++) {
   //   if (particles[i].number() == 0)
   //     continue;
@@ -547,16 +548,17 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaFree(ph_send_left[i]));
     CudaSafeCall(cudaFree(ph_send_right[i]));
   }
-  CudaSafeCall(cudaDeviceSynchronize());
   timer::show_duration_since_stamp("Sending particles", "ms", "send_ptc");
 }
 
 void
 cu_sim_data::sort_particles() {
+  timer::stamp("ptc_sort");
   for_each_device(dev_map, [this](int n) {
     particles[n].sort_by_cell();
     photons[n].sort_by_cell();
   });
+  timer::show_duration_since_stamp("Sorting particles", "us", "ptc_sort");
 }
 
 void
@@ -564,8 +566,8 @@ cu_sim_data::init_bg_fields() {
   for_each_device(dev_map, [this](int n) {
     Logger::print_debug("on host, B0 is {}", Bbg[n](0, 5, 4));
     init_dev_bg_fields(Ebg[n], Bbg[n]);
-    Kernels::check_bg_fields<<<1, 1>>>();
-    CudaCheckError();
+    // Kernels::check_bg_fields<<<1, 1>>>();
+    // CudaCheckError();
   });
 }
 

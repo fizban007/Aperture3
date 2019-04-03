@@ -264,6 +264,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
             "p2 is %f, p3 is %f\n",
             ratio, E_ph2, p1, p2, p3);
         // asm("trap;");
+        photons.cell[tid] = MAX_CELL;
         continue;
       }
       // Add the two new particles
