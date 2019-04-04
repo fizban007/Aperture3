@@ -340,8 +340,11 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
     CudaCheckError();
 
     auto &mesh = grid[n]->mesh();
-    particles[n].set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) *
+    particles[n].set_num(mesh.dims[0] * mesh.dims[1] *
                          2 * multiplicity);
+    });
+  for_each_device(dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
     });
 }
 
