@@ -333,9 +333,7 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
 
 void
 cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
-  for (int n = 0; n < dev_map.size(); n++) {
-    int dev_id = dev_map[n];
-    CudaSafeCall(cudaSetDevice(dev_id));
+  for_each_device(dev_map, [this, weight, multiplicity](int n) {
     Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(
         particles[n].data(), weight, multiplicity);
     // cudaDeviceSynchronize();
@@ -343,8 +341,8 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
 
     auto &mesh = grid[n]->mesh();
     particles[n].set_num(mesh.reduced_dim(0) * mesh.reduced_dim(1) *
-                         multiplicity);
-  }
+                         2 * multiplicity);
+    });
 }
 
 void
