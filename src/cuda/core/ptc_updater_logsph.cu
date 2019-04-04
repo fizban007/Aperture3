@@ -715,6 +715,13 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
+    for_each_device(data.dev_map, [this, &data](int n) {
+        data.J[n].initialize();
+        for (int i = 0; i < data.env.params().num_species; i++) {
+          data.Rho[i][n].initialize();
+        }
+      });
+    timer::stamp("ptc_push");
     // Skip empty particle array
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
       if (data.particles[n].number() > 0) {
@@ -725,13 +732,17 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
                                            data.particles[n].number(),
                                            m_dev_fields[n], dt);
         CudaCheckError();
-        data.J[n].initialize();
-        for (int i = 0; i < data.env.params().num_species; i++) {
-          data.Rho[i][n].initialize();
-        }
-        const Grid_LogSph_dev &grid =
-            *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-        auto mesh_ptrs = grid.get_mesh_ptrs();
+      }
+      });
+    CudaSafeCall(cudaDeviceSynchronize());
+    timer::show_duration_since_stamp("Pushing particles", "us", "ptc_push");
+
+    timer::stamp("ptc_deposit");
+    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
+      if (data.particles[n].number() > 0) {
+        const Grid_LogSph_dev *grid =
+            dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
+        auto mesh_ptrs = grid->get_mesh_ptrs();
         // m_J1.initialize();
         // m_J2.initialize();
         Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
@@ -743,6 +754,11 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
         // CudaCheckError();
       }
+      });
+    CudaSafeCall(cudaDeviceSynchronize());
+    timer::show_duration_since_stamp("Depositing particles", "us", "ptc_push");
+
+    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
       // Skip empty particle array
       if (data.photons[n].number() > 0) {
         Logger::print_info(

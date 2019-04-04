@@ -15,6 +15,7 @@
 #include "cuda/utils/iterate_devices.h"
 #include "rt_pulsar.h"
 #include "utils/logger.h"
+#include "utils/timer.h"
 #include "utils/util_functions.h"
 #include <cuda.h>
 #include <thrust/device_ptr.h>
@@ -334,6 +335,7 @@ RadiationTransferPulsar::~RadiationTransferPulsar() {
 
 void
 RadiationTransferPulsar::emit_photons(cu_sim_data &data) {
+  timer::stamp("emit_photons");
   for_each_device(data.dev_map, [this, &data](int n) {
     auto &ptc = data.particles[n];
     auto &photons = data.photons[n];
@@ -376,6 +378,7 @@ RadiationTransferPulsar::emit_photons(cu_sim_data &data) {
   });
 
   cudaDeviceSynchronize();
+  timer::show_duration_since_stamp("Emitting photons", "ms", "emit_photons");
   // Logger::print_debug("Initialize finished");
 
   // Logger::print_info("There are {} photons in the pool",
@@ -385,6 +388,7 @@ RadiationTransferPulsar::emit_photons(cu_sim_data &data) {
 
 void
 RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
+  timer::stamp("produce_pairs");
   for_each_device(data.dev_map, [this, &data](int n) {
     auto &ptc = data.particles[n];
     auto &photons = data.photons[n];
@@ -429,6 +433,7 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
   cudaDeviceSynchronize();
+  timer::show_duration_since_stamp("Producing pairs", "ms", "produce_pairs");
 }
 
 }  // namespace Aperture
