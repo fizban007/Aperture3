@@ -735,7 +735,9 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         CudaCheckError();
       }
     });
-    CudaSafeCall(cudaDeviceSynchronize());
+    for_each_device(data.dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
+    });
     timer::show_duration_since_stamp("Pushing particles", "us",
                                      "ptc_push");
 
@@ -757,7 +759,9 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         // CudaCheckError();
       }
     });
-    CudaSafeCall(cudaDeviceSynchronize());
+    for_each_device(data.dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
+    });
     timer::show_duration_since_stamp("Depositing particles", "us",
                                      "ptc_push");
 
@@ -774,7 +778,9 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         CudaCheckError();
       }
     });
-    CudaSafeCall(cudaDeviceSynchronize());
+    for_each_device(data.dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
+    });
     timer::show_duration_since_stamp("Updating photons", "us",
                                      "ph_update");
     timer::stamp("comm");
@@ -783,15 +789,16 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       m_env.send_sub_guard_cells(data.Rho[i]);
     }
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
-      const Grid_LogSph_dev &grid =
-          *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-      auto mesh_ptrs = grid.get_mesh_ptrs();
+      const Grid_LogSph_dev *grid =
+          dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
+      auto mesh_ptrs = grid->get_mesh_ptrs();
       Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
           m_dev_fields[n], mesh_ptrs, dt);
       CudaCheckError();
     });
   }
-  CudaSafeCall(cudaDeviceSynchronize());
+  for_each_device(data.dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
   timer::show_duration_since_stamp("Sending guard cells", "us", "comm");
   data.send_particles();
   handle_boundary(data);
@@ -804,7 +811,8 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
     data.particles[n].clear_guard_cells();
     data.photons[n].clear_guard_cells();
   });
-  CudaSafeCall(cudaDeviceSynchronize());
+  for_each_device(data.dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
   for_each_device(data.dev_map, [this, &data](int n) {
     const Grid_LogSph_dev *grid =
         dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
@@ -826,7 +834,8 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
       // cudaDeviceSynchronize();
     }
   });
-  CudaSafeCall(cudaDeviceSynchronize());
+  for_each_device(data.dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
 }
 
 void
