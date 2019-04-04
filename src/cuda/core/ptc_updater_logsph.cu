@@ -532,7 +532,8 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     if (i >= dev_mesh.dims[0]) continue;
     // Scalar *row = (Scalar *)((char *)fields.J2.ptr +
-    //                          (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J2.pitch);
+    //                          (dev_mesh.dims[1] - dev_mesh.guard[1] -
+    //                          1) * fields.J2.pitch);
     size_t offset_pi =
         i * sizeof(Scalar) +
         (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J3.pitch;
@@ -716,11 +717,11 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
 
   if (m_env.grid().dim() == 2) {
     for_each_device(data.dev_map, [this, &data](int n) {
-        data.J[n].initialize();
-        for (int i = 0; i < data.env.params().num_species; i++) {
-          data.Rho[i][n].initialize();
-        }
-      });
+      data.J[n].initialize();
+      for (int i = 0; i < data.env.params().num_species; i++) {
+        data.Rho[i][n].initialize();
+      }
+    });
     timer::stamp("ptc_push");
     // Skip empty particle array
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
@@ -733,9 +734,10 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
                                            m_dev_fields[n], dt);
         CudaCheckError();
       }
-      });
+    });
     CudaSafeCall(cudaDeviceSynchronize());
-    timer::show_duration_since_stamp("Pushing particles", "us", "ptc_push");
+    timer::show_duration_since_stamp("Pushing particles", "us",
+                                     "ptc_push");
 
     timer::stamp("ptc_deposit");
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
@@ -754,10 +756,12 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
         // CudaCheckError();
       }
-      });
+    });
     CudaSafeCall(cudaDeviceSynchronize());
-    timer::show_duration_since_stamp("Depositing particles", "us", "ptc_push");
+    timer::show_duration_since_stamp("Depositing particles", "us",
+                                     "ptc_push");
 
+    timer::stamp("ph_update");
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
       // Skip empty particle array
       if (data.photons[n].number() > 0) {
@@ -770,6 +774,10 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         CudaCheckError();
       }
     });
+    CudaSafeCall(cudaDeviceSynchronize());
+    timer::show_duration_since_stamp("Updating photons", "us",
+                                     "ph_update");
+    timer::stamp("comm");
     m_env.send_sub_guard_cells(data.J);
     for (int i = 0; i < data.env.params().num_species; i++) {
       m_env.send_sub_guard_cells(data.Rho[i]);
@@ -784,6 +792,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
     });
   }
   CudaSafeCall(cudaDeviceSynchronize());
+  timer::show_duration_since_stamp("Sending guard cells", "us", "comm");
   data.send_particles();
   handle_boundary(data);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
@@ -794,7 +803,7 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   for_each_device(data.dev_map, [this, &data](int n) {
     data.particles[n].clear_guard_cells();
     data.photons[n].clear_guard_cells();
-    });
+  });
   CudaSafeCall(cudaDeviceSynchronize());
   for_each_device(data.dev_map, [this, &data](int n) {
     const Grid_LogSph_dev *grid =
