@@ -404,19 +404,22 @@ cu_sim_environment::send_sub_guard_cells(
     // Sending right to left
     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      send_sub_guard_cells_left(field[n].data(), field[n - 1].data(),
-                                field[n].grid().mesh(),
-                                field[n - 1].grid().mesh(), n - 1, n,
-                                n - 1, field[n].stagger()[last_dim]);
+      send_sub_guard_cells_left(
+          field[n].data(), field[n - 1].data(), field[n].grid().mesh(),
+          field[n - 1].grid().mesh(), n - 1, m_dev_map[n],
+          m_dev_map[n - 1], field[n].stagger()[last_dim]);
     }
     // Sending left to right
     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      send_sub_guard_cells_right(field[n].data(), field[n + 1].data(),
-                                 field[n].grid().mesh(),
-                                 field[n + 1].grid().mesh(), n + 1, n,
-                                 n + 1, field[n].stagger()[last_dim]);
+      send_sub_guard_cells_right(
+          field[n].data(), field[n + 1].data(), field[n].grid().mesh(),
+          field[n + 1].grid().mesh(), n + 1, m_dev_map[n],
+          m_dev_map[n + 1], field[n].stagger()[last_dim]);
     }
+    for_each_device(m_dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
+    });
     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
       add_from_buffer_left(field[n - 1].data(),
@@ -460,6 +463,8 @@ cu_sim_environment::send_sub_guard_cells(
             field[n].grid().mesh(), field[n + 1].grid().mesh(), n + 1,
             n, n + 1, field[n].stagger(i)[last_dim]);
       }
+      for_each_device(m_dev_map,
+                      [](int n) { cudaDeviceSynchronize(); });
       for (unsigned int n = 1; n < m_dev_map.size(); n++) {
         CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
         add_from_buffer_left(field[n - 1].data(i),

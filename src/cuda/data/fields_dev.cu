@@ -456,11 +456,14 @@ cu_scalar_field<T>::interpolate(const Vec3<int>& c,
 
 template <typename T>
 cu_vector_field<T>::cu_vector_field() : field_base(), m_array() {
+  m_type = FieldType::E;
   for (int i = 0; i < VECTOR_DIM; ++i) {
     // Default initialize to face-centered
     m_stagger[i] = Stagger(0b000);
     // m_stagger[i][i] = true;
-    m_stagger[i].set_bit(i, true);
+    // m_stagger[i].set_bit(i, true);
+    m_stagger[i].set_bit((i + 1) % 3, true);
+    m_stagger[i].set_bit((i + 2) % 3, true);
   }
 }
 
