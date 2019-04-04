@@ -105,18 +105,18 @@ AdditionalDiagnostics::collect_diagnostics(cu_sim_data& data) {
     }
   });
 
-  cudaDeviceSynchronize();
+  for_each_device(data.dev_map, [](int n) { cudaDeviceSynchronize(); });
 }
 
 void
 AdditionalDiagnostics::init_pointers(cu_sim_data& data) {
   if (!m_initialized) {
-    for_each_device(data.dev_map, [this, &data](int n){
-        for (int i = 0; i < m_env.params().num_species; i++)  {
-          m_dev_gamma[n][i] = data.gamma[i][n].ptr();
-          m_dev_ptc_num[n][i] = data.ptc_num[i][n].ptr();
-        }
-      });
+    for_each_device(data.dev_map, [this, &data](int n) {
+      for (int i = 0; i < m_env.params().num_species; i++) {
+        m_dev_gamma[n][i] = data.gamma[i][n].ptr();
+        m_dev_ptc_num[n][i] = data.ptc_num[i][n].ptr();
+      }
+    });
   }
 }
 

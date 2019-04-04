@@ -377,8 +377,10 @@ RadiationTransferPulsar::emit_photons(cu_sim_data &data) {
     photons.set_num(photons.number() + new_photons + padding);
   });
 
-  cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Emitting photons", "ms", "emit_photons");
+  for_each_device(data.dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+  timer::show_duration_since_stamp("Emitting photons", "ms",
+                                   "emit_photons");
   // Logger::print_debug("Initialize finished");
 
   // Logger::print_info("There are {} photons in the pool",
@@ -400,9 +402,9 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
         <<<m_blocksPerGrid, m_threadsPerBlock>>>(
             photons.data(), photons.number(), m_numPerBlock[n].data_d(),
             m_posInBlock[n].data_d(), (curandState *)d_rand_states[n],
-            data.pair_produced[n].ptr(), data.Rho[0][n].ptr(), data.Rho[1][n].ptr(),
-            data.Rho[2][n].ptr(), data.B[n].ptr(0), data.B[n].ptr(1),
-            data.B[n].ptr(2));
+            data.pair_produced[n].ptr(), data.Rho[0][n].ptr(),
+            data.Rho[1][n].ptr(), data.Rho[2][n].ptr(),
+            data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
     CudaCheckError();
 
     thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock[n].data_d());
@@ -424,7 +426,8 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
         <<<m_blocksPerGrid, m_threadsPerBlock>>>(
             photons.data(), photons.number(), ptc.data(), ptc.number(),
             m_posInBlock[n].data_d(), m_numPerBlock[n].data_d(),
-            m_cumNumPerBlock[n].data_d(), (curandState *)d_rand_states[n]);
+            m_cumNumPerBlock[n].data_d(),
+            (curandState *)d_rand_states[n]);
     CudaCheckError();
 
     int padding = 100;
@@ -432,8 +435,10 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
   });
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());
-  cudaDeviceSynchronize();
-  timer::show_duration_since_stamp("Producing pairs", "ms", "produce_pairs");
+  for_each_device(data.dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+  timer::show_duration_since_stamp("Producing pairs", "ms",
+                                   "produce_pairs");
 }
 
 }  // namespace Aperture
