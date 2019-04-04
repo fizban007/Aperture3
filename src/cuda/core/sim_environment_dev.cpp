@@ -5,6 +5,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/grids/grid_log_sph_dev.h"
+#include "cuda/utils/iterate_devices.h"
 // #include "domain_communicator.h"
 
 namespace Aperture {
@@ -428,7 +429,9 @@ cu_sim_environment::send_sub_guard_cells(
                             field[n + 1].grid().mesh(), n + 1,
                             field[n + 1].stagger()[last_dim]);
     }
-    cudaDeviceSynchronize();
+    for_each_device(m_dev_map, [](int n) {
+      CudaSafeCall(cudaDeviceSynchronize());
+    });
   }
 }
 
@@ -469,7 +472,8 @@ cu_sim_environment::send_sub_guard_cells(
                               field[n + 1].grid().mesh(), n + 1,
                               field[n + 1].stagger(i)[last_dim]);
       }
-      cudaDeviceSynchronize();
+      for_each_device(m_dev_map,
+                      [](int n) { cudaDeviceSynchronize(); });
     }
   }
 }
