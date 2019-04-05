@@ -14,6 +14,44 @@ namespace Aperture {
 namespace Kernels {
 
 __global__ void
+compute_EdotB(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
+              cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
+              cudaPitchedPtr b1bg, cudaPitchedPtr b2bg,
+              cudaPitchedPtr b3bg, cudaPitchedPtr EdotB) {
+  // Compute time-averaged EdotB over the output interval
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+
+  float delta = 1.0f / dev_params.data_interval;
+  Scalar E1 = 0.5f * (*ptrAddr(e1, globalOffset) +
+                      *ptrAddr(e1, globalOffset - e1.pitch));
+  Scalar E2 = 0.5f * (*ptrAddr(e2, globalOffset) +
+                      *ptrAddr(e2, globalOffset - sizeof(Scalar)));
+  Scalar E3 =
+      0.25f * (*ptrAddr(e3, globalOffset) +
+               *ptrAddr(e3, globalOffset - sizeof(Scalar)) +
+               *ptrAddr(e3, globalOffset - e3.pitch) +
+               *ptrAddr(e3, globalOffset - sizeof(Scalar) - e3.pitch));
+  Scalar B1 = 0.5f * (*ptrAddr(b1, globalOffset) +
+                      *ptrAddr(b1, globalOffset - sizeof(Scalar))) +
+              0.5f * (*ptrAddr(b1bg, globalOffset) +
+                      *ptrAddr(b1bg, globalOffset - sizeof(Scalar)));
+  Scalar B2 = 0.5f * (*ptrAddr(b2, globalOffset) +
+                      *ptrAddr(b2, globalOffset - b2.pitch)) +
+              0.5f * (*ptrAddr(b2bg, globalOffset) +
+                      *ptrAddr(b2bg, globalOffset - b2bg.pitch));
+  Scalar B3 = *ptrAddr(b3, globalOffset) + *ptrAddr(b3bg, globalOffset);
+
+  // Do the actual computation here
+  (*ptrAddr(EdotB, globalOffset)) += delta *
+                                     (E1 * B1 + E2 * B2 + E3 * B3) /
+                                     sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+}
+
+__global__ void
 check_bg_fields() {
   printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B1.pitch,
          dev_bg_fields.B1.xsize, dev_bg_fields.B1.ysize);
@@ -289,6 +327,8 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
     divE.emplace_back(*grid[n]);
     divB.emplace_back(*grid[n]);
     divB[n].set_stagger(0b000);
+    EdotB.emplace_back(*grid[n]);
+    EdotB[n].set_stagger(0b000);
 
     photon_produced.emplace_back(*grid[n]);
     // Logger::print_debug("initialize photon_produced");
@@ -340,12 +380,11 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
     CudaCheckError();
 
     auto &mesh = grid[n]->mesh();
-    particles[n].set_num(mesh.dims[0] * mesh.dims[1] *
-                         2 * multiplicity);
-    });
-  for_each_device(dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
+    particles[n].set_num(mesh.dims[0] * mesh.dims[1] * 2 *
+                         multiplicity);
+  });
+  for_each_device(dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
 }
 
 void
@@ -550,7 +589,7 @@ cu_sim_data::send_particles() {
     CudaSafeCall(cudaFree(ptc_send_right[i]));
     CudaSafeCall(cudaFree(ph_send_left[i]));
     CudaSafeCall(cudaFree(ph_send_right[i]));
-    });
+  });
   timer::show_duration_since_stamp("Sending particles", "ms",
                                    "send_ptc");
 }
@@ -573,6 +612,20 @@ cu_sim_data::init_bg_fields() {
     init_dev_bg_fields(Ebg[n], Bbg[n]);
     // Kernels::check_bg_fields<<<1, 1>>>();
     // CudaCheckError();
+  });
+}
+
+void
+cu_sim_data::compute_edotb() {
+  for_each_device(dev_map, [this](int n) {
+    auto &mesh = grid[n]->mesh();
+    dim3 blockSize(32, 16);
+    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+    Kernels::compute_EdotB<<<gridSize, blockSize>>>(
+        E[n].ptr(0), E[n].ptr(1), E[n].ptr(2), B[n].ptr(0), B[n].ptr(1),
+        B[n].ptr(2), Bbg[n].ptr(0), Bbg[n].ptr(1), Bbg[n].ptr(2),
+        EdotB[n].ptr());
+    CudaCheckError();
   });
 }
 

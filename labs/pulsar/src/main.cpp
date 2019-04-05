@@ -56,24 +56,9 @@ main(int argc, char* argv[]) {
       2, [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
   data.init_bg_fields();
 
-  // for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1];
-  // j++) {
-  //   for (int i = mesh.guard[0]; i < mesh.dims[0] - mesh.guard[0];
-  //        i++) {
-  //     uint32_t cell = i + j * mesh.dims[0];
-  //     for (int n = 0; n < 5; n++) {
-  //       data.particles.append({0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-  //       cell,
-  //                             ParticleType::electron, 100.0);
-  //       data.particles.append({0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-  //       cell,
-  //                             ParticleType::positron, 100.0);
-  //     }
-  //   }
-  // }
   // data.particles[0].append({0.5, 0.5, 0.0}, {0.0, 30.0, 0.0}, 50 + 260*129,
   //                          ParticleType::electron, 100.0);
-  // data.fill_multiplicity(20.0, 2);
+  data.fill_multiplicity(1.0, 2);
   // Initialize the field solver
   FieldSolver_LogSph field_solver;
 
@@ -134,6 +119,7 @@ main(int argc, char* argv[]) {
       for_each_device(env.dev_map(), [&data](int n) {
         data.photon_produced[n].initialize();
         data.pair_produced[n].initialize();
+        data.EdotB[n].initialize();
       });
 
       Logger::print_info("Finished output!");
