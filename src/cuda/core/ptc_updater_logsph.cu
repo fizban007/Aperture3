@@ -181,12 +181,12 @@ vay_push_2d(particle_data ptc, size_t num,
         Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
                          delta_p3 * delta_p3);
         // if (dp < p) {
-        p1 +=
-            (dp < 10.0f * p || dp < 1e-2 ? delta_p1 : 0.5 * p * delta_p1 / dp);
-        p2 +=
-            (dp < 10.0f * p || dp < 1e-2 ? delta_p2 : 0.5 * p * delta_p2 / dp);
-        p3 +=
-            (dp < 10.0f * p || dp < 1e-2 ? delta_p3 : 0.5 * p * delta_p3 / dp);
+        p1 += (dp < 10.0f * p || dp < 1e-2 ? delta_p1
+                                           : 0.5 * p * delta_p1 / dp);
+        p2 += (dp < 10.0f * p || dp < 1e-2 ? delta_p2
+                                           : 0.5 * p * delta_p2 / dp);
+        p3 += (dp < 10.0f * p || dp < 1e-2 ? delta_p3
+                                           : 0.5 * p * delta_p3 / dp);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
       }
       // printf("gamma after is %f\n", gamma);
@@ -284,7 +284,7 @@ __launch_bounds__(512, 4)
     deposit_current_2d_log_sph(particle_data ptc, size_t num,
                                PtcUpdaterDev::fields_data fields,
                                Grid_LogSph_dev::mesh_ptrs mesh_ptrs,
-                               Scalar dt, bool axis0, bool axis1) {
+                               Scalar dt, uint32_t step, bool axis0, bool axis1) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -368,6 +368,7 @@ __launch_bounds__(512, 4)
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = r3p;
+
     // printf("c1 %d, c2 %d, x1 %f, x2 %f, v1 %f, v2 %f\n", c1, c2,
     // new_x1,
     //        new_x2, v1, v2);
@@ -412,8 +413,10 @@ __launch_bounds__(512, 4)
                   -weight * v3 * val2 / *ptrAddr(mesh_ptrs.dV, offset));
 
         // rho is deposited at the final position
-        Scalar s1 = sx1 * sy1;
-        atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+        if ((step + 1) % dev_params.data_interval == 0) {
+          Scalar s1 = sx1 * sy1;
+          atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+        }
       }
     }
   }
@@ -459,8 +462,11 @@ process_j(PtcUpdaterDev::fields_data fields,
 
 __global__ void
 inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
-           Scalar p2, Scalar p3, Scalar w, cudaPitchedPtr rho0,
-           cudaPitchedPtr rho1, curandState *states, Scalar omega) {
+           Scalar p2, Scalar p3, Scalar w,
+           // cudaPitchedPtr rho0,
+           // cudaPitchedPtr rho1,
+           Scalar *surface_e, Scalar *surface_p, curandState *states,
+           Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i = dev_mesh.guard[1] + id;
@@ -469,9 +475,11 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
-    Scalar dens = max(-*ptrAddr(rho0, dev_mesh.guard[0] + 2, i),
-                      *ptrAddr(rho1, dev_mesh.guard[0] + 2, i));
-    if (dens > 0.2 * square(1.0f / dev_mesh.delta[1])) continue;
+    // Scalar dens = max(-*ptrAddr(rho0, dev_mesh.guard[0] + 2, i),
+    //                   *ptrAddr(rho1, dev_mesh.guard[0] + 2, i));
+    Scalar dens = max(surface_e[i - dev_mesh.guard[1]],
+                      surface_p[i - dev_mesh.guard[1]]);
+    if (dens > 0.4 * square(1.0f / dev_mesh.delta[1])) continue;
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
@@ -513,6 +521,23 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
 }
 
 __global__ void
+ptc_outflow(particle_data ptc, size_t num) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[idx];
+    if (c == MAX_CELL || idx >= num) continue;
+
+    int c1 = dev_mesh.get_c1(c);
+    auto flag = ptc.flag[idx];
+    if (check_bit(flag, ParticleFlag::ignore_EM)) continue;
+    if (c1 > dev_mesh.dims[0] - dev_params.damping_length + 2) {
+      flag |= bit_or(ParticleFlag::ignore_EM);
+      ptc.flag[idx] = flag;
+    }
+  }
+}
+
+__global__ void
 axis_rho_lower(PtcUpdaterDev::fields_data fields,
                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -546,6 +571,30 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
     //        fields.J3.pitch, fields.J3.xsize, fields.J3.ysize);
     // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
     // row[i] = 0.0f;
+  }
+}
+
+__global__ void
+measure_surface_density(particle_data ptc, size_t num,
+                        Scalar *surface_e, Scalar *surface_p) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = ptc.cell[idx];
+    if (c == MAX_CELL || idx >= num) continue;
+
+    // Load particle quantities
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    if (c1 >= dev_mesh.guard[0] + 1 && c1 <= dev_mesh.guard[0] + 3) {
+      auto flag = ptc.flag[idx];
+      int sp = get_ptc_type(flag);
+      auto w = ptc.weight[idx];
+      if (sp == (int)ParticleType::electron) {
+        atomicAdd(surface_e, w / 3.0f);
+      } else if (sp == (int)ParticleType::positron) {
+        atomicAdd(surface_p, w / 3.0f);
+      }
+    }
   }
 }
 
@@ -699,6 +748,12 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
                      this->m_threadsPerBlock, this->m_blocksPerGrid);
   });
 
+  for_each_device(env.dev_map(), [this](int n) {
+    m_surface_e.emplace_back(m_env.sub_params(n).N[1],
+                             m_env.dev_map()[n]);
+    m_surface_p.emplace_back(m_env.sub_params(n).N[1],
+                             m_env.dev_map()[n]);
+  });
   // m_J1.initialize();
   // m_J2.initialize();
 }
@@ -751,7 +806,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
         // m_J2.initialize();
         Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
             data.particles[n].data(), data.particles[n].number(),
-            m_dev_fields[n], mesh_ptrs, dt, m_env.is_boundary(n, 2),
+            m_dev_fields[n], mesh_ptrs, dt, step, m_env.is_boundary(n, 2),
             m_env.is_boundary(n, 3));
         CudaCheckError();
         // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
@@ -763,7 +818,7 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       CudaSafeCall(cudaDeviceSynchronize());
     });
     timer::show_duration_since_stamp("Depositing particles", "us",
-                                     "ptc_push");
+                                     "ptc_deposit");
 
     // timer::stamp("comm");
     m_env.send_sub_guard_cells(data.J);
@@ -800,7 +855,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
     // timer::show_duration_since_stamp("Updating photons", "us",
     //                                  "ph_update");
   }
-  // timer::show_duration_since_stamp("Sending guard cells", "us", "comm");
+  // timer::show_duration_since_stamp("Sending guard cells", "us",
+  // "comm");
   data.send_particles();
   handle_boundary(data);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
@@ -826,13 +882,19 @@ PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
       Kernels::axis_rho_lower<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
       // cudaDeviceSynchronize();
-    } else if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
+    }
+    if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
       // CudaSafeCall(cudaSetDevice(n));
       // Logger::print_debug("Processing boundary {} on device {}",
       //                     (int)BoundaryPos::upper1, n);
       Kernels::axis_rho_upper<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
       CudaCheckError();
       // cudaDeviceSynchronize();
+    }
+    if (data.env.is_boundary(n, (int)BoundaryPos::upper0)) {
+      Kernels::ptc_outflow<<<256, 512>>>(data.particles[n].data(),
+                                         data.particles[n].number());
+      CudaCheckError();
     }
   });
   for_each_device(data.dev_map,
@@ -846,10 +908,17 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
   for_each_device(data.dev_map, [this, &data, &inj_per_cell, &p1, &p2,
                                  &p3, &w, &omega](int n) {
     if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
+      m_surface_e[n].assign_dev(0.0);
+      m_surface_p[n].assign_dev(0.0);
+      Kernels::measure_surface_density<<<256, 512>>>(
+          data.particles[n].data(), data.particles[n].number(),
+          m_surface_e[n].data_d(), m_surface_p[n].data_d());
+      CudaCheckError();
       Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
           data.particles[n].data(), data.particles[n].number(),
-          inj_per_cell, p1, p2, p3, w, data.Rho[0][n].ptr(),
-          data.Rho[1][n].ptr(), (curandState *)d_rand_states[n], omega);
+          inj_per_cell, p1, p2, p3, w, m_surface_e[n].data_d(),
+          m_surface_p[n].data_d(), (curandState *)d_rand_states[n],
+          omega);
       CudaCheckError();
 
       data.particles[n].set_num(
