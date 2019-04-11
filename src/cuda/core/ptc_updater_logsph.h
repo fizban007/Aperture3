@@ -3,6 +3,7 @@
 
 #include "cuda/core/ptc_updater_dev.h"
 #include "cuda/data/fields_dev.h"
+#include "cuda/data/array.h"
 #include "cuda/grids/grid_log_sph_dev.h"
 
 namespace Aperture {
@@ -23,6 +24,8 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   // Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
   std::vector<void*> d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
+
+  std::vector<cu_array<Scalar>> m_surface_e, m_surface_p;
 
   // cu_scalar_field<double> m_J1, m_J2;
   // cu_scalar_field<Scalar> m_dens, m_balance;

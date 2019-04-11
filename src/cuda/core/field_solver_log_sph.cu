@@ -519,6 +519,7 @@ FieldSolver_LogSph::update_fields(cu_sim_data& data, double dt,
         data.divE[n].ptr(), data.divB[n].ptr(), mesh_ptrs);
     CudaCheckError();
   });
+  data.compute_edotb();
 
   CudaSafeCall(cudaDeviceSynchronize());
   timer::show_duration_since_stamp("Field update", "us", "field_update");
