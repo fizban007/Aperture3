@@ -17,9 +17,10 @@ struct exponent_sim {
   void init_spectra(const T& spec, double n0);
   void push_particles(Scalar Eacc, Scalar dt);
   void add_new_particles(int num, Scalar E);
-  void produce_photons();
-  void produce_pairs();
+  void produce_photons(Scalar dt);
+  void produce_pairs(Scalar dt);
   void compute_spectrum();
+  void sort_photons();
 
   cu_sim_environment& m_env;
   inverse_compton m_ic;

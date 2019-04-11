@@ -16,7 +16,7 @@ class inverse_compton {
   ~inverse_compton();
 
   template <typename F>
-  void init(const F& n_e, Scalar emin, Scalar emax);
+  void init(const F& n_e, Scalar emin, Scalar emax, Scalar n0 = 1.0);
 
   cu_array<Scalar>& ic_rate() { return m_ic_rate; }
   cu_array<Scalar>& gg_rate() { return m_gg_rate; }

@@ -283,7 +283,8 @@ inverse_compton::~inverse_compton() {}
 
 template <typename F>
 void
-inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
+inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
+                      Scalar n0) {
   const int N_mu = 100;
   const int N_e = 800;
 
@@ -310,7 +311,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
         result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) * e;
       }
     }
-    m_ic_rate[n] = result * dmu * de;
+    m_ic_rate[n] =
+        result * dmu * de * RE_SQUARE * n0 * 8.0 * CONST_PI / 3.0;
+    if (n % 10 == 0)
+      Logger::print_info("IC rate at gamma {} is {}", gamma,
+                         m_ic_rate[n]);
+
     // if (n != 0)
     //   m_ic_rate[n] /= m_ic_rate[0];
     // Logger::print_info("IC rate is {}", m_ic_rate[n]);
@@ -340,10 +346,13 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
           // {}", eph, s, b, sigma_gg(b));
         }
       }
-      m_gg_rate[n] = 0.25 * result * dmu * de;
+      m_gg_rate[n] =
+          0.25 * result * dmu * de * n0 * CONST_PI * RE_SQUARE;
       // if (n != 0)
       //   m_gg_rate[n] /= m_gg_rate[0];
-      // Logger::print_info("gg rate {}", m_gg_rate[n]);
+      if (n % 10 == 0)
+        Logger::print_info("gg rate at gamma {} is {}", eph,
+                           m_gg_rate[n]);
     }
   }
   // m_gg_rate[0] = 1.0;
@@ -503,14 +512,19 @@ inverse_compton::generate_random_gamma(cu_array<Scalar>& gammas) {
 }
 
 template void inverse_compton::init<Spectra::power_law_hard>(
-    const Spectra::power_law_hard& n_e, Scalar emin, Scalar emax);
+    const Spectra::power_law_hard& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void inverse_compton::init<Spectra::power_law_soft>(
-    const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax);
+    const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void inverse_compton::init<Spectra::black_body>(
-    const Spectra::black_body& n_e, Scalar emin, Scalar emax);
+    const Spectra::black_body& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void inverse_compton::init<Spectra::mono_energetic>(
-    const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax);
+    const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void inverse_compton::init<Spectra::broken_power_law>(
-    const Spectra::broken_power_law& n_e, Scalar emin, Scalar emax);
+    const Spectra::broken_power_law& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 
 }  // namespace Aperture

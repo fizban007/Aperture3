@@ -32,4 +32,6 @@
 #define TAG_ID_MASK 0x0000FFFF
 #define MAX_TRACKED 3000000
 
+#define RE_SQUARE 7.91402e-26
+
 #endif  // _CONSTANTS_H_
