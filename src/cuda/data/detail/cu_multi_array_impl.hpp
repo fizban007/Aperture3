@@ -109,7 +109,7 @@ cu_multi_array<T>::copy_from(const self_type& other) {
   myParms.kind = cudaMemcpyDeviceToDevice;
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
-  sync_to_host();
+  // sync_to_host();
   // auto ptr = thrust::device_pointer_cast(_data_d);
   // auto ptr_other = thrust::device_pointer_cast(other._data_d);
   // thrust::copy_n(ptr_other, _size, ptr);

@@ -1,5 +1,6 @@
 # Time step size
-delta_t = 0.01
+# delta_t = 7.0e5
+delta_t = 20
 
 # Maximum number of particles per node
 max_ptc_number = 100000000
@@ -8,13 +9,13 @@ max_ptc_number = 100000000
 max_photon_number = 100000000
 
 # Radius cutoff for pair creation
-r_cutoff = 100.0
+r_cutoff = 6.0e7
 
 # Acceleration E field
-constE = 100.0
+constE = 50
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/Aperture3/2d_weak_pulsar/"
+data_dir = "/home/alex/storage/Data/Aperture3/exponent/"
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -22,7 +23,7 @@ data_dir = "/home/alex/storage/Data/Aperture3/2d_weak_pulsar/"
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [2048, 2048, 1]
+N = [256, 256, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
@@ -39,12 +40,6 @@ tile_size = [16, 16, 1]
 
 [Simulation]
 
-coord_system = "LogSpherical"
-
 random_seed = 3333
 
-# Downsample factor. 1 means no downsample at all, and n means output
-# resolution is divided by n. This should be a power of 2 as well
-downsample = 4
-
-max_steps = 1000000
+max_steps = 500000

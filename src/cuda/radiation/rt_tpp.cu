@@ -44,7 +44,9 @@ total_f(Scalar s) {
 
 HOST_DEVICE double
 approx_Em(Scalar s) {
-  if (s < 100.0) {
+  if (s <= 4.01) {
+    return 0.0;
+  } else if (s < 100.0) {
     return 0.71 / sqrt(s);
   } else {
     Scalar l2s = std::log(2.0 * s);
@@ -72,7 +74,8 @@ __device__ Scalar
 find_tpp_rate(Scalar gamma) {
   int gn = find_tpp_n_gamma(gamma);
   if (gamma > MAX_GAMMA) return dev_tpp_rate[gn];
-  Scalar x = (std::log(gamma) - std::log(dev_tpp_gammas[gn])) / dev_tpp_dg;
+  Scalar x =
+      (std::log(gamma) - std::log(dev_tpp_gammas[gn])) / dev_tpp_dg;
   return dev_tpp_rate[gn] * (1.0f - x) + dev_tpp_rate[gn + 1] * x;
 }
 
@@ -80,7 +83,8 @@ __device__ Scalar
 find_tpp_Em(Scalar gamma) {
   int gn = find_tpp_n_gamma(gamma);
   if (gamma > MAX_GAMMA) return dev_tpp_rate[gn];
-  Scalar x = (std::log(gamma) - std::log(dev_tpp_gammas[gn])) / dev_tpp_dg;
+  Scalar x =
+      (std::log(gamma) - std::log(dev_tpp_gammas[gn])) / dev_tpp_dg;
   return dev_tpp_Em[gn] * (1.0f - x) + dev_tpp_Em[gn + 1] * x;
 }
 
@@ -124,7 +128,7 @@ triplet_pairs::~triplet_pairs() {}
 
 template <typename F>
 void
-triplet_pairs::init(const F& n_e, Scalar emin, Scalar emax) {
+triplet_pairs::init(const F& n_e, Scalar emin, Scalar emax, Scalar n0) {
   const int N_mu = 100;
   const int N_e = 800;
 
@@ -144,29 +148,41 @@ triplet_pairs::init(const F& n_e, Scalar emin, Scalar emax) {
         Scalar e = exp(log(emin) + i_e * de);
         Scalar b = beta(gamma);
         Scalar s = gamma * e * (1.0 - b * mu);
-        result += 0.5f * total_f(s) * (1.0 - b * mu) / 137.0;
-        Emean += 0.5f * total_f(s) * approx_Em(s) * (1.0 - b * mu) / 137.0;
+        result += 0.5f * n_e(e) * total_f(s) * (1.0 - b * mu);
+        Emean += 0.5f * n_e(e) * total_f(s) * approx_Em(s) *
+                 (1.0 - b * mu);
         // Scalar sigma = sigma_ic(x);
         // result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) *
         // e;
       }
     }
-    m_rate[n] = result * dmu * de;
-    m_Em[n] = Emean / result;
+    m_rate[n] = result * dmu * de * n0 * RE_SQUARE / 137.0;
+    // m_Em[n] = Emean / result;
+    if (result > 0.0)
+      m_Em[n] = Emean / result;
+    else
+      m_Em[n] = 0.0;
+    Logger::print_info("TPP rate at gamma {} is {}", gamma, m_rate[n]);
+    Logger::print_info("TPP Em at gamma {} is {}", gamma, m_Em[n]);
   }
   m_rate.sync_to_device();
   m_Em.sync_to_device();
 }
 
 template void triplet_pairs::init<Spectra::power_law_hard>(
-    const Spectra::power_law_hard& n_e, Scalar emin, Scalar emax);
+    const Spectra::power_law_hard& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void triplet_pairs::init<Spectra::power_law_soft>(
-    const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax);
+    const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void triplet_pairs::init<Spectra::black_body>(
-    const Spectra::black_body& n_e, Scalar emin, Scalar emax);
+    const Spectra::black_body& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void triplet_pairs::init<Spectra::mono_energetic>(
-    const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax);
+    const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 template void triplet_pairs::init<Spectra::broken_power_law>(
-    const Spectra::broken_power_law& n_e, Scalar emin, Scalar emax);
+    const Spectra::broken_power_law& n_e, Scalar emin, Scalar emax,
+    Scalar n0);
 
 }  // namespace Aperture
