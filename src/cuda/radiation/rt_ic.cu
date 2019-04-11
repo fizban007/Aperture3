@@ -311,11 +311,11 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax) {
       }
     }
     m_ic_rate[n] = result * dmu * de;
-    if (n != 0)
-      m_ic_rate[n] /= m_ic_rate[0];
+    // if (n != 0)
+    //   m_ic_rate[n] /= m_ic_rate[0];
     // Logger::print_info("IC rate is {}", m_ic_rate[n]);
   }
-  m_ic_rate[0] = 1.0;
+  // m_ic_rate[0] = 1.0;
   m_ic_rate.sync_to_device();
 
   // TODO: Precalculate gamma-gamma rate

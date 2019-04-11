@@ -105,6 +105,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
     "cuda/radiation/rt_ic.cu"
+    "cuda/radiation/rt_tpp.cu"
     )
 
   if(LAB_ROOT_DIR)

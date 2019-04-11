@@ -7,14 +7,14 @@
 // #include "radiation/radiation_transfer.h"
 // #include "radiation/rt_pulsar.h"
 // #include "cu_sim_data.h"
-#include "cuda/core/additional_diagnostics.h"
-#include "cuda/core/cu_sim_data.h"
-#include "cuda/core/field_solver_log_sph.h"
-#include "cuda/core/ptc_updater_logsph.h"
+// #include "cuda/core/additional_diagnostics.h"
+// #include "cuda/core/cu_sim_data.h"
+// #include "cuda/core/field_solver_log_sph.h"
+// #include "cuda/core/ptc_updater_logsph.h"
 #include "cuda/core/sim_environment_dev.h"
-#include "cuda/radiation/rt_pulsar.h"
-#include "cuda/utils/cu_data_exporter.h"
-#include "utils/data_exporter.h"
+// #include "cuda/radiation/rt_pulsar.h"
+// #include "cuda/utils/cu_data_exporter.h"
+// #include "utils/data_exporter.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include "utils/util_functions.h"
@@ -26,15 +26,15 @@ int
 main(int argc, char* argv[]) {
   uint32_t step = 0;
   // Construct the simulation environment
-  sim_environment env(&argc, &argv);
+  cu_sim_environment env(&argc, &argv);
 
   // Allocate simulation data
-  sim_data data(env);
+  // cu_sim_data data(env);
 
   // Initialize the field solver
   // field_solver_default solver(env.grid());
 
   // Initialize data exporter
-  data_exporter exporter(env.params(), step);
+  // data_exporter exporter(env.params(), step);
   return 0;
 }
