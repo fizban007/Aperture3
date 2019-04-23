@@ -21,6 +21,7 @@ struct exponent_sim {
   void produce_pairs(Scalar dt);
   void compute_spectrum();
   void sort_photons();
+  void prepare_initial_condition(int num_ptc, Scalar E);
 
   cu_sim_environment& m_env;
   inverse_compton m_ic;

@@ -284,14 +284,14 @@ inverse_compton::~inverse_compton() {}
 template <typename F>
 void
 inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
-                      Scalar n0) {
+                      double n0) {
   const int N_mu = 100;
   const int N_e = 800;
 
   // Compute the gammas and rates for IC scattering
   Logger::print_info("Pre-calculating the scattering rate");
-  Scalar dmu = 2.0 / (N_mu - 1.0);
-  Scalar de = (log(emax) - log(emin)) / (N_e - 1.0);
+  double dmu = 2.0 / (N_mu - 1.0);
+  double de = (log(emax) - log(emin)) / (N_e - 1.0);
   // Kernels::init_scatter_rate<<<200, 200>>>(
   //     n_e, dmu, de, N_mu, N_e, m_ic_rate.data(), m_gammas.data(),
   //     emin, m_gammas.size());
@@ -299,23 +299,23 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   // CudaCheckError();
   // m_ic_rate.sync_to_host();
   for (uint32_t n = 0; n < m_ic_rate.size(); n++) {
-    Scalar gamma = m_gammas[n];
+    double gamma = m_gammas[n];
     // Logger::print_info("gamma is {}", gamma);
-    Scalar result = 0.0;
+    double result = 0.0;
     for (int i_mu = 0; i_mu < N_mu; i_mu++) {
-      Scalar mu = i_mu * dmu - 1.0;
+      double mu = i_mu * dmu - 1.0;
       for (int i_e = 0; i_e < N_e; i_e++) {
-        Scalar e = exp(log(emin) + i_e * de);
-        Scalar x = x_ic(gamma, e, mu);
-        Scalar sigma = sigma_ic(x);
+        double e = exp(log(emin) + i_e * de);
+        double x = x_ic(gamma, e, mu);
+        double sigma = sigma_ic(x);
         result += 0.5f * n_e(e) * sigma * (1.0f - beta(gamma) * mu) * e;
       }
     }
     m_ic_rate[n] =
-        result * dmu * de * RE_SQUARE * n0 * 8.0 * CONST_PI / 3.0;
+        result * dmu * de * (RE_SQUARE * n0) * 8.0 * CONST_PI / 3.0;
     if (n % 10 == 0)
-      Logger::print_info("IC rate at gamma {} is {}", gamma,
-                         m_ic_rate[n]);
+      Logger::print_info("IC rate at gamma {} is {}, result is {}, factor is {}", gamma,
+                         m_ic_rate[n], result, (dmu * de * RE_SQUARE * n0) * 8.0 * CONST_PI / 3.0);
 
     // if (n != 0)
     //   m_ic_rate[n] /= m_ic_rate[0];
@@ -328,13 +328,13 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   Logger::print_info(
       "Pre-calculating the gamma-gamma pair creation rate");
   for (uint32_t n = 0; n < m_gg_rate.size(); n++) {
-    Scalar eph = m_gammas[n];
+    double eph = m_gammas[n];
     if (eph < 2.0) {
       m_gg_rate[n] = 0.0;
     } else {
-      Scalar result = 0.0;
+      double result = 0.0;
       for (int i_mu = 0; i_mu < N_mu; i_mu++) {
-        Scalar mu = i_mu * dmu - 1.0;
+        double mu = i_mu * dmu - 1.0;
         for (int i_e = 0; i_e < N_e; i_e++) {
           double e = exp(log(emin) + i_e * de);
           double s = eph * e * (1.0 - mu) * 0.5;
@@ -347,7 +347,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
         }
       }
       m_gg_rate[n] =
-          0.25 * result * dmu * de * n0 * CONST_PI * RE_SQUARE;
+          0.25 * result * dmu * de * CONST_PI * (n0 * RE_SQUARE);
       // if (n != 0)
       //   m_gg_rate[n] /= m_gg_rate[0];
       if (n % 10 == 0)
@@ -360,14 +360,14 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
 
   Logger::print_info("Pre-calculating the lab-frame spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
-    Scalar gamma = m_gammas[n];
+    double gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_ep.size(); i++) {
-      Scalar e1 = m_ep[i];
-      Scalar result = 0.0;
+      double e1 = m_ep[i];
+      double result = 0.0;
       for (uint32_t i_e = 0; i_e < N_e; i_e++) {
-        Scalar e = exp(log(emin) + i_e * de);
-        Scalar ge = gamma * e * 4.0;
-        Scalar q = e1 / (ge * (1.0 - e1));
+        double e = exp(log(emin) + i_e * de);
+        double ge = gamma * e * 4.0;
+        double q = e1 / (ge * (1.0 - e1));
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
           result += n_e(e) * sigma_lab(q, ge) / gamma;
       }
@@ -384,14 +384,14 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   m_dNde.sync_to_device();
 
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
-    Scalar gamma = m_gammas[n];
+    double gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_log_ep.size(); i++) {
-      Scalar e1 = m_log_ep[i];
-      Scalar result = 0.0;
+      double e1 = m_log_ep[i];
+      double result = 0.0;
       for (uint32_t i_e = 0; i_e < N_e; i_e++) {
-        Scalar e = exp(log(emin) + i_e * de);
-        Scalar ge = gamma * e * 4.0;
-        Scalar q = e1 / (ge * (1.0 - e1));
+        double e = exp(log(emin) + i_e * de);
+        double ge = gamma * e * 4.0;
+        double q = e1 / (ge * (1.0 - e1));
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
           result += n_e(e) * sigma_lab(q, ge) / gamma;
       }
@@ -513,18 +513,18 @@ inverse_compton::generate_random_gamma(cu_array<Scalar>& gammas) {
 
 template void inverse_compton::init<Spectra::power_law_hard>(
     const Spectra::power_law_hard& n_e, Scalar emin, Scalar emax,
-    Scalar n0);
+    double n0);
 template void inverse_compton::init<Spectra::power_law_soft>(
     const Spectra::power_law_soft& n_e, Scalar emin, Scalar emax,
-    Scalar n0);
+    double n0);
 template void inverse_compton::init<Spectra::black_body>(
     const Spectra::black_body& n_e, Scalar emin, Scalar emax,
-    Scalar n0);
+    double n0);
 template void inverse_compton::init<Spectra::mono_energetic>(
     const Spectra::mono_energetic& n_e, Scalar emin, Scalar emax,
-    Scalar n0);
+    double n0);
 template void inverse_compton::init<Spectra::broken_power_law>(
     const Spectra::broken_power_law& n_e, Scalar emin, Scalar emax,
-    Scalar n0);
+    double n0);
 
 }  // namespace Aperture

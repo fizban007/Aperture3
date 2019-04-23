@@ -72,7 +72,7 @@ struct black_body {
     return e * e / (exp(e / kT_) - 1.0);
   }
 
-  Scalar emin() const { return 1e-7 * kT_; }
+  Scalar emin() const { return 1e-10 * kT_; }
   Scalar emax() const { return 1e3 * kT_; }
 
   Scalar kT_;
