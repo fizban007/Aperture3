@@ -1,3 +1,4 @@
+#include <cuda_runtime.h>
 #include "cuda/grids/grid_log_sph_dev.h"
 #include "utils/util_functions.h"
 

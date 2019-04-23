@@ -1,3 +1,4 @@
+#include <cuda_runtime.h>
 #include "cuda/utils/cu_data_exporter.h"
 #include "core/constant_defs.h"
 #include "cuda/core/cu_sim_data.h"

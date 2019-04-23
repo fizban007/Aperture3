@@ -52,7 +52,7 @@ class sim_environment {
   const float* masses() const { return m_masses.data(); }
   const float* q_over_m() const { return m_q_over_m.data(); }
   float charge(int sp) const { return m_charges[sp]; }
-  float masse(int sp) const { return m_masses[sp]; }
+  float mass(int sp) const { return m_masses[sp]; }
   float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
   // MetricType metric_type() const { return m_metric_type; }
