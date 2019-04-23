@@ -15,7 +15,7 @@ class triplet_pairs
   ~triplet_pairs();
 
   template <typename F>
-  void init(const F& n_gamma, Scalar emin, Scalar emax, Scalar n0 = 1.0);
+  void init(const F& n_gamma, Scalar emin, Scalar emax, double n0 = 1.0);
 
   cu_array<Scalar>& rate() { return m_rate; }
   cu_array<Scalar>& Em() { return m_Em; }

@@ -15,6 +15,14 @@ namespace Aperture {
 namespace Kernels {
 
 __global__ void
+add_new_particles(Scalar* ptc_E, size_t ptc_num, Scalar E, int num) {
+  for (size_t idx = ptc_num + blockIdx.x * blockDim.x + threadIdx.x;
+       idx < ptc_num + num; idx += blockDim.x * gridDim.x) {
+    ptc_E[idx] = E;
+  }
+}
+
+__global__ void
 push_particles(Scalar* ptc_E, size_t ptc_num, Scalar Eacc, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < ptc_num; idx += blockDim.x * gridDim.x) {
@@ -58,7 +66,7 @@ exp_count_photons(Scalar* ptc_E, size_t ptc_num, int* ph_count,
     if (E > 0.0f) {
       // TODO: Multiply by some normalization constant for ic_rate
       Scalar ic_rate = find_ic_rate(E);
-      if (tid == 0) printf("0th particle IC rate is %f\n", ic_rate);
+      if (tid == 0) printf("0th particle IC rate is %f\n", ic_rate*dt);
       float u = rng();
       if (u < ic_rate * dt) {
         ph_pos[tid] = atomicAdd(&photonProduced, 1) + 1;
@@ -79,7 +87,7 @@ exp_emit_photons(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
                  Scalar* ph_path, size_t ph_num, int* ph_count,
                  int* ph_pos, int* ph_cum, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
+  CudaRng rng(&states[id]);
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = ph_pos[tid] - 1;
@@ -90,16 +98,17 @@ exp_emit_photons(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
       ptc_E[tid] = E;
 
       Scalar gg_rate = find_gg_rate(Eph);
-      // TODO: normalize gg_rate and get free path
-      Scalar path = 1.0f / gg_rate;
-      if (path > dev_params.delta_t * dev_params.max_steps * 0.1) continue;
+      float u = rng();
+      
+      Scalar path = -(1.0f / gg_rate) * std::log(u);
+      // if (path > dev_params.delta_t * dev_params.max_steps * 0.1) continue;
       int start_pos = ph_cum[blockIdx.x];
       int offset = ph_num + start_pos + pos_in_block;
       ph_E[offset] = Eph;
       ph_path[offset] = path;
-      // if (tid == 0) {
-      //   printf("emitting photon, Eph is %f, path is %f\n", Eph, path);
-      // }
+      if (tid == 0) {
+        printf("emitting photon, gamma is %f, Eph is %f, path is %f\n", E+Eph, Eph, path);
+      }
     }
   }
 }
@@ -167,7 +176,7 @@ exp_count_tpp_pairs(Scalar* ptc_E, size_t ptc_num, int* pair_count,
     if (E > 0.0f) {
       // TODO: Multiply by some normalization constant for ic_rate
       Scalar tpp_rate = find_tpp_rate(E);
-      if (tid == 0) printf("0th particle IC rate is %f\n", tpp_rate);
+      if (tid == 0) printf("0th particle tpp rate is %f\n", tpp_rate*dt);
       float u = rng();
       if (u < tpp_rate * dt) {
         pair_pos[tid] = atomicAdd(&pairProduced, 2) + 2;
@@ -273,12 +282,32 @@ exponent_sim::push_particles(Scalar Eacc, Scalar dt) {
 
 void
 exponent_sim::add_new_particles(int num, Scalar E) {
-  ptc_E.sync_to_host();
-  for (int i = 0; i < num; i++) {
-    ptc_E[ptc_num + i] = E;
+  // ptc_E.sync_to_host();
+  // for (int i = 0; i < num; i++) {
+  //   ptc_E[ptc_num + i] = E;
+  // }
+  // ptc_E.sync_to_device();
+  Kernels::add_new_particles<<<1, 128>>>(ptc_E.data_d(), ptc_num, E, num);
+  CudaCheckError();
+  ptc_num += num;
+}
+
+void
+exponent_sim::prepare_initial_condition(int num_ptc, Scalar E) {
+  for (int i = 0; i < ptc_E.size(); i++) {
+    if (i < num_ptc) {
+      ptc_E[i] = E;
+    } else {
+      ptc_E[i] = -1.0;
+    }
   }
   ptc_E.sync_to_device();
-  ptc_num += num;
+  ptc_num = num_ptc;
+  for (int i = 0; i < ph_E.size(); i++) {
+    ph_E[i] = -1.0;
+    ph_path[i] = -1.0;
+  }
+  ph_num = 0;
 }
 
 void
@@ -318,6 +347,7 @@ exponent_sim::produce_photons(Scalar dt) {
 
 void
 exponent_sim::produce_pairs(Scalar dt) {
+  // Process gamma-gamma
   m_pos_in_block.assign_dev(0, ph_num);
   m_num_per_block.assign_dev(0);
   m_cumnum_per_block.assign_dev(0);
@@ -352,6 +382,8 @@ exponent_sim::produce_pairs(Scalar dt) {
   CudaCheckError();
 
   ptc_num += new_ptc;
+
+  // Process tpp
   // m_pos_in_block.assign_dev(0, ptc_num);
   // m_num_per_block.assign_dev(0);
   // m_cumnum_per_block.assign_dev(0);
