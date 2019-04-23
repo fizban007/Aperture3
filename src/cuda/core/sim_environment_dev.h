@@ -1,6 +1,7 @@
 #ifndef _SIM_ENVIRONMENT_DEV_H_
 #define _SIM_ENVIRONMENT_DEV_H_
 
+#include <cuda_runtime.h>
 #include "commandline_args.h"
 #include "config_file.h"
 #include "core/grid.h"

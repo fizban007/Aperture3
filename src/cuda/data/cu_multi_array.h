@@ -7,7 +7,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include "cuda_runtime.h"
+// #include "cuda_runtime.h"
 
 namespace Aperture {
 

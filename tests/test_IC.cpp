@@ -1,3 +1,4 @@
+#include <cuda_runtime.h>
 #include "cuda/radiation/rt_ic.h"
 #include "radiation/spectra.h"
 #include "sim_params.h"
