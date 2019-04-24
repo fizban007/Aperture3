@@ -145,7 +145,7 @@ gen_photon_e(Scalar gamma, curandState* state) {
     result = dev_ic_dep * bb;
   }
 
-  return result * gamma;
+  return min(result * gamma, gamma - 1.01);
 }
 
 __device__ Scalar
