@@ -22,6 +22,7 @@ class triplet_pairs
 
  private:
   cu_array<Scalar> m_rate, m_Em, m_gammas;
+  cu_multi_array<Scalar> m_dNde;
 
   Scalar m_dg;
   int m_threads, m_blocks;

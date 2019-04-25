@@ -202,21 +202,25 @@ exp_emit_tpp_pairs(Scalar* ptc_E, size_t ptc_num, int* pair_count,
                    int* pair_pos, int* pair_cum, curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
+  curandState local_state = states[id];
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = pair_pos[tid] - 1;
     Scalar E = ptc_E[tid];
     if (pos_in_block > -1 && E > 0.0f) {
-      Scalar Em = find_tpp_Em(E);
+      // Scalar Em = find_tpp_Em(E);
       int start_pos = pair_cum[blockIdx.x];
       int offset = ptc_num + start_pos + pos_in_block;
-      if (tid == 0) printf("0th particle tpp Em is %f\n", Em * E);
-      ptc_E[offset] = Em * E;
-      ptc_E[offset + 1] = Em * E;
-      ptc_E[tid] -= 2.0f * Em * E;
+      // if (tid == 0) printf("0th particle tpp Em is %f\n", Em * E);
+      Scalar E_p = gen_tpp_Ep(E, &local_state);
+      Scalar E_m = min(gen_tpp_Ep(E, &local_state), E - E_p - 1.01);
+      ptc_E[offset] = E_p;
+      ptc_E[offset + 1] = E_m;
+      ptc_E[tid] -= E_p + E_m;
       // ph_path[offset] = path;
     }
   }
+  states[id] = local_state;
 }
 
 __global__ void
