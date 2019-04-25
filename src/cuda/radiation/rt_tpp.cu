@@ -92,6 +92,17 @@ __constant__ Scalar dev_tpp_dg;
 __constant__ Scalar *dev_tpp_rate;
 __constant__ Scalar *dev_tpp_gammas;
 __constant__ Scalar *dev_tpp_Em;
+__constant__ cudaPitchedPtr dev_tpp_dNde;
+
+__device__ int
+find_n_gamma(Scalar gamma);
+
+__device__ int
+binary_search(float u, Scalar* array, int size, Scalar& l, Scalar& h);
+
+__device__ int
+binary_search(float u, int n, cudaPitchedPtr array, Scalar& l,
+              Scalar& h);
 
 __device__ int
 find_tpp_n_gamma(Scalar gamma) {
@@ -118,12 +129,26 @@ find_tpp_Em(Scalar gamma) {
   return dev_tpp_Em[gn] * (1.0f - x) + dev_tpp_Em[gn + 1] * x;
 }
 
+__device__ Scalar
+gen_tpp_Ep(Scalar gamma, curandState* state) {
+  float u = curand_uniform(state);
+  int gn = find_n_gamma(gamma);
+
+  Scalar l, h;
+  int b = binary_search(u, gn, dev_tpp_dNde, l, h);
+  Scalar bb = (l == h ? b : (u - l) / (h - l) + b);
+  Scalar result = std::exp(std::log(MIN_GAMMA) + dev_tpp_dg * bb);
+
+  return min(result, gamma - 1.01);
+}
+
 }  // namespace Kernels
 
 triplet_pairs::triplet_pairs(const SimParams &params)
     : m_rate(params.n_gamma),
       m_Em(params.n_gamma),
       m_gammas(params.n_gamma),
+      m_dNde(Extent(params.n_gamma, params.n_gamma)),
       m_threads(256),
       m_blocks(256),
       m_generator(),
@@ -137,6 +162,8 @@ triplet_pairs::triplet_pairs(const SimParams &params)
 
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_tpp_dg, &m_dg, sizeof(Scalar)));
+  CudaSafeCall(cudaMemcpyToSymbol(
+      Kernels::dev_tpp_dNde, &m_dNde.data_d(), sizeof(cudaPitchedPtr)));
 
   Scalar *dev_tpp_rate = m_rate.data_d();
   Scalar *dev_tpp_Em = m_Em.data_d();
@@ -200,6 +227,32 @@ triplet_pairs::init(const F &n_e, Scalar emin, Scalar emax, double n0) {
   }
   m_rate.sync_to_device();
   m_Em.sync_to_device();
+
+  for (uint32_t n = 0; n < m_gammas.size(); n++) {
+    double gamma = m_gammas[n];
+    for (uint32_t i = 0; i < m_gammas.size(); i++) {
+      double E_p = m_gammas[i];
+      double result = 0.0;
+      for (uint32_t i_e = 0; i_e < N_e; i_e++) {
+        double e = exp(log(emin) + i_e * de);
+        double s = gamma * e;
+        double Emin = E_plus_min(gamma, s);
+        double Emax = E_plus_max(gamma, s);
+        if (E_p < Emin || E_p > Emax) continue;
+        double norm = 4.0/3.0 *
+                      (1.0/std::pow(Emin, 0.75) - 1.0/std::pow(Emax, 0.75));
+        result += n_e(e) * m_rate[n] * m_Em[n] * std::pow(E_p, -1.75) / norm;
+      }
+      m_dNde(i, n) = result * de;
+    }
+    for (uint32_t i = 1; i < m_gammas.size(); i++) {
+      m_dNde(i, n) += m_dNde(i - 1, n);
+    }
+    for (uint32_t i = 0; i < m_gammas.size(); i++) {
+      m_dNde(i, n) /= m_dNde(m_gammas.size() - 1, n);
+    }
+  }
+  m_dNde.sync_to_device();
 }
 
 template void triplet_pairs::init<Spectra::power_law_hard>(
