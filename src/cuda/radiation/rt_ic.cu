@@ -258,10 +258,13 @@ inverse_compton::inverse_compton(const SimParams& params)
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
                                   sizeof(Scalar)));
+  cudaPitchedPtr p_dNde =m_dNde.data_d().p;
+  cudaPitchedPtr p_dNde_t =m_dNde_thompson.data_d().p;
+
   CudaSafeCall(cudaMemcpyToSymbol(
-      Kernels::dev_ic_dNde, &m_dNde.data_d(), sizeof(cudaPitchedPtr)));
+      Kernels::dev_ic_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
-                                  &m_dNde_thompson.data_d(),
+                                  &p_dNde_t,
                                   sizeof(cudaPitchedPtr)));
   Scalar* dev_ic_rates = m_ic_rate.data_d();
   Scalar* dev_gg_rates = m_gg_rate.data_d();

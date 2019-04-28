@@ -8,9 +8,19 @@ namespace Aperture {
 
 template <typename T>
 struct typed_pitchedptr {
+  typedef typed_pitchedptr<T> self_type;
   cudaPitchedPtr p;
 
+  HOST_DEVICE typed_pitchedptr() {}
   HOST_DEVICE typed_pitchedptr(cudaPitchedPtr ptr) : p(ptr) {}
+  HOST_DEVICE typed_pitchedptr(const self_type& other) : p(other.p) {}
+
+  HOST_DEVICE operator cudaPitchedPtr() const { return p; }
+
+  HD_INLINE self_type& operator=(const self_type& other) {
+    p = other.p;
+    return *this;
+  }
 
   HD_INLINE T& operator[](size_t offset) {
     return *(T*)((char*)p.ptr + offset);

@@ -232,14 +232,14 @@ cu_sim_environment::get_sub_guard_cells(
     // Sending right to left
     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      get_sub_guard_cells_left(field[n].ptr(), field[n - 1].ptr(),
+      get_sub_guard_cells_left(field[n].ptr().p, field[n - 1].ptr().p,
                                field[n].grid().mesh(),
                                field[n - 1].grid().mesh(), n, n - 1);
     }
     // Sending left to right
     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      get_sub_guard_cells_right(field[n].ptr(), field[n + 1].ptr(),
+      get_sub_guard_cells_right(field[n].ptr().p, field[n + 1].ptr().p,
                                 field[n].grid().mesh(),
                                 field[n + 1].grid().mesh(), n, n + 1);
     }
@@ -257,7 +257,7 @@ cu_sim_environment::get_sub_guard_cells(
     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
       for (int i = 0; i < VECTOR_DIM; i++) {
-        get_sub_guard_cells_left(field[n].ptr(i), field[n - 1].ptr(i),
+        get_sub_guard_cells_left(field[n].ptr(i).p, field[n - 1].ptr(i).p,
                                  field[n].grid().mesh(),
                                  field[n - 1].grid().mesh(), n, n - 1);
       }
@@ -266,7 +266,7 @@ cu_sim_environment::get_sub_guard_cells(
     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
       for (int i = 0; i < VECTOR_DIM; i++) {
-        get_sub_guard_cells_right(field[n].ptr(i), field[n + 1].ptr(i),
+        get_sub_guard_cells_right(field[n].ptr(i).p, field[n + 1].ptr(i).p,
                                   field[n].grid().mesh(),
                                   field[n + 1].grid().mesh(), n, n + 1);
       }
@@ -280,8 +280,8 @@ cu_sim_environment::send_sub_guard_cells_left(
     const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
     int src_dev, int dst_dev, bool stagger) const {
   cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = src.data_d();
-  myParms.dstPtr = m_sub_buffer_left[dst_dev].data_d();
+  myParms.srcPtr = src.data_d().p;
+  myParms.dstPtr = m_sub_buffer_left[dst_dev].data_d().p;
   // myParms.kind = cudaMemcpyDefault;
   myParms.srcDevice = src_dev;
   myParms.dstDevice = dst_dev;
@@ -323,8 +323,8 @@ cu_sim_environment::send_sub_guard_cells_right(
     const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
     int src_dev, int dst_dev, bool stagger) const {
   cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = src.data_d();
-  myParms.dstPtr = m_sub_buffer_right[dst_dev].data_d();
+  myParms.srcPtr = src.data_d().p;
+  myParms.dstPtr = m_sub_buffer_right[dst_dev].data_d().p;
   // myParms.kind = cudaMemcpyDefault;
   myParms.srcDevice = src_dev;
   myParms.dstDevice = dst_dev;

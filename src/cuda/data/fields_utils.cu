@@ -15,7 +15,7 @@ field_add(cu_vector_field<Scalar>& v, const cu_vector_field<Scalar>& u,
   dim3 gridSize(16, 8, 8);
   for (int i = 0; i < VECTOR_DIM; i++) {
     Kernels::map_array_binary_op<Scalar>
-        <<<gridSize, blockSize>>>(v.ptr(i), u.ptr(i), mesh.extent(),
+        <<<gridSize, blockSize>>>(v.ptr(i).p, u.ptr(i).p, mesh.extent(),
                                   detail::Op_MultConstAdd<Scalar>{q});
     CudaCheckError();
   }

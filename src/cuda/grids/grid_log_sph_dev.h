@@ -2,6 +2,7 @@
 #define _GRID_LOG_SPH_DEV_H_
 
 #include "cuda/data/fields_dev.h"
+#include "cuda/utils/typed_pitchedptr.cuh"
 #include "grids/grid_log_sph_base.h"
 
 namespace Aperture {
@@ -16,11 +17,11 @@ public:
   virtual void init(const SimParams &params) override;
 
   struct mesh_ptrs {
-    cudaPitchedPtr l1_e, l2_e, l3_e;
-    cudaPitchedPtr l1_b, l2_b, l3_b;
-    cudaPitchedPtr A1_e, A2_e, A3_e;
-    cudaPitchedPtr A1_b, A2_b, A3_b;
-    cudaPitchedPtr dV;
+    typed_pitchedptr<Scalar> l1_e, l2_e, l3_e;
+    typed_pitchedptr<Scalar> l1_b, l2_b, l3_b;
+    typed_pitchedptr<Scalar> A1_e, A2_e, A3_e;
+    typed_pitchedptr<Scalar> A1_b, A2_b, A3_b;
+    typed_pitchedptr<Scalar> dV;
   };
 
   mesh_ptrs get_mesh_ptrs() const;

@@ -162,8 +162,10 @@ triplet_pairs::triplet_pairs(const SimParams &params)
 
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_tpp_dg, &m_dg, sizeof(Scalar)));
+
+  cudaPitchedPtr p_dNde = m_dNde.data_d().p;
   CudaSafeCall(cudaMemcpyToSymbol(
-      Kernels::dev_tpp_dNde, &m_dNde.data_d(), sizeof(cudaPitchedPtr)));
+      Kernels::dev_tpp_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
 
   Scalar *dev_tpp_rate = m_rate.data_d();
   Scalar *dev_tpp_Em = m_Em.data_d();

@@ -312,7 +312,7 @@ cu_scalar_field<T>::multiplyBy(data_type value) {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
   Kernels::map_array_unary_op<T>
-      <<<gridSize, blockSize>>>(m_array.data_d(), m_grid->extent(),
+      <<<gridSize, blockSize>>>(m_array.data_d().p, m_grid->extent(),
                                 detail::Op_MultConst<T>(value));
   return (*this);
 }
@@ -329,7 +329,7 @@ cu_scalar_field<T>::multiplyBy(const cu_scalar_field<T>& field) {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
   Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-      field.data().data_d(), m_array.data_d(), m_grid->extent(),
+      field.data().data_d().p, m_array.data_d().p, m_grid->extent(),
       detail::Op_MultAssign<T>());
   return (*this);
 }
@@ -342,7 +342,7 @@ cu_scalar_field<T>::addBy(data_type value) {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
   Kernels::map_array_unary_op<T>
-      <<<gridSize, blockSize>>>(m_array.data_d(), m_grid->extent(),
+      <<<gridSize, blockSize>>>(m_array.data_d().p, m_grid->extent(),
                                 detail::Op_PlusConst<T>(value));
   return (*this);
 }
@@ -359,7 +359,7 @@ cu_scalar_field<T>::addBy(const cu_scalar_field<T>& field) {
   // -> m_grid -> extent(),
   //                         detail::Op_PlusAssign<T>());
   Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-      field.data().data_d(), m_array.data_d(), m_grid->extent(),
+      field.data().data_d().p, m_array.data_d().p, m_grid->extent(),
       detail::Op_PlusAssign<T>());
   return (*this);
 }
@@ -372,7 +372,7 @@ cu_scalar_field<T>::subtractBy(data_type value) {
   // detail::map_multi_array(m_array.begin(), this -> m_grid ->
   // extent(), detail::Op_MinusConst<T>(value));
   Kernels::map_array_unary_op<T>
-      <<<gridSize, blockSize>>>(m_array.data_d(), m_grid->extent(),
+      <<<gridSize, blockSize>>>(m_array.data_d().p, m_grid->extent(),
                                 detail::Op_MinusConst<T>(value));
   return (*this);
 }
@@ -389,7 +389,7 @@ cu_scalar_field<T>::subtractBy(const cu_scalar_field<T>& field) {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(8, 8, 8);
   Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-      field.data().data_d(), m_array.data_d(), m_grid->extent(),
+      field.data().data_d().p, m_array.data_d().p, m_grid->extent(),
       detail::Op_MinusAssign<T>());
   return (*this);
 }
@@ -404,13 +404,13 @@ cu_scalar_field<T>::divideBy(const cu_scalar_field<T>& field) {
     dim3 gridSize(8, 8, 8);
     dim3 blockSize(8, 8, 8);
     Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-        field.data().data_d(), m_array.data_d(), m_grid->extent(),
+        field.data().data_d().p, m_array.data_d().p, m_grid->extent(),
         detail::Op_DivAssign<T>());
   } else if (field.grid().dim() == 2) {
     dim3 gridSize(32, 32);
     dim3 blockSize(32, 32);
     Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
-        field.data().data_d(), m_array.data_d(), m_grid->extent(),
+        field.data().data_d().p, m_array.data_d().p, m_grid->extent(),
         detail::Op_DivAssign<T>());
   }
   CudaCheckError();
@@ -617,7 +617,7 @@ cu_vector_field<T>::assign(const cu_vector_field<T>& field, T q) {
       //                         this -> m_grid -> extent(),
       //                         detail::Op_PlusAssign<T>());
       Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_AddMultConst<T>(q));
     }
   } else if (field.grid().dim() == 2) {
@@ -625,7 +625,7 @@ cu_vector_field<T>::assign(const cu_vector_field<T>& field, T q) {
     dim3 blockSize(32, 32);
     for (int i = 0; i < VECTOR_DIM; ++i) {
       Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_AddMultConst<T>(q));
     }
   }
@@ -664,7 +664,7 @@ cu_vector_field<T>::multiplyBy(data_type value) {
     // extent(),
     //                         detail::Op_MultConst<T>(value));
     Kernels::map_array_unary_op<T>
-        <<<gridSize, blockSize>>>(m_array[i].data_d(), m_grid->extent(),
+        <<<gridSize, blockSize>>>(m_array[i].data_d().p, m_grid->extent(),
                                   detail::Op_MultConst<T>(value));
   }
   return (*this);
@@ -680,7 +680,7 @@ cu_vector_field<T>::multiplyBy(const cu_scalar_field<T>& field) {
   dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
     Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-        field.data().data_d(), m_array[i].data_d(), m_grid->extent(),
+        field.data().data_d().p, m_array[i].data_d().p, m_grid->extent(),
         detail::Op_MultAssign<T>());
     // detail::map_multi_array(m_array[i].begin(), field.data().begin(),
     //                         this -> m_grid -> extent(),
@@ -699,13 +699,13 @@ cu_vector_field<T>::addBy(data_type value, int n) {
     dim3 gridSize(8, 8, 8);
     dim3 blockSize(8, 8, 8);
     Kernels::map_array_unary_op<T>
-        <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
+        <<<gridSize, blockSize>>>(m_array[n].data_d().p, m_grid->extent(),
                                   detail::Op_PlusConst<T>(value));
   } else if (this->m_grid->dim() == 2) {
     dim3 gridSize(32, 32);
     dim3 blockSize(32, 32);
     Kernels::map_array_unary_op_2d<T>
-        <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
+        <<<gridSize, blockSize>>>(m_array[n].data_d().p, m_grid->extent(),
                                   detail::Op_PlusConst<T>(value));
   }
   return (*this);
@@ -726,7 +726,7 @@ cu_vector_field<T>::addBy(const cu_vector_field<T>& field) {
       //                         this -> m_grid -> extent(),
       //                         detail::Op_PlusAssign<T>());
       Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_PlusAssign<T>());
     }
   } else if (field.grid().dim() == 2) {
@@ -734,7 +734,7 @@ cu_vector_field<T>::addBy(const cu_vector_field<T>& field) {
     dim3 blockSize(32, 32);
     for (int i = 0; i < VECTOR_DIM; ++i) {
       Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_PlusAssign<T>());
     }
   }
@@ -756,7 +756,7 @@ cu_vector_field<T>::addBy(const cu_vector_field<T>& field, T q) {
       //                         this -> m_grid -> extent(),
       //                         detail::Op_PlusAssign<T>());
       Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_MultConstAdd<T>(q));
     }
   } else if (field.grid().dim() == 2) {
@@ -764,7 +764,7 @@ cu_vector_field<T>::addBy(const cu_vector_field<T>& field, T q) {
     dim3 blockSize(32, 32);
     for (int i = 0; i < VECTOR_DIM; ++i) {
       Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
-          field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+          field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
           detail::Op_MultConstAdd<T>(q));
     }
   }
@@ -780,7 +780,7 @@ cu_vector_field<T>::subtractBy(data_type value, int n) {
   dim3 gridSize(8, 8, 8);
   dim3 blockSize(8, 8, 8);
   Kernels::map_array_unary_op<T>
-      <<<gridSize, blockSize>>>(m_array[n].data_d(), m_grid->extent(),
+      <<<gridSize, blockSize>>>(m_array[n].data_d().p, m_grid->extent(),
                                 detail::Op_MinusConst<T>(value));
   return (*this);
 }
@@ -795,7 +795,7 @@ cu_vector_field<T>::subtractBy(const cu_vector_field<T>& field) {
   dim3 blockSize(8, 8, 8);
   for (int i = 0; i < VECTOR_DIM; ++i) {
     Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
-        field.data(i).data_d(), m_array[i].data_d(), m_grid->extent(),
+        field.data(i).data_d().p, m_array[i].data_d().p, m_grid->extent(),
         detail::Op_MinusAssign<T>());
     // detail::map_multi_array(m_array[i].begin(),
     // field.data(i).begin(),
@@ -876,8 +876,8 @@ cu_vector_field<T>::interpolate_to_center(self_type& result) {
                 mesh.reduced_dim(2) / 8);
 
   Kernels::interp_to_center<2, 16, 8, 8><<<gridSize, blockSize>>>(
-      result.ptr(0), result.ptr(1), result.ptr(2), m_array[0].data_d(),
-      m_array[1].data_d(), m_array[2].data_d(), m_type);
+      result.ptr(0).p, result.ptr(1).p, result.ptr(2).p, m_array[0].data_d().p,
+      m_array[1].data_d().p, m_array[2].data_d().p, m_type);
   CudaCheckError();
 }
 
@@ -894,8 +894,8 @@ cu_vector_field<T>::interpolate_from_center(self_type& result,
                   mesh.reduced_dim(2) / 4);
 
     Kernels::interp_from_center<2, 32, 8, 4><<<gridSize, blockSize>>>(
-        result.ptr(0), result.ptr(1), result.ptr(2),
-        m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
+        result.ptr(0).p, result.ptr(1).p, result.ptr(2).p,
+        m_array[0].data_d().p, m_array[1].data_d().p, m_array[2].data_d().p,
         m_type);
     CudaCheckError();
   } else if (mesh.dim() == 2) {
@@ -903,8 +903,8 @@ cu_vector_field<T>::interpolate_from_center(self_type& result,
     dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 32);
 
     Kernels::interp_from_center_2d<2, 32, 32><<<gridSize, blockSize>>>(
-        result.ptr(0), result.ptr(1), result.ptr(2),
-        m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
+        result.ptr(0).p, result.ptr(1).p, result.ptr(2).p,
+        m_array[0].data_d().p, m_array[1].data_d().p, m_array[2].data_d().p,
         m_type, q);
     CudaCheckError();
   }
@@ -922,8 +922,8 @@ cu_vector_field<T>::interpolate_from_center_add(self_type& result,
                   mesh.reduced_dim(2) / 4);
 
     Kernels::interp_from_center<2, 32, 8, 4><<<gridSize, blockSize>>>(
-        result.ptr(0), result.ptr(1), result.ptr(2),
-        m_array[0].data_d(), m_array[1].data_d(), m_array[2].data_d(),
+        result.ptr(0).p, result.ptr(1).p, result.ptr(2).p,
+        m_array[0].data_d().p, m_array[1].data_d().p, m_array[2].data_d().p,
         m_type, q);
     CudaCheckError();
   } else if (mesh.dim() == 2) {
@@ -931,10 +931,10 @@ cu_vector_field<T>::interpolate_from_center_add(self_type& result,
     dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 32);
 
     Kernels::interp_from_center_add_2d<2, 32, 32>
-        <<<gridSize, blockSize>>>(result.ptr(0), result.ptr(1),
-                                  result.ptr(2), m_array[0].data_d(),
-                                  m_array[1].data_d(),
-                                  m_array[2].data_d(), m_type, q);
+        <<<gridSize, blockSize>>>(result.ptr(0).p, result.ptr(1).p,
+                                  result.ptr(2).p, m_array[0].data_d().p,
+                                  m_array[1].data_d().p,
+                                  m_array[2].data_d().p, m_type, q);
     CudaCheckError();
   }
 }

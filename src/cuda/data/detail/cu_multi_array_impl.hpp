@@ -262,7 +262,7 @@ cu_multi_array<T>::add_from(const cu_multi_array<T>& src, Index src_pos,
     dim3 gridSize((this->_extent.x + 7) / 8, (this->_extent.y + 7) / 8,
                   (this->_extent.z + 7) / 8);
     Kernels::map_array_binary_op<T>
-        <<<gridSize, blockSize>>>(src.data_d(), _data_d, src_pos, pos,
+        <<<gridSize, blockSize>>>(src._data_d, _data_d, src_pos, pos,
                                   ext, detail::Op_PlusAssign<T>{});
     CudaCheckError();
   } else if (this->_dim == 2) {
@@ -271,12 +271,12 @@ cu_multi_array<T>::add_from(const cu_multi_array<T>& src, Index src_pos,
     dim3 gridSize((this->_extent.x + 31) / 32,
                   (this->_extent.y + 15) / 16);
     Kernels::map_array_binary_op_2d<T>
-        <<<gridSize, blockSize>>>(src.data_d(), _data_d, src_pos, pos,
+        <<<gridSize, blockSize>>>(src._data_d, _data_d, src_pos, pos,
                                   ext, detail::Op_PlusAssign<T>{});
     CudaCheckError();
   } else if (this->_dim == 1) {
     Kernels::map_array_binary_op_1d<T>
-        <<<64, 128>>>(src.data_d(), _data_d, src_pos, pos, ext,
+        <<<64, 128>>>(src._data_d, _data_d, src_pos, pos, ext,
                       detail::Op_PlusAssign<T>{});
     CudaCheckError();
   }
