@@ -51,7 +51,7 @@ check_bg_fields() {
          dev_bg_fields.B1.xsize, dev_bg_fields.B1.ysize);
   printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B2.pitch,
          dev_bg_fields.B2.xsize, dev_bg_fields.B2.ysize);
-  printf("bg B0 value is %f\n", *ptrAddr(dev_bg_fields.B1, 5, 4));
+  // printf("bg B0 value is %f\n", *ptrAddr(dev_bg_fields.B1, 5, 4));
 }
 
 __global__ void

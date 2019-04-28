@@ -13,8 +13,8 @@ namespace Kernels {
 
 __global__ void
 collect_ptc_diagnostics(particle_data ptc, size_t num,
-                        cudaPitchedPtr* ptc_gamma,
-                        cudaPitchedPtr* ptc_num) {
+                        typed_pitchedptr<Scalar>* ptc_gamma,
+                        typed_pitchedptr<Scalar>* ptc_num) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -29,17 +29,19 @@ collect_ptc_diagnostics(particle_data ptc, size_t num,
     auto flag = ptc.flag[idx];
     int sp = get_ptc_type(flag);
     auto w = ptc.weight[idx];
-    size_t offset = c2 * ptc_num[0].pitch + c1 * sizeof(Scalar);
+    // size_t offset = c2 * ptc_num[0].pitch + c1 * sizeof(Scalar);
 
     // printf("%d\n",ptc_num[0].pitch);
-    atomicAdd(ptrAddr(ptc_num[sp], offset), w);
-    atomicAdd(ptrAddr(ptc_gamma[sp], offset), w * gamma);
+    // atomicAdd(ptrAddr(ptc_num[sp], offset), w);
+    // atomicAdd(ptrAddr(ptc_gamma[sp], offset), w * gamma);
+    atomicAdd(&ptc_num[sp](c1, c2), w);
+    atomicAdd(&ptc_gamma[sp](c1, c2), w * gamma);
   }
 }
 
 __global__ void
 collect_photon_diagnostics(photon_data photons, size_t num,
-                           cudaPitchedPtr photon_num) {
+                           typed_pitchedptr<Scalar> photon_num) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
@@ -51,9 +53,9 @@ collect_photon_diagnostics(photon_data photons, size_t num,
     int c2 = dev_mesh.get_c2(c);
     auto w = photons.weight[idx];
     // auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx];
-    size_t offset = c2 * photon_num.pitch + c1 * sizeof(Scalar);
+    // size_t offset = c2 * photon_num.pitch + c1 * sizeof(Scalar);
 
-    atomicAdd(ptrAddr(photon_num, offset), w);
+    atomicAdd(&photon_num(c1, c2), w);
   }
 }
 
@@ -68,10 +70,10 @@ AdditionalDiagnostics::AdditionalDiagnostics(
   for_each_device(env.dev_map(), [this](int n) {
     CudaSafeCall(cudaMallocManaged(
         &m_dev_gamma[n],
-        sizeof(cudaPitchedPtr) * m_env.params().num_species));
+        sizeof(typed_pitchedptr<Scalar>) * m_env.params().num_species));
     CudaSafeCall(cudaMallocManaged(
         &m_dev_ptc_num[n],
-        sizeof(cudaPitchedPtr) * m_env.params().num_species));
+        sizeof(typed_pitchedptr<Scalar>) * m_env.params().num_species));
   });
 }
 
