@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "utils/util_functions.h"
 #include <cstring>
 

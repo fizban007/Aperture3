@@ -1,7 +1,7 @@
 #include "algorithms/field_solver_default.h"
 #include "ptc_updater_dev.h"
 #include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cu_sim_environment.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include <random>

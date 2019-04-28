@@ -3,7 +3,7 @@
 #include "data/particles_dev.h"
 #include "radiation/rt_pulsar.h"
 #include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cu_sim_environment.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include <random>

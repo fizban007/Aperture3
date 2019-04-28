@@ -11,7 +11,7 @@
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/utils/iterate_devices.h"
 #include "cuda/utils/typed_pitchedptr.cuh"
 #include "rt_pulsar.h"

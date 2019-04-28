@@ -4,7 +4,7 @@
 #include "cuda/core/ptc_updater_logsph.h"
 #include "cuda/cudarng.h"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/radiation/rt_pulsar.h"
 #include "cuda/utils/cu_data_exporter.h"
 #include "cuda/utils/iterate_devices.h"

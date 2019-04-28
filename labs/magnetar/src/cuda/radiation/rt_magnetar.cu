@@ -11,7 +11,7 @@
 // #include "data/photons_1d.h"
 // #include "radiation/curvature_instant.h"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/radiation/rt_magnetar.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"

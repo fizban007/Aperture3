@@ -1,5 +1,5 @@
-#ifndef _SIM_ENVIRONMENT_DEV_H_
-#define _SIM_ENVIRONMENT_DEV_H_
+#ifndef _CU_SIM_ENVIRONMENT_H_
+#define _CU_SIM_ENVIRONMENT_H_
 
 #include <cuda_runtime.h>
 #include "commandline_args.h"
@@ -105,4 +105,4 @@ class cu_sim_environment : public sim_environment {
 };  // ----- end of class cu_sim_environment -----
 }  // namespace Aperture
 
-#endif  // _SIM_ENVIRONMENT_DEV_H_
+#endif  // _CU_SIM_ENVIRONMENT_H_

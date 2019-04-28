@@ -1,7 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data1d.h"
 #include "cuda/core/ptc_updater_1dgr.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
