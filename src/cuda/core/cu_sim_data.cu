@@ -6,6 +6,7 @@
 #include "cuda/grids/grid_log_sph_dev.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
+#include "cuda/utils/typed_pitchedptr.cuh"
 #include "utils/timer.h"
 #include "visit_struct/visit_struct.hpp"
 
@@ -13,42 +14,35 @@ namespace Aperture {
 
 namespace Kernels {
 
+template <typename T>
 __global__ void
-compute_EdotB(cudaPitchedPtr e1, cudaPitchedPtr e2, cudaPitchedPtr e3,
-              cudaPitchedPtr b1, cudaPitchedPtr b2, cudaPitchedPtr b3,
-              cudaPitchedPtr b1bg, cudaPitchedPtr b2bg,
-              cudaPitchedPtr b3bg, cudaPitchedPtr EdotB) {
+compute_EdotB(typed_pitchedptr<T> e1, typed_pitchedptr<T> e2,
+              typed_pitchedptr<T> e3, typed_pitchedptr<T> b1,
+              typed_pitchedptr<T> b2, typed_pitchedptr<T> b3,
+              typed_pitchedptr<T> b1bg, typed_pitchedptr<T> b2bg,
+              typed_pitchedptr<T> b3bg, typed_pitchedptr<T> EdotB) {
   // Compute time-averaged EdotB over the output interval
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+  // size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = e1.compute_offset(n1, n2);
 
   float delta = 1.0f / dev_params.data_interval;
-  Scalar E1 = 0.5f * (*ptrAddr(e1, globalOffset) +
-                      *ptrAddr(e1, globalOffset - e1.pitch));
-  Scalar E2 = 0.5f * (*ptrAddr(e2, globalOffset) +
-                      *ptrAddr(e2, globalOffset - sizeof(Scalar)));
-  Scalar E3 =
-      0.25f * (*ptrAddr(e3, globalOffset) +
-               *ptrAddr(e3, globalOffset - sizeof(Scalar)) +
-               *ptrAddr(e3, globalOffset - e3.pitch) +
-               *ptrAddr(e3, globalOffset - sizeof(Scalar) - e3.pitch));
-  Scalar B1 = 0.5f * (*ptrAddr(b1, globalOffset) +
-                      *ptrAddr(b1, globalOffset - sizeof(Scalar))) +
-              0.5f * (*ptrAddr(b1bg, globalOffset) +
-                      *ptrAddr(b1bg, globalOffset - sizeof(Scalar)));
-  Scalar B2 = 0.5f * (*ptrAddr(b2, globalOffset) +
-                      *ptrAddr(b2, globalOffset - b2.pitch)) +
-              0.5f * (*ptrAddr(b2bg, globalOffset) +
-                      *ptrAddr(b2bg, globalOffset - b2bg.pitch));
-  Scalar B3 = *ptrAddr(b3, globalOffset) + *ptrAddr(b3bg, globalOffset);
+  Scalar E1 = 0.5f * (e1(n1, n2) + e1(n1, n2 - 1));
+  Scalar E2 = 0.5f * (e1(n1, n2) + e1(n1 - 1, n2));
+  Scalar E3 = 0.25f * (e3(n1, n2) + e3(n1 - 1, n2) + e3(n1, n2 - 1) +
+                       e3(n1 - 1, n2 - 1));
+  Scalar B1 = 0.5f * (b1(n1, n2) + b1(n1 - 1, n2)) +
+              0.5f * (b1bg(n1, n2) + b1bg(n1 - 1, n2));
+  Scalar B2 = 0.5f * (b2(n1, n2) + b2(n1, n2 - 1)) +
+              0.5f * (b2bg(n1, n2) + b2bg(n1, n2 - 1));
+  Scalar B3 = b3[globalOffset] + b3bg[globalOffset];
 
   // Do the actual computation here
-  (*ptrAddr(EdotB, globalOffset)) += delta *
-                                     (E1 * B1 + E2 * B2 + E3 * B3) /
-                                     sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  EdotB[globalOffset] += delta * (E1 * B1 + E2 * B2 + E3 * B3) /
+                         sqrt(B1 * B1 + B2 * B2 + B3 * B3);
 }
 
 __global__ void
@@ -68,8 +62,8 @@ check_dev_mesh() {
 
 __global__ void
 check_mesh_ptrs(Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
-  printf("mesh ptr %lu, %lu\n", mesh_ptrs.A1_e.pitch,
-         mesh_ptrs.dV.pitch);
+  printf("mesh ptr %lu, %lu\n", mesh_ptrs.A1_e.p.pitch,
+         mesh_ptrs.dV.p.pitch);
 }
 
 __global__ void

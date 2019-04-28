@@ -3,6 +3,7 @@
 
 #include "core/multi_array.h"
 #include "core/vec3.h"
+#include "cuda/utils/typed_pitchedptr.cuh"
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
@@ -129,8 +130,11 @@ class cu_multi_array : public multi_array<T> {
   // T* data() { return _data_h; }
   // const T* data() const { return _data_h; }
   // cudaPitchedPtr data_d() { return _data_d; }
-  cudaPitchedPtr& data_d() { return _data_d; }
-  const cudaPitchedPtr& data_d() const { return _data_d; }
+  // cudaPitchedPtr& data_d() { return _data_d; }
+  // cudaPitchedPtr data_d() const { return _data_d; }
+  typed_pitchedptr<T> data_d() const {
+    return typed_pitchedptr<T>(_data_d);
+  }
   int devId() const { return _devId; }
 
  private:
