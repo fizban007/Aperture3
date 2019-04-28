@@ -19,11 +19,9 @@ namespace Aperture {
 
 namespace Kernels {
 
-__device__ Scalar
-beta_phi(Scalar r, Scalar theta);
+__device__ Scalar beta_phi(Scalar r, Scalar theta);
 
-__device__ Scalar
-alpha_gr(Scalar r);
+__device__ Scalar alpha_gr(Scalar r);
 
 HD_INLINE void
 cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
@@ -80,32 +78,38 @@ vay_push_2d(particle_data ptc, size_t num,
     gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
-          alpha_gr(r) * (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
+          alpha_gr(r) *
+          (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
           // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
           //        Stagger(0b110))) *
           q_over_m;
       Scalar E2 =
-          alpha_gr(r) * (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
+          alpha_gr(r) *
+          (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
           // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
           //        Stagger(0b101))) *
           q_over_m;
       Scalar E3 =
-          alpha_gr(r) * (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
+          alpha_gr(r) *
+          (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
           // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
           //        Stagger(0b011))) *
           q_over_m;
       Scalar B1 =
-          alpha_gr(r) * (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
+          alpha_gr(r) *
+          (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
            interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
                   Stagger(0b001))) *
           q_over_m;
       Scalar B2 =
-          alpha_gr(r) * (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
+          alpha_gr(r) *
+          (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
            interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
                   Stagger(0b010))) *
           q_over_m;
       Scalar B3 =
-          alpha_gr(r) * (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
+          alpha_gr(r) *
+          (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
           // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
           //        Stagger(0b100))) *
           q_over_m;
@@ -188,11 +192,14 @@ vay_push_2d(particle_data ptc, size_t num,
         //                  delta_p3 * delta_p3);
         // if (dp < p) {
         // p1 += (dp < 10.0f * p || dp < 1e-2 ? delta_p1
-        //                                    : 0.5 * p * delta_p1 / dp);
+        //                                    : 0.5 * p * delta_p1 /
+        //                                    dp);
         // p2 += (dp < 10.0f * p || dp < 1e-2 ? delta_p2
-        //                                    : 0.5 * p * delta_p2 / dp);
+        //                                    : 0.5 * p * delta_p2 /
+        //                                    dp);
         // p3 += (dp < 10.0f * p || dp < 1e-2 ? delta_p3
-        //                                    : 0.5 * p * delta_p3 / dp);
+        //                                    : 0.5 * p * delta_p3 /
+        //                                    dp);
         p1 += delta_p1;
         p2 += delta_p2;
         p3 += delta_p3;
@@ -405,34 +412,36 @@ __launch_bounds__(512, 4)
       Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
       Scalar sy1 = interp.interpolate(-new_x2 + (j + 1 - dc2));
 
-      size_t j_offset = (j + c2) * fields.J1.pitch;
+      // size_t j_offset = (j + c2) * fields.J1.p.pitch;
       Scalar djx = 0.0f;
       for (int i = i_0; i <= i_1; i++) {
         Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
         Scalar sx1 = interp.interpolate(-new_x1 + (i + 1 - dc1));
 
         // j1 is movement in r
-        int offset = j_offset + (i + c1) * sizeof(Scalar);
+        // int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
-                  weight * djx);
+        // atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
+        atomicAdd(&fields.J1(i + c1 + 1, j + c2), weight * djx);
 
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         djy[i - i_0] += val1;
-        atomicAdd(ptrAddr(fields.J2, offset + fields.J2.pitch),
+        // atomicAdd(ptrAddr(fields.J2, offset + fields.J2.pitch),
+        atomicAdd(&fields.J2(i + c1, j + c2 + 1),
                   weight * djy[i - i_0]);
 
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
-        atomicAdd(ptrAddr(fields.J3, offset),
-                  -weight * v3 * val2 / *ptrAddr(mesh_ptrs.dV, offset));
+        // atomicAdd(ptrAddr(fields.J3, offset),
+        atomicAdd(&fields.J3(i + c1, j + c2),
+                  -weight * v3 * val2 / mesh_ptrs.dV(i + c1, j + c2));
 
         // rho is deposited at the final position
         // if ((step + 1) % dev_params.data_interval == 0) {
         Scalar s1 = sx1 * sy1;
-        atomicAdd(ptrAddr(fields.Rho[sp], offset), -weight * s1);
+        atomicAdd(&fields.Rho[sp](i + c1, j + c2), -weight * s1);
         // }
       }
     }
@@ -463,15 +472,12 @@ process_j(PtcUpdaterDev::fields_data fields,
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
          i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-      size_t offset = j * fields.J1.pitch + i * sizeof(Scalar);
+      // size_t offset = j * fields.J1.pitch + i * sizeof(Scalar);
       Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
-      (*ptrAddr(fields.J1, offset)) *=
-          w / *ptrAddr(mesh_ptrs.A1_e, offset);
-      (*ptrAddr(fields.J2, offset)) *=
-          w / *ptrAddr(mesh_ptrs.A2_e, offset);
+      fields.J1(i, j) *= w / mesh_ptrs.A1_e(i, j);
+      fields.J2(i, j) *= w / mesh_ptrs.A2_e(i, j);
       for (int n = 0; n < dev_params.num_species; n++) {
-        (*ptrAddr(fields.Rho[n], offset)) /=
-            *ptrAddr(mesh_ptrs.dV, offset);
+        fields.Rho[n](i, j) /= mesh_ptrs.dV(i, j);
       }
     }
   }
@@ -562,11 +568,14 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    size_t offset_0 =
-        i * sizeof(Scalar) + dev_mesh.guard[1] * fields.J3.pitch;
-    (*ptrAddr(fields.J3, offset_0 - fields.J3.pitch)) = 0.0f;
-    (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) -=
-        *ptrAddr(fields.J2, offset_0 - 2 * fields.J2.pitch);
+    // size_t offset_0 =
+    //     i * sizeof(Scalar) + dev_mesh.guard[1] * fields.J3.pitch;
+    // (*ptrAddr(fields.J3, offset_0 - fields.J3.pitch)) = 0.0f;
+    fields.J3(i, dev_mesh.guard[1] - 1) = 0.0f;
+    // (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) -=
+    //     *ptrAddr(fields.J2, offset_0 - 2 * fields.J2.pitch);
+    fields.J2(i, dev_mesh.guard[1] - 1) -=
+        fields.J2(i, dev_mesh.guard[1] - 2);
   }
 }
 
@@ -579,13 +588,16 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
     // Scalar *row = (Scalar *)((char *)fields.J2.ptr +
     //                          (dev_mesh.dims[1] - dev_mesh.guard[1] -
     //                          1) * fields.J2.pitch);
-    size_t offset_pi =
-        i * sizeof(Scalar) +
-        (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J3.pitch;
-    (*ptrAddr(fields.J2, offset_pi)) -=
-        *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
+    // size_t offset_pi =
+    //     i * sizeof(Scalar) +
+    //     (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J3.pitch;
+    // (*ptrAddr(fields.J2, offset_pi)) -=
+    //     *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
+    fields.J2(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) -=
+        fields.J2(i, dev_mesh.dims[1] - dev_mesh.guard[1]);
 
-    (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
+    // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
+    fields.J3(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) = 0.0f;
     // printf("%d, %d, %lu, %lu, %lu\n", i,
     //        (dev_mesh.dims[1] - dev_mesh.guard[1] - 1),
     //        fields.J3.pitch, fields.J3.xsize, fields.J3.ysize);
@@ -619,8 +631,10 @@ measure_surface_density(particle_data ptc, size_t num,
 }
 
 __global__ void
-annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
-                 cudaPitchedPtr j2, cudaPitchedPtr j3) {
+annihilate_pairs(particle_data ptc, size_t num,
+                 typed_pitchedptr<Scalar> j1,
+                 typed_pitchedptr<Scalar> j2,
+                 typed_pitchedptr<Scalar> j3) {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     // First do a deposit before annihilation
@@ -656,23 +670,25 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
         Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
         Scalar sy1 = interp.interpolate(-new_x2 + j + 1);
 
-        size_t j_offset = (j + c2) * j1.pitch;
+        // size_t j_offset = (j + c2) * j1.pitch;
         Scalar djx = 0.0f;
         for (int i = -1; i <= 0; i++) {
           Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
           Scalar sx1 = interp.interpolate(-new_x1 + i + 1);
 
           // j1 is movement in r
-          int offset = j_offset + (i + c1) * sizeof(Scalar);
+          // int offset = j_offset + (i + c1) * sizeof(Scalar);
           Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
           djx += val0;
-          atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)), weight * djx);
+          // atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)), weight *
+          // djx);
+          atomicAdd(&j1(i + c1 + 1, j + c2), weight * djx);
 
           // j2 is movement in theta
           Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
           djy[i + 1] += val1;
-          atomicAdd(ptrAddr(j2, offset + j2.pitch),
-                    weight * djy[i + 1]);
+          // atomicAdd(ptrAddr(j2, offset + j2.pitch),
+          atomicAdd(&j2(i + c1, j + c2 + 1), weight * djy[i + 1]);
         }
       }
     }
@@ -683,8 +699,9 @@ annihilate_pairs(particle_data ptc, size_t num, cudaPitchedPtr j1,
 }
 
 __global__ void
-flag_annihilation(particle_data data, size_t num, cudaPitchedPtr dens,
-                  cudaPitchedPtr balance) {
+flag_annihilation(particle_data data, size_t num,
+                  typed_pitchedptr<Scalar> dens,
+                  typed_pitchedptr<Scalar> balance) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     auto c = data.cell[i];
@@ -697,15 +714,15 @@ flag_annihilation(particle_data data, size_t num, cudaPitchedPtr dens,
 
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
-    size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
+    // size_t offset = c1 * sizeof(Scalar) + c2 * dens.pitch;
 
-    Scalar n = atomicAdd(ptrAddr(dens, offset), w);
+    Scalar n = atomicAdd(&dens(c1, c2), w);
     Scalar r = std::exp(dev_mesh.pos(0, c1, 0.5f));
     // TODO: implement the proper condition
     if (n >
         0.5 * dev_mesh.inv_delta[0] * dev_mesh.inv_delta[0] / (r * r)) {
       set_bit(flag, ParticleFlag::annihilate);
-      atomicAdd(ptrAddr(balance, c1, c2),
+      atomicAdd(&balance(c1, c2),
                 w * (get_ptc_type(flag) == (int)ParticleType::electron
                          ? -1.0f
                          : 1.0f));
@@ -718,7 +735,7 @@ flag_annihilation(particle_data data, size_t num, cudaPitchedPtr dens,
 
 __global__ void
 add_extra_particles(particle_data ptc, size_t num,
-                    cudaPitchedPtr balance) {
+                    typed_pitchedptr<Scalar> balance) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -733,7 +750,7 @@ add_extra_particles(particle_data ptc, size_t num,
   ptc.p2[num + num_offset] = 0.0f;
   ptc.p3[num + num_offset] = 0.0f;
   ptc.E[num + num_offset] = 1.0f;
-  Scalar w = *ptrAddr(balance, n1, n2);
+  Scalar w = balance(n1, n2);
   ptc.weight[num + num_offset] = std::abs(w);
   if (w > 0)
     ptc.flag[num + num_offset] =
@@ -743,61 +760,64 @@ add_extra_particles(particle_data ptc, size_t num,
         set_ptc_type_flag(0, ParticleType::electron);
 }
 
-__global__ void
-filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp, cudaPitchedPtr A,
-               bool boundary_lower0, bool boundary_upper0,
-               bool boundary_lower1, bool boundary_upper1) {
-  // Load position parameters
-  int t1 = blockIdx.x, t2 = blockIdx.y;
-  int c1 = threadIdx.x, c2 = threadIdx.y;
-  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
-  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
+// __global__ void
+// filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp, cudaPitchedPtr
+// A,
+//                bool boundary_lower0, bool boundary_upper0,
+//                bool boundary_lower1, bool boundary_upper1) {
+//   // Load position parameters
+//   int t1 = blockIdx.x, t2 = blockIdx.y;
+//   int c1 = threadIdx.x, c2 = threadIdx.y;
+//   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+//   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+//   size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
 
-  size_t dr_plus = sizeof(Scalar);
-  if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] - 1)
-    dr_plus = 0;
-  // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
-  //                                                : 0);
-  size_t dr_minus = sizeof(Scalar);
-  if (boundary_lower0 && n1 == dev_mesh.guard[0]) dr_minus = 0;
-  // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
-  size_t dt_plus = j.pitch;
-  if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1)
-    dt_plus = 0;
-  // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
-  size_t dt_minus = j.pitch;
-  if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
-  // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
-  // Do the actual computation here
-  (*ptrAddr(j_tmp, globalOffset)) =
-      0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + dr_plus) *
-      *ptrAddr(A, globalOffset + dr_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - dr_minus) *
-      *ptrAddr(A, globalOffset - dr_minus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset + dt_plus) *
-      *ptrAddr(A, globalOffset + dt_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.125f * *ptrAddr(j, globalOffset - dt_minus) *
-      *ptrAddr(A, globalOffset - dt_minus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
-      *ptrAddr(A, globalOffset + dr_plus + dt_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset - dr_minus + dt_plus) *
-      *ptrAddr(A, globalOffset - dr_minus + dt_plus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset + dr_plus - dt_minus) *
-      *ptrAddr(A, globalOffset + dr_plus - dt_minus);
-  (*ptrAddr(j_tmp, globalOffset)) +=
-      0.0625f * *ptrAddr(j, globalOffset - dr_minus - dt_minus) *
-      *ptrAddr(A, globalOffset - dr_minus - dt_minus);
-  (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
-}
+//   size_t dr_plus = sizeof(Scalar);
+//   if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] -
+//   1)
+//     dr_plus = 0;
+//   // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
+//   //                                                : 0);
+//   size_t dr_minus = sizeof(Scalar);
+//   if (boundary_lower0 && n1 == dev_mesh.guard[0]) dr_minus = 0;
+//   // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+//   size_t dt_plus = j.pitch;
+//   if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] -
+//   1)
+//     dt_plus = 0;
+//   // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+//   size_t dt_minus = j.pitch;
+//   if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
+//   // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+//   // Do the actual computation here
+//   (*ptrAddr(j_tmp, globalOffset)) =
+//       0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.125f * *ptrAddr(j, globalOffset + dr_plus) *
+//       *ptrAddr(A, globalOffset + dr_plus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.125f * *ptrAddr(j, globalOffset - dr_minus) *
+//       *ptrAddr(A, globalOffset - dr_minus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.125f * *ptrAddr(j, globalOffset + dt_plus) *
+//       *ptrAddr(A, globalOffset + dt_plus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.125f * *ptrAddr(j, globalOffset - dt_minus) *
+//       *ptrAddr(A, globalOffset - dt_minus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
+//       *ptrAddr(A, globalOffset + dr_plus + dt_plus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.0625f * *ptrAddr(j, globalOffset - dr_minus + dt_plus) *
+//       *ptrAddr(A, globalOffset - dr_minus + dt_plus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.0625f * *ptrAddr(j, globalOffset + dr_plus - dt_minus) *
+//       *ptrAddr(A, globalOffset + dr_plus - dt_minus);
+//   (*ptrAddr(j_tmp, globalOffset)) +=
+//       0.0625f * *ptrAddr(j, globalOffset - dr_minus - dt_minus) *
+//       *ptrAddr(A, globalOffset - dr_minus - dt_minus);
+//   (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
+// }
 
 }  // namespace Kernels
 
@@ -921,41 +941,42 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       CudaSafeCall(cudaDeviceSynchronize());
     });
 
-    Logger::print_debug("current smoothing {} times",
-                        m_env.params().current_smoothing);
-    for (int i = 0; i < m_env.params().current_smoothing; i++) {
-      m_env.get_sub_guard_cells(data.J);
-      // Logger::print_debug("current smoothing {}", i);
-      for_each_device(data.dev_map, [this, &data](int n) {
-        // Logger::print_debug(
-        //     "on device {}, tmp_j1 is on {}, tmp_j2 is on {}", n,
-        //     m_tmp_j1[n].devId(), m_tmp_j2[n].devId());
-        const Grid_LogSph_dev *grid =
-            dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-        auto mesh_ptrs = grid->get_mesh_ptrs();
-        auto &mesh = grid->mesh();
-        dim3 blockSize(32, 16);
-        dim3 gridSize(mesh.reduced_dim(0) / 32,
-                      mesh.reduced_dim(1) / 16);
+    // Logger::print_debug("current smoothing {} times",
+    //                     m_env.params().current_smoothing);
+    // for (int i = 0; i < m_env.params().current_smoothing; i++) {
+    //   m_env.get_sub_guard_cells(data.J);
+    //   // Logger::print_debug("current smoothing {}", i);
+    //   for_each_device(data.dev_map, [this, &data](int n) {
+    //     // Logger::print_debug(
+    //     //     "on device {}, tmp_j1 is on {}, tmp_j2 is on {}", n,
+    //     //     m_tmp_j1[n].devId(), m_tmp_j2[n].devId());
+    //     const Grid_LogSph_dev *grid =
+    //         dynamic_cast<const Grid_LogSph_dev
+    //         *>(data.grid[n].get());
+    //     auto mesh_ptrs = grid->get_mesh_ptrs();
+    //     auto &mesh = grid->mesh();
+    //     dim3 blockSize(32, 16);
+    //     dim3 gridSize(mesh.reduced_dim(0) / 32,
+    //                   mesh.reduced_dim(1) / 16);
 
-        Kernels::filter_current<<<gridSize, blockSize>>>(
-            data.J[n].ptr(0), m_tmp_j1[n].data_d(), mesh_ptrs.A1_e,
-            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        data.J[n].data(0).copy_from(m_tmp_j1[n]);
-        CudaCheckError();
+    //     Kernels::filter_current<<<gridSize, blockSize>>>(
+    //         data.J[n].ptr(0), m_tmp_j1[n].data_d(), mesh_ptrs.A1_e,
+    //         m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
+    //         m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
+    //     data.J[n].data(0).copy_from(m_tmp_j1[n]);
+    //     CudaCheckError();
 
-        Kernels::filter_current<<<gridSize, blockSize>>>(
-            data.J[n].ptr(1), m_tmp_j2[n].data_d(), mesh_ptrs.A2_e,
-            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        data.J[n].data(1).copy_from(m_tmp_j2[n]);
-        CudaCheckError();
-      });
-      for_each_device(data.dev_map, [](int n) {
-        CudaSafeCall(cudaDeviceSynchronize());
-      });
-    }
+    //     Kernels::filter_current<<<gridSize, blockSize>>>(
+    //         data.J[n].ptr(1), m_tmp_j2[n].data_d(), mesh_ptrs.A2_e,
+    //         m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
+    //         m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
+    //     data.J[n].data(1).copy_from(m_tmp_j2[n]);
+    //     CudaCheckError();
+    //   });
+    //   for_each_device(data.dev_map, [](int n) {
+    //     CudaSafeCall(cudaDeviceSynchronize());
+    //   });
+    // }
     // timer::stamp("ph_update");
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
       // Skip empty particle array
