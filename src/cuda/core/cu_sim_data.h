@@ -3,7 +3,7 @@
 
 #include "core/enum_types.h"
 #include "core/grid.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/detail/fields_dev_impl.hpp"
 #include "cuda/data/particles_dev.h"

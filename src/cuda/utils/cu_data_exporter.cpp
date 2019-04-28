@@ -3,7 +3,7 @@
 #include "core/constant_defs.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/cu_sim_data1d.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "sim_params.h"
 #include "utils/hdf_exporter_impl.hpp"
 #include "utils/type_name.h"

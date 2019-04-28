@@ -1,4 +1,4 @@
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/data/array.h"
 #include "radiation/spectra.h"
 #include "sim.h"

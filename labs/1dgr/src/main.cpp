@@ -1,7 +1,7 @@
 #include "cuda/core/cu_sim_data1d.h"
 #include "cuda/core/field_solver_1dgr.h"
 #include "cuda/core/ptc_updater_1dgr.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/radiation/rt_1dgr.h"
 #include "cuda/utils/cu_data_exporter.h"
 #include "utils/logger.h"

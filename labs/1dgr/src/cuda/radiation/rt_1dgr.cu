@@ -1,7 +1,7 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"

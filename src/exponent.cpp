@@ -4,7 +4,7 @@
 #include "radiation/inverse_compton_power_law.h"
 #include "radiation/radiation_transfer.h"
 #include "cu_sim_data.h"
-#include "sim_environment_dev.h"
+#include "cu_sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 #include <fmt/core.h>

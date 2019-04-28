@@ -2,7 +2,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/ptc_updater_helper.cuh"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"

@@ -2,7 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/data/photons_dev.h"
-#include "cuda/core/sim_environment_dev.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
 

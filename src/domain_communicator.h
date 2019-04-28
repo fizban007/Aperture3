@@ -4,7 +4,7 @@
 #include "data/fields_dev.h"
 #include "data/cu_multi_array.h"
 #include "data/particle_base.h"
-#include "sim_environment_dev.h"
+#include "cu_sim_environment.h"
 
 namespace Aperture {
 

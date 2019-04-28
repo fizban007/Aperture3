@@ -90,7 +90,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/grids/grid_1dgr_dev.cpp"
     "cuda/core/field_solver_log_sph.cu"
     # "cuda/core/field_solver_1dgr.cu"
-    "cuda/core/sim_environment_dev.cpp"
+    "cuda/core/cu_sim_environment.cpp"
     "cuda/core/cu_sim_data.cu"
     "cuda/core/cu_sim_data1d.cu"
     "cuda/core/additional_diagnostics.cu"

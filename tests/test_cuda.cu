@@ -1,7 +1,7 @@
 #include "data/particle_data.h"
 #include <cuda.h>
 #include "catch.hpp"
-#include "sim_environment_dev.h"
+#include "cu_sim_environment.h"
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
