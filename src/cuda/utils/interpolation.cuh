@@ -5,8 +5,9 @@
 #include "core/typedefs.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cuda_control.h"
-#include "cuda/ptr_util.h"
+// #include "cuda/ptr_util.h"
 #include "utils/util_functions.h"
+#include "cuda/utils/typed_pitchedptr.cuh"
 
 namespace Aperture {
 
@@ -80,7 +81,7 @@ struct Interpolator3D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(typed_pitchedptr<Scalar> f, FloatT x1, FloatT x2,
                                 FloatT x3, int c1, int c2, int c3,
                                 Stagger stagger) const {
     Scalar result = 0.0f;
@@ -88,12 +89,12 @@ struct Interpolator3D {
     //      k <= c3 + Interp::support - Interp::radius; k++) {
     for (int k = 0; k <= Interp::support; k++) {
       int kk = k + c3 - Interp::radius;
-      size_t k_offset = kk * f.pitch * f.ysize;
+      size_t k_offset = kk * f.p.pitch * f.p.ysize;
       for (int j = 0; j <= Interp::support; j++) {
         // for (int j = c2 - Interp::radius;
         //      j <= c2 + Interp::support - Interp::radius; j++) {
         int jj = j + c2 - Interp::radius;
-        size_t j_offset = jj * f.pitch;
+        size_t j_offset = jj * f.p.pitch;
         for (int i = 0; i <= Interp::support; i++) {
           // for (int i = c1 - Interp::radius;
           //      i <= c1 + Interp::support - Interp::radius; i++) {
@@ -101,7 +102,7 @@ struct Interpolator3D {
           size_t globalOffset =
               k_offset + j_offset + ii * sizeof(Scalar);
 
-          result += (*(Scalar*)((char*)f.ptr + globalOffset)) *
+          result += f[globalOffset] *
                     interp_cell(interp, x1, c1, ii, stagger[0]) *
                     interp_cell(interp, x2, c2, jj, stagger[1]) *
                     interp_cell(interp, x3, c3, kk, stagger[2]);
@@ -135,22 +136,19 @@ struct Interpolator2D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(cudaPitchedPtr f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(typed_pitchedptr<Scalar> f, FloatT x1, FloatT x2,
                                 int c1, int c2, Stagger stagger) const {
     Scalar result = 0.0f;
-    // for (int j = c2 - Interp::radius;
-    //      j <= c2 + Interp::support - Interp::radius; j++) {
     for (int j = 0; j <= Interp::support; j++) {
       int jj = j + c2 - Interp::radius;
-      size_t j_offset = jj * f.pitch;
-      // for (int i = c1 - Interp::radius;
-      //      i <= c1 + Interp::support - Interp::radius; i++) {
+      size_t j_offset = jj * f.p.pitch;
+
       for (int i = 0; i <= Interp::support; i++) {
         int ii = i + c1 - Interp::radius;
         size_t globalOffset = j_offset + ii * sizeof(Scalar);
         // printf("add %f\n", *ptrAddr(f, globalOffset));
 
-        result += (*ptrAddr(f, globalOffset)) *
+        result += f[globalOffset] *
                   interp_cell(interp, x1, c1, ii, stagger[0]) *
                   interp_cell(interp, x2, c2, jj, stagger[1]);
         // printf("%f\n",result);

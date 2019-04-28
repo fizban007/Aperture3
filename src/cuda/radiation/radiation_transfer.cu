@@ -3,7 +3,7 @@
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
 #include "cuda/kernels.h"
-#include "data/particles_dev.h"
+#include "cuda/data/particles_dev.h"
 #include "data/particles_1d.h"
 #include "data/photons_dev.h"
 #include "data/photons_1d.h"

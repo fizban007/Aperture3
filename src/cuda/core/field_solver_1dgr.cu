@@ -2,21 +2,23 @@
 #include "cuda/core/cu_sim_data1d.h"
 #include "cuda/core/field_solver_1dgr.h"
 #include "cuda/cudaUtility.h"
-#include "cuda/ptr_util.h"
+// #include "cuda/ptr_util.h"
+#include "cuda/utils/typed_pitchedptr.cuh"
 
 namespace Aperture {
 
 namespace Kernels {
 
 __global__ void
-update_e_1dgr(cudaPitchedPtr e1, cudaPitchedPtr e3, cudaPitchedPtr j1,
-              cudaPitchedPtr rho, Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
-              Scalar dt) {
+update_e_1dgr(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e3,
+              typed_pitchedptr<Scalar> j1, typed_pitchedptr<Scalar> rho,
+              Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   for (size_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     // Scalar j0 = mesh_ptrs.j0[i] * mesh_ptrs.dpsidth[i];
     Scalar j0 = mesh_ptrs.j0[i];
-    *ptrAddr(e1, i, 0) += (j0 - *ptrAddr(j1, i, 0)) * dt;
+    // *ptrAddr(e1, i, 0) += (j0 - *ptrAddr(j1, i, 0)) * dt;
+    e1(i, 0) += (j0 - j1(i, 0)) * dt;
     // printf("E1 is %f\n", *ptrAddr(e1, i, 0));
     // TODO: Check all equations
     // *ptrAddr(e3, i, 0) +=
