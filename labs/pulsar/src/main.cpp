@@ -3,8 +3,6 @@
 #include "cuda/core/field_solver_log_sph.h"
 #include "cuda/core/ptc_updater_logsph.h"
 #include "cuda/cudarng.h"
-// #include "cuda/radiation/curvature_instant.h"
-// #include "radiation/radiation_transfer.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/sim_environment_dev.h"
 #include "cuda/radiation/rt_pulsar.h"
@@ -71,25 +69,6 @@ main(int argc, char* argv[]) {
   // Setup data export and diagnostics
   AdditionalDiagnostics diag(env);
   exporter.prepare_output(data);
-  // exporter.add_field("E", data.E);
-  // exporter.add_field("B", data.B);
-  // exporter.add_field("B_bg", data.Bbg);
-  // exporter.add_field("J", data.J);
-  // exporter.add_field("Rho_e", data.Rho[0]);
-  // exporter.add_field("Rho_p", data.Rho[1]);
-  // exporter.add_field("Rho_i", data.Rho[2]);
-  // exporter.add_field("flux", data.flux, false);
-  // exporter.add_field("divE", field_solver.get_divE());
-  // exporter.add_field("divB", field_solver.get_divB());
-  // exporter.add_field("photon_produced", rad.get_ph_events());
-  // exporter.add_field("pair_produced", rad.get_pair_events());
-  // exporter.add_field("photon_num", diag.get_ph_num());
-  // exporter.add_field("gamma_e", diag.get_gamma(0));
-  // exporter.add_field("gamma_p", diag.get_gamma(1));
-  // exporter.add_field("gamma_i", diag.get_gamma(2));
-  // exporter.add_field("num_e", diag.get_ptc_num(0));
-  // exporter.add_field("num_p", diag.get_ptc_num(1));
-  // exporter.add_field("num_i", diag.get_ptc_num(2));
 
   // Main simulation loop
   for (; step <= env.params().max_steps; step++) {
@@ -129,9 +108,8 @@ main(int argc, char* argv[]) {
     if (step % 1 == 0)
       ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 1.0, omega);
 
-    // Update particles (push and deposit)
+    // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);
-    // ptc_updater.handle_boundary(data);
 
     // Update field values and handle field boundary conditions
     field_solver.update_fields(data, dt, time);
