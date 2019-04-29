@@ -41,7 +41,6 @@ compute_e_update(
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  // size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
   size_t globalOffset = e1.compute_offset(n1, n2);
 
   Scalar r = std::exp(dev_mesh.pos(0, n1, true));
@@ -55,7 +54,6 @@ compute_e_update(
   Scalar r0 = std::exp(dev_mesh.pos(0, n1, 0));
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  // if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
   if (std::abs(dev_mesh.pos(1, n2, true) - CONST_PI) < 1.0e-5) {
     e1[globalOffset] +=
         dt *
@@ -99,33 +97,16 @@ compute_e_update(
 
   __syncthreads();
   // Extra work for the axis
-  // if (n2 == dev_mesh.guard[1]) {
-  //   printf("pos2 is at %f\n", std::abs(dev_mesh.pos(1, n2, true)));
-  // }
   if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) <
       1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
     globalOffset = e1.compute_offset(n1, n2);
 
-    // e2[globalOffset] = 0.0f;
     e3[globalOffset] = 0.0f;
 
     e1[globalOffset] += dt * (4.0f * b3(n1, n2 + 1) * alpha_gr(r0) /
                               (dev_mesh.delta[1] * r0)) -
                         alpha_gr(r0) * j1(n1, n2);
-    // dt * ((*ptrAddr(b3, globalOffset + b3.pitch) *
-    //            *ptrAddr(mesh_ptrs.l3_b, globalOffset + b3.pitch) -
-    //        *ptrAddr(b3, globalOffset) *
-    //            *ptrAddr(mesh_ptrs.l3_b, globalOffset)) /
-    //           *ptrAddr(mesh_ptrs.A1_e, globalOffset) -
-    //       *ptrAddr(j1, globalOffset));
-    // if (n1 == 4) {
-    //   printf("E1 is %f, %f\n", *ptrAddr(e1, globalOffset),
-    //   *ptrAddr(e1, globalOffset + b3.pitch)); printf("E2 is %f,
-    //   %f\n", *ptrAddr(e2, globalOffset), *ptrAddr(e2, globalOffset +
-    //   b3.pitch)); printf("B3 is %f, %f\n", *ptrAddr(b3,
-    //   globalOffset), *ptrAddr(b3, globalOffset + b3.pitch));
-    // }
   }
 }
 
@@ -183,24 +164,10 @@ compute_b_update(typed_pitchedptr<Scalar> e1,
   __syncthreads();
 
   // Extra work for the axis at theta = 0
-  // if (threadIdx.y == 0 && blockIdx.y == 0) {
   if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) <
       1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
-    // globalOffset = n2 * b1.pitch + n1 * sizeof(Scalar);
     globalOffset = b2.compute_offset(n1, n2);
-
-    // (*ptrAddr(b1, globalOffset)) +=
-    //     -dt *
-    //     (*ptrAddr(e3, globalOffset + e1.pitch) *
-    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset + e1.pitch) -
-    //      *ptrAddr(e3, globalOffset) *
-    //          *ptrAddr(mesh_ptrs.l3_e, globalOffset)) /
-    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
-    // (*ptrAddr(b1, globalOffset)) +=
-    //     -dt * *ptrAddr(e3, globalOffset + e3.pitch) *
-    //     *ptrAddr(mesh_ptrs.l3_e, globalOffset + e3.pitch) /
-    //     *ptrAddr(mesh_ptrs.A1_b, globalOffset);
 
     b2[globalOffset] = 0.0f;
   }
@@ -254,7 +221,6 @@ compute_divs(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e2,
 
   if (std::abs(dev_mesh.pos(1, n2, 1)) - dev_mesh.delta[1] < 1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
-    // globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
     globalOffset = e1.compute_offset(n1, n2);
 
     divE[globalOffset] =
@@ -265,7 +231,6 @@ compute_divs(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e2,
   }
 }
 
-// template <int DIM2>
 __global__ void
 stellar_boundary(typed_pitchedptr<Scalar> e1,
                  typed_pitchedptr<Scalar> e2,
@@ -284,7 +249,6 @@ stellar_boundary(typed_pitchedptr<Scalar> e1,
       b1(i, j) = 0.0f;
       e3(i, j) = 0.0f;
       e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s * dev_bg_fields.B1(i, j);
-      // Do not impose right on the surface
       e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r * dev_bg_fields.B2(i, j);
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
@@ -349,9 +313,8 @@ outflow_boundary(typed_pitchedptr<Scalar> e1,
       e1[offset] *= lambda;
       e2[offset] *= lambda;
       e3[offset] *= lambda;
-      // (*ptrAddr(b1, offset)) *= lambda;
-      // (*ptrAddr(b2, offset)) *= lambda;
-      // (*ptrAddr(b3, offset)) *= lambda;
+      // b1[offset] *= lambda;
+      // b2[offset] *= lambda;
       b3[offset] *= lambda;
     }
   }
@@ -521,47 +484,6 @@ FieldSolver_LogSph::update_fields(cu_sim_data &data, double dt,
                                    "field_update");
 }
 
-// void
-// FieldSolver_LogSph::update_fields(vfield_t& E, vfield_t& B,
-//                                   const vfield_t& J, sfield_t& divE,
-//                                   sfielt_t& divB, double dt,
-//                                   double time) {
-//   Logger::print_info("Updating fields");
-//   auto mesh_ptrs = m_grid.get_mesh_ptrs();
-//   auto& mesh = m_grid.mesh();
-
-//   if (m_grid.dim() == 2) {
-//     // We only implemented 2d at the moment
-//     dim3 blockSize(32, 16);
-//     dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) /
-//     16);
-//     // Update B
-//     Kernels::compute_b_update<<<gridSize, blockSize>>>(
-//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-//         mesh_ptrs, dt);
-//     CudaCheckError();
-//     // cudaDeviceSynchronize();
-
-//     // Update E
-//     Kernels::compute_e_update<<<gridSize, blockSize>>>(
-//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-//         J.ptr(0), J.ptr(1), J.ptr(2), mesh_ptrs, dt);
-//     CudaCheckError();
-//     // cudaDeviceSynchronize();
-
-//     // if (m_comm_callback_vfield != nullptr) {
-//     //   m_comm_callback_vfield(E);
-//     //   m_comm_callback_vfield(B);
-//     // }
-
-//     // Compute divE
-//     Kernels::compute_divs<<<gridSize, blockSize>>>(
-//         E.ptr(0), E.ptr(1), E.ptr(2), B.ptr(0), B.ptr(1), B.ptr(2),
-//         m_divE.ptr(), m_divB.ptr(), mesh_ptrs);
-//     CudaCheckError();
-//   }
-// }
-
 void
 FieldSolver_LogSph::set_background_j(const vfield_t &J) {}
 
@@ -572,8 +494,6 @@ FieldSolver_LogSph::boundary_conditions(cu_sim_data &data,
     int dev_id = data.dev_map[n];
     CudaSafeCall(cudaSetDevice(dev_id));
     if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
-      // Logger::print_debug("Processing field boundary {} on device
-      // {}", (int)BoundaryPos::lower0, n);
       Kernels::stellar_boundary<<<32, 256>>>(
           data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
           data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), omega);
