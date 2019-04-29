@@ -18,8 +18,10 @@ using namespace Aperture;
 
 int
 main(int argc, char* argv[]) {
-  uint32_t step = 0;
-  float time = 0.0;
+  uint32_t start_step = 0;
+  uint32_t step = start_step;
+  float start_time = 0.0;
+  float time = start_time;
 
   // Construct the simulation environment
   cu_sim_environment env(&argc, &argv);
@@ -28,14 +30,14 @@ main(int argc, char* argv[]) {
   cu_sim_data data(env);
 
   // Initialize data exporter
-  cu_data_exporter exporter(env.params(), step);
+  cu_data_exporter exporter(env.params(), start_step);
 
   if (env.params().is_restart) {
     Logger::print_info("This is a restart");
-    exporter.load_from_snapshot(env, data, step, time);
-    exporter.prepareXMFrestart(step, env.params().data_interval, time);
-    step += 1;
-    time += env.params().delta_t;
+    exporter.load_from_snapshot(env, data, start_step, start_time);
+    exporter.prepareXMFrestart(step, env.params().data_interval, start_time);
+    step = start_step + 1;
+    time = start_time + env.params().delta_t;
   } else {
     exporter.copyConfigFile();
     exporter.copySrc();
@@ -78,6 +80,7 @@ main(int argc, char* argv[]) {
   // Main simulation loop
   for (; step <= env.params().max_steps; step++) {
     double dt = env.params().delta_t;
+    time = start_time + (step - start_step) * dt;
 
     Scalar omega = 0.0;
     if (time <= 10.0) {
@@ -134,7 +137,7 @@ main(int argc, char* argv[]) {
       Logger::print_info("Snapshot took {}ms", t_snapshot);
     }
 
-    time += dt;
+    // time += dt;
   }
   return 0;
 }

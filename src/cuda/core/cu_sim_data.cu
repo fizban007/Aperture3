@@ -363,6 +363,8 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
 
   for_each_device(dev_map,
                   [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+
+  init_bg_fields();
 }
 
 void
@@ -604,8 +606,8 @@ cu_sim_data::init_bg_fields() {
   for_each_device(dev_map, [this](int n) {
     Logger::print_debug("on host, B0 is {}", Bbg[n](0, 5, 4));
     init_dev_bg_fields(Ebg[n], Bbg[n]);
-    // Kernels::check_bg_fields<<<1, 1>>>();
-    // CudaCheckError();
+    Kernels::check_bg_fields<<<1, 1>>>();
+    CudaCheckError();
   });
 }
 

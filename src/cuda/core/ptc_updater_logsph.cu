@@ -1,8 +1,8 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
-#include "cuda/core/ptc_updater_helper.cuh"
 #include "cuda/core/cu_sim_environment.h"
+#include "cuda/core/ptc_updater_helper.cuh"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
@@ -412,35 +412,34 @@ __launch_bounds__(512, 4)
       Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
       Scalar sy1 = interp.interpolate(-new_x2 + (j + 1 - dc2));
 
-      // size_t j_offset = (j + c2) * fields.J1.p.pitch;
+      size_t j_offset = (j + c2) * fields.J1.p.pitch;
       Scalar djx = 0.0f;
       for (int i = i_0; i <= i_1; i++) {
         Scalar sx0 = interp.interpolate(-old_x1 + i + 1);
         Scalar sx1 = interp.interpolate(-new_x1 + (i + 1 - dc1));
 
         // j1 is movement in r
-        // int offset = j_offset + (i + c1) * sizeof(Scalar);
+        int offset = j_offset + (i + c1) * sizeof(Scalar);
         Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
         djx += val0;
-        // atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
-        atomicAdd(&fields.J1(i + c1 + 1, j + c2), weight * djx);
+        atomicAdd(&fields.J1[offset + sizeof(Scalar)], weight * djx);
 
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         djy[i - i_0] += val1;
-        atomicAdd(&fields.J2(i + c1, j + c2 + 1),
+        atomicAdd(&fields.J2[offset + fields.J2.p.pitch],
                   weight * djy[i - i_0]);
 
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
-        atomicAdd(&fields.J3(i + c1, j + c2),
-                  -weight * v3 * val2 / mesh_ptrs.dV(i + c1, j + c2));
+        atomicAdd(&fields.J3[offset],
+                  -weight * v3 * val2 / mesh_ptrs.dV[offset]);
 
         // rho is deposited at the final position
-        // if ((step + 1) % dev_params.data_interval == 0) {
-        Scalar s1 = sx1 * sy1;
-        atomicAdd(&fields.Rho[sp](i + c1, j + c2), -weight * s1);
-        // }
+        if ((step + 1) % dev_params.data_interval == 0) {
+          Scalar s1 = sx1 * sy1;
+          atomicAdd(&fields.Rho[sp][offset], -weight * s1);
+        }
       }
     }
   }
@@ -470,12 +469,12 @@ process_j(PtcUpdaterDev::fields_data fields,
        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
          i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-      // size_t offset = j * fields.J1.pitch + i * sizeof(Scalar);
+      size_t offset = fields.J1.compute_offset(i, j);
       Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
-      fields.J1(i, j) *= w / mesh_ptrs.A1_e(i, j);
-      fields.J2(i, j) *= w / mesh_ptrs.A2_e(i, j);
+      fields.J1[offset] *= w / mesh_ptrs.A1_e[offset];
+      fields.J2[offset] *= w / mesh_ptrs.A2_e[offset];
       for (int n = 0; n < dev_params.num_species; n++) {
-        fields.Rho[n](i, j) /= mesh_ptrs.dV(i, j);
+        fields.Rho[n][offset] /= mesh_ptrs.dV[offset];
       }
     }
   }
@@ -483,9 +482,8 @@ process_j(PtcUpdaterDev::fields_data fields,
 
 __global__ void
 inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
-           Scalar p2, Scalar p3, Scalar w,
-           Scalar *surface_e, Scalar *surface_p, curandState *states,
-           Scalar omega) {
+           Scalar p2, Scalar p3, Scalar w, Scalar *surface_e,
+           Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   for (int i = dev_mesh.guard[1] + id;
@@ -564,10 +562,10 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    fields.J3(i, dev_mesh.guard[1] - 1) = 0.0f;
-    fields.J2(i, dev_mesh.guard[1]) -=
-        fields.J2(i, dev_mesh.guard[1] - 1);
-    fields.J2(i, dev_mesh.guard[1] - 1) = 0.0;
+    int j_0 = dev_mesh.guard[1];
+    fields.J3(i, j_0 - 1) = 0.0f;
+    fields.J2(i, j_0) -= fields.J2(i, j_0 - 1);
+    fields.J2(i, j_0 - 1) = 0.0;
   }
 }
 
@@ -579,8 +577,8 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
     if (i >= dev_mesh.dims[0]) continue;
     int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
     fields.J2(i, j_last - 1) -= fields.J2(i, j_last);
+    fields.J2(i, j_last) = 0.0;
 
-    // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
     fields.J3(i, j_last - 1) = 0.0f;
   }
 }
