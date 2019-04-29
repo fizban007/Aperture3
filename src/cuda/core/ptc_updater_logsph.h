@@ -27,8 +27,6 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
 
   std::vector<cu_array<Scalar>> m_surface_e, m_surface_p;
   std::vector<cu_multi_array<Scalar>> m_tmp_j1, m_tmp_j2;
-  // cu_scalar_field<double> m_J1, m_J2;
-  // cu_scalar_field<Scalar> m_dens, m_balance;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture

@@ -276,12 +276,9 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
     // reflect around the axis
-    // if (c2 + dc2 < dev_mesh.guard[1] && axis0) {
     if (dev_mesh.pos(1, c2 + dc2, new_x2) < 0.0f) {
       dc2 += 1;
       new_x2 = 1.0f - new_x2;
-      // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
-      //            axis1) {
     } else if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
       dc2 -= 1;
       new_x2 = 1.0f - new_x2;
@@ -327,17 +324,14 @@ __launch_bounds__(512, 4)
     Scalar exp_r1 = std::exp(r1);
     Scalar r2 = dev_mesh.pos(1, c2, old_x2);
 
-    // v1 = alpha_gr(exp_r1) * v1 / gamma;
-    // v2 = alpha_gr(exp_r1) * v2 / gamma;
-    // v3 = alpha_gr(exp_r1) * v3 / gamma - beta_phi(exp_r1, r2);
-    v1 = v1 / gamma;
-    v2 = v2 / gamma;
-    v3 = v3 / gamma - beta_phi(exp_r1, r2);
-    // v3 = v3 / gamma;
+    v1 = alpha_gr(exp_r1) * v1 / gamma;
+    v2 = alpha_gr(exp_r1) * v2 / gamma;
+    v3 = alpha_gr(exp_r1) * v3 / gamma - beta_phi(exp_r1, r2);
+    // v1 = v1 / gamma;
+    // v2 = v2 / gamma;
+    // v3 = v3 / gamma - beta_phi(exp_r1, r2);
 
     // step 1: Compute particle movement and update position
-    // v3 -= 0.4f * dev_params.omega * dev_params.compactness *
-    //       std::sin(r2) / (exp_r1 * exp_r1);
     Scalar x = exp_r1 * std::sin(r2) * std::cos(old_x3);
     Scalar y = exp_r1 * std::sin(r2) * std::sin(old_x3);
     Scalar z = exp_r1 * std::cos(r2);
@@ -376,12 +370,9 @@ __launch_bounds__(512, 4)
     new_x1 -= (Pos_t)dc1;
     new_x2 -= (Pos_t)dc2;
     // reflect around the axis
-    // if (c2 + dc2 < dev_mesh.guard[1] && axis0) {
     if (dev_mesh.pos(1, c2 + dc2, new_x2) < 0.0f) {
       dc2 += 1;
       new_x2 = 1.0f - new_x2;
-      // } else if (c2 + dc2 >= dev_mesh.dims[1] - dev_mesh.guard[1] &&
-      //            axis1) {
     } else if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
       dc2 -= 1;
       new_x2 = 1.0f - new_x2;
@@ -399,8 +390,6 @@ __launch_bounds__(512, 4)
 
     // step 2: Deposit current
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
-    // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
-    // {0.0f};
     Scalar weight = -dev_charges[sp] * w;
 
     int j_0 = (dc2 == -1 ? -2 : -1);
@@ -564,6 +553,7 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     int j_0 = dev_mesh.guard[1];
     fields.J3(i, j_0 - 1) = 0.0f;
+    fields.J3(i, j_0) = 0.0f;
     fields.J2(i, j_0) -= fields.J2(i, j_0 - 1);
     fields.J2(i, j_0 - 1) = 0.0;
   }
@@ -579,6 +569,7 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
     fields.J2(i, j_last - 1) -= fields.J2(i, j_last);
     fields.J2(i, j_last) = 0.0;
 
+    fields.J3(i, j_last) = 0.0f;
     fields.J3(i, j_last - 1) = 0.0f;
   }
 }
@@ -594,14 +585,16 @@ measure_surface_density(particle_data ptc, size_t num,
     // Load particle quantities
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
-    if (c1 >= dev_mesh.guard[0] + 1 && c1 <= dev_mesh.guard[0] + 3) {
+    // Sum over 3 cells, hense the w / 3.0f in the atomicAdd
+    int sum_cells = 3;
+    if (c1 >= dev_mesh.guard[0] + 1 && c1 <= dev_mesh.guard[0] + sum_cells) {
       auto flag = ptc.flag[idx];
       int sp = get_ptc_type(flag);
       auto w = ptc.weight[idx];
       if (sp == (int)ParticleType::electron) {
-        atomicAdd(surface_e, w / 3.0f);
+        atomicAdd(surface_e, w / float(sum_cells));
       } else if (sp == (int)ParticleType::positron) {
-        atomicAdd(surface_p, w / 3.0f);
+        atomicAdd(surface_p, w / float(sum_cells));
       }
     }
   }
@@ -638,8 +631,6 @@ annihilate_pairs(particle_data ptc, size_t num,
 
     // Deposit extra current due to this movement
     if (!check_bit(flag, ParticleFlag::ignore_current)) {
-      // Scalar djz[spline_t::support + 1][spline_t::support + 1] =
-      // {0.0f};
       Scalar weight = -dev_charges[sp] * w;
 
       Scalar djy[3] = {0.0f};
@@ -654,17 +645,13 @@ annihilate_pairs(particle_data ptc, size_t num,
           Scalar sx1 = interp.interpolate(-new_x1 + i + 1);
 
           // j1 is movement in r
-          // int offset = j_offset + (i + c1) * sizeof(Scalar);
           Scalar val0 = movement2d(sy0, sy1, sx0, sx1);
           djx += val0;
-          // atomicAdd(ptrAddr(j1, offset + sizeof(Scalar)), weight *
-          // djx);
           atomicAdd(&j1(i + c1 + 1, j + c2), weight * djx);
 
           // j2 is movement in theta
           Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
           djy[i + 1] += val1;
-          // atomicAdd(ptrAddr(j2, offset + j2.pitch),
           atomicAdd(&j2(i + c1, j + c2 + 1), weight * djy[i + 1]);
         }
       }
@@ -803,9 +790,6 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
       d_rand_states(env.dev_map().size()),
       m_threadsPerBlock(256),
       m_blocksPerGrid(128)
-// m_J1(env.local_grid()),
-// m_dens(env.local_grid()),
-// m_balance(env.local_grid())
 {
   // const Grid_LogSph_dev &grid =
   //     dynamic_cast<const Grid_LogSph_dev &>(env.grid());
