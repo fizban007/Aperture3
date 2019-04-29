@@ -1,3 +1,4 @@
+#include "cuda_runtime.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/core/additional_diagnostics.h"
 #include "cuda/core/cu_sim_data.h"
@@ -59,7 +60,7 @@ main(int argc, char* argv[]) {
     // data.particles[0].append({0.5, 0.5, 0.0}, {0.0, 30.0, 0.0}, 50 +
     // 260*129,
     //                          ParticleType::electron, 100.0);
-    data.fill_multiplicity(1.0, 2);
+    // data.fill_multiplicity(1.0, 2);
   }
   // Initialize the field solver
   FieldSolver_LogSph field_solver;

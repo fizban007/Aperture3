@@ -283,9 +283,9 @@ stellar_boundary(typed_pitchedptr<Scalar> e1,
       Scalar omega_LT = 0.4f * omega * dev_params.compactness;
       b1(i, j) = 0.0f;
       e3(i, j) = 0.0f;
-      e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s * b1(i, j);
+      e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s * dev_bg_fields.B1(i, j);
       // Do not impose right on the surface
-      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r * b2(i, j);
+      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r * dev_bg_fields.B2(i, j);
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
     }
@@ -301,25 +301,13 @@ axis_boundary_lower(typed_pitchedptr<Scalar> e1,
                     typed_pitchedptr<Scalar> b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    // (*ptrAddr(e3, i, dev_mesh.guard[1] - 1)) = 0.0f;
     e3(i, dev_mesh.guard[1] - 1) = 0.0f;
-    // (*ptrAddr(
-    //     e1, (dev_mesh.guard[1] - 1) * e1.pitch + i * sizeof(Scalar)))
-    //     = *ptrAddr(e1, dev_mesh.guard[1] * e1.pitch + i *
-    //     sizeof(Scalar));
+    e3(i, dev_mesh.guard[1]) = 0.0f;
     e2(i, dev_mesh.guard[1] - 1) = -e2(i, dev_mesh.guard[1]);
 
-    b3(i, dev_mesh.guard[1] - 1) = b3(i, dev_mesh.guard[1]);
+    b3(i, dev_mesh.guard[1] - 1) = b3(i, dev_mesh.guard[1]) = 0.0f;
     b2(i, dev_mesh.guard[1] - 1) = 0.0f;
     b1(i, dev_mesh.guard[1] - 1) = b1(i, dev_mesh.guard[1]);
-
-    // (*ptrAddr(e3, dev_mesh.guard[1] * e3.pitch + i * sizeof(Scalar)))
-    // =
-    //     0.0f;
-
-    // (*ptrAddr(e3,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e3.pitch +
-    //               i * sizeof(Scalar))) = 0.0f;
   }
 }
 
@@ -332,40 +320,13 @@ axis_boundary_upper(typed_pitchedptr<Scalar> e1,
                     typed_pitchedptr<Scalar> b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    e3(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) = 0.0f;
-    e2(i, dev_mesh.dims[1] - dev_mesh.guard[1]) =
-        -e2(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
+    int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
+    e3(i, j_last - 1) = 0.0f;
+    e2(i, j_last) = -e2(i, j_last - 1);
 
-    b3(i, dev_mesh.dims[1] - dev_mesh.guard[1]) =
-        b3(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
-    b2(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) = 0.0f;
-    b1(i, dev_mesh.dims[1] - dev_mesh.guard[1]) =
-        b1(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1);
-    // (*ptrAddr(e1,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e1.pitch +
-    //               i * sizeof(Scalar))) =
-    //     *ptrAddr(e1,
-    //              (dev_mesh.dims[1] - dev_mesh.guard[1] - 2) *
-    //              e1.pitch +
-    //                  i * sizeof(Scalar));
-    // (*ptrAddr(b3,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b3.pitch +
-    //               i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(b1,
-    //           (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * b1.pitch +
-    //               i * sizeof(Scalar))) = 0.0f;
-    // (*ptrAddr(b3, (dev_mesh.dims[1] - dev_mesh.guard[1]) * b3.pitch +
-    //                   i * sizeof(Scalar))) =
-    //     *ptrAddr(b3,
-    //              (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) *
-    //              b3.pitch +
-    //                  i * sizeof(Scalar));
-    // (*ptrAddr(e2, (dev_mesh.dims[1] - dev_mesh.guard[1]) * e2.pitch +
-    //                   i * sizeof(Scalar))) =
-    //     -*ptrAddr(
-    //         e2, (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * e2.pitch
-    //         +
-    //                 i * sizeof(Scalar));
+    b3(i, j_last) = b3(i, j_last - 1) = 0.0f;
+    b2(i, j_last - 1) = 0.0f;
+    b1(i, j_last) = b1(i, j_last - 1);
   }
 }
 

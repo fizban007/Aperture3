@@ -428,13 +428,11 @@ __launch_bounds__(512, 4)
         // j2 is movement in theta
         Scalar val1 = movement2d(sx0, sx1, sy0, sy1);
         djy[i - i_0] += val1;
-        // atomicAdd(ptrAddr(fields.J2, offset + fields.J2.pitch),
         atomicAdd(&fields.J2(i + c1, j + c2 + 1),
                   weight * djy[i - i_0]);
 
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
-        // atomicAdd(ptrAddr(fields.J3, offset),
         atomicAdd(&fields.J3(i + c1, j + c2),
                   -weight * v3 * val2 / mesh_ptrs.dV(i + c1, j + c2));
 
@@ -486,8 +484,6 @@ process_j(PtcUpdaterDev::fields_data fields,
 __global__ void
 inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar p2, Scalar p3, Scalar w,
-           // cudaPitchedPtr rho0,
-           // cudaPitchedPtr rho1,
            Scalar *surface_e, Scalar *surface_p, curandState *states,
            Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -568,14 +564,10 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
                Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    // size_t offset_0 =
-    //     i * sizeof(Scalar) + dev_mesh.guard[1] * fields.J3.pitch;
-    // (*ptrAddr(fields.J3, offset_0 - fields.J3.pitch)) = 0.0f;
     fields.J3(i, dev_mesh.guard[1] - 1) = 0.0f;
-    // (*ptrAddr(fields.J2, offset_0 - fields.J2.pitch)) -=
-    //     *ptrAddr(fields.J2, offset_0 - 2 * fields.J2.pitch);
-    fields.J2(i, dev_mesh.guard[1] - 1) -=
-        fields.J2(i, dev_mesh.guard[1] - 2);
+    fields.J2(i, dev_mesh.guard[1]) -=
+        fields.J2(i, dev_mesh.guard[1] - 1);
+    fields.J2(i, dev_mesh.guard[1] - 1) = 0.0;
   }
 }
 
@@ -585,24 +577,11 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     if (i >= dev_mesh.dims[0]) continue;
-    // Scalar *row = (Scalar *)((char *)fields.J2.ptr +
-    //                          (dev_mesh.dims[1] - dev_mesh.guard[1] -
-    //                          1) * fields.J2.pitch);
-    // size_t offset_pi =
-    //     i * sizeof(Scalar) +
-    //     (dev_mesh.dims[1] - dev_mesh.guard[1] - 1) * fields.J3.pitch;
-    // (*ptrAddr(fields.J2, offset_pi)) -=
-    //     *ptrAddr(fields.J2, offset_pi + fields.J2.pitch);
-    fields.J2(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) -=
-        fields.J2(i, dev_mesh.dims[1] - dev_mesh.guard[1]);
+    int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
+    fields.J2(i, j_last - 1) -= fields.J2(i, j_last);
 
     // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
-    fields.J3(i, dev_mesh.dims[1] - dev_mesh.guard[1] - 1) = 0.0f;
-    // printf("%d, %d, %lu, %lu, %lu\n", i,
-    //        (dev_mesh.dims[1] - dev_mesh.guard[1] - 1),
-    //        fields.J3.pitch, fields.J3.xsize, fields.J3.ysize);
-    // (*ptrAddr(fields.J3, offset_pi)) = 0.0f;
-    // row[i] = 0.0f;
+    fields.J3(i, j_last - 1) = 0.0f;
   }
 }
 
