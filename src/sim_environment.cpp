@@ -26,7 +26,7 @@ sim_environment::sim_environment(int* argc, char*** argv)
     m_conf_file.parse_file(m_params.conf_file, m_params);
   } catch (exceptions::file_not_found& e) {
     Logger::err("Config file not found, exiting");
-    exit(0);
+    exit(1);
   }
 
   // Look at the output directory to see if we are restarting from a

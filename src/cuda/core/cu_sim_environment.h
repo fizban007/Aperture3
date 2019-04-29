@@ -1,7 +1,6 @@
 #ifndef _CU_SIM_ENVIRONMENT_H_
 #define _CU_SIM_ENVIRONMENT_H_
 
-#include <cuda_runtime.h>
 #include "commandline_args.h"
 #include "config_file.h"
 #include "core/grid.h"
@@ -10,12 +9,12 @@
 #include "sim_environment.h"
 #include "sim_params.h"
 #include "utils/logger.h"
+#include <cuda_runtime.h>
 #include <memory>
 #include <random>
 #include <string>
 #include <vector>
 // #include "core/domain_info.h"
-// #include "utils/hdf_exporter.h"
 // #include "utils/mpi_comm.h"
 
 namespace Aperture {
