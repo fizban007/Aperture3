@@ -24,10 +24,10 @@ main(int argc, char *argv[]) {
 
   exponent_sim sim(env);
 
-  // Spectra::black_body ne(1.685e-5);
-  Spectra::mono_energetic ne(1.0e-3, 1.0e-4);
-  // sim.init_spectra(ne, 1.75464e30 * 1706.25);
-  sim.init_spectra(ne, 1.0e18 * 1706.25);
+  Spectra::black_body ne(1.685e-5);
+  // Spectra::mono_energetic ne(1.0e-3, 1.0e-4);
+  sim.init_spectra(ne, 1.75464e30 * 1706.25);
+  // sim.init_spectra(ne, 1.0e18 * 1706.25);
 
   // sim.add_new_particles(100, 1.0);
 
@@ -61,11 +61,10 @@ main(int argc, char *argv[]) {
   std::vector<Scalar> ptc_spec(sim.ptc_spec.size());
   std::vector<Scalar> ph_spec(sim.ph_spec.size());
 
-  // std::vector<Scalar> Es{0.01, 0.03, 0.06, 0.1,  0.3,   0.6,   1.0,
-  // 3.0,
-  //                        6.0,  10.0, 30.0, 60.0, 100.0, 300.0, 600.0,
-  //                        1000.0};
-  std::vector<Scalar> Es{0.0};
+  std::vector<Scalar> Es{0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
+  2.0, 4.0, 6.0, 8.0, 10.0, 20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0};
+  // std::vector<Scalar> Es{10.0, 20.0, 40.0, 60.0, 80.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0};
+  // std::vector<Scalar> Es{0.0};
   std::vector<Scalar> exps;
 
   std::ofstream out;
@@ -75,26 +74,30 @@ main(int argc, char *argv[]) {
     Scalar t_start, num_start, t_end;
     bool started = false;
     // double Eacc = env.params().constE;
-    // double dt = std::max(std::min(1000.0 / Eacc, 2000.0), 100.0);
-    double dt = env.params().delta_t;
+    double dt = std::max(std::min(100.0 / Eacc, 10000.0), 1000.0);
+    // if (Eacc > 100.0)
+    //   dt = 1000.0;
+    // double dt = env.params().delta_t;
     Logger::print_debug("dt is {}, Eacc is {}", dt, Eacc);
-    sim.prepare_initial_condition(1000, 5.0e6);
+    sim.prepare_initial_condition(100, 1.0);
+    // sim.prepare_initial_condition(100.0, 5.0e6);
 
     for (uint32_t step = 0; step < env.params().max_steps; step++) {
-      sim.add_new_particles(500, 5.0e6);
+      sim.add_new_particles(100, 1.0);
       Logger::print_info(
           "==== On timestep {}, pushing {} particles, {} photons ====",
           step, sim.ptc_num, sim.ph_num);
       // sim.ptc_E.sync_to_host();
       // Logger::print_info("0th particle has energy {}", sim.ptc_E[0]);
       sim.push_particles(Eacc, dt);
-      // sim.produce_pairs(dt);
+      sim.produce_pairs(dt);
       sim.produce_photons(dt);
       sim.compute_spectrum();
 
       if (sim.ptc_num > 100000 && !started) {
         t_start = step * dt;
         num_start = sim.ptc_num;
+        t_end = -0.01;
         started = true;
       }
 
@@ -128,6 +131,7 @@ main(int argc, char *argv[]) {
         break;
       }
     }
+    if (t_end < 0.0) t_end = env.params().max_steps * dt;
     Scalar ex = (std::log(sim.ptc_num) - std::log(num_start)) /
                 (t_end - t_start) / 5.6875e-8;
     Logger::print_info("Exponent for E = {}, kT = 10^5K is {}", Eacc,
