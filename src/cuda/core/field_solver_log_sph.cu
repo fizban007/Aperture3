@@ -302,7 +302,7 @@ axis_boundary_lower(typed_pitchedptr<Scalar> e1,
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     e3(i, dev_mesh.guard[1] - 1) = 0.0f;
-    e3(i, dev_mesh.guard[1]) = 0.0f;
+    // e3(i, dev_mesh.guard[1]) = 0.0f;
     e2(i, dev_mesh.guard[1] - 1) = -e2(i, dev_mesh.guard[1]);
 
     b3(i, dev_mesh.guard[1] - 1) = b3(i, dev_mesh.guard[1]) = 0.0f;

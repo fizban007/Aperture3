@@ -267,6 +267,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
     Logger::print_info("Writing {} particles to snapshot", ptcNum);
 
     std::vector<double> buffer(std::max(ptcNum, phNum));
+    int component = 0;
     visit_struct::for_each(
         data.particles[n].data(), [&](const char *name, auto &x) {
           typedef
@@ -275,13 +276,15 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
           //     fmt::format("ptc_{}", name), DataSpace(ptcNum));
           cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
                      cudaMemcpyDeviceToHost);
-          ptc_data[n]
+          ptc_data[component]
               .select({ptc_offset}, {ptcNum})
               .write(reinterpret_cast<x_type *>(buffer.data()));
+          component += 1;
         });
 
     Logger::print_info("Writing {} photons to snapshot", phNum);
 
+    component = 0;
     visit_struct::for_each(data.photons[n].data(), [&](const char *name,
                                                        auto &x) {
       typedef typename std::remove_reference<decltype(*x)>::type x_type;
@@ -289,9 +292,10 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
       //     fmt::format("ph_{}", name), DataSpace(phNum));
       cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
                  cudaMemcpyDeviceToHost);
-      ph_data[n]
+      ph_data[component]
           .select({ph_offset}, {phNum})
           .write(reinterpret_cast<x_type *>(buffer.data()));
+      component += 1;
     });
     ptc_offset += ptcNum;
     ph_offset += phNum;
@@ -349,11 +353,12 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
   size_t ptc_offset = 0, ph_offset = 0;
   // Assuming the grid size is the same
   size_t grid_size = data.E[0].data(0).size();
+  std::vector<double> buffer(std::max(*std::max_element(v_ptc_num.begin(), v_ptc_num.end()),
+                                      *std::max_element(v_ph_num.begin(), v_ph_num.end())));
   for_each_device(data.dev_map, [&](int n) {
     size_t ptcNum = v_ptc_num[n];
     size_t phNum = v_ph_num[n];
     // Read particle data
-    std::vector<double> buffer(std::max(ptcNum, phNum));
     data.particles[n].set_num(ptcNum);
     data.photons[n].set_num(phNum);
 
@@ -363,6 +368,8 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
               typename std::remove_reference<decltype(*x)>::type x_type;
           DataSet ptc_data =
               snapshotfile.getDataSet(fmt::format("ptc_{}", name));
+          Logger::print_info("--- ptc_{} has size {}", name,
+                             ptc_data.getSpace().getDimensions()[0]);
           ptc_data.select({ptc_offset}, {ptcNum})
               .read(reinterpret_cast<x_type *>(buffer.data()));
           cudaMemcpy(x, buffer.data(), ptcNum * sizeof(x_type),
@@ -374,6 +381,8 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
       typedef typename std::remove_reference<decltype(*x)>::type x_type;
       DataSet ph_data =
           snapshotfile.getDataSet(fmt::format("ph_{}", name));
+      Logger::print_info("--- ph_{} has size {}", name,
+                         ph_data.getSpace().getDimensions()[0]);
       ph_data.select({ph_offset}, {phNum})
           .read(reinterpret_cast<x_type *>(buffer.data()));
       cudaMemcpy(x, buffer.data(), phNum * sizeof(x_type),
