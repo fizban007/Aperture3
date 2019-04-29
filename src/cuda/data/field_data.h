@@ -1,14 +1,15 @@
 #ifndef _FIELD_DATA_H_
 #define _FIELD_DATA_H_
 
-#include <cuda_runtime.h>
+#include "cuda/utils/typed_pitchedptr.cuh"
+#include "core/typedefs.h"
 
 namespace Aperture {
 
 struct FieldData
 {
-  cudaPitchedPtr E1, E2, E3;
-  cudaPitchedPtr B1, B2, B3;
+  typed_pitchedptr<Scalar> E1, E2, E3;
+  typed_pitchedptr<Scalar> B1, B2, B3;
 };
 
 }

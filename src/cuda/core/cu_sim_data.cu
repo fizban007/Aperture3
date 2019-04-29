@@ -47,10 +47,10 @@ compute_EdotB(typed_pitchedptr<T> e1, typed_pitchedptr<T> e2,
 
 __global__ void
 check_bg_fields() {
-  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B1.pitch,
-         dev_bg_fields.B1.xsize, dev_bg_fields.B1.ysize);
-  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B2.pitch,
-         dev_bg_fields.B2.xsize, dev_bg_fields.B2.ysize);
+  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B1.p.pitch,
+         dev_bg_fields.B1.p.xsize, dev_bg_fields.B1.p.ysize);
+  printf("bg field has %lu, %lu, %lu\n", dev_bg_fields.B2.p.pitch,
+         dev_bg_fields.B2.p.xsize, dev_bg_fields.B2.p.ysize);
   // printf("bg B0 value is %f\n", *ptrAddr(dev_bg_fields.B1, 5, 4));
 }
 
