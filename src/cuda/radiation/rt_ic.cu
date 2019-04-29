@@ -369,10 +369,13 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
       double result = 0.0;
       for (uint32_t i_e = 0; i_e < N_e; i_e++) {
         double e = exp(log(emin) + i_e * de);
+        double ne = n_e(e);
+        // if (ne < 1.0e-8) continue;
         double ge = gamma * e * 4.0;
         double q = e1 / (ge * (1.0 - e1));
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
-          result += n_e(e) * sigma_lab(q, ge) / gamma;
+          // result += n_e(e) * sigma_lab(q, ge) / gamma;
+          result += ne * sigma_lab(q, ge) / gamma;
       }
       m_dNde(i, n) = result * de;
     }
@@ -393,10 +396,12 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
       double result = 0.0;
       for (uint32_t i_e = 0; i_e < N_e; i_e++) {
         double e = exp(log(emin) + i_e * de);
+        double ne = n_e(e);
+        // if (ne < 1.0e-8) continue;
         double ge = gamma * e * 4.0;
         double q = e1 / (ge * (1.0 - e1));
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
-          result += n_e(e) * sigma_lab(q, ge) / gamma;
+          result += ne * sigma_lab(q, ge) / gamma;
       }
       m_dNde_thompson(i, n) = result * de * e1;
     }

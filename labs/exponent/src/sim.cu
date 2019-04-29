@@ -27,7 +27,7 @@ push_particles(Scalar* ptc_E, size_t ptc_num, Scalar Eacc, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < ptc_num; idx += blockDim.x * gridDim.x) {
     Scalar E = ptc_E[idx];
-    if (E > 0.0f) {
+    if (E >= 0.0f) {
       E += Eacc * dt;
       ptc_E[idx] = E;
     }
@@ -96,7 +96,7 @@ exp_emit_photons(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
     if (pos_in_block > -1 && E > 0.0f) {
       Scalar Eph = gen_photon_e(E, &states[id]);
       E -= Eph;
-      ptc_E[tid] = E;
+      ptc_E[tid] = max(E, 1.01);
 
       Scalar gg_rate = find_gg_rate(Eph);
       float u = rng();
@@ -106,9 +106,9 @@ exp_emit_photons(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
       // continue;
       int start_pos = ph_cum[blockIdx.x];
       int offset = ph_num + start_pos + pos_in_block;
-      // ph_E[offset] = Eph;
-      ph_E[offset] = -1.0;
-      // ph_path[offset] = path;
+      ph_E[offset] = Eph;
+      // ph_E[offset] = -1.0;
+      ph_path[offset] = path;
       if (tid == 0) {
         printf("emitting photon, gamma is %f, Eph is %f, path is %f\n",
                E + Eph, Eph, path);
@@ -158,7 +158,6 @@ exp_emit_gg_pairs(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
       int offset = ph_num + start_pos + pos_in_block;
       ptc_E[offset] = 0.5f * E;
       ptc_E[offset + 1] = 0.5f * E;
-      // ph_path[offset] = path;
       ph_E[tid] = -1.0f;
     }
   }
@@ -212,7 +211,7 @@ exp_emit_tpp_pairs(Scalar* ptc_E, size_t ptc_num, int* pair_count,
       int start_pos = pair_cum[blockIdx.x];
       int offset = ptc_num + start_pos + pos_in_block;
       // if (tid == 0) printf("0th particle tpp Em is %f\n", Em * E);
-      Scalar E_p = gen_tpp_Ep(E, &local_state);
+      Scalar E_p = min(gen_tpp_Ep(E, &local_state), E - 2.02);
       Scalar E_m = min(gen_tpp_Ep(E, &local_state), E - E_p - 1.01);
       ptc_E[offset] = E_p;
       ptc_E[offset + 1] = E_m;
@@ -395,38 +394,38 @@ exponent_sim::produce_pairs(Scalar dt) {
   ptc_num += new_ptc;
 
   // Process tpp
-  // m_pos_in_block.assign_dev(0, ptc_num);
-  // m_num_per_block.assign_dev(0);
-  // m_cumnum_per_block.assign_dev(0);
-  // Kernels::
-  //     exp_count_tpp_pairs<<<m_blocks_per_grid,
-  //     m_threads_per_block>>>(
-  //         ptc_E.data_d(), ptc_num, m_num_per_block.data_d(),
-  //         m_pos_in_block.data_d(), (curandState*)d_rand_states, dt);
-  // CudaCheckError();
+  m_pos_in_block.assign_dev(0, ptc_num);
+  m_num_per_block.assign_dev(0);
+  m_cumnum_per_block.assign_dev(0);
+  Kernels::
+      exp_count_tpp_pairs<<<m_blocks_per_grid,
+      m_threads_per_block>>>(
+          ptc_E.data_d(), ptc_num, m_num_per_block.data_d(),
+          m_pos_in_block.data_d(), (curandState*)d_rand_states, dt);
+  CudaCheckError();
 
-  // // Scan the number of photons produced per block. The result gives
-  // // the offset for each block
-  // thrust::exclusive_scan(ptrNumPerBlock,
-  //                        ptrNumPerBlock + m_blocks_per_grid,
-  //                        ptrCumNum);
-  // CudaCheckError();
+  // Scan the number of photons produced per block. The result gives
+  // the offset for each block
+  thrust::exclusive_scan(ptrNumPerBlock,
+                         ptrNumPerBlock + m_blocks_per_grid,
+                         ptrCumNum);
+  CudaCheckError();
 
-  // m_cumnum_per_block.sync_to_host();
-  // m_num_per_block.sync_to_host();
-  // new_ptc = m_cumnum_per_block[m_blocks_per_grid - 1] +
-  //           m_num_per_block[m_blocks_per_grid - 1];
-  // Logger::print_info("{} particles are produced through tpp!",
-  // new_ptc);
+  m_cumnum_per_block.sync_to_host();
+  m_num_per_block.sync_to_host();
+  new_ptc = m_cumnum_per_block[m_blocks_per_grid - 1] +
+            m_num_per_block[m_blocks_per_grid - 1];
+  Logger::print_info("{} particles are produced through tpp!",
+  new_ptc);
 
-  // Kernels::
-  //     exp_emit_tpp_pairs<<<m_blocks_per_grid, m_threads_per_block>>>(
-  //         ptc_E.data_d(), ptc_num, m_num_per_block.data_d(),
-  //         m_pos_in_block.data_d(), m_cumnum_per_block.data_d(),
-  //         (curandState*)d_rand_states);
-  // CudaCheckError();
+  Kernels::
+      exp_emit_tpp_pairs<<<m_blocks_per_grid, m_threads_per_block>>>(
+          ptc_E.data_d(), ptc_num, m_num_per_block.data_d(),
+          m_pos_in_block.data_d(), m_cumnum_per_block.data_d(),
+          (curandState*)d_rand_states);
+  CudaCheckError();
 
-  // ptc_num += new_ptc;
+  ptc_num += new_ptc;
 }
 
 void

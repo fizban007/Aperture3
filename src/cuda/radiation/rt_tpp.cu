@@ -230,22 +230,40 @@ triplet_pairs::init(const F &n_e, Scalar emin, Scalar emax, double n0) {
   m_rate.sync_to_device();
   m_Em.sync_to_device();
 
+  Logger::print_info(
+      "Pre-calculating the triplet pair spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
+    Logger::print_info("Working on gamma {} of {}", n, m_gammas.size());
     double gamma = m_gammas[n];
     for (uint32_t i = 0; i < m_gammas.size(); i++) {
       double E_p = m_gammas[i];
-      double result = 0.0;
-      for (uint32_t i_e = 0; i_e < N_e; i_e++) {
-        double e = exp(log(emin) + i_e * de);
-        double s = gamma * e;
-        double Emin = E_plus_min(gamma, s);
-        double Emax = E_plus_max(gamma, s);
-        if (E_p < Emin || E_p > Emax) continue;
-        double norm = 4.0/3.0 *
-                      (1.0/std::pow(Emin, 0.75) - 1.0/std::pow(Emax, 0.75));
-        result += n_e(e) * m_rate[n] * m_Em[n] * std::pow(E_p, -1.75) / norm;
+      if (E_p > gamma) {
+        m_dNde(i, n) = 0.0;
+        continue;
       }
-      m_dNde(i, n) = result * de;
+      double result = 0.0;
+      // for (uint32_t i_mu = 0; i_mu < N_mu; i_mu++) {
+      //   double mu = i_mu * dmu - 1.0;
+        for (uint32_t i_e = 0; i_e < N_e; i_e++) {
+          double e = exp(log(emin) + i_e * de);
+          double ne = n_e(e);
+          // if (ne < 1.0e-8) continue;
+          // double s = gamma * e * (1.0 - mu);
+          double s = gamma * e;
+          double Emin = E_plus_min(gamma, s);
+          // double Emin = 1.0 / e;
+          double Emax = E_plus_max(gamma, s);
+          if (E_p < Emin || E_p > Emax) continue;
+          // double norm = 4.0/3.0 *
+          //               (std::pow(Emin, -0.75) - std::pow(Emax,
+          //               -0.75));
+          double norm =
+              4.0 * (std::pow(Emax, 0.25) - std::pow(Emin, 0.25));
+          result +=
+              ne * m_rate[n] * m_Em[n] * std::pow(E_p, -1.75) * e / norm;
+        }
+      // }
+      m_dNde(i, n) = result * de * dmu;
     }
     for (uint32_t i = 1; i < m_gammas.size(); i++) {
       m_dNde(i, n) += m_dNde(i - 1, n);
