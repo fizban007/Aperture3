@@ -134,7 +134,7 @@ compute_b_update(typed_pitchedptr<Scalar> e1,
   b1[globalOffset] +=
       -dt *
       (e3(n1, n2) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2) -
-       e3(n1, n2 - 1) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2)) /
+       e3(n1, n2 - 1) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2 - 1)) /
       mesh_ptrs.A1_b(n1, n2);
 
   // (Curl u)_2 = d3u1 - d1u3
