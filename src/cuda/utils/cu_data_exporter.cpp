@@ -1,8 +1,8 @@
+#include "cuda/utils/cu_data_exporter.h"
 #include "core/constant_defs.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/cu_sim_data1d.h"
 #include "cuda/core/cu_sim_environment.h"
-#include "cuda/utils/cu_data_exporter.h"
 #include "cuda/utils/iterate_devices.h"
 #include "sim_params.h"
 #include "utils/hdf_exporter_impl.hpp"
@@ -126,7 +126,8 @@ cu_data_exporter::set_mesh(cu_sim_data &data) {
 
 void
 cu_data_exporter::write_snapshot(cu_sim_environment &env,
-                                 cu_sim_data &data, uint32_t timestep) {
+                                 cu_sim_data &data, uint32_t timestep,
+                                 float time) {
   File snapshotfile(
       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
       // timestep)
@@ -300,12 +301,15 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   DataSet data_timestep = snapshotfile.createDataSet<uint32_t>(
       "timestep", DataSpace::From(timestep));
   data_timestep.write(timestep);
+  DataSet data_time =
+      snapshotfile.createDataSet<float>("time", DataSpace::From(time));
+  data_time.write(time);
 }
 
 void
 cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
                                      cu_sim_data &data,
-                                     uint32_t &timestep) {
+                                     uint32_t &timestep, float &time) {
   File snapshotfile(
       fmt::format("{}snapshot.h5", outputDirectory).c_str(),
       File::ReadOnly);
@@ -319,6 +323,8 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
   // Read the scalars first
   DataSet data_timestep = snapshotfile.getDataSet("timestep");
   data_timestep.read(timestep);
+  DataSet data_time = snapshotfile.getDataSet("time");
+  data_time.read(time);
   DataSet data_ptcNum = snapshotfile.getDataSet("ptcNum");
   data_ptcNum.read(v_ptc_num);
   DataSet data_phNum = snapshotfile.getDataSet("phNum");

@@ -31,7 +31,7 @@ compute_EdotB(typed_pitchedptr<T> e1, typed_pitchedptr<T> e2,
 
   float delta = 1.0f / dev_params.data_interval;
   Scalar E1 = 0.5f * (e1(n1, n2) + e1(n1, n2 - 1));
-  Scalar E2 = 0.5f * (e1(n1, n2) + e1(n1 - 1, n2));
+  Scalar E2 = 0.5f * (e2(n1, n2) + e2(n1 - 1, n2));
   Scalar E3 = 0.25f * (e3(n1, n2) + e3(n1 - 1, n2) + e3(n1, n2 - 1) +
                        e3(n1 - 1, n2 - 1));
   Scalar B1 = 0.5f * (b1(n1, n2) + b1(n1 - 1, n2)) +

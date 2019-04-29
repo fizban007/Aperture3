@@ -41,9 +41,9 @@ class cu_data_exporter : public hdf_exporter<cu_data_exporter> {
                       std::vector<Photons>& ptc);
 
   void write_snapshot(cu_sim_environment& env, cu_sim_data& data,
-                      uint32_t timestep);
+                      uint32_t timestep, float time);
   void load_from_snapshot(cu_sim_environment& env, cu_sim_data& data,
-                          uint32_t& timestep);
+                          uint32_t& timestep, float& time);
   void write_particles(cu_sim_data& data, uint32_t step, double time);
   void write_output(cu_sim_data& data, uint32_t timestep, double time);
   void set_mesh(cu_sim_data& data);
