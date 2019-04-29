@@ -662,7 +662,7 @@ hdf_exporter<T>::writeXMF(uint32_t step, double time) {
 template <typename T>
 void
 hdf_exporter<T>::prepareXMFrestart(uint32_t restart_step,
-                                   int data_interval) {
+                                   int data_interval, float time) {
   boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
   boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
   boost::filesystem::remove(xmf_bak);
@@ -673,18 +673,26 @@ hdf_exporter<T>::prepareXMFrestart(uint32_t restart_step,
 
   xmf.open(xmf_file.c_str());
 
-  int n = -1;
-  int num_outputs = restart_step / data_interval;
+  // int n = -1;
+  // int num_outputs = restart_step / data_interval;
   std::string line;
-  bool in_step = false;
+  bool in_step = false, found = false;
+  std::string t_line = "  <Time Type=\"Single\" Value=\"";
   while (std::getline(xmf_in, line)) {
     if (line == "<Grid Name=\"quadmesh\" Type=\"Uniform\">") {
-      n += 1;
+      // n += 1;
       in_step = true;
+    }
+    if (in_step && line.compare(0, t_line.length(), t_line) == 0) {
+      std::string sub = line.substr(line.find_first_of("0123456789"));
+      sub = sub.substr(0, sub.find_first_of("\""));
+      float t = std::stof(sub);
+      if (std::abs(t - time) < 1.0e-4) found = true;
     }
     xmf << line << std::endl;
     if (line == "</Grid>") in_step = false;
-    if (n >= num_outputs && !in_step) break;
+    if (found && !in_step) break;
+    // if (n >= num_outputs && !in_step) break;
   }
   writeXMFTail(xmf);
 

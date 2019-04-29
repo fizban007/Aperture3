@@ -90,7 +90,7 @@ class hdf_exporter {
   void writeXMFStep(std::ofstream& fs, uint32_t step, double time);
   void writeXMFTail(std::ofstream& fs);
   void writeXMF(uint32_t step, double time);
-  void prepareXMFrestart(uint32_t restart_step, int data_interval);
+  void prepareXMFrestart(uint32_t restart_step, int data_interval, float time);
   void createDirectories();
   bool checkDirectories();
   void copyConfigFile();
