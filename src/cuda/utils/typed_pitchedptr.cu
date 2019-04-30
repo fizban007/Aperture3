@@ -1,4 +1,5 @@
 #include "typed_pitchedptr.cuh"
+#include <cstdint>
 
 namespace Aperture {
 
