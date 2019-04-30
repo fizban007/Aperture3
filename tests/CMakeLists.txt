@@ -45,7 +45,7 @@ if (CMAKE_CUDA_COMPILER)
     "test_multiarray.cu"
     # "test_env.cpp"
     "test_domain.cpp"
-    "test_typed_pitchedptr.cu"
+    "test_pitchptr.cu"
     "test_config.cpp")
   set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda

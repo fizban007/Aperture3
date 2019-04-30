@@ -38,7 +38,7 @@ PtcUpdaterDev::PtcUpdaterDev(const cu_sim_environment &env)
     CudaSafeCall(cudaMallocManaged(
         &m_dev_fields[n].Rho,
         // m_env.params().num_species * sizeof(cudaPitchedPtr)));
-        m_env.params().num_species * sizeof(typed_pitchedptr<Scalar>)));
+        m_env.params().num_species * sizeof(pitchptr<Scalar>)));
   }
   m_fields_initialized = false;
 }

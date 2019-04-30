@@ -2,7 +2,7 @@
 #define _ADDITIONAL_DIAGNOSTICS_H_
 
 #include "cuda/data/fields_dev.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include <vector>
 
 namespace Aperture {
@@ -23,8 +23,8 @@ class AdditionalDiagnostics
 
   void init_pointers(cu_sim_data& data);
 
-  std::vector<typed_pitchedptr<Scalar>*> m_dev_gamma;
-  std::vector<typed_pitchedptr<Scalar>*> m_dev_ptc_num;
+  std::vector<pitchptr<Scalar>*> m_dev_gamma;
+  std::vector<pitchptr<Scalar>*> m_dev_ptc_num;
   bool m_initialized = false;
 }; // ----- end of class AdditionalDiagnostics -----
 

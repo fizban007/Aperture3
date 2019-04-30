@@ -1,7 +1,7 @@
 #ifndef _PTC_UPDATER_DEV_H_
 #define _PTC_UPDATER_DEV_H_
 
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include <vector>
 
 namespace Aperture {
@@ -19,10 +19,10 @@ class PtcUpdaterDev {
   virtual void handle_boundary(cu_sim_data& data) = 0;
 
   struct fields_data {
-    typed_pitchedptr<Scalar> E1, E2, E3;
-    typed_pitchedptr<Scalar> B1, B2, B3;
-    typed_pitchedptr<Scalar> J1, J2, J3;
-    typed_pitchedptr<Scalar>* Rho;
+    pitchptr<Scalar> E1, E2, E3;
+    pitchptr<Scalar> B1, B2, B3;
+    pitchptr<Scalar> J1, J2, J3;
+    pitchptr<Scalar>* Rho;
   };
 
  protected:

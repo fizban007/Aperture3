@@ -102,7 +102,7 @@ if (CMAKE_CUDA_COMPILER)
     # "algorithms/ptc_pusher_beadonwire.cu"
     # "algorithms/ptc_pusher_geodesic.cpp"
     "cuda/utils/cu_data_exporter.cpp"
-    "cuda/utils/typed_pitchedptr.cu"
+    "cuda/utils/pitchptr.cu"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
     "cuda/radiation/rt_ic.cu"

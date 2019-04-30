@@ -1,16 +1,16 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
+#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
 #include "cuda/data/particles_dev.h"
+#include "cuda/data/photons_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "cuda/data/photons_dev.h"
-#include "cuda/core/cu_sim_data.h"
-#include "cuda/core/cu_sim_environment.h"
 #include "cuda/utils/iterate_devices.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include "rt_pulsar.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -27,7 +27,7 @@ template <typename PtcData>
 __global__ void
 count_photon_produced(PtcData ptc, size_t number, int *ph_count,
                       int *phPos, curandState *states,
-                      typed_pitchedptr<Scalar> ph_events) {
+                      pitchptr<Scalar> ph_events) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
 
   __shared__ int photonProduced;
@@ -144,12 +144,12 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
 template <typename PhotonData>
 __global__ void
-count_pairs_produced(
-    PhotonData photons, size_t number, int *pair_count, int *pair_pos,
-    curandState *states, typed_pitchedptr<Scalar> pair_events,
-    typed_pitchedptr<Scalar> rho0, typed_pitchedptr<Scalar> rho1,
-    typed_pitchedptr<Scalar> rho2, typed_pitchedptr<Scalar> b1,
-    typed_pitchedptr<Scalar> b2, typed_pitchedptr<Scalar> b3) {
+count_pairs_produced(PhotonData photons, size_t number, int *pair_count,
+                     int *pair_pos, curandState *states,
+                     pitchptr<Scalar> pair_events,
+                     pitchptr<Scalar> rho0, pitchptr<Scalar> rho1,
+                     pitchptr<Scalar> rho2, pitchptr<Scalar> b1,
+                     pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   // CudaRng rng(&states[id]);
   // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,

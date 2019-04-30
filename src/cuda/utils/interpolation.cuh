@@ -7,7 +7,7 @@
 #include "cuda/cuda_control.h"
 // #include "cuda/ptr_util.h"
 #include "utils/util_functions.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 
 namespace Aperture {
 
@@ -81,7 +81,7 @@ struct Interpolator3D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(typed_pitchedptr<Scalar> f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1, FloatT x2,
                                 FloatT x3, int c1, int c2, int c3,
                                 Stagger stagger) const {
     Scalar result = 0.0f;
@@ -136,7 +136,7 @@ struct Interpolator2D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(typed_pitchedptr<Scalar> f, FloatT x1, FloatT x2,
+  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1, FloatT x2,
                                 int c1, int c2, Stagger stagger) const {
     Scalar result = 0.0f;
     for (int j = 0; j <= Interp::support; j++) {
