@@ -119,7 +119,11 @@ cu_data_exporter::set_mesh(cu_sim_data &data) {
           m_submesh[n].reduced_dim(i) / data.env.params().downsample;
       m_submesh_out[n].delta[i] *= data.env.params().downsample;
       m_submesh_out[n].inv_delta[i] /= data.env.params().downsample;
-      m_submesh_out[n].offset[i] /= data.env.params().downsample;
+      if (m_submesh_out[n].offset[i] != 0)
+        m_submesh_out[n].offset[i] =
+            (m_submesh_out[n].offset[i] - m_submesh[n].guard[i]) /
+                data.env.params().downsample +
+            m_submesh[n].guard[i];
     }
   }
 }
@@ -353,8 +357,9 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
   size_t ptc_offset = 0, ph_offset = 0;
   // Assuming the grid size is the same
   size_t grid_size = data.E[0].data(0).size();
-  std::vector<double> buffer(std::max(*std::max_element(v_ptc_num.begin(), v_ptc_num.end()),
-                                      *std::max_element(v_ph_num.begin(), v_ph_num.end())));
+  std::vector<double> buffer(
+      std::max(*std::max_element(v_ptc_num.begin(), v_ptc_num.end()),
+               *std::max_element(v_ph_num.begin(), v_ph_num.end())));
   for_each_device(data.dev_map, [&](int n) {
     size_t ptcNum = v_ptc_num[n];
     size_t phNum = v_ph_num[n];
