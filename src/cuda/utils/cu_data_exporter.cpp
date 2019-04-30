@@ -25,18 +25,16 @@ namespace Aperture {
 
 template class hdf_exporter<cu_data_exporter>;
 
-cu_data_exporter::cu_data_exporter(SimParams &params,
-                                   uint32_t &timestep)
+cu_data_exporter::cu_data_exporter(SimParams &params, uint32_t &timestep)
     : hdf_exporter(params, timestep) {}
 
 cu_data_exporter::~cu_data_exporter() {}
 
-void
-cu_data_exporter::add_cu_field_output(const std::string &name,
-                                      const std::string &type,
-                                      int num_components,
-                                      std::vector<field_base *> &field,
-                                      int dim, bool sync) {
+void cu_data_exporter::add_cu_field_output(const std::string &name,
+                                           const std::string &type,
+                                           int num_components,
+                                           std::vector<field_base *> &field,
+                                           int dim, bool sync) {
   auto &mesh = grid->mesh();
   if (dim == 3) {
     cu_fieldoutput<3> tempData;
@@ -76,10 +74,9 @@ cu_data_exporter::add_cu_field_output(const std::string &name,
 }
 
 template <typename T>
-void
-cu_data_exporter::add_field(const std::string &name,
-                            std::vector<cu_scalar_field<T>> &field,
-                            bool sync) {
+void cu_data_exporter::add_field(const std::string &name,
+                                 std::vector<cu_scalar_field<T>> &field,
+                                 bool sync) {
   std::vector<field_base *> field_ptr(field.size());
   for (unsigned int i = 0; i < field.size(); i++) {
     field_ptr[i] = &field[i];
@@ -87,15 +84,14 @@ cu_data_exporter::add_field(const std::string &name,
     // field_ptr[i]->grid().extent().x,
     // field_ptr[i]->grid().extent().y);
   }
-  add_cu_field_output(name, TypeName<T>::Get(), 1, field_ptr,
-                      grid->dim(), sync);
+  add_cu_field_output(name, TypeName<T>::Get(), 1, field_ptr, grid->dim(),
+                      sync);
 }
 
 template <typename T>
-void
-cu_data_exporter::add_field(const std::string &name,
-                            std::vector<cu_vector_field<T>> &field,
-                            bool sync) {
+void cu_data_exporter::add_field(const std::string &name,
+                                 std::vector<cu_vector_field<T>> &field,
+                                 bool sync) {
   std::vector<field_base *> field_ptr(field.size());
   for (unsigned int i = 0; i < field.size(); i++) {
     field_ptr[i] = &field[i];
@@ -106,8 +102,7 @@ cu_data_exporter::add_field(const std::string &name,
   //                  grid->dim(), sync);
 }
 
-void
-cu_data_exporter::set_mesh(cu_sim_data &data) {
+void cu_data_exporter::set_mesh(cu_sim_data &data) {
   m_submesh.resize(data.dev_map.size());
   m_submesh_out.resize(data.dev_map.size());
   for (unsigned int n = 0; n < m_submesh.size(); n++) {
@@ -119,19 +114,19 @@ cu_data_exporter::set_mesh(cu_sim_data &data) {
           m_submesh[n].reduced_dim(i) / data.env.params().downsample;
       m_submesh_out[n].delta[i] *= data.env.params().downsample;
       m_submesh_out[n].inv_delta[i] /= data.env.params().downsample;
-      if (m_submesh_out[n].offset[i] != 0)
-        m_submesh_out[n].offset[i] =
-            (m_submesh_out[n].offset[i] - m_submesh[n].guard[i]) /
-                data.env.params().downsample +
-            m_submesh[n].guard[i];
+      // if (m_submesh_out[n].offset[i] != 0)
+      //   m_submesh_out[n].offset[i] =
+      //       (m_submesh_out[n].offset[i] - m_submesh[n].guard[i]) /
+      //           data.env.params().downsample +
+      //       m_submesh[n].guard[i];
+      m_submesh_out[n].offset[i] /= data.env.params().downsample;
     }
   }
 }
 
-void
-cu_data_exporter::write_snapshot(cu_sim_environment &env,
-                                 cu_sim_data &data, uint32_t timestep,
-                                 float time) {
+void cu_data_exporter::write_snapshot(cu_sim_environment &env,
+                                      cu_sim_data &data, uint32_t timestep,
+                                      float time) {
   File snapshotfile(
       // fmt::format("{}snapshot{:06d}.h5", outputDirectory,
       // timestep)
@@ -142,18 +137,18 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   size_t grid_size = data.E[0].data(0).size();
   uint32_t num_dev = data.dev_map.size();
   size_t total_size = grid_size * num_dev;
-  DataSet data_bg_E1 = snapshotfile.createDataSet<Scalar>(
-      "bg_E1", DataSpace(total_size));
-  DataSet data_bg_E2 = snapshotfile.createDataSet<Scalar>(
-      "bg_E2", DataSpace(total_size));
-  DataSet data_bg_E3 = snapshotfile.createDataSet<Scalar>(
-      "bg_E3", DataSpace(total_size));
-  DataSet data_bg_B1 = snapshotfile.createDataSet<Scalar>(
-      "bg_B1", DataSpace(total_size));
-  DataSet data_bg_B2 = snapshotfile.createDataSet<Scalar>(
-      "bg_B2", DataSpace(total_size));
-  DataSet data_bg_B3 = snapshotfile.createDataSet<Scalar>(
-      "bg_B3", DataSpace(total_size));
+  DataSet data_bg_E1 =
+      snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(total_size));
+  DataSet data_bg_E2 =
+      snapshotfile.createDataSet<Scalar>("bg_E2", DataSpace(total_size));
+  DataSet data_bg_E3 =
+      snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(total_size));
+  DataSet data_bg_B1 =
+      snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(total_size));
+  DataSet data_bg_B2 =
+      snapshotfile.createDataSet<Scalar>("bg_B2", DataSpace(total_size));
+  DataSet data_bg_B3 =
+      snapshotfile.createDataSet<Scalar>("bg_B3", DataSpace(total_size));
   DataSet data_E1 =
       snapshotfile.createDataSet<Scalar>("E1", DataSpace(total_size));
   DataSet data_E2 =
@@ -177,8 +172,8 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
     data_Rho.push_back(snapshotfile.createDataSet<Scalar>(
         fmt::format("Rho{}", i), DataSpace(total_size)));
   }
-  DataSet data_devId = snapshotfile.createDataSet<int>(
-      "devId", DataSpace::From(data.dev_map));
+  DataSet data_devId =
+      snapshotfile.createDataSet<int>("devId", DataSpace::From(data.dev_map));
   data_devId.write(data.dev_map);
 
   size_t tot_ptc_num = 0, tot_ph_num = 0;
@@ -195,24 +190,22 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   DataSet data_ptcNum = snapshotfile.createDataSet<size_t>(
       "ptcNum", DataSpace::From(vec_ptc_num));
   data_ptcNum.write(vec_ptc_num);
-  DataSet data_phNum = snapshotfile.createDataSet<size_t>(
-      "phNum", DataSpace::From(vec_ph_num));
+  DataSet data_phNum =
+      snapshotfile.createDataSet<size_t>("phNum", DataSpace::From(vec_ph_num));
   data_phNum.write(vec_ph_num);
 
   std::vector<DataSet> ptc_data, ph_data;
   visit_struct::for_each(
-      data.particles[0].data(), [&snapshotfile, &ptc_data, tot_ptc_num](
-                                    const char *name, auto &x) {
-        typedef
-            typename std::remove_reference<decltype(*x)>::type x_type;
+      data.particles[0].data(),
+      [&snapshotfile, &ptc_data, tot_ptc_num](const char *name, auto &x) {
+        typedef typename std::remove_reference<decltype(*x)>::type x_type;
         ptc_data.push_back(snapshotfile.createDataSet<x_type>(
             fmt::format("ptc_{}", name), DataSpace(tot_ptc_num)));
       });
   visit_struct::for_each(
       data.photons[0].data(),
       [&snapshotfile, &ph_data, tot_ph_num](const char *name, auto &x) {
-        typedef
-            typename std::remove_reference<decltype(*x)>::type x_type;
+        typedef typename std::remove_reference<decltype(*x)>::type x_type;
         ph_data.push_back(snapshotfile.createDataSet<x_type>(
             fmt::format("ph_{}", name), DataSpace(tot_ph_num)));
       });
@@ -274,8 +267,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
     int component = 0;
     visit_struct::for_each(
         data.particles[n].data(), [&](const char *name, auto &x) {
-          typedef
-              typename std::remove_reference<decltype(*x)>::type x_type;
+          typedef typename std::remove_reference<decltype(*x)>::type x_type;
           // DataSet ptc_data = snapshotfile.createDataSet<x_type>(
           //     fmt::format("ptc_{}", name), DataSpace(ptcNum));
           cudaMemcpy(buffer.data(), x, ptcNum * sizeof(x_type),
@@ -289,18 +281,18 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
     Logger::print_info("Writing {} photons to snapshot", phNum);
 
     component = 0;
-    visit_struct::for_each(data.photons[n].data(), [&](const char *name,
-                                                       auto &x) {
-      typedef typename std::remove_reference<decltype(*x)>::type x_type;
-      // DataSet ph_data = snapshotfile.createDataSet<x_type>(
-      //     fmt::format("ph_{}", name), DataSpace(phNum));
-      cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
-                 cudaMemcpyDeviceToHost);
-      ph_data[component]
-          .select({ph_offset}, {phNum})
-          .write(reinterpret_cast<x_type *>(buffer.data()));
-      component += 1;
-    });
+    visit_struct::for_each(
+        data.photons[n].data(), [&](const char *name, auto &x) {
+          typedef typename std::remove_reference<decltype(*x)>::type x_type;
+          // DataSet ph_data = snapshotfile.createDataSet<x_type>(
+          //     fmt::format("ph_{}", name), DataSpace(phNum));
+          cudaMemcpy(buffer.data(), x, phNum * sizeof(x_type),
+                     cudaMemcpyDeviceToHost);
+          ph_data[component]
+              .select({ph_offset}, {phNum})
+              .write(reinterpret_cast<x_type *>(buffer.data()));
+          component += 1;
+        });
     ptc_offset += ptcNum;
     ph_offset += phNum;
   });
@@ -314,13 +306,11 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   data_time.write(time);
 }
 
-void
-cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
-                                     cu_sim_data &data,
-                                     uint32_t &timestep, float &time) {
-  File snapshotfile(
-      fmt::format("{}snapshot.h5", outputDirectory).c_str(),
-      File::ReadOnly);
+void cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
+                                          cu_sim_data &data, uint32_t &timestep,
+                                          float &time) {
+  File snapshotfile(fmt::format("{}snapshot.h5", outputDirectory).c_str(),
+                    File::ReadOnly);
 
   // size_t grid_size = data.E.grid().size();
   // size_t ptcNum, phNum;
@@ -342,8 +332,8 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
 
   // Check that the devmap for restart is the same as current one
   if (v_devmap.size() != data.dev_map.size()) {
-    Logger::print_err("Number of devices mismatch! {} vs {}",
-                      v_devmap.size(), data.dev_map.size());
+    Logger::print_err("Number of devices mismatch! {} vs {}", v_devmap.size(),
+                      data.dev_map.size());
     exit(1);
   }
   for (uint32_t i = 0; i < v_devmap.size(); i++) {
@@ -367,32 +357,29 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
     data.particles[n].set_num(ptcNum);
     data.photons[n].set_num(phNum);
 
-    visit_struct::for_each(
-        data.particles[n].data(), [&](const char *name, auto &x) {
-          typedef
-              typename std::remove_reference<decltype(*x)>::type x_type;
-          DataSet ptc_data =
-              snapshotfile.getDataSet(fmt::format("ptc_{}", name));
-          Logger::print_info("--- ptc_{} has size {}", name,
-                             ptc_data.getSpace().getDimensions()[0]);
-          ptc_data.select({ptc_offset}, {ptcNum})
-              .read(reinterpret_cast<x_type *>(buffer.data()));
-          cudaMemcpy(x, buffer.data(), ptcNum * sizeof(x_type),
-                     cudaMemcpyHostToDevice);
-        });
-    ptc_offset += ptcNum;
-    visit_struct::for_each(data.photons[n].data(), [&](const char *name,
-                                                       auto &x) {
+    visit_struct::for_each(data.particles[n].data(), [&](const char *name,
+                                                         auto &x) {
       typedef typename std::remove_reference<decltype(*x)>::type x_type;
-      DataSet ph_data =
-          snapshotfile.getDataSet(fmt::format("ph_{}", name));
-      Logger::print_info("--- ph_{} has size {}", name,
-                         ph_data.getSpace().getDimensions()[0]);
-      ph_data.select({ph_offset}, {phNum})
+      DataSet ptc_data = snapshotfile.getDataSet(fmt::format("ptc_{}", name));
+      Logger::print_info("--- ptc_{} has size {}", name,
+                         ptc_data.getSpace().getDimensions()[0]);
+      ptc_data.select({ptc_offset}, {ptcNum})
           .read(reinterpret_cast<x_type *>(buffer.data()));
-      cudaMemcpy(x, buffer.data(), phNum * sizeof(x_type),
+      cudaMemcpy(x, buffer.data(), ptcNum * sizeof(x_type),
                  cudaMemcpyHostToDevice);
     });
+    ptc_offset += ptcNum;
+    visit_struct::for_each(
+        data.photons[n].data(), [&](const char *name, auto &x) {
+          typedef typename std::remove_reference<decltype(*x)>::type x_type;
+          DataSet ph_data = snapshotfile.getDataSet(fmt::format("ph_{}", name));
+          Logger::print_info("--- ph_{} has size {}", name,
+                             ph_data.getSpace().getDimensions()[0]);
+          ph_data.select({ph_offset}, {phNum})
+              .read(reinterpret_cast<x_type *>(buffer.data()));
+          cudaMemcpy(x, buffer.data(), phNum * sizeof(x_type),
+                     cudaMemcpyHostToDevice);
+        });
     ph_offset += phNum;
 
     // Read field data
@@ -450,8 +437,7 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
     data.J[n].sync_to_device();
 
     for (int i = 0; i < data.num_species; i++) {
-      DataSet data_rho =
-          snapshotfile.getDataSet(fmt::format("Rho{}", i));
+      DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
       data_rho.select({n * grid_size}, {grid_size})
           .read((char *)data.Rho[i][n].data().data());
       data.Rho[i][n].sync_to_device();
@@ -460,12 +446,12 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
 }
 
 template <typename T>
-void
-cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
-                                           int components, const T &t) {
+void cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
+                                                int components, const T &t) {
   if (components == 1) {
     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync)
+      fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
     // #pragma omp simd
     for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -482,7 +468,8 @@ cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
     }
   } else if (components == 3) {
     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync)
+      fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
     // #pragma omp simd
     for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -503,12 +490,12 @@ cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
 }
 
 template <typename T>
-void
-cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
-                                           int components, const T &t) {
+void cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
+                                                int components, const T &t) {
   if (components == 1) {
     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync)
+      fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -519,8 +506,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
           for (int n1 = 0; n1 < downsample_factor; n1++) {
             field.f[0][j / downsample_factor + mesh.guard[1]]
                    [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
+                (*fptr)(i + n1 + mesh.guard[0], j + n2 + mesh.guard[1]) /
                 square(downsample_factor);
           }
         }
@@ -534,7 +520,8 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
     }
   } else if (components == 3) {
     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync)
+      fptr->sync_to_host();
     auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -549,8 +536,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
           for (int n1 = 0; n1 < downsample_factor; n1++) {
             field.f[0][j / downsample_factor + mesh.guard[1]]
                    [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(0, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
+                (*fptr)(0, i + n1 + mesh.guard[0], j + n2 + mesh.guard[1]) /
                 square(downsample_factor);
             // std::cout << vf.f1[j / downsample_factor +
             // mesh.guard[1]
@@ -558,14 +544,12 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
             // std::endl;
             field.f[1][j / downsample_factor + mesh.guard[1]]
                    [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(1, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
+                (*fptr)(1, i + n1 + mesh.guard[0], j + n2 + mesh.guard[1]) /
                 square(downsample_factor);
 
             field.f[2][j / downsample_factor + mesh.guard[1]]
                    [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(2, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
+                (*fptr)(2, i + n1 + mesh.guard[0], j + n2 + mesh.guard[1]) /
                 square(downsample_factor);
           }
         }
@@ -593,14 +577,11 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
 }
 
 template <typename T>
-void
-cu_data_exporter::interpolate_field_values(fieldoutput<3> &field,
-                                           int components, const T &t) {
-}
+void cu_data_exporter::interpolate_field_values(fieldoutput<3> &field,
+                                                int components, const T &t) {}
 
-void
-cu_data_exporter::write_particles(cu_sim_data &data, uint32_t step,
-                                  double time) {
+void cu_data_exporter::write_particles(cu_sim_data &data, uint32_t step,
+                                       double time) {
   // auto &mesh = orig_grid->mesh();
   // for (auto &ptcoutput : dbPtcData1d) {
   //   Particles_1D *ptc = dynamic_cast<Particles_1D *>(ptcoutput.ptc);
@@ -640,8 +621,7 @@ cu_data_exporter::write_particles(cu_sim_data &data, uint32_t step,
   // }
   Logger::print_info("Writing tracked particles");
   File datafile(
-      fmt::format("{}{}{:06d}.h5", outputDirectory, filePrefix, step)
-          .c_str(),
+      fmt::format("{}{}{:06d}.h5", outputDirectory, filePrefix, step).c_str(),
       File::ReadWrite);
   for (auto &ptcoutput : m_ptcdata) {
     for (int sp = 0; sp < m_params.num_species; sp++) {
@@ -696,14 +676,14 @@ cu_data_exporter::write_particles(cu_sim_data &data, uint32_t step,
   }
 }
 
-void
-cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
-                               double time) {
-  if (!checkDirectories()) createDirectories();
-  File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-                            filePrefix, timestep)
-                    .c_str(),
-                File::ReadWrite | File::Create | File::Truncate);
+void cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
+                                    double time) {
+  if (!checkDirectories())
+    createDirectories();
+  File datafile(
+      fmt::format("{}{}{:06d}.h5", outputDirectory, filePrefix, timestep)
+          .c_str(),
+      File::ReadWrite | File::Create | File::Truncate);
   for (auto &f : m_fields_1d) {
   }
   for (auto &f : m_fields_2d) {
@@ -713,55 +693,81 @@ cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
         auto fptr = dynamic_cast<cu_scalar_field<Scalar> *>(f.field[n]);
         // Logger::print_info("grid is {}x{}", fptr->grid().extent().x,
         //                    fptr->grid().extent().y);
-        if (f.sync) fptr->sync_to_host();
+        if (f.sync)
+          fptr->sync_to_host();
         auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
-        for (int j = 0; j < mesh.reduced_dim(1);
-             j += downsample_factor) {
-          for (int i = 0; i < mesh.reduced_dim(0);
-               i += downsample_factor) {
+        for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+          for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
             f.f[0][j / downsample_factor + mesh.guard[1] +
-                   m_submesh_out[n].offset[1]]
-               [i / downsample_factor + mesh.guard[0] +
-                m_submesh_out[n].offset[0]] =
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
                 (*fptr)(i + mesh.guard[0], j + mesh.guard[1]);
+          }
+        }
+        if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
+          for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+            f.f[0][mesh.guard[1] - 1 +
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
+                (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
           }
         }
       } else if (components == 3) {
         auto fptr = dynamic_cast<cu_vector_field<Scalar> *>(f.field[n]);
-        if (f.sync) fptr->sync_to_host();
+        if (f.sync)
+          fptr->sync_to_host();
         auto &mesh = fptr->grid().mesh();
         // Logger::print_debug("offset[0] is {}, offset[1] is {}",
         // m_submesh_out[n].offset[0],
         //                     m_submesh_out[n].offset[1]);
 #pragma omp simd collapse(2)
-        for (int j = 0; j < mesh.reduced_dim(1);
-             j += downsample_factor) {
-          for (int i = 0; i < mesh.reduced_dim(0);
-               i += downsample_factor) {
+        for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
+          for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
             f.f[0][j / downsample_factor + mesh.guard[1] +
-                   m_submesh_out[n].offset[1]]
-               [i / downsample_factor + mesh.guard[0] +
-                m_submesh_out[n].offset[0]] =
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
                 (*fptr)(0, i + mesh.guard[0], j + mesh.guard[1]);
             f.f[1][j / downsample_factor + mesh.guard[1] +
-                   m_submesh_out[n].offset[1]]
-               [i / downsample_factor + mesh.guard[0] +
-                m_submesh_out[n].offset[0]] =
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
                 (*fptr)(1, i + mesh.guard[0], j + mesh.guard[1]);
             f.f[2][j / downsample_factor + mesh.guard[1] +
-                   m_submesh_out[n].offset[1]]
-               [i / downsample_factor + mesh.guard[0] +
-                m_submesh_out[n].offset[0]] =
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
                 (*fptr)(2, i + mesh.guard[0], j + mesh.guard[1]);
+          }
+        }
+        if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
+          for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
+            f.f[0][mesh.guard[1] - 1 +
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
+                (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
+            f.f[1][mesh.guard[1] - 1 +
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
+                (*fptr)(1, i + mesh.guard[0], mesh.guard[1] - 1);
+            f.f[2][mesh.guard[1] - 1 +
+                   m_submesh_out[n].offset[1]][i / downsample_factor +
+                                               mesh.guard[0] +
+                                               m_submesh_out[n].offset[0]] =
+                (*fptr)(2, i + mesh.guard[0], mesh.guard[1] - 1);
           }
         }
       }
     }
     if (components == 1) {
       // Logger::print_info("Creating dataset for {}", f.name);
-      DataSet data = datafile.createDataSet<float>(
-          f.name, DataSpace::From(f.f[0]));
+      DataSet data =
+          datafile.createDataSet<float>(f.name, DataSpace::From(f.f[0]));
       data.write(f.f[0]);
     } else {
       // Logger::print_info("Creating dataset for {}", f.name);
@@ -776,8 +782,7 @@ cu_data_exporter::write_output(cu_sim_data &data, uint32_t timestep,
   }
 }
 
-void
-cu_data_exporter::prepare_output(cu_sim_data &data) {
+void cu_data_exporter::prepare_output(cu_sim_data &data) {
   set_mesh(data);
   add_field("E", data.E, true);
   add_field("B", data.B, true);
@@ -796,14 +801,12 @@ cu_data_exporter::prepare_output(cu_sim_data &data) {
   add_field("EdotBavg", data.EdotB, true);
 }
 
-void
-cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
-                               double time) {
+void cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
+                                    double time) {
   std::string dim_str;
   auto &mesh = grid->mesh();
   if (grid->dim() == 3) {
-    dim_str = fmt::format("{} {} {}", mesh.dims[2], mesh.dims[1],
-                          mesh.dims[0]);
+    dim_str = fmt::format("{} {} {}", mesh.dims[2], mesh.dims[1], mesh.dims[0]);
   } else if (grid->dim() == 2) {
     dim_str = fmt::format("{} {}", mesh.dims[1], mesh.dims[0]);
   } else if (grid->dim() == 1) {
@@ -811,8 +814,7 @@ cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
   }
 
   fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
-  fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>"
-     << std::endl;
+  fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>" << std::endl;
   if (grid->dim() == 3) {
     fs << "  <Topology Type=\"3DSMesh\" NumberOfElements=\"" << dim_str
        << "\"/>" << std::endl;
@@ -827,8 +829,7 @@ cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
     fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
   }
   fs << "    <DataItem Dimensions=\"" << dim_str
-     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
-     << std::endl;
+     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">" << std::endl;
   fs << "      mesh.h5:x1" << std::endl;
   fs << "    </DataItem>" << std::endl;
   if (grid->dim() >= 2) {
@@ -855,21 +856,19 @@ cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
       fs << "    <DataItem Dimensions=\"" << dim_str
          << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
          << std::endl;
-      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
-                        f.name)
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, f.name)
          << std::endl;
       fs << "    </DataItem>" << std::endl;
       fs << "  </Attribute>" << std::endl;
     } else if (f.f.size() == 3) {
       for (int i = 0; i < 3; i++) {
         fs << "  <Attribute Name=\"" << f.name << i + 1
-           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
-           << std::endl;
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
         fs << "    <DataItem Dimensions=\"" << dim_str
            << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
            << std::endl;
-        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
-                          f.name, i + 1)
+        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step, f.name,
+                          i + 1)
            << std::endl;
         fs << "    </DataItem>" << std::endl;
         fs << "  </Attribute>" << std::endl;
@@ -884,21 +883,19 @@ cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
       fs << "    <DataItem Dimensions=\"" << dim_str
          << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
          << std::endl;
-      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step,
-                        f.name)
+      fs << fmt::format("      {}{:06d}.h5:{}", filePrefix, step, f.name)
          << std::endl;
       fs << "    </DataItem>" << std::endl;
       fs << "  </Attribute>" << std::endl;
     } else if (f.f.size() == 3) {
       for (int i = 0; i < 1; i++) {
         fs << "  <Attribute Name=\"" << f.name << i + 1
-           << "\" Center=\"Node\" AttributeType=\"Scalar\">"
-           << std::endl;
+           << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
         fs << "    <DataItem Dimensions=\"" << dim_str
            << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
            << std::endl;
-        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step,
-                          f.name, i + 1)
+        fs << fmt::format("      {}{:06d}.h5:{}{}", filePrefix, step, f.name,
+                          i + 1)
            << std::endl;
         fs << "    </DataItem>" << std::endl;
         fs << "  </Attribute>" << std::endl;
@@ -1007,18 +1004,22 @@ cu_data_exporter::writeXMFStep(std::ofstream &fs, uint32_t step,
 }
 
 // Explicit instantiation of templates
-template void cu_data_exporter::add_field<float>(
-    const std::string &name, std::vector<cu_scalar_field<float>> &field,
-    bool sync);
-template void cu_data_exporter::add_field<float>(
-    const std::string &name, std::vector<cu_vector_field<float>> &field,
-    bool sync);
-template void cu_data_exporter::add_field<double>(
-    const std::string &name,
-    std::vector<cu_scalar_field<double>> &field, bool sync);
-template void cu_data_exporter::add_field<double>(
-    const std::string &name,
-    std::vector<cu_vector_field<double>> &field, bool sync);
+template void
+cu_data_exporter::add_field<float>(const std::string &name,
+                                   std::vector<cu_scalar_field<float>> &field,
+                                   bool sync);
+template void
+cu_data_exporter::add_field<float>(const std::string &name,
+                                   std::vector<cu_vector_field<float>> &field,
+                                   bool sync);
+template void
+cu_data_exporter::add_field<double>(const std::string &name,
+                                    std::vector<cu_scalar_field<double>> &field,
+                                    bool sync);
+template void
+cu_data_exporter::add_field<double>(const std::string &name,
+                                    std::vector<cu_vector_field<double>> &field,
+                                    bool sync);
 
 template void cu_data_exporter::interpolate_field_values<float>(
     fieldoutput<2> &field, int components, const float &t);
@@ -1027,4 +1028,4 @@ template void cu_data_exporter::interpolate_field_values<double>(
 template void hdf_exporter<cu_data_exporter>::add_array_output<float>(
     const std::string &name, multi_array<float> &array);
 
-}  // namespace Aperture
+} // namespace Aperture

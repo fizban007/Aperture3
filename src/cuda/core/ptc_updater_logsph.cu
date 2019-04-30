@@ -373,9 +373,14 @@ __launch_bounds__(512, 4)
     if (dev_mesh.pos(1, c2 + dc2, new_x2) < 0.0f) {
       dc2 += 1;
       new_x2 = 1.0f - new_x2;
-    } else if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
+      ptc.p2[idx] *= -1.0;
+      ptc.p3[idx] *= -1.0;
+    }
+    if (dev_mesh.pos(1, c2 + dc2, new_x2) >= CONST_PI) {
       dc2 -= 1;
       new_x2 = 1.0f - new_x2;
+      ptc.p2[idx] *= -1.0;
+      ptc.p3[idx] *= -1.0;
     }
     ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
     // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
@@ -475,9 +480,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
-  for (int i = dev_mesh.guard[1] + id;
+  for (int i = dev_mesh.guard[1] + 1 + id;
        // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
-       i < dev_mesh.dims[1] - dev_mesh.guard[1];
+       i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
@@ -554,8 +559,8 @@ axis_rho_lower(PtcUpdaterDev::fields_data fields,
     int j_0 = dev_mesh.guard[1];
     fields.J3(i, j_0 - 1) = 0.0f;
     fields.J3(i, j_0) = 0.0f;
-    fields.J2(i, j_0) -= fields.J2(i, j_0 - 1);
-    fields.J2(i, j_0 - 1) = 0.0;
+    // fields.J2(i, j_0) -= fields.J2(i, j_0 - 1);
+    // fields.J2(i, j_0 - 1) = 0.0;
   }
 }
 
@@ -566,8 +571,8 @@ axis_rho_upper(PtcUpdaterDev::fields_data fields,
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     if (i >= dev_mesh.dims[0]) continue;
     int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
-    fields.J2(i, j_last - 1) -= fields.J2(i, j_last);
-    fields.J2(i, j_last) = 0.0;
+    // fields.J2(i, j_last - 1) -= fields.J2(i, j_last);
+    // fields.J2(i, j_last) = 0.0;
 
     fields.J3(i, j_last) = 0.0f;
     fields.J3(i, j_last - 1) = 0.0f;

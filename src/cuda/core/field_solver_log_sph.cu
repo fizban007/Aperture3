@@ -58,7 +58,7 @@ compute_e_update(
     e1[globalOffset] +=
         dt *
         (-4.0f * b3[globalOffset] * alpha_gr(r0) /
-             (dev_mesh.delta[1] * std::exp(dev_mesh.pos(0, n1, 0))) -
+             (dev_mesh.delta[1] * r0) -
          alpha_gr(r0) * j1[globalOffset]);
   } else {
     e1[globalOffset] +=
@@ -105,8 +105,8 @@ compute_e_update(
     e3[globalOffset] = 0.0f;
 
     e1[globalOffset] += dt * (4.0f * b3(n1, n2 + 1) * alpha_gr(r0) /
-                              (dev_mesh.delta[1] * r0)) -
-                        alpha_gr(r0) * j1(n1, n2);
+                              (dev_mesh.delta[1] * r0) -
+                        alpha_gr(r0) * j1[globalOffset]);
   }
 }
 
@@ -268,6 +268,7 @@ axis_boundary_lower(typed_pitchedptr<Scalar> e1,
     e3(i, dev_mesh.guard[1] - 1) = 0.0f;
     // e3(i, dev_mesh.guard[1]) = 0.0f;
     e2(i, dev_mesh.guard[1] - 1) = -e2(i, dev_mesh.guard[1]);
+    // e2(i, dev_mesh.guard[1] - 1) = e2(i, dev_mesh.guard[1]) = 0.0f;
 
     b3(i, dev_mesh.guard[1] - 1) = b3(i, dev_mesh.guard[1]) = 0.0f;
     b2(i, dev_mesh.guard[1] - 1) = 0.0f;
@@ -287,6 +288,7 @@ axis_boundary_upper(typed_pitchedptr<Scalar> e1,
     int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
     e3(i, j_last - 1) = 0.0f;
     e2(i, j_last) = -e2(i, j_last - 1);
+    // e2(i, j_last) = e2(i, j_last - 1) = 0.0f;
 
     b3(i, j_last) = b3(i, j_last - 1) = 0.0f;
     b2(i, j_last - 1) = 0.0f;

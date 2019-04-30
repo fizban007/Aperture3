@@ -34,15 +34,15 @@ void Grid_LogSph_dev::init(const SimParams &params) {
     m_dV.resize(m_mesh.dims[0], m_mesh.dims[1]);
 
     for (int j = 0; j < m_mesh.dims[1]; j++) {
-      Scalar x2 = m_mesh.pos(1, j, 0);
-      Scalar x2s = m_mesh.pos(1, j, 1);
+      double x2 = m_mesh.pos(1, j, 0);
+      double x2s = m_mesh.pos(1, j, 1);
       for (int i = 0; i < m_mesh.dims[0]; i++) {
-        Scalar x1 = m_mesh.pos(0, i, 0);
-        Scalar x1s = m_mesh.pos(0, i, 1);
-        Scalar r_plus = std::exp(x1 + m_mesh.delta[0]);
-        Scalar r = std::exp(x1);
-        Scalar rs = std::exp(x1s);
-        Scalar rs_minus = std::exp(x1s - m_mesh.delta[0]);
+        double x1 = m_mesh.pos(0, i, 0);
+        double x1s = m_mesh.pos(0, i, 1);
+        double r_plus = std::exp(x1 + m_mesh.delta[0]);
+        double r = std::exp(x1);
+        double rs = std::exp(x1s);
+        double rs_minus = std::exp(x1s - m_mesh.delta[0]);
         m_l1_e(i, j) = l1(rs, r_g) - l1(rs_minus, r_g);
         m_l2_e(i, j) = rs * m_mesh.delta[1];
         m_l3_e(i, j) = rs * std::sin(x2s);
