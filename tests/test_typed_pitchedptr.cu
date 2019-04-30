@@ -1,19 +1,19 @@
 #include "catch.hpp"
 #include "cuda/cudaUtility.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include <vector>
 
 using namespace Aperture;
 
 template <typename T>
 __global__ void
-assign_values(typed_pitchedptr<T> ptr) {
+assign_values(pitchptr<T> ptr) {
   ptr(threadIdx.x, blockIdx.x) = threadIdx.x * blockIdx.x;
 }
 
 template <typename T>
 __global__ void
-assign_values3d(typed_pitchedptr<T> ptr) {
+assign_values3d(pitchptr<T> ptr) {
   ptr(threadIdx.x, threadIdx.y, blockIdx.x) =
       threadIdx.x * blockIdx.x * threadIdx.y;
 }
@@ -34,10 +34,10 @@ TEST_CASE("Simple usage", "[pitchedptr]") {
   std::vector<float> v2f(100 * 100), v3f(8 * 8 * 8);
   std::vector<double> v2d(100 * 100), v3d(8 * 8 * 8);
 
-  assign_values<<<100, 100>>>(typed_pitchedptr<float>(p2f));
-  assign_values<<<100, 100>>>(typed_pitchedptr<double>(p2d));
-  assign_values3d<<<8, dim3(8, 8)>>>(typed_pitchedptr<float>(p3f));
-  assign_values3d<<<8, dim3(8, 8)>>>(typed_pitchedptr<double>(p3d));
+  assign_values<<<100, 100>>>(pitchptr<float>(p2f));
+  assign_values<<<100, 100>>>(pitchptr<double>(p2d));
+  assign_values3d<<<8, dim3(8, 8)>>>(pitchptr<float>(p3f));
+  assign_values3d<<<8, dim3(8, 8)>>>(pitchptr<double>(p3d));
   CudaSafeCall(cudaDeviceSynchronize());
 
   cudaMemcpy3DParms pv2f = {0};

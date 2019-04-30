@@ -8,6 +8,7 @@
 #include "cuda/data/fields_utils.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
+#include "cuda/utils/pitchptr.cuh"
 #include "utils/timer.h"
 
 namespace Aperture {
@@ -28,14 +29,13 @@ alpha_gr(Scalar r) {
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_e_update(
-    typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e2,
-    typed_pitchedptr<Scalar> e3, typed_pitchedptr<Scalar> b1,
-    typed_pitchedptr<Scalar> b2, typed_pitchedptr<Scalar> b3,
-    typed_pitchedptr<Scalar> j1, typed_pitchedptr<Scalar> j2,
-    typed_pitchedptr<Scalar> j3, typed_pitchedptr<Scalar> rho0,
-    typed_pitchedptr<Scalar> rho1, typed_pitchedptr<Scalar> rho2,
-    Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                 pitchptr<Scalar> j1, pitchptr<Scalar> j2,
+                 pitchptr<Scalar> j3, pitchptr<Scalar> rho0,
+                 pitchptr<Scalar> rho1, pitchptr<Scalar> rho2,
+                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -55,11 +55,9 @@ compute_e_update(
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   if (std::abs(dev_mesh.pos(1, n2, true) - CONST_PI) < 1.0e-5) {
-    e1[globalOffset] +=
-        dt *
-        (-4.0f * b3[globalOffset] * alpha_gr(r0) /
-             (dev_mesh.delta[1] * r0) -
-         alpha_gr(r0) * j1[globalOffset]);
+    e1[globalOffset] += dt * (-4.0f * b3[globalOffset] * alpha_gr(r0) /
+                                  (dev_mesh.delta[1] * r0) -
+                              alpha_gr(r0) * j1[globalOffset]);
   } else {
     e1[globalOffset] +=
         // -dt * j1[globalOffset];
@@ -105,19 +103,16 @@ compute_e_update(
     e3[globalOffset] = 0.0f;
 
     e1[globalOffset] += dt * (4.0f * b3(n1, n2 + 1) * alpha_gr(r0) /
-                              (dev_mesh.delta[1] * r0) -
-                        alpha_gr(r0) * j1[globalOffset]);
+                                  (dev_mesh.delta[1] * r0) -
+                              alpha_gr(r0) * j1[globalOffset]);
   }
 }
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_b_update(typed_pitchedptr<Scalar> e1,
-                 typed_pitchedptr<Scalar> e2,
-                 typed_pitchedptr<Scalar> e3,
-                 typed_pitchedptr<Scalar> b1,
-                 typed_pitchedptr<Scalar> b2,
-                 typed_pitchedptr<Scalar> b3,
+compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
                  Grid_LogSph_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -175,11 +170,10 @@ compute_b_update(typed_pitchedptr<Scalar> e1,
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_divs(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e2,
-             typed_pitchedptr<Scalar> e3, typed_pitchedptr<Scalar> b1,
-             typed_pitchedptr<Scalar> b2, typed_pitchedptr<Scalar> b3,
-             typed_pitchedptr<Scalar> divE,
-             typed_pitchedptr<Scalar> divB,
+compute_divs(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+             pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+             pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+             pitchptr<Scalar> divE, pitchptr<Scalar> divB,
              Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -232,12 +226,10 @@ compute_divs(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e2,
 }
 
 __global__ void
-stellar_boundary(typed_pitchedptr<Scalar> e1,
-                 typed_pitchedptr<Scalar> e2,
-                 typed_pitchedptr<Scalar> e3,
-                 typed_pitchedptr<Scalar> b1,
-                 typed_pitchedptr<Scalar> b2,
-                 typed_pitchedptr<Scalar> b3, Scalar omega) {
+stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                 Scalar omega) {
   for (int j = blockIdx.x * blockDim.x + threadIdx.x;
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     Scalar theta_s = dev_mesh.pos(1, j, true);
@@ -248,8 +240,10 @@ stellar_boundary(typed_pitchedptr<Scalar> e1,
       Scalar omega_LT = 0.4f * omega * dev_params.compactness;
       b1(i, j) = 0.0f;
       e3(i, j) = 0.0f;
-      e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s * dev_bg_fields.B1(i, j);
-      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r * dev_bg_fields.B2(i, j);
+      e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s *
+                 dev_bg_fields.B1(i, j);
+      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r *
+                 dev_bg_fields.B2(i, j);
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
     }
@@ -257,12 +251,9 @@ stellar_boundary(typed_pitchedptr<Scalar> e1,
 }
 
 __global__ void
-axis_boundary_lower(typed_pitchedptr<Scalar> e1,
-                    typed_pitchedptr<Scalar> e2,
-                    typed_pitchedptr<Scalar> e3,
-                    typed_pitchedptr<Scalar> b1,
-                    typed_pitchedptr<Scalar> b2,
-                    typed_pitchedptr<Scalar> b3) {
+axis_boundary_lower(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                    pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     e3(i, dev_mesh.guard[1] - 1) = 0.0f;
@@ -277,12 +268,9 @@ axis_boundary_lower(typed_pitchedptr<Scalar> e1,
 }
 
 __global__ void
-axis_boundary_upper(typed_pitchedptr<Scalar> e1,
-                    typed_pitchedptr<Scalar> e2,
-                    typed_pitchedptr<Scalar> e3,
-                    typed_pitchedptr<Scalar> b1,
-                    typed_pitchedptr<Scalar> b2,
-                    typed_pitchedptr<Scalar> b3) {
+axis_boundary_upper(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                    pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
@@ -297,12 +285,9 @@ axis_boundary_upper(typed_pitchedptr<Scalar> e1,
 }
 
 __global__ void
-outflow_boundary(typed_pitchedptr<Scalar> e1,
-                 typed_pitchedptr<Scalar> e2,
-                 typed_pitchedptr<Scalar> e3,
-                 typed_pitchedptr<Scalar> b1,
-                 typed_pitchedptr<Scalar> b2,
-                 typed_pitchedptr<Scalar> b3) {
+outflow_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                 pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
   for (int j = blockIdx.x * blockDim.x + threadIdx.x;
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     for (int i = 0; i < dev_params.damping_length; i++) {
@@ -323,10 +308,10 @@ outflow_boundary(typed_pitchedptr<Scalar> e1,
 }
 
 // __global__ void
-// relax_electric_potential(typed_pitchedptr<Scalar e1,
-// typed_pitchedptr<Scalar e2,
-//                          typed_pitchedptr<Scalar* rho,
-//                          typed_pitchedptr<Scalar dphi,
+// relax_electric_potential(pitchptr<Scalar e1,
+// pitchptr<Scalar e2,
+//                          pitchptr<Scalar* rho,
+//                          pitchptr<Scalar dphi,
 //                          Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
 //   int t1 = blockIdx.x, t2 = blockIdx.y;
 //   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -377,9 +362,9 @@ outflow_boundary(typed_pitchedptr<Scalar> e1,
 // }
 
 // __global__ void
-// correct_E_field(typed_pitchedptr<Scalar e1, typed_pitchedptr<Scalar
+// correct_E_field(pitchptr<Scalar e1, pitchptr<Scalar
 // e2,
-//                 typed_pitchedptr<Scalar dphi,
+//                 pitchptr<Scalar dphi,
 //                 Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
 //   int t1 = blockIdx.x, t2 = blockIdx.y;
 //   int c1 = threadIdx.x, c2 = threadIdx.y;

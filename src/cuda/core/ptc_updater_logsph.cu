@@ -592,7 +592,8 @@ measure_surface_density(particle_data ptc, size_t num,
     int c2 = dev_mesh.get_c2(c);
     // Sum over 3 cells, hense the w / 3.0f in the atomicAdd
     int sum_cells = 3;
-    if (c1 >= dev_mesh.guard[0] + 1 && c1 <= dev_mesh.guard[0] + sum_cells) {
+    if (c1 >= dev_mesh.guard[0] + 1 &&
+        c1 <= dev_mesh.guard[0] + sum_cells) {
       auto flag = ptc.flag[idx];
       int sp = get_ptc_type(flag);
       auto w = ptc.weight[idx];
@@ -606,10 +607,8 @@ measure_surface_density(particle_data ptc, size_t num,
 }
 
 __global__ void
-annihilate_pairs(particle_data ptc, size_t num,
-                 typed_pitchedptr<Scalar> j1,
-                 typed_pitchedptr<Scalar> j2,
-                 typed_pitchedptr<Scalar> j3) {
+annihilate_pairs(particle_data ptc, size_t num, pitchptr<Scalar> j1,
+                 pitchptr<Scalar> j2, pitchptr<Scalar> j3) {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     // First do a deposit before annihilation
@@ -668,9 +667,8 @@ annihilate_pairs(particle_data ptc, size_t num,
 }
 
 __global__ void
-flag_annihilation(particle_data data, size_t num,
-                  typed_pitchedptr<Scalar> dens,
-                  typed_pitchedptr<Scalar> balance) {
+flag_annihilation(particle_data data, size_t num, pitchptr<Scalar> dens,
+                  pitchptr<Scalar> balance) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
     auto c = data.cell[i];
@@ -704,7 +702,7 @@ flag_annihilation(particle_data data, size_t num,
 
 __global__ void
 add_extra_particles(particle_data ptc, size_t num,
-                    typed_pitchedptr<Scalar> balance) {
+                    pitchptr<Scalar> balance) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -794,8 +792,7 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
     : PtcUpdaterDev(env),
       d_rand_states(env.dev_map().size()),
       m_threadsPerBlock(256),
-      m_blocksPerGrid(128)
-{
+      m_blocksPerGrid(128) {
   // const Grid_LogSph_dev &grid =
   //     dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   // m_mesh_ptrs = grid.get_mesh_ptrs();

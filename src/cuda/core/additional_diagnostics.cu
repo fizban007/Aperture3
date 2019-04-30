@@ -13,8 +13,8 @@ namespace Kernels {
 
 __global__ void
 collect_ptc_diagnostics(particle_data ptc, size_t num,
-                        typed_pitchedptr<Scalar>* ptc_gamma,
-                        typed_pitchedptr<Scalar>* ptc_num) {
+                        pitchptr<Scalar>* ptc_gamma,
+                        pitchptr<Scalar>* ptc_num) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
@@ -41,7 +41,7 @@ collect_ptc_diagnostics(particle_data ptc, size_t num,
 
 __global__ void
 collect_photon_diagnostics(photon_data photons, size_t num,
-                           typed_pitchedptr<Scalar> photon_num) {
+                           pitchptr<Scalar> photon_num) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
@@ -70,10 +70,10 @@ AdditionalDiagnostics::AdditionalDiagnostics(
   for_each_device(env.dev_map(), [this](int n) {
     CudaSafeCall(cudaMallocManaged(
         &m_dev_gamma[n],
-        sizeof(typed_pitchedptr<Scalar>) * m_env.params().num_species));
+        sizeof(pitchptr<Scalar>) * m_env.params().num_species));
     CudaSafeCall(cudaMallocManaged(
         &m_dev_ptc_num[n],
-        sizeof(typed_pitchedptr<Scalar>) * m_env.params().num_species));
+        sizeof(pitchptr<Scalar>) * m_env.params().num_species));
   });
 }
 

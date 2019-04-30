@@ -3,15 +3,15 @@
 #include "cuda/core/field_solver_1dgr.h"
 #include "cuda/cudaUtility.h"
 // #include "cuda/ptr_util.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 
 namespace Aperture {
 
 namespace Kernels {
 
 __global__ void
-update_e_1dgr(typed_pitchedptr<Scalar> e1, typed_pitchedptr<Scalar> e3,
-              typed_pitchedptr<Scalar> j1, typed_pitchedptr<Scalar> rho,
+update_e_1dgr(pitchptr<Scalar> e1, pitchptr<Scalar> e3,
+              pitchptr<Scalar> j1, pitchptr<Scalar> rho,
               Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   for (size_t i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {

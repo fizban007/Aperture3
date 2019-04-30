@@ -1,5 +1,5 @@
-#ifndef _TYPED_PITCHEDPTR_CUH_
-#define _TYPED_PITCHEDPTR_CUH_
+#ifndef _PITCHPTR_CUH_
+#define _PITCHPTR_CUH_
 
 #include "cuda/cuda_control.h"
 #include <cuda_runtime.h>
@@ -7,13 +7,13 @@
 namespace Aperture {
 
 template <typename T>
-struct typed_pitchedptr {
-  typedef typed_pitchedptr<T> self_type;
+struct pitchptr {
+  typedef pitchptr<T> self_type;
   cudaPitchedPtr p;
 
-  HOST_DEVICE typed_pitchedptr() {}
-  HOST_DEVICE typed_pitchedptr(cudaPitchedPtr ptr) : p(ptr) {}
-  HOST_DEVICE typed_pitchedptr(const self_type& other) : p(other.p) {}
+  HOST_DEVICE pitchptr() {}
+  HOST_DEVICE pitchptr(cudaPitchedPtr ptr) : p(ptr) {}
+  HOST_DEVICE pitchptr(const self_type& other) : p(other.p) {}
 
   // HOST_DEVICE operator cudaPitchedPtr() const { return p; }
 
@@ -57,4 +57,4 @@ struct typed_pitchedptr {
 
 }  // namespace Aperture
 
-#endif  // _TYPED_PITCHEDPTR_CUH_
+#endif  // _PITCHPTR_CUH_

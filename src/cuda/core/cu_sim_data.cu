@@ -6,7 +6,7 @@
 #include "cuda/grids/grid_log_sph_dev.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
-#include "cuda/utils/typed_pitchedptr.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include "utils/timer.h"
 #include "visit_struct/visit_struct.hpp"
 
@@ -16,11 +16,11 @@ namespace Kernels {
 
 template <typename T>
 __global__ void
-compute_EdotB(typed_pitchedptr<T> e1, typed_pitchedptr<T> e2,
-              typed_pitchedptr<T> e3, typed_pitchedptr<T> b1,
-              typed_pitchedptr<T> b2, typed_pitchedptr<T> b3,
-              typed_pitchedptr<T> b1bg, typed_pitchedptr<T> b2bg,
-              typed_pitchedptr<T> b3bg, typed_pitchedptr<T> EdotB) {
+compute_EdotB(pitchptr<T> e1, pitchptr<T> e2,
+              pitchptr<T> e3, pitchptr<T> b1,
+              pitchptr<T> b2, pitchptr<T> b3,
+              pitchptr<T> b1bg, pitchptr<T> b2bg,
+              pitchptr<T> b3bg, pitchptr<T> EdotB) {
   // Compute time-averaged EdotB over the output interval
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
