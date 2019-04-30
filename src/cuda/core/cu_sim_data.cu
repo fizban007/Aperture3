@@ -406,7 +406,7 @@ cu_sim_data::init_grid(const cu_sim_environment &env) {
     grid[n]->init(env.sub_params(n));
     auto &mesh = grid[n]->mesh();
     mesh.offset[last_dim] = offset;
-    if (offset == 0) offset += mesh.guard[last_dim];
+    // if (offset == 0) offset += mesh.guard[last_dim];
     offset += mesh.reduced_dim(last_dim);
     Logger::print_debug("Grid dimension for dev {} is {}x{}x{}", dev_id,
                         mesh.dims[0], mesh.dims[1], mesh.dims[2]);
