@@ -123,8 +123,10 @@ main(int argc, char* argv[]) {
     field_solver.boundary_conditions(data, omega);
 
     // Create photons and pairs
-    rad.emit_photons(data);
-    rad.produce_pairs(data);
+    if (env.params().create_pairs) {
+      rad.emit_photons(data);
+      rad.produce_pairs(data);
+    }
 
     if (step % env.params().sort_interval == 0 && step != 0) {
       data.sort_particles();
