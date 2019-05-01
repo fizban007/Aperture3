@@ -407,63 +407,43 @@ FieldSolver_LogSph::update_fields(cu_sim_data &data, double dt,
   if (data.env.grid().dim() != 2) return;
   timer::stamp("field_update");
 
-  // update_fields(data.E, data.B, data.J, dt, time);
-  // Logger::print_info("Updating fields");
-  data.env.get_sub_guard_cells(data.E);
+  // First communicate to get the E field guard cells
+  // data.env.get_sub_guard_cells(data.E);
 
-  for_each_device(data.dev_map, [&data, dt, time](int n) {
-    const Grid_LogSph_dev &grid =
-        *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-    auto mesh_ptrs = grid.get_mesh_ptrs();
-    auto &mesh = grid.mesh();
+  const Grid_LogSph_dev &grid =
+      *dynamic_cast<const Grid_LogSph_dev *>(data.grid.get());
+  auto mesh_ptrs = grid.get_mesh_ptrs();
+  auto &mesh = grid.mesh();
 
-    dim3 blockSize(32, 16);
-    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-    // Update B
-    Kernels::compute_b_update<<<gridSize, blockSize>>>(
-        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), mesh_ptrs,
-        dt);
-    CudaCheckError();
-  });
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+  // Update B
+  Kernels::compute_b_update<<<gridSize, blockSize>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2), mesh_ptrs, dt);
+  CudaCheckError();
 
-  data.env.get_sub_guard_cells(data.B);
-  data.env.get_sub_guard_cells(data.J);
-  for_each_device(data.dev_map, [&data, dt, time](int n) {
-    const Grid_LogSph_dev &grid =
-        *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-    auto mesh_ptrs = grid.get_mesh_ptrs();
-    auto &mesh = grid.mesh();
+  // Communicate the new B values to guard cells
+  // data.env.get_sub_guard_cells(data.B);
+  // data.env.get_sub_guard_cells(data.J);
 
-    dim3 blockSize(32, 16);
-    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-    // Update B
-    Kernels::compute_e_update<<<gridSize, blockSize>>>(
-        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2),
-        data.J[n].ptr(0), data.J[n].ptr(1), data.J[n].ptr(2),
-        data.Rho[0][n].ptr(), data.Rho[1][n].ptr(),
-        data.Rho[2][n].ptr(), mesh_ptrs, dt);
-    CudaCheckError();
-  });
+  // Update E
+  Kernels::compute_e_update<<<gridSize, blockSize>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2), data.J.ptr(0), data.J.ptr(1),
+      data.J.ptr(2), data.Rho[0].ptr(), data.Rho[1].ptr(),
+      data.Rho[2].ptr(), mesh_ptrs, dt);
+  CudaCheckError();
 
-  data.env.get_sub_guard_cells(data.E);
+  // Communicate the new E values to guard cells
+  // data.env.get_sub_guard_cells(data.E);
 
-  for_each_device(data.dev_map, [&data](int n) {
-    const Grid_LogSph_dev &grid =
-        *dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-    auto mesh_ptrs = grid.get_mesh_ptrs();
-    auto &mesh = grid.mesh();
-
-    dim3 blockSize(32, 16);
-    dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
-    // Update B
-    Kernels::compute_divs<<<gridSize, blockSize>>>(
-        data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-        data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2),
-        data.divE[n].ptr(), data.divB[n].ptr(), mesh_ptrs);
-    CudaCheckError();
-  });
+  // Update B
+  Kernels::compute_divs<<<gridSize, blockSize>>>(
+      data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+      data.B.ptr(1), data.B.ptr(2), data.divE.ptr(), data.divB.ptr(),
+      mesh_ptrs);
+  CudaCheckError();
   data.compute_edotb();
 
   CudaSafeCall(cudaDeviceSynchronize());
@@ -477,36 +457,34 @@ FieldSolver_LogSph::set_background_j(const vfield_t &J) {}
 void
 FieldSolver_LogSph::boundary_conditions(cu_sim_data &data,
                                         double omega) {
-  for (int n = 0; n < data.dev_map.size(); n++) {
-    int dev_id = data.dev_map[n];
-    CudaSafeCall(cudaSetDevice(dev_id));
-    if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
-      Kernels::stellar_boundary<<<32, 256>>>(
-          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2), omega);
-      CudaCheckError();
-    }
+  // int dev_id = data.dev_id;
+  // CudaSafeCall(cudaSetDevice(dev_id));
+  if (data.env.is_boundary(BoundaryPos::lower0)) {
+    Kernels::stellar_boundary<<<32, 256>>>(
+        data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+        data.B.ptr(1), data.B.ptr(2), omega);
+    CudaCheckError();
+  }
 
-    if (data.env.is_boundary(n, (int)BoundaryPos::upper0)) {
-      Kernels::outflow_boundary<<<32, 256>>>(
-          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
-      CudaCheckError();
-    }
+  if (data.env.is_boundary(BoundaryPos::upper0)) {
+    Kernels::outflow_boundary<<<32, 256>>>(
+        data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+        data.B.ptr(1), data.B.ptr(2));
+    CudaCheckError();
+  }
 
-    if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
-      Kernels::axis_boundary_lower<<<32, 256>>>(
-          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
-      CudaCheckError();
-    }
+  if (data.env.is_boundary(BoundaryPos::lower1)) {
+    Kernels::axis_boundary_lower<<<32, 256>>>(
+        data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+        data.B.ptr(1), data.B.ptr(2));
+    CudaCheckError();
+  }
 
-    if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
-      Kernels::axis_boundary_upper<<<32, 256>>>(
-          data.E[n].ptr(0), data.E[n].ptr(1), data.E[n].ptr(2),
-          data.B[n].ptr(0), data.B[n].ptr(1), data.B[n].ptr(2));
-      CudaCheckError();
-    }
+  if (data.env.is_boundary(BoundaryPos::upper1)) {
+    Kernels::axis_boundary_upper<<<32, 256>>>(
+        data.E.ptr(0), data.E.ptr(1), data.E.ptr(2), data.B.ptr(0),
+        data.B.ptr(1), data.B.ptr(2));
+    CudaCheckError();
   }
   // Logger::print_info("omega is {}", omega);
 }

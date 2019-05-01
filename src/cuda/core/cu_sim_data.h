@@ -25,20 +25,11 @@ struct cu_sim_data {
   void fill_multiplicity(Scalar weight, int multiplicity);
   template <class Func>
   void init_bg_B_field(int component, const Func& f) {
-    for (unsigned int n = 0; n < dev_map.size(); n++) {
-      cudaSetDevice(dev_map[n]);
-      Bbg[n].initialize(component, f);
-      Logger::print_debug("on host, B0 is {}", Bbg[n](0, 5, 4));
-      // B[n].sync_to_device();
-    }
+    Bbg.initialize(component, f);
   }
   template <class Func>
   void init_bg_E_field(int component, const Func& f) {
-    for (unsigned int n = 0; n < dev_map.size(); n++) {
-      cudaSetDevice(dev_map[n]);
-      Ebg[n].initialize(component, f);
-      // E[n].sync_to_device();
-    }
+    Ebg.initialize(component, f);
   }
 
   void send_particles();
@@ -49,37 +40,37 @@ struct cu_sim_data {
   void compute_edotb();
 
   const cu_sim_environment& env;
-  std::vector<cu_vector_field<Scalar>> E;
-  std::vector<cu_vector_field<Scalar>> B;
-  std::vector<cu_vector_field<Scalar>> J;
-  std::vector<std::vector<cu_scalar_field<Scalar>>> Rho;
-  std::vector<std::vector<cu_scalar_field<Scalar>>> gamma;
-  std::vector<std::vector<cu_scalar_field<Scalar>>> ptc_num;
-  std::vector<cu_scalar_field<Scalar>> flux;
-  std::vector<cu_scalar_field<Scalar>> divE;
-  std::vector<cu_scalar_field<Scalar>> divB;
-  std::vector<cu_scalar_field<Scalar>> EdotB;
-  std::vector<cu_scalar_field<Scalar>> photon_produced;
-  std::vector<cu_scalar_field<Scalar>> pair_produced;
-  std::vector<cu_scalar_field<Scalar>> photon_num;
+  cu_vector_field<Scalar> E;
+  cu_vector_field<Scalar> B;
+  cu_vector_field<Scalar> J;
+  std::vector<cu_scalar_field<Scalar>> Rho;
+  std::vector<cu_scalar_field<Scalar>> gamma;
+  std::vector<cu_scalar_field<Scalar>> ptc_num;
+  cu_scalar_field<Scalar> flux;
+  cu_scalar_field<Scalar> divE;
+  cu_scalar_field<Scalar> divB;
+  cu_scalar_field<Scalar> EdotB;
+  cu_scalar_field<Scalar> photon_produced;
+  cu_scalar_field<Scalar> pair_produced;
+  cu_scalar_field<Scalar> photon_num;
   // std::vector<cu_scalar_field<Scalar>> Rho_avg;
   // std::vector<cu_scalar_field<Scalar>> J_s;
   // std::vector<cu_scalar_field<Scalar>> J_avg;
 
-  std::vector<cu_vector_field<Scalar>> Ebg;
-  std::vector<cu_vector_field<Scalar>> Bbg;
+  cu_vector_field<Scalar> Ebg;
+  cu_vector_field<Scalar> Bbg;
 
-  std::vector<std::unique_ptr<Grid>> grid;
+  std::unique_ptr<Grid> grid;
 
-  std::vector<Particles> particles;
-  std::vector<Photons> photons;
+  Particles particles;
+  Photons photons;
 
   std::vector<Particles> ptc_buffer;
   std::vector<Photons> ph_buffer;
   int num_species;
   double time = 0.0;
   // int devId;
-  std::vector<int> dev_map;
+  int dev_id;
 };
 
 }  // namespace Aperture
