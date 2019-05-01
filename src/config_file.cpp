@@ -40,6 +40,7 @@ skip_line_or_word(const std::string& str) {
 // }
 
 ConfigFile::ConfigFile() {
+  Logger::print_info("Size of params is {}", sizeof(SimParams));
   // m_grid_conf.resize(3);
 }
 
@@ -67,6 +68,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                             .value_or(defaults.create_pairs);
   params.trace_photons = config->get_as<bool>("trace_photons")
                              .value_or(defaults.trace_photons);
+  params.inject_ions =
+      config->get_as<bool>("inject_ions").value_or(defaults.inject_ions);
   // params.use_bg_fields = config->get_as<bool>("use_bg_fields")
   //                            .value_or(defaults.use_bg_fields);
   params.gravity_on =
