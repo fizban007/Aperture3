@@ -65,7 +65,10 @@ damping_coef = 0.003
 damping_length = 48
 
 # Star rotating omega
-omega = 0.125
+omega = 0.2
+
+# Whether to inject ions or positrons
+inject_ions = false
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one

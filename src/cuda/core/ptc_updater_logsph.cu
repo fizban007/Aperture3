@@ -66,6 +66,7 @@ vay_push_2d(particle_data ptc, size_t num,
     auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx],
          gamma = ptc.E[idx];
     Scalar r = std::exp(dev_mesh.pos(0, c1, old_x1));
+    Scalar alpha = alpha_gr(r);
     Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
     if (p1 != p1 || p2 != p2 || p3 != p3) {
       printf(
@@ -78,37 +79,37 @@ vay_push_2d(particle_data ptc, size_t num,
     gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
           // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
           //        Stagger(0b110))) *
           q_over_m;
       Scalar E2 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
           // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
           //        Stagger(0b101))) *
           q_over_m;
       Scalar E3 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
           // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
           //        Stagger(0b011))) *
           q_over_m;
       Scalar B1 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
            interp(dev_bg_fields.B1, old_x1, old_x2, c1, c2,
                   Stagger(0b001))) *
           q_over_m;
       Scalar B2 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
            interp(dev_bg_fields.B2, old_x1, old_x2, c1, c2,
                   Stagger(0b010))) *
           q_over_m;
       Scalar B3 =
-          alpha_gr(r) *
+          alpha *
           (interp(fields.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
           // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
           //        Stagger(0b100))) *
@@ -324,9 +325,9 @@ __launch_bounds__(512, 4)
     Scalar exp_r1 = std::exp(r1);
     Scalar r2 = dev_mesh.pos(1, c2, old_x2);
 
-    v1 = alpha_gr(exp_r1) * v1 / gamma;
-    v2 = alpha_gr(exp_r1) * v2 / gamma;
-    v3 = alpha_gr(exp_r1) * v3 / gamma - beta_phi(exp_r1, r2);
+    v1 = v1 / gamma;
+    v2 = v2 / gamma;
+    v3 = v3 / gamma;
     // v1 = v1 / gamma;
     // v2 = v2 / gamma;
     // v3 = v3 / gamma - beta_phi(exp_r1, r2);
@@ -339,9 +340,9 @@ __launch_bounds__(512, 4)
 
     logsph2cart(v1, v2, v3, r1, r2, old_x3);
     // printf("cart velocity is (%f, %f, %f)\n", v1, v2, v3);
-    x += v1 * dt;
-    y += v2 * dt;
-    z += v3 * dt;
+    x += alpha_gr(exp_r1) * v1 * dt;
+    y += alpha_gr(exp_r1) * v2 * dt;
+    z += alpha_gr(exp_r1) * (v3 - beta_phi(exp_r1, r2)) * dt;
     // printf("new cart position is (%f, %f, %f)\n", x, y, z);
     Scalar r1p = sqrt(x * x + y * y + z * z);
     Scalar r2p = acos(z / r1p);
@@ -480,6 +481,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
+  ParticleType p_type =
+      (dev_params.inject_ions ? ParticleType::ion
+                              : ParticleType::positron);
   for (int i = dev_mesh.guard[1] + 1 + id;
        // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
        i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
@@ -527,8 +531,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.cell[offset + n * 2 + 1] =
           dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
       ptc.weight[offset + n * 2 + 1] = w_ptc;
-      ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::ion);
+      ptc.flag[offset + n * 2 + 1] =
+          set_ptc_type_flag(bit_or(ParticleFlag::primary), p_type);
     }
   }
   states[id] = localState;

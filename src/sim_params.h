@@ -58,6 +58,8 @@ struct SimParamsBase {
   float BQ = 1.0;
   float star_kT = 0.001;
   float res_drag_coef = 40.0;
+  float omega = 0.2;
+  bool inject_ions = true;
 
   // These parameters are for radiative transfer
   float E_cutoff = 10.0;
@@ -73,7 +75,6 @@ struct SimParamsBase {
   float E_thr = 15.0;
   float E_secondary = 4.0;
   float r_cutoff = 4.0;
-  float omega = 0.2;
 
   // Inverse compton parameters
   int n_gamma = 600;

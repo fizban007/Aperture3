@@ -17,14 +17,14 @@ namespace Kernels {
 
 __device__ Scalar
 beta_phi(Scalar r, Scalar theta) {
-  return 0.4f * dev_params.compactness * dev_params.omega *
+  return -0.4f * dev_params.compactness * dev_params.omega *
          std::sin(theta) / (r * r);
 }
 
 __device__ Scalar
 alpha_gr(Scalar r) {
-  // return std::sqrt(1.0f - dev_params.compactness / r);
-  return 1.0f;
+  return std::sqrt(1.0f - dev_params.compactness / r);
+  // return 1.0f;
 }
 
 // template <int DIM1, int DIM2>
@@ -57,7 +57,8 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   if (std::abs(dev_mesh.pos(1, n2, true) - CONST_PI) < 1.0e-5) {
     e1[globalOffset] += dt * (-4.0f * b3[globalOffset] * alpha_gr(r0) /
                                   (dev_mesh.delta[1] * r0) -
-                              alpha_gr(r0) * j1[globalOffset]);
+                              // alpha_gr(r0) * j1[globalOffset]);
+                              j1[globalOffset]);
   } else {
     e1[globalOffset] +=
         // -dt * j1[globalOffset];
@@ -65,7 +66,8 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
         ((b3(n1, n2 + 1) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2 + 1) -
           b3(n1, n2) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2)) /
              mesh_ptrs.A1_e(n1, n2) -
-         alpha_gr(r0) * j1(n1, n2));
+         // alpha_gr(r0) * j1(n1, n2));
+         j1(n1, n2));
   }
   // (Curl u)_2 = d3u1 - d1u3
   e2[globalOffset] +=
@@ -74,24 +76,29 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
       ((b3(n1, n2) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2) -
         b3(n1 + 1, n2) * alpha_gr(r1) * mesh_ptrs.l3_b(n1 + 1, n2)) /
            mesh_ptrs.A2_e(n1, n2) -
-       alpha_gr(r) * j2(n1, n2));
+       // alpha_gr(r) * j2(n1, n2));
+       j2(n1, n2));
 
   // (Curl u)_3 = d1u2 - d2u1
   e3[globalOffset] +=
       // -dt * j3[globalOffset];
-      dt *
-      (((b2(n1 + 1, n2) * alpha_gr(r1) -
-         e1(n1 + 1, n2) * beta_phi(r1, theta)) *
-            mesh_ptrs.l2_b(n1 + 1, n2) -
-        (b2(n1, n2) * alpha_gr(r0) - e1(n1, n2) * beta_phi(r0, theta)) *
-            mesh_ptrs.l2_b(n1, n2) +
-        (b1(n1, n2) * alpha_gr(r) + e2(n1, n2) * beta_phi(r, theta0)) *
-            mesh_ptrs.l1_b(n1, n2) -
-        (b1(n1, n2 + 1) * alpha_gr(r) +
-         e2(n1, n2 + 1) * beta_phi(r, theta0 + dev_mesh.delta[1])) *
-            mesh_ptrs.l1_b(n1, n2 + 1)) /
-           mesh_ptrs.A3_e(n1, n2) -
-       alpha_gr(r) * j3(n1, n2) + beta * rho);
+      dt * ((b2(n1 + 1, n2) * alpha_gr(r1) *
+                 // e1(n1 + 1, n2) * beta_phi(r1, theta)) *
+                 mesh_ptrs.l2_b(n1 + 1, n2) -
+             b2(n1, n2) * alpha_gr(r0) *
+                 // - e1(n1, n2) * beta_phi(r0, theta)) *
+                 mesh_ptrs.l2_b(n1, n2) +
+             b1(n1, n2) * alpha_gr(r) *
+                 // + e2(n1, n2) * beta_phi(r, theta0)) *
+                 mesh_ptrs.l1_b(n1, n2) -
+             b1(n1, n2 + 1) * alpha_gr(r) *
+                 // e2(n1, n2 + 1) * beta_phi(r, theta0 +
+                 // dev_mesh.delta[1])) *
+                 mesh_ptrs.l1_b(n1, n2 + 1)) /
+                mesh_ptrs.A3_e(n1, n2) -
+            // alpha_gr(r) * j3(n1, n2) + beta * rho);
+            // j3(n1, n2) + beta * rho);
+            j3(n1, n2));
 
   __syncthreads();
   // Extra work for the axis
@@ -104,7 +111,8 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 
     e1[globalOffset] += dt * (4.0f * b3(n1, n2 + 1) * alpha_gr(r0) /
                                   (dev_mesh.delta[1] * r0) -
-                              alpha_gr(r0) * j1[globalOffset]);
+                              // alpha_gr(r0) * j1[globalOffset]);
+                              j1[globalOffset]);
   }
 }
 
@@ -143,16 +151,16 @@ compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   b3[globalOffset] +=
       -dt *
       (((e2(n1, n2) * alpha_gr(r1) +
-         b1(n1, n2) * beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
+         dev_bg_fields.B1(n1, n2) * beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
             mesh_ptrs.l2_e(n1, n2) -
         (e2(n1 - 1, n2) * alpha_gr(r0) +
-         b1(n1 - 1, n2) * beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
+         dev_bg_fields.B1(n1 - 1, n2) * beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
             mesh_ptrs.l2_e(n1 - 1, n2) +
         (e1(n1, n2 - 1) * alpha_gr(r) -
-         b2(n1, n2 - 1) * beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
+         dev_bg_fields.B2(n1, n2 - 1) * beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
             mesh_ptrs.l1_e(n1, n2 - 1) -
         (e1(n1, n2) * alpha_gr(r) -
-         b2(n1, n2) * beta_phi(r, dev_mesh.pos(1, n2, 1))) *
+         dev_bg_fields.B2(n1, n2) * beta_phi(r, dev_mesh.pos(1, n2, 1))) *
             mesh_ptrs.l1_e(n1, n2)) /
        mesh_ptrs.A3_b(n1, n2));
 
@@ -241,9 +249,10 @@ stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
       b1(i, j) = 0.0f;
       e3(i, j) = 0.0f;
       e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s *
-                 dev_bg_fields.B1(i, j);
-      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r *
-                 dev_bg_fields.B2(i, j);
+                 dev_bg_fields.B1(i, j) / alpha_gr(r_s);
+      // e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r *
+      //            dev_bg_fields.B2(i, j);
+      e1(i, j) = 0.0f;
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
     }
