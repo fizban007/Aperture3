@@ -15,8 +15,8 @@ Grid_LogSph_dev::~Grid_LogSph_dev() {}
 void Grid_LogSph_dev::init(const SimParams &params) {
   Grid::init(params);
   if (m_mesh.dim() == 2) {
-    Scalar r_g = params.compactness;
-    // Scalar r_g = 0.0;
+    // Scalar r_g = params.compactness;
+    Scalar r_g = 0.0;
     m_l1_e.resize(m_mesh.dims[0], m_mesh.dims[1]);
     m_l2_e.resize(m_mesh.dims[0], m_mesh.dims[1]);
     m_l3_e.resize(m_mesh.dims[0], m_mesh.dims[1]);
