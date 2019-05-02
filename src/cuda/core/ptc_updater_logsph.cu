@@ -493,7 +493,15 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     Scalar dens = max(surface_e[i - dev_mesh.guard[1]],
                       surface_p[i - dev_mesh.guard[1]]);
     Scalar omega_LT = 0.4f * omega * dev_params.compactness;
-    if (dens > 0.2 * square(1.0f / dev_mesh.delta[1])) continue;
+    // if (i == dev_mesh.dims[1] / 2)
+    //   printf("dens_e is %f, dens_p is %f, limit is %f\n",
+    //          dev_params.q_e * surface_e[i - dev_mesh.guard[1]],
+    //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
+    //          0.4 * square(1.0f / dev_mesh.delta[1]) *
+    //              std::sin(dev_mesh.pos(1, i, 0.5f)));
+    if (dev_params.q_e * dens > 0.4 * square(1.0f / dev_mesh.delta[1]) *
+                                    std::sin(dev_mesh.pos(1, i, 0.5f)))
+      continue;
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
