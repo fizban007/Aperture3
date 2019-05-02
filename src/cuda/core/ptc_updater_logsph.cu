@@ -328,9 +328,6 @@ __launch_bounds__(512, 4)
     v1 = v1 / gamma;
     v2 = v2 / gamma;
     v3 = v3 / gamma;
-    // v1 = v1 / gamma;
-    // v2 = v2 / gamma;
-    // v3 = v3 / gamma - beta_phi(exp_r1, r2);
 
     // step 1: Compute particle movement and update position
     Scalar x = exp_r1 * std::sin(r2) * std::cos(old_x3);
@@ -481,6 +478,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
+  int inject_i = dev_mesh.guard[0] + 3;
   ParticleType p_type =
       (dev_params.inject_ions ? ParticleType::ion
                               : ParticleType::positron);
@@ -489,7 +487,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
        i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
-    Scalar r = exp(dev_mesh.pos(0, dev_mesh.guard[0] + 2, 0.5f));
+    Scalar r = exp(dev_mesh.pos(0, inject_i, 0.5f));
     // Scalar dens = max(-*ptrAddr(rho0, dev_mesh.guard[0] + 2, i),
     //                   *ptrAddr(rho1, dev_mesh.guard[0] + 2, i));
     Scalar dens = max(surface_e[i - dev_mesh.guard[1]],
@@ -503,18 +501,19 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       // Scalar vphi = omega * r * sin(theta);
       // Scalar vphi = 0.0f;
       Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      // Scalar w_ptc = w * sin(theta);
+      Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
-      ptc.p1[offset + n * 2] = p1;
-      ptc.p2[offset + n * 2] = p2;
-      ptc.p3[offset + n * 2] = vphi;
-      ptc.E[offset + n * 2] =
-          sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
+      ptc.p1[offset + n * 2] = 0.0f;
+      ptc.p2[offset + n * 2] = 0.0f;
+      ptc.p3[offset + n * 2] = gamma * vphi;
+      ptc.E[offset + n * 2] = gamma;
+      // sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
       // printf("inject E is %f\n", ptc.E[offset + n * 2]);
       // ptc.p3[offset + n * 2] = p3;
-      ptc.cell[offset + n * 2] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
+      ptc.cell[offset + n * 2] = dev_mesh.get_idx(inject_i, i);
       ptc.weight[offset + n * 2] = w_ptc;
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
           bit_or(ParticleFlag::primary), ParticleType::electron);
@@ -522,15 +521,14 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
       ptc.x3[offset + n * 2 + 1] = 0.0f;
-      ptc.p1[offset + n * 2 + 1] = p1;
-      ptc.p2[offset + n * 2 + 1] = p2;
-      ptc.p3[offset + n * 2 + 1] = vphi;
-      ptc.E[offset + n * 2 + 1] =
-          sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
+      ptc.p1[offset + n * 2 + 1] = 0.0f;
+      ptc.p2[offset + n * 2 + 1] = 0.0f;
+      ptc.p3[offset + n * 2 + 1] = gamma * vphi;
+      ptc.E[offset + n * 2 + 1] = gamma;
+      // sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
       // printf("inject E is %f\n", ptc.E[offset + n * 2 + 1]);
       // ptc.p3[offset + n * 2 + 1] = p3;
-      ptc.cell[offset + n * 2 + 1] =
-          dev_mesh.get_idx(dev_mesh.guard[0] + 2, i);
+      ptc.cell[offset + n * 2 + 1] = dev_mesh.get_idx(inject_i, i);
       ptc.weight[offset + n * 2 + 1] = w_ptc;
       ptc.flag[offset + n * 2 + 1] =
           set_ptc_type_flag(bit_or(ParticleFlag::primary), p_type);
@@ -597,15 +595,17 @@ measure_surface_density(particle_data ptc, size_t num,
     int c2 = dev_mesh.get_c2(c);
     // Sum over 3 cells, hense the w / 3.0f in the atomicAdd
     int sum_cells = 3;
-    if (c1 >= dev_mesh.guard[0] + 1 &&
-        c1 <= dev_mesh.guard[0] + sum_cells) {
+    int inject_cell = dev_mesh.guard[0] + 3;
+    if (c1 >= inject_cell - 1 && c1 <= inject_cell - 1 + sum_cells) {
       auto flag = ptc.flag[idx];
       int sp = get_ptc_type(flag);
       auto w = ptc.weight[idx];
       if (sp == (int)ParticleType::electron) {
-        atomicAdd(surface_e, w / float(sum_cells));
+        atomicAdd(&surface_e[c2 - dev_mesh.guard[1]],
+                  w / float(sum_cells));
       } else if (sp == (int)ParticleType::positron) {
-        atomicAdd(surface_p, w / float(sum_cells));
+        atomicAdd(&surface_p[c2 - dev_mesh.guard[1]],
+                  w / float(sum_cells));
       }
     }
   }
