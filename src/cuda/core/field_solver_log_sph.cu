@@ -23,8 +23,8 @@ beta_phi(Scalar r, Scalar theta) {
 
 __device__ Scalar
 alpha_gr(Scalar r) {
-  return std::sqrt(1.0f - dev_params.compactness / r);
-  // return 1.0f;
+  // return std::sqrt(1.0f - dev_params.compactness / r);
+  return 1.0f;
 }
 
 // template <int DIM1, int DIM2>
@@ -248,10 +248,10 @@ stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
       Scalar omega_LT = 0.4f * omega * dev_params.compactness;
       b1(i, j) = 0.0f;
       e3(i, j) = 0.0f;
-      e2(i, j) = -(omega - omega_LT) * std::sin(theta) * r_s *
-                 dev_bg_fields.B1(i, j) / alpha_gr(r_s);
-      // e1(i, j) = (omega - omega_LT) * std::sin(theta_s) * r *
-      //            dev_bg_fields.B2(i, j);
+      e2(i, j) = -(omega - omega_LT) * std::sin(theta) *
+                 dev_bg_fields.B1(i, j) / alpha_gr(r_s) / r_s / r_s;
+      e1(i, j) = (omega - omega_LT) * std::sin(theta_s) *
+                 dev_bg_fields.B2(i, j) / alpha_gr(r_s) / r / r;
       e1(i, j) = 0.0f;
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
