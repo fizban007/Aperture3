@@ -101,7 +101,7 @@ struct SimParams : public SimParamsBase {
   std::string data_file_prefix = "output";
   std::string log_method = "stdout";
   std::string log_file = data_dir + "output.log";
-  std::string conf_file = "sim.toml";
+  std::string conf_file = "config.toml";
 
   // std::array<std::string, 3> grid_config;
   // std::array<std::string, 3> data_grid_config;

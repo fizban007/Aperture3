@@ -3,9 +3,9 @@
 
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/data/particle_base_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/memory.h"
-#include "cuda/data/particle_base_dev.h"
 #include "utils/for_each_arg.hpp"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -110,7 +110,7 @@ struct rearrange_array {
     auto ptr_index = thrust::device_pointer_cast(index_);
     // Logger::print_info("rearranging {}", name);
     if (std::strcmp(name, skip_.c_str()) == 0) {
-      //   Logger::print_info("skipping {}", name);
+      // Logger::print_info("skipping {}", name);
       return;
     }
     auto x_ptr = thrust::device_pointer_cast(x);
@@ -133,11 +133,13 @@ template <typename ParticleClass>
 particle_base_dev<ParticleClass>::particle_base_dev(std::size_t max_num)
     : particle_interface(max_num) {
   std::cout << "New particle array with size " << max_num << std::endl;
-  CudaSafeCall(cudaGetDevice(&m_devId));
+  // CudaSafeCall(cudaGetDevice(&m_devId));
+  m_devId = 0;
   alloc_mem(max_num);
   // auto alloc = alloc_cuda_managed(max_num);
-  auto alloc = alloc_cuda_device(max_num);
-  alloc(m_index);
+  // auto alloc = alloc_cuda_device(max_num);
+  // alloc("index", m_index);
+  cudaMalloc(&m_index, max_num * sizeof(Index_t));
   cudaMalloc(&m_tmp_data_ptr, max_num * sizeof(double));
   // m_index.resize(max_num, 0);
   // m_index_bak.resize(max_num, 0);
@@ -151,13 +153,14 @@ particle_base_dev<ParticleClass>::particle_base_dev(
   m_size = n;
   m_number = other.m_number;
   m_devId = other.m_devId;
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   // m_sorted = other.m_sorted;
 
   alloc_mem(n);
   // auto alloc = alloc_cuda_managed(n);
-  auto alloc = alloc_cuda_device(n);
-  alloc(m_index);
+  // auto alloc = alloc_cuda_device(n);
+  // alloc(m_index);
+  cudaMalloc(&m_index, n * sizeof(Index_t));
   cudaMalloc(&m_tmp_data_ptr, n * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(n);
@@ -171,15 +174,16 @@ particle_base_dev<ParticleClass>::particle_base_dev(
   m_size = other.m_size;
   m_number = other.m_number;
   m_devId = other.m_devId;
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   // m_sorted = other.m_sorted;
 
   // m_data_ptr = other.m_data_ptr;
   m_data = other.m_data;
   // auto alloc = alloc_cuda_managed(m_size);
-  auto alloc = alloc_cuda_device(m_size);
-  alloc(m_index);
+  // auto alloc = alloc_cuda_device(m_size);
+  // alloc(m_index);
   cudaMalloc(&m_tmp_data_ptr, m_size * sizeof(double));
+  cudaMalloc(&m_index, m_size * sizeof(Index_t));
   // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(other.m_size);
   // m_index_bak.resize(other.m_size);
@@ -191,10 +195,12 @@ particle_base_dev<ParticleClass>::particle_base_dev(
 
 template <typename ParticleClass>
 particle_base_dev<ParticleClass>::~particle_base_dev() {
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   free_mem();
   free_cuda()(m_index);
   free_cuda()(m_tmp_data_ptr);
+  // CudaSafeCall(cudaFree(m_index));
+  // CudaSafeCall(cudaFree(m_tmp_data_ptr));
 }
 
 template <typename ParticleClass>
@@ -219,7 +225,7 @@ particle_base_dev<ParticleClass>::initialize() {
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::resize(std::size_t max_num) {
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   m_size = max_num;
   if (m_number > max_num) m_number = max_num;
   free_mem();
@@ -228,8 +234,9 @@ particle_base_dev<ParticleClass>::resize(std::size_t max_num) {
   free_cuda()(m_index);
   free_cuda()(m_tmp_data_ptr);
   // auto alloc = alloc_cuda_managed(max_num);
-  auto alloc = alloc_cuda_device(max_num);
-  alloc(m_index);
+  // auto alloc = alloc_cuda_device(max_num);
+  // alloc(m_index);
+  cudaMalloc(&m_index, max_num * sizeof(Index_t));
   cudaMalloc(&m_tmp_data_ptr, max_num * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
 
@@ -242,7 +249,7 @@ template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::erase(std::size_t pos,
                                         std::size_t amount) {
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   if (pos + amount > m_size) amount = m_size - pos;
   std::cout << "Erasing from index " << pos << " for " << amount
             << " number of particles" << std::endl;
@@ -251,22 +258,23 @@ particle_base_dev<ParticleClass>::erase(std::size_t pos,
   for_each_arg(m_data, ptc, fill_pos_amount{pos, amount});
 }
 
+template <typename ParticleClass>
+void
+particle_base_dev<ParticleClass>::put(Index_t pos,
+                                      const ParticleClass& part) {
+  if (pos >= m_size)
+    throw std::runtime_error(
+        "Trying to insert particle beyond the end of the array."
+        "Resize it first!");
+
+  for_each_arg(m_data, part, assign_at_idx(pos));
+  if (pos >= m_number) m_number = pos + 1;
+}
+
 // template <typename ParticleClass>
 // void
-// particle_base_dev<ParticleClass>::put(Index_t pos,
-//                                  const ParticleClass& part) {
-//   if (pos >= m_size)
-//     throw std::runtime_error(
-//         "Trying to insert particle beyond the end of the array.
-//         Resize " "it " "first!");
-
-//   for_each_arg(m_data, part, assign_at_idx(pos));
-//   if (pos >= m_number) m_number = pos + 1;
-// }
-
-// template <typename ParticleClass>
-// void
-// particle_base_dev<ParticleClass>::swap(Index_t pos, ParticleClass& part)
+// particle_base_dev<ParticleClass>::swap(Index_t pos, ParticleClass&
+// part)
 // {
 //   ParticleClass p_tmp = m_data[pos];
 //   if (pos >= m_size)
@@ -284,19 +292,19 @@ particle_base_dev<ParticleClass>::erase(std::size_t pos,
 //   if (pos >= m_number) m_number = pos + 1;
 // }
 
-// template <typename ParticleClass>
-// void
-// particle_base_dev<ParticleClass>::append(const ParticleClass& part) {
-//   // put(m_number, x, p, cell, flag);
-//   put(m_number, part);
-// }
+template <typename ParticleClass>
+void
+particle_base_dev<ParticleClass>::append(const ParticleClass& part) {
+  // put(m_number, x, p, cell, flag);
+  put(m_number, part);
+}
 
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::copy_from(
     const particle_base_dev<ParticleClass>& other, std::size_t num,
     std::size_t src_pos, std::size_t dest_pos) {
-  CudaSafeCall(cudaSetDevice(m_devId));
+  // CudaSafeCall(cudaSetDevice(m_devId));
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_size) num = m_size - dest_pos;
   for_each_arg(m_data, other.m_data,
@@ -343,31 +351,33 @@ particle_base_dev<ParticleClass>::copy_from(
 template <typename ParticleClass>
 void
 particle_base_dev<ParticleClass>::sort_by_cell() {
-  CudaSafeCall(cudaSetDevice(m_devId));
-  // Generate particle index array
-  auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
-  auto ptr_idx = thrust::device_pointer_cast(m_index);
-  thrust::counting_iterator<Index_t> iter(0);
-  thrust::copy_n(iter, this->m_number, ptr_idx);
+  if (m_number > 0) {
+    // CudaSafeCall(cudaSetDevice(m_devId));
+    // Generate particle index array
+    auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
+    auto ptr_idx = thrust::device_pointer_cast(m_index);
+    thrust::counting_iterator<Index_t> iter(0);
+    thrust::copy_n(iter, this->m_number, ptr_idx);
 
-  // Sort the index array by key
-  thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
-  // cudaDeviceSynchronize();
+    // Sort the index array by key
+    thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
+    // cudaDeviceSynchronize();
+    Logger::print_debug("Finished sorting");
 
-  // Move the rest of particle array using the new index
-  rearrange_arrays("cell");
+    // Move the rest of particle array using the new index
+    rearrange_arrays("cell");
 
-  // Update the new number of particles
-  const int padding = 100;
-  m_number =
-      thrust::upper_bound(ptr_cell, ptr_cell + m_number + padding,
-                          MAX_CELL - 1) -
-      ptr_cell;
+    // Update the new number of particles
+    const int padding = 100;
+    m_number =
+        thrust::upper_bound(ptr_cell, ptr_cell + m_number + padding,
+                            MAX_CELL - 1) -
+        ptr_cell;
 
-  // Logger::print_info("Sorting complete, there are {} particles in the
-  // pool", m_number);
-  // cudaDeviceSynchronize();
-  CudaCheckError();
+    // Logger::print_info("Sorting complete, there are {} particles in
+    // the pool", m_number); cudaDeviceSynchronize();
+    CudaCheckError();
+  }
 }
 
 template <typename ParticleClass>
@@ -400,7 +410,8 @@ particle_base_dev<ParticleClass>::rearrange_arrays(
 // }
 // template <typename ParticleClass>
 // void
-// particle_base_dev<ParticleClass>::rearrange(std::vector<Index_t>& index,
+// particle_base_dev<ParticleClass>::rearrange(std::vector<Index_t>&
+// index,
 //                                        std::size_t num) {
 //   // std::cout << "In rearrange!" << std::endl;
 //   ParticleClass p_tmp;

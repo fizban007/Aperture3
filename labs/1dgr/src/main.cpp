@@ -1,7 +1,7 @@
 #include "cuda/core/cu_sim_data1d.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/core/field_solver_1dgr.h"
 #include "cuda/core/ptc_updater_1dgr.h"
-#include "cuda/core/cu_sim_environment.h"
 #include "cuda/radiation/rt_1dgr.h"
 #include "cuda/utils/cu_data_exporter.h"
 #include "utils/logger.h"
@@ -24,17 +24,20 @@ main(int argc, char* argv[]) {
   cu_sim_data1d data(env);
 
   // Initialize the field solver
-  field_solver_1dgr_dev solver(
-      *dynamic_cast<const Grid_1dGR_dev*>(&env.grid()));
+  field_solver_1dgr_dev solver;
+  Logger::print_debug("Finished initializing field solver");
 
   // Initialize particle updater
   ptc_updater_1dgr_dev pusher(env);
+  Logger::print_debug("Finished initializing ptc updater");
 
   // Initialize radiative transfer module
-  RadiationTransfer1DGR rad(env);
+  // RadiationTransfer1DGR rad(env);
+  // Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  data.prepare_initial_condition(100);
+  data.prepare_initial_condition(10);
+  Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter
   cu_data_exporter exporter(env.params(), step);
@@ -76,7 +79,7 @@ main(int argc, char* argv[]) {
     if (step % env.params().sort_interval == 0 && step != 0) {
       timer::stamp();
       data.particles.sort_by_cell();
-      data.photons.sort_by_cell();
+      // data.photons.sort_by_cell();
       auto t_sort = timer::get_duration_since_stamp("us");
       Logger::print_info("Ptc sort took {}us", t_sort);
     }

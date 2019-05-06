@@ -1,7 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data1d.h"
-#include "cuda/core/ptc_updater_1dgr.h"
 #include "cuda/core/cu_sim_environment.h"
+#include "cuda/core/ptc_updater_1dgr.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
@@ -40,6 +40,15 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     auto nx1 = 1.0f - x1;
     auto flag = ptc.flag[idx];
     int sp = get_ptc_type(flag);
+    Scalar xi = dev_mesh.pos(0, c, x1);
+    // FIXME: pass a in as a parameter
+    constexpr Scalar a = 0.99;
+    const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+    const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+    Scalar exp_xi = std::exp(xi * (rp - rm));
+    Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+    // if (idx == 10)
+    //   printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx], u0, ptc.weight[idx]);
 
     // interpolate quantities
     Scalar alpha =
@@ -47,11 +56,10 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     Scalar D1 = mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * nx1;
     Scalar D2 = mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * nx1;
     Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
-    Scalar Dr =
-        (x1 < 0.5f ? *ptrAddr(fields.E1, c, 0) * (0.5f + x1) +
-                         *ptrAddr(fields.E1, c - 1, 0) * (0.5f - x1)
-                   : *ptrAddr(fields.E1, c, 0) * (1.5f - x1) +
-                         *ptrAddr(fields.E1, c + 1, 0) * (x1 - 0.5f));
+    Scalar Dr = (x1 < 0.5f ? fields.E1(c, 0) * (0.5f + x1) +
+                                 fields.E1(c - 1, 0) * (0.5f - x1)
+                           : fields.E1(c, 0) * (1.5f - x1) +
+                                 fields.E1(c + 1, 0) * (x1 - 0.5f));
     // Scalar Dphi = fields.E3[c] * x1 + fields.E3[c - 1] * nx1;
     // Scalar Dphi = *ptrAddr(fields.E3, c, 0) * x1 +
     //               *ptrAddr(fields.E3, c - 1, 0) * nx1;
@@ -62,10 +70,11 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
 
     Scalar vr = (p1 / u0 - D1) / D2;
     // int c_0 = (x1 < 0.5f ? c - 1 : c);
-    Scalar da2dr = (square(mesh_ptrs.alpha[c]) -
-                    square(mesh_ptrs.alpha[c - 1])) *
-                   dev_mesh.inv_delta[0];
-    // Scalar da2dr = 2.0 * alpha * interp_deriv(x1, c, mesh_ptrs.alpha) *
+    Scalar da2dr =
+        (square(mesh_ptrs.alpha[c]) - square(mesh_ptrs.alpha[c - 1])) *
+        dev_mesh.inv_delta[0];
+    // Scalar da2dr = 2.0 * alpha * interp_deriv(x1, c, mesh_ptrs.alpha)
+    // *
     //                dev_mesh.inv_delta[0];
     Scalar dD1dr =
         (mesh_ptrs.D1[c] - mesh_ptrs.D1[c - 1]) * dev_mesh.inv_delta[0];
@@ -73,14 +82,21 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
         (mesh_ptrs.D2[c] - mesh_ptrs.D2[c - 1]) * dev_mesh.inv_delta[0];
     Scalar dD3dr =
         (mesh_ptrs.D3[c] - mesh_ptrs.D3[c - 1]) * dev_mesh.inv_delta[0];
+    Scalar dDelta_dr = 2.0f * r - 2.0;
 
     // update momentum
     Scalar gr_term =
-        0.5f * u0 *
-        (da2dr - (dD3dr + 2.0f * dD1dr * vr + dD2dr * vr * vr)) * dt;
-    p1 -= gr_term;
-    Scalar E_term = Er * dt * dev_charges[sp] / dev_masses[sp];
+        -0.5f * u0 *
+            (da2dr - (dD3dr + 2.0f * (dD1dr - D1 * dDelta_dr) * vr +
+                      (dD2dr - 2.0f * D2 * dDelta_dr) * vr * vr)) *
+            dt +
+        dDelta_dr * p1 * vr * dt;
+    p1 += gr_term;
+    Scalar E_term = Er * dev_charges[sp] / dev_masses[sp] * dt;
     p1 += E_term;
+    // if (idx == 10)
+    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er, dev_charges[sp], dev_masses[sp]);
+
 
     u0 = sqrt((D2 + p1 * p1) / (D2 * (alpha * alpha - D3) + D1 * D1));
 
@@ -131,15 +147,17 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
         djx += sx1 - sx0;
         // printf("djx%d is %f, ", i, sx1 - sx0);
 
-        atomicAdd(ptrAddr(fields.J1, offset + sizeof(Scalar)),
-                  weight * djx * mesh_ptrs.dpsidth_j[i + c + 1] *
+        atomicAdd(&fields.J1[offset + sizeof(Scalar)],
+                  weight * djx / mesh_ptrs.K1_j[i + c + 1] *
                       dev_mesh.delta[0] / dt);
         // if (sp == 0)
         //   printf("j1 is %f, ",
-        //          *ptrAddr(fields.J1, offset + sizeof(Scalar)));
+        //          fields.J1[offset + sizeof(Scalar)]);
 
-        atomicAdd(ptrAddr(fields.Rho[sp], offset),
-                  -weight * sx0 * mesh_ptrs.dpsidth[i + c]);
+        atomicAdd(&fields.Rho[sp][offset],
+                  -weight * sx1 / mesh_ptrs.K1[i + c]);
+        // if (sp == 0)
+        //   printf("sx1 is %f\n", sx1);
       }
       // printf("j1 is %f at %d\n", *ptrAddr(fields.J1, c, 0), c);
       // printf("\n");
@@ -167,11 +185,6 @@ update_photon_1dgr(photon1d_data photons, size_t num,
 ptc_updater_1dgr_dev::ptc_updater_1dgr_dev(
     const cu_sim_environment& env)
     : m_env(env) {
-  const Grid_1dGR_dev& grid =
-      dynamic_cast<const Grid_1dGR_dev&>(env.grid());
-  // TODO: Check error!!
-  m_mesh_ptrs = grid.get_mesh_ptrs();
-
   CudaSafeCall(cudaMallocManaged(
       &m_dev_fields.Rho,
       m_env.params().num_species * sizeof(cudaPitchedPtr)));
@@ -192,11 +205,14 @@ ptc_updater_1dgr_dev::update_particles(cu_sim_data1d& data, double dt,
       rho.initialize();
     }
 
+    const Grid_1dGR_dev& grid =
+        *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
+    auto mesh_ptrs = grid.get_mesh_ptrs();
     Logger::print_info("Updating {} particles",
                        data.particles.number());
-    Kernels::update_ptc_1dgr<<<256, 512>>>(
-        data.particles.data(), data.particles.number(), m_dev_fields,
-        m_mesh_ptrs, dt);
+    Kernels::update_ptc_1dgr<<<256, 512>>>(data.particles.data(),
+                                           data.particles.number(),
+                                           m_dev_fields, mesh_ptrs, dt);
     CudaCheckError();
   }
 }

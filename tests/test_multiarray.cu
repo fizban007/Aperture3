@@ -73,7 +73,7 @@ TEST_CASE("Initialize multi_array", "[MultiArray]") {
   dim3 blockSize(8, 8);
   dim3 gridSize(8, 8);
   Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(
-      data.a.data_d(), data.b.data_d(), data.c.data_d(),
+      data.a.data_d().p, data.b.data_d().p, data.c.data_d().p,
       data.a.extent(), detail::Op_Plus<Scalar>());
   CudaCheckError();
 
@@ -136,7 +136,7 @@ TEST_CASE("Map Array Multiply", "[MultiArray]") {
   dim3 blockSize(8, 8, 8);
   dim3 gridSize(16, 16, 8);
   Kernels::map_array_binary_op<Scalar><<<gridSize, blockSize>>>(
-      data.a.data_d(), data.b.data_d(), data.c.data_d(),
+      data.a.data_d().p, data.b.data_d().p, data.c.data_d().p,
       data.a.extent(), Op_Multiply<Scalar>());
   CudaCheckError();
 
