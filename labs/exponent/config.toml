@@ -1,6 +1,6 @@
 # Time step size
 # delta_t = 7.0e5
-delta_t = 20
+delta_t = 100
 
 # Maximum number of particles per node
 max_ptc_number = 100000000
@@ -12,7 +12,7 @@ max_photon_number = 100000000
 r_cutoff = 6.0e7
 
 # Acceleration E field
-constE = 50
+constE = 1.0
 
 # Data output directory
 data_dir = "/home/alex/storage/Data/Aperture3/exponent/"
@@ -43,3 +43,5 @@ tile_size = [16, 16, 1]
 random_seed = 3333
 
 max_steps = 500000
+
+data_interval = 1000
