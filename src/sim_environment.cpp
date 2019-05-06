@@ -77,6 +77,8 @@ sim_environment::setup_env() {
     m_charges[i] = m_params.q_e;
     m_masses[i] = m_params.q_e;
   }
+  Logger::print_debug("Electron particle type is {}, charge_e is {}", (int)ParticleType::electron,
+                      m_charges[0]);
   m_charges[(int)ParticleType::electron] *= -1.0;
   m_masses[(int)ParticleType::ion] *= m_params.ion_mass;
   for (int i = 0; i < 8; i++) {
@@ -84,6 +86,7 @@ sim_environment::setup_env() {
   }
 
   // Setup the domain
+  // Logger::print_info("World size is {}", m_comm->world().size());
   setup_domain(m_comm->world().size());
 
   // Setup the local grid and the local data output grid
@@ -127,7 +130,7 @@ sim_environment::setup_domain(int num_nodes) {
 
   m_comm->cartesian().create_dims(num_nodes, ndims, dims);
 
-  if (ndims == 1) setup_domain(dims[0]);
+  if (ndims == 1) setup_domain(dims[0], 1);
   if (ndims == 2) setup_domain(dims[0], dims[1]);
   if (ndims == 3) setup_domain(dims[0], dims[1], dims[2]);
 }

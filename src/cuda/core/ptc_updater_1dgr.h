@@ -2,6 +2,7 @@
 #define _PTC_UPDATER_1DGR_H_
 
 #include "cuda/grids/grid_1dgr_dev.h"
+#include "cuda/utils/pitchptr.cuh"
 
 namespace Aperture {
 
@@ -18,15 +19,15 @@ class ptc_updater_1dgr_dev {
   void initialize_dev_fields(cu_sim_data1d& data);
 
   struct fields_data {
-    cudaPitchedPtr E1, E3;
-    cudaPitchedPtr B1, B3;
-    cudaPitchedPtr J1, J3;
-    cudaPitchedPtr* Rho;
+    pitchptr<Scalar> E1, E3;
+    // pitchptr<Scalar> B1, B3;
+    pitchptr<Scalar> J1, J3;
+    pitchptr<Scalar>* Rho;
   };
 
  private:
   const cu_sim_environment& m_env;
-  Grid_1dGR_dev::mesh_ptrs m_mesh_ptrs;
+  // Grid_1dGR_dev::mesh_ptrs m_mesh_ptrs;
 
   bool m_fields_initialized = false;
 

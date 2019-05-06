@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 2.0e-4
+delta_t = 3.0e-4
 
 # Charge of an electron
 q_e = 1.0
@@ -86,10 +86,10 @@ N = [16384, 1, 1]
 guard = [2, 0, 0]
 
 # Lower limit of the coordinate
-lower = [1.20, 0.0, 0.0]
+lower = [-6.273, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [7.32, 1.0, 1.0]
+size = [6.138, 1.0, 1.0]
 
 [Simulation]
 
@@ -99,8 +99,8 @@ random_seed = 3333
 
 downsample = 1
 
-max_steps = 2
+max_steps = 100000
 
-data_interval = 200
+data_interval = 1000
 
 sort_interval = 20

@@ -28,8 +28,8 @@ class Particles_1D : public particle_base_dev<single_particle1d_t> {
   using BaseClass::put;
   // void put(std::size_t pos, Pos_t x1, Scalar p1, int cell,
   //          ParticleType type, Scalar weight = 1.0, uint32_t flag = 0);
-  // void append(Pos_t x1, Scalar p1, int cell, ParticleType type,
-  //             Scalar weight = 1.0, uint32_t flag = 0);
+  void append(Pos_t x1, Scalar p1, int cell, ParticleType type,
+              Scalar weight = 1.0, uint32_t flag = 0);
 
  private:
   std::vector<Index_t> m_partition;

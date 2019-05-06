@@ -34,22 +34,25 @@ prepare_initial_condition(particle1d_data ptc,
       Scalar D2 = mesh_ptrs.D2[cell];
       Scalar D3 = mesh_ptrs.D3[cell];
       Scalar alpha = mesh_ptrs.alpha[cell];
-      Scalar dpsidth = mesh_ptrs.dpsidth[cell];
+      Scalar K1 = mesh_ptrs.K1[cell];
       Scalar rho0 = mesh_ptrs.rho0[cell];
       Scalar u0 = sqrt(D2 / (D2 * (alpha * alpha - D3) + D1 * D1));
 
+      float u = curand_uniform(&local_state);
       ptc.E[idx] = ptc.E[idx + 1] = u0;
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
       // ptc.cell[idx] = MAX_CELL;
       ptc.weight[idx] =
-          1.0f / dpsidth +
-          std::abs(min(rho0 / dpsidth, 0.0f)) / multiplicity;
-      ptc.weight[idx + 1] =
-          1.0f / dpsidth + max(rho0 / dpsidth, 0.0f) / multiplicity;
-      ptc.flag[idx] = set_ptc_type_flag(bit_or(ParticleFlag::tracked),
-                                        ParticleType::electron);
+          K1 + std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
+      ptc.weight[idx + 1] = K1 + max(rho0 * K1, 0.0f) / multiplicity;
+      // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
+      // u0, ptc.weight[idx]);
+      ptc.flag[idx] = set_ptc_type_flag(
+          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          ParticleType::electron);
       ptc.flag[idx + 1] = set_ptc_type_flag(
-          bit_or(ParticleFlag::tracked), ParticleType::positron);
+          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          ParticleType::positron);
     }
   }
 }
@@ -57,7 +60,10 @@ prepare_initial_condition(particle1d_data ptc,
 }  // namespace Kernels
 
 cu_sim_data1d::cu_sim_data1d(const cu_sim_environment& e)
-    : env(e), dev_map(e.dev_map()) {
+    : env(e),
+      dev_id(e.dev_id()),
+      particles(e.params().max_ptc_number),
+      photons(e.params().max_photon_number) {
   initialize(e);
   // E.initialize();
   // B.initialize();
@@ -85,68 +91,56 @@ cu_sim_data1d::~cu_sim_data1d() {}
 
 void
 cu_sim_data1d::initialize(const cu_sim_environment& env) {
+  // CudaSafeCall(cudaSetDevice(dev_id));
   init_grid(env);
-  for (int n = 0; n < dev_map.size(); n++) {
-    int dev_id = dev_map[n];
-    CudaSafeCall(cudaSetDevice(dev_id));
-    E.emplace_back(*grid[n]);
-    E[n].initialize();
-    J.emplace_back(*grid[n]);
-    J[n].initialize();
+  E = cu_vector_field<Scalar>(*grid);
+  E.initialize();
+  J = cu_vector_field<Scalar>(*grid);
+  J.initialize();
 
-    for (int i = 0; i < env.params().num_species; i++) {
-      Rho[n].emplace_back(*grid[n]);
-      Rho[n][i].initialize();
-      // Rho[n][i].sync_to_host();
-    }
+  for (int i = 0; i < env.params().num_species; i++) {
+    Rho.emplace_back(*grid);
+    Rho[i].initialize();
+    // Rho[n][i].sync_to_host();
   }
 
-  for (int n = 0; n < dev_map.size(); n++) {
-    int dev_id = dev_map[n];
-    CudaSafeCall(cudaSetDevice(dev_id));
-    cudaDeviceSynchronize();
-  }
+  Logger::print_debug("Finished initializing sim_data1d");
+  cudaDeviceSynchronize();
 }
 
 void
-cu_sim_data1d::fill_multiplicity(Scalar weight, int multiplicity) {
-  // const Grid_1dGR_dev* g =
-  //     dynamic_cast<const Grid_1dGR_dev*>(&env.local_grid());
-  // if (g != nullptr) {
-  //   Kernels::prepare_initial_condition<<<128, 256>>>(
-  //       particles.data(), g->get_mesh_ptrs(), multiplicity);
-  //   CudaCheckError();
+cu_sim_data1d::prepare_initial_condition(int multiplicity) {
+  const Grid_1dGR_dev* g =
+      dynamic_cast<const Grid_1dGR_dev*>(grid.get());
+  if (g != nullptr) {
+    Kernels::prepare_initial_condition<<<128, 256>>>(
+        particles.data(), g->get_mesh_ptrs(), multiplicity);
+    CudaCheckError();
 
-  //   particles.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
-  //   // particles.append({0.5, 0.0, 4000})
-  // }
+    particles.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
+    // particles.append({0.5, 0.0, 4000})
+  }
 }
 
 void
 cu_sim_data1d::init_grid(const cu_sim_environment& env) {
-  for (int n = 0; n < dev_map.size(); n++) {
-    int dev_id = dev_map[n];
-    CudaSafeCall(cudaSetDevice(dev_id));
-
-    if (env.params().coord_system == "Cartesian") {
-      grid[n].reset(new Grid());
-    } else if (env.params().coord_system == "1DGR" &&
-               grid[n]->dim() == 1) {
-      grid[n].reset(new Grid_1dGR_dev());
-    } else {
-      grid[n].reset(new Grid());
-    }
-    grid[n]->init(env.params());
-    Logger::print_info("Grid dimension for dev {} is {}", dev_id,
-                       grid[n]->dim());
-    if (grid[n]->mesh().delta[0] < env.params().delta_t) {
-      std::cerr
-          << "Grid spacing should be larger than delta_t! Aborting!"
-          << std::endl;
-      abort();
-    }
-    init_dev_mesh(grid[n]->mesh());
+  if (env.params().coord_system == "Cartesian") {
+    grid.reset(new Grid());
+  } else if (env.params().coord_system == "1DGR") {
+    grid.reset(new Grid_1dGR_dev());
+  } else {
+    grid.reset(new Grid());
   }
+  Logger::print_info("Initializing grid");
+  grid->init(env.params());
+  Logger::print_info("Grid dimension for dev {} is {}", dev_id,
+                     grid->dim());
+  if (grid->mesh().delta[0] < env.params().delta_t) {
+    std::cerr << "Grid spacing should be larger than delta_t! Aborting!"
+              << std::endl;
+    abort();
+  }
+  init_dev_mesh(grid->mesh());
 }
 
 }  // namespace Aperture
