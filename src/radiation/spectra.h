@@ -69,7 +69,8 @@ struct black_body {
   HOST_DEVICE black_body(Scalar kT) : kT_(kT) {}
 
   HD_INLINE double operator()(double e) const {
-    return e * e / (exp(e / kT_) - 1.0);
+    // The normalization factor comes as 8 \pi/(h^3 c^3) (me c^2)^3
+    return 1.75464e30 * e * e / (exp(e / kT_) - 1.0);
   }
 
   Scalar emin() const { return 1e-10 * kT_; }

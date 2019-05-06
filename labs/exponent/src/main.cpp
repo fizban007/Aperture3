@@ -26,7 +26,7 @@ main(int argc, char *argv[]) {
 
   Spectra::black_body ne(1.685e-5);
   // Spectra::mono_energetic ne(1.0e-3, 1.0e-4);
-  sim.init_spectra(ne, 1.75464e30 * 1706.25);
+  sim.init_spectra(ne, 1706.25);
   // sim.init_spectra(ne, 1.0e18 * 1706.25);
 
   // sim.add_new_particles(100, 1.0);
@@ -74,7 +74,7 @@ main(int argc, char *argv[]) {
     Scalar t_start, num_start, t_end;
     bool started = false;
     // double Eacc = env.params().constE;
-    double dt = std::max(std::min(100.0 / Eacc, 10000.0), 1000.0);
+    double dt = std::max(std::min(100.0 / Eacc, 10000.0), 100.0);
     // if (Eacc > 100.0)
     //   dt = 1000.0;
     // double dt = env.params().delta_t;
@@ -83,7 +83,7 @@ main(int argc, char *argv[]) {
     // sim.prepare_initial_condition(100.0, 5.0e6);
 
     for (uint32_t step = 0; step < env.params().max_steps; step++) {
-      sim.add_new_particles(100, 1.0);
+      sim.add_new_particles(1, 1.0);
       Logger::print_info(
           "==== On timestep {}, pushing {} particles, {} photons ====",
           step, sim.ptc_num, sim.ph_num);
