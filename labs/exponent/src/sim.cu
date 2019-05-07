@@ -102,8 +102,8 @@ exp_emit_photons(Scalar* ptc_E, size_t ptc_num, Scalar* ph_E,
       float u = rng();
 
       Scalar path = -(1.0f / gg_rate) * std::log(u);
-      // if (path > dev_params.delta_t * dev_params.max_steps * 0.1)
-      // continue;
+      if (path > dev_params.delta_t * dev_params.max_steps)
+        continue;
       int start_pos = ph_cum[blockIdx.x];
       int offset = ph_num + start_pos + pos_in_block;
       ph_E[offset] = Eph;
@@ -455,7 +455,7 @@ exponent_sim::sort_photons() {
         thrust::make_zip_iterator(
             thrust::make_tuple(ptr_Eph + ph_num, ptr_pathph + ph_num)),
         [] __host__ __device__(const thrust::tuple<Scalar, Scalar>& a) {
-          return thrust::get<0>(a) < 0.0f;
+          return thrust::get<0>(a) < 2.0f;
         });
     auto end = z_end.get_iterator_tuple();
     auto Eph_end = thrust::get<0>(end);
