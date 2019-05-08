@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   // Construct the simulation environment
   cu_sim_environment env(&argc, &argv);
 
-  exponent_sim sim(env);
+  exponent_sim sim(env, false, true);
 
   // Spectra::black_body ne(1.685e-5);
   // Spectra::mono_energetic ne(1.0e-3, 1.0e-4);
@@ -84,13 +84,14 @@ int main(int argc, char *argv[]) {
     double dt = std::max(std::min(100.0 / Eacc, 2000.0), 100.0);
     // if (Eacc > 100.0)
     //   dt = 1000.0;
-    // double dt = env.params().delta_t;
+    double dt = env.params().delta_t;
     Logger::print_debug("dt is {}, Eacc is {}", dt, Eacc);
-    sim.prepare_initial_condition(100, 1.0);
-    // sim.prepare_initial_condition(100.0, 5.0e6);
+    // sim.prepare_initial_condition(100, 1.0);
+    sim.prepare_initial_condition(100.0, 5.0e6);
 
     for (uint32_t step = 0; step < env.params().max_steps; step++) {
-      sim.add_new_particles(1, 1.0);
+      // sim.add_new_particles(1, 1.0);
+      sim.add_new_particles(100.0, 5.0e6);
       Logger::print_info(
           "==== On timestep {}, pushing {} particles, {} photons ====", step,
           sim.ptc_num, sim.ph_num);

@@ -10,7 +10,7 @@ namespace Aperture {
 class cu_sim_environment;
 
 struct exponent_sim {
-  exponent_sim(cu_sim_environment& env);
+  exponent_sim(cu_sim_environment& env, bool gg = true, bool tpp = true);
   ~exponent_sim();
 
   template <typename T>
@@ -40,6 +40,8 @@ struct exponent_sim {
   cu_array<int> m_cumnum_per_block;
   cu_array<int> m_pos_in_block;
   void* d_rand_states;
+
+  bool do_gg, do_tpp;
 };  // ----- end of class exponent_sim -----
 
 }  // namespace Aperture
