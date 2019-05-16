@@ -118,6 +118,8 @@ struct SimParams : public SimParamsBase {
   int sort_interval = 20;
   int snapshot_interval = 1000;
   bool is_restart = false;
+  bool update_fields = true;
+  bool inject_particles = true;
 };
 
 }  // namespace Aperture

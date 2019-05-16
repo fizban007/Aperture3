@@ -44,18 +44,22 @@ count_photon_produced(PtcData ptc, size_t number, int *ph_count,
     int sp = get_ptc_type(flag);
     if (sp == (int)ParticleType::ion) continue;
     int c1 = dev_mesh.get_c1(cell);
+    int c2 = dev_mesh.get_c2(cell);
 
     // Skip photon emission when outside given radius
     Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
+    Scalar theta = dev_mesh.pos(1, c2, ptc.x2[tid]);
     Scalar gamma = ptc.E[tid];
     Scalar w = ptc.weight[tid];
 
     // if (rad_model.emit_photon(gamma)) {
     if (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
         r > 1.02f) {
+        // r > 1.02f &&
+        // !(r < 1.5f && theta > 0.45f * CONST_PI &&
+        //   theta < 0.55f * CONST_PI)) {
       // phPos[tid] = atomicAdd_block(&photonProduced, 1) + 1;
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
-      int c2 = dev_mesh.get_c2(cell);
       // atomicAdd(ptrAddr(ph_events,
       //                   c2 * ph_events.pitch + c1 * sizeof(Scalar)),
       atomicAdd(&ph_events(c1, c2), w);
@@ -110,7 +114,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
       auto c = ptc.cell[tid];
       Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
-      Scalar lph = min(10.0f, 0.03f * (1.0f / std::sin(theta) - 1.0f) +
+      Scalar lph = min(10.0f, (1.0f / std::sin(theta) - 1.0f) *
                                   dev_params.photon_path);
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above

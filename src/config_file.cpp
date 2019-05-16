@@ -184,7 +184,13 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                                .value_or(defaults.sort_interval);
     params.current_smoothing =
         sim_table->get_as<int>("current_smoothing")
-            .value_or(defaults.current_smoothing);
+        .value_or(defaults.current_smoothing);
+    params.update_fields =
+        sim_table->get_as<bool>("update_fields")
+        .value_or(defaults.update_fields);
+    params.inject_particles =
+        sim_table->get_as<bool>("inject_particles")
+        .value_or(defaults.inject_particles);
   }
 
   // Radiation transfer parameters

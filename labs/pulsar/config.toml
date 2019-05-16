@@ -1,20 +1,20 @@
 # Time step size
-delta_t = 0.0005
+delta_t = 0.001
 
 # Charge of an electron
-q_e = 400.0
+q_e = 20000.0
 
 # Ion mass
-ion_mass = 5.0
+ion_mass = 1.0
 
 # Number of species
 num_species = 3
 
 # Maximum number of particles per node
-max_ptc_number = 150000000
+max_ptc_number = 110000000
 
 # Maximum number of photons per node
-max_photon_number = 20000000
+max_photon_number = 10000000
 
 # Create pairs or not
 create_pairs = true
@@ -62,13 +62,13 @@ B0 = 160000.0
 damping_coef = 0.003
 
 # Damping layer thickness in cells
-damping_length = 48
+damping_length = 64
 
 # Star rotating omega
-omega = 0.2
+omega = 0.125
 
 # Whether to inject ions or positrons
-inject_ions = false
+inject_ions = true
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -76,7 +76,7 @@ inject_ions = false
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [2048, 2048, 1]
+N = [1536, 1536, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
@@ -86,7 +86,7 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [4.0, 3.1415926535898, 1.0]
+size = [3.3, 3.1415926535898, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]
@@ -99,12 +99,18 @@ random_seed = 3333
 
 # Downsample factor. 1 means no downsample at all, and n means output
 # resolution is divided by n. This should be a power of 2 as well
-downsample = 4
+downsample = 3
 
-max_steps = 2000000
+max_steps = 200000
 
-data_interval = 400
+data_interval = 200
 
 snapshot_interval = 5000
 
 sort_interval = 20
+
+current_smoothing = 4
+
+update_fields = true
+
+inject_particles = true
