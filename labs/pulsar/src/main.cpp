@@ -1,4 +1,3 @@
-#include "cuda_runtime.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/core/additional_diagnostics.h"
 #include "cuda/core/cu_sim_data.h"
@@ -9,6 +8,7 @@
 #include "cuda/radiation/rt_pulsar.h"
 #include "cuda/utils/cu_data_exporter.h"
 #include "cuda/utils/iterate_devices.h"
+#include "cuda_runtime.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include "utils/util_functions.h"
@@ -35,7 +35,8 @@ main(int argc, char* argv[]) {
   if (env.params().is_restart) {
     Logger::print_info("This is a restart");
     exporter.load_from_snapshot(env, data, start_step, start_time);
-    exporter.prepareXMFrestart(step, env.params().data_interval, start_time);
+    exporter.prepareXMFrestart(step, env.params().data_interval,
+                               start_time);
     step = start_step + 1;
     time = start_time + env.params().delta_t;
   } else {
@@ -50,18 +51,46 @@ main(int argc, char* argv[]) {
     data.init_bg_B_field(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
       Scalar r = exp(x1);
       return 2.0 * B0 * cos(x2) / (r * r * r);
+      // return B0 / (r * r);
     });
     data.init_bg_B_field(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
       Scalar r = exp(x1);
       return B0 * sin(x2) / (r * r * r);
+      // return 0.0;
     });
     data.init_bg_B_field(
         2, [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
     data.init_bg_fields();
 
-    // data.particles[0].append({0.5, 0.5, 0.0}, {0.0, 30.0, 0.0}, 50 +
-    // 260*129,
-    //                          ParticleType::electron, 100.0);
+    // data.E[0].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    //   Scalar r = exp(x1);
+    //   return 0.1 * sin(x2) * r * B0 * sin(x2) / (r * r * r);
+    // });
+    // data.E[0].initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    //   Scalar r = exp(x1);
+    //   return -0.1 * sin(x2) * r * 2.0 * B0 * cos(x2) / (r * r * r);
+    // });
+    // data.E[1].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    //   Scalar r = exp(x1);
+    //   return 0.1 * sin(x2) * r * B0 * sin(x2) / (r * r * r);
+    // });
+    // data.E[1].initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    //   Scalar r = exp(x1);
+    //   return -0.1 * sin(x2) * r * 2.0 * B0 * cos(x2) / (r * r * r);
+    // });
+    // Scalar th = data.grid[0]->mesh().pos(1, 100, 0.5f);
+    // Scalar p = 100.0;
+    // Scalar pp1 = 2.0 * p * cos(th);
+    // Scalar pp2 = p * sin(th);
+    // Scalar rot = 1.0;
+    // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
+    // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
+    // data.particles[0].append(
+    //     {0.5, 0.5, 0.0}, {pr1, pr2, 0.0},
+    //     // std::abs(p) * 0.1 * sin(th) *
+    //     //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
+    //     // 200 + 516 * 100, ParticleType::electron, 1.0);
+    //     20 + 516 * 100, ParticleType::electron, 1.0);
     // data.fill_multiplicity(1.0, 2);
   }
   // Initialize the field solver
@@ -112,15 +141,17 @@ main(int argc, char* argv[]) {
     }
 
     // Inject particles
-    if (step % 1 == 0)
+    if (env.params().inject_particles && step % 1 == 0)
       ptc_updater.inject_ptc(data, 1, 0.0, 0.0, 0.0, 1.0, omega);
 
     // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);
 
     // Update field values and handle field boundary conditions
-    field_solver.update_fields(data, dt, time);
-    field_solver.boundary_conditions(data, omega);
+    if (env.params().update_fields) {
+      field_solver.update_fields(data, dt, time);
+      field_solver.boundary_conditions(data, omega);
+    }
 
     // Create photons and pairs
     if (env.params().create_pairs) {

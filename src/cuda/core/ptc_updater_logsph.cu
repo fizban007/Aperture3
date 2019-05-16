@@ -166,49 +166,61 @@ vay_push_2d(particle_data ptc, size_t num,
       }
 
       Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+      Scalar B_sqrt = std::sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+      Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
+      Scalar pitch_angle = pdotB / (p * B_sqrt);
 
+      // if (dev_params.rad_cooling_on && std::abs(pitch_angle) < 0.6f
+      // &&
       if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
-        Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
-        Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
-        Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
-        Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
-        Scalar bE = (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+        // if (std::abs(pitch_angle) > 0.9) {
+        if (false) {
+          Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
+          Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
+          Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
+          Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
+          Scalar bE =
+              (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
 
-        Scalar delta_p1 =
-            dev_params.rad_cooling_coef *
-            (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
-             gamma * p1 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p2 =
-            dev_params.rad_cooling_coef *
-            (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
-             gamma * p2 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        Scalar delta_p3 =
-            dev_params.rad_cooling_coef *
-            (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
-             gamma * p3 * (tmp_sq - bE * bE)) /
-            square(dev_params.B0);
-        // Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-        //                  delta_p3 * delta_p3);
-        // if (dp < p) {
-        // p1 += (dp < 10.0f * p || dp < 1e-2 ? delta_p1
-        //                                    : 0.5 * p * delta_p1 /
-        //                                    dp);
-        // p2 += (dp < 10.0f * p || dp < 1e-2 ? delta_p2
-        //                                    : 0.5 * p * delta_p2 /
-        //                                    dp);
-        // p3 += (dp < 10.0f * p || dp < 1e-2 ? delta_p3
-        //                                    : 0.5 * p * delta_p3 /
-        //                                    dp);
-        p1 += delta_p1;
-        p2 += delta_p2;
-        p3 += delta_p3;
-        gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+          Scalar delta_p1 =
+              dev_params.rad_cooling_coef *
+              (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+               gamma * p1 * (tmp_sq - bE * bE)) /
+              square(dev_params.B0);
+          Scalar delta_p2 =
+              dev_params.rad_cooling_coef *
+              (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+               gamma * p2 * (tmp_sq - bE * bE)) /
+              square(dev_params.B0);
+          Scalar delta_p3 =
+              dev_params.rad_cooling_coef *
+              (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+               gamma * p3 * (tmp_sq - bE * bE)) /
+              square(dev_params.B0);
+
+          p1 += delta_p1;
+          p2 += delta_p2;
+          p3 += delta_p3;
+        } else {
+          Scalar delta_p1 = -dev_params.rad_cooling_coef *
+                            (p1 - B1 * pdotB / (B_sqrt * B_sqrt));
+          Scalar delta_p2 = -dev_params.rad_cooling_coef *
+                            (p2 - B2 * pdotB / (B_sqrt * B_sqrt));
+          Scalar delta_p3 = -dev_params.rad_cooling_coef *
+                            (p3 - B3 * pdotB / (B_sqrt * B_sqrt));
+          Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                           delta_p3 * delta_p3);
+          Scalar f = std::sqrt(B_sqrt / dev_params.B0);
+          p1 += delta_p1 * f;
+          p2 += delta_p2 * f;
+          p3 += delta_p3 * f;
+        }
+        p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+        gamma = sqrt(1.0f + p * p);
       }
-      // printf("gamma after is %f\n", gamma);
-      // printf("p before is (%f, %f, %f)\n", ptc.p1[idx], ptc.p2[idx],
-      // ptc.p3[idx]);
+      // printf("gamma after cooling is %f\n", gamma);
+      // printf("p is (%f, %f, %f)\n", p1, p2, p3);
+      // printf("pitch angle is %f\n", pitch_angle);
       ptc.p1[idx] = p1;
       ptc.p2[idx] = p2;
       ptc.p3[idx] = p3;
@@ -499,7 +511,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
-    if (dev_params.q_e * dens > 0.4 * square(1.0f / dev_mesh.delta[1]) *
+    if (dev_params.q_e * dens > 0.6f *
+                                    square(1.0f / dev_mesh.delta[1]) *
                                     std::sin(dev_mesh.pos(1, i, 0.5f)))
       continue;
     for (int n = 0; n < inj_per_cell; n++) {
@@ -508,8 +521,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       // Scalar vphi = 0.0f;
-      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      // Scalar w_ptc = w * sin(theta);
+      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      Scalar w_ptc = w * sin(theta);
       Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
@@ -740,64 +753,57 @@ add_extra_particles(particle_data ptc, size_t num,
         set_ptc_type_flag(0, ParticleType::electron);
 }
 
-// __global__ void
-// filter_current(cudaPitchedPtr j, cudaPitchedPtr j_tmp, cudaPitchedPtr
-// A,
-//                bool boundary_lower0, bool boundary_upper0,
-//                bool boundary_lower1, bool boundary_upper1) {
-//   // Load position parameters
-//   int t1 = blockIdx.x, t2 = blockIdx.y;
-//   int c1 = threadIdx.x, c2 = threadIdx.y;
-//   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
-//   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-//   size_t globalOffset = n2 * j.pitch + n1 * sizeof(Scalar);
+__global__ void
+filter_current(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+               pitchptr<Scalar> A, bool boundary_lower0,
+               bool boundary_upper0, bool boundary_lower1,
+               bool boundary_upper1) {
+  // Load position parameters
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  // size_t globalOffset = n2 * j.p.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = j.compute_offset(n1, n2);
 
-//   size_t dr_plus = sizeof(Scalar);
-//   if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] -
-//   1)
-//     dr_plus = 0;
-//   // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
-//   //                                                : 0);
-//   size_t dr_minus = sizeof(Scalar);
-//   if (boundary_lower0 && n1 == dev_mesh.guard[0]) dr_minus = 0;
-//   // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
-//   size_t dt_plus = j.pitch;
-//   if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] -
-//   1)
-//     dt_plus = 0;
-//   // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
-//   size_t dt_minus = j.pitch;
-//   if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
-//   // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
-//   // Do the actual computation here
-//   (*ptrAddr(j_tmp, globalOffset)) =
-//       0.25f * *ptrAddr(j, globalOffset) * *ptrAddr(A, globalOffset);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.125f * *ptrAddr(j, globalOffset + dr_plus) *
-//       *ptrAddr(A, globalOffset + dr_plus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.125f * *ptrAddr(j, globalOffset - dr_minus) *
-//       *ptrAddr(A, globalOffset - dr_minus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.125f * *ptrAddr(j, globalOffset + dt_plus) *
-//       *ptrAddr(A, globalOffset + dt_plus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.125f * *ptrAddr(j, globalOffset - dt_minus) *
-//       *ptrAddr(A, globalOffset - dt_minus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.0625f * *ptrAddr(j, globalOffset + dr_plus + dt_plus) *
-//       *ptrAddr(A, globalOffset + dr_plus + dt_plus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.0625f * *ptrAddr(j, globalOffset - dr_minus + dt_plus) *
-//       *ptrAddr(A, globalOffset - dr_minus + dt_plus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.0625f * *ptrAddr(j, globalOffset + dr_plus - dt_minus) *
-//       *ptrAddr(A, globalOffset + dr_plus - dt_minus);
-//   (*ptrAddr(j_tmp, globalOffset)) +=
-//       0.0625f * *ptrAddr(j, globalOffset - dr_minus - dt_minus) *
-//       *ptrAddr(A, globalOffset - dr_minus - dt_minus);
-//   (*ptrAddr(j_tmp, globalOffset)) /= *ptrAddr(A, globalOffset);
-// }
+  size_t dr_plus = sizeof(Scalar);
+  if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] - 1)
+    dr_plus = 0;
+  // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
+  //                                                : 0);
+  size_t dr_minus = sizeof(Scalar);
+  if (boundary_lower0 && n1 == dev_mesh.guard[0]) dr_minus = 0;
+  // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+  size_t dt_plus = j.p.pitch;
+  if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1)
+    dt_plus = 0;
+  // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+  size_t dt_minus = j.p.pitch;
+  if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
+  // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  // Do the actual computation here
+  j_tmp[globalOffset] = 0.25f * j[globalOffset] * A[globalOffset];
+  j_tmp[globalOffset] +=
+      0.125f * j[globalOffset + dr_plus] * A[globalOffset + dr_plus];
+  j_tmp[globalOffset] +=
+      0.125f * j[globalOffset - dr_minus] * A[globalOffset - dr_minus];
+  j_tmp[globalOffset] +=
+      0.125f * j[globalOffset + dt_plus] * A[globalOffset + dt_plus];
+  j_tmp[globalOffset] +=
+      0.125f * j[globalOffset - dt_minus] * A[globalOffset - dt_minus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus + dt_plus] *
+                         A[globalOffset + dr_plus + dt_plus];
+  j_tmp[globalOffset] += 0.0625f *
+                         j[globalOffset - dr_minus + dt_plus] *
+                         A[globalOffset - dr_minus + dt_plus];
+  j_tmp[globalOffset] += 0.0625f *
+                         j[globalOffset + dr_plus - dt_minus] *
+                         A[globalOffset + dr_plus - dt_minus];
+  j_tmp[globalOffset] += 0.0625f *
+                         j[globalOffset - dr_minus - dt_minus] *
+                         A[globalOffset - dr_minus - dt_minus];
+  j_tmp[globalOffset] /= A[globalOffset];
+}
 
 }  // namespace Kernels
 
@@ -917,42 +923,65 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
       CudaSafeCall(cudaDeviceSynchronize());
     });
 
-    // Logger::print_debug("current smoothing {} times",
-    //                     m_env.params().current_smoothing);
-    // for (int i = 0; i < m_env.params().current_smoothing; i++) {
-    //   m_env.get_sub_guard_cells(data.J);
-    //   // Logger::print_debug("current smoothing {}", i);
-    //   for_each_device(data.dev_map, [this, &data](int n) {
-    //     // Logger::print_debug(
-    //     //     "on device {}, tmp_j1 is on {}, tmp_j2 is on {}", n,
-    //     //     m_tmp_j1[n].devId(), m_tmp_j2[n].devId());
-    //     const Grid_LogSph_dev *grid =
-    //         dynamic_cast<const Grid_LogSph_dev
-    //         *>(data.grid[n].get());
-    //     auto mesh_ptrs = grid->get_mesh_ptrs();
-    //     auto &mesh = grid->mesh();
-    //     dim3 blockSize(32, 16);
-    //     dim3 gridSize(mesh.reduced_dim(0) / 32,
-    //                   mesh.reduced_dim(1) / 16);
+    Logger::print_debug("current smoothing {} times",
+                        m_env.params().current_smoothing);
+    for (int i = 0; i < m_env.params().current_smoothing; i++) {
+      m_env.get_sub_guard_cells(data.J);
+      if ((step + 1) % data.env.params().data_interval == 0) {
+        for (int i = 0; i < data.env.params().num_species; i++) {
+          m_env.get_sub_guard_cells(data.Rho[i]);
+        }
+      }
+      // Logger::print_debug("current smoothing {}", i);
+      for_each_device(data.dev_map, [this, &data, step](int n) {
+        // Logger::print_debug(
+        //     "on device {}, tmp_j1 is on {}, tmp_j2 is on {}", n,
+        //     m_tmp_j1[n].devId(), m_tmp_j2[n].devId());
+        const Grid_LogSph_dev *grid =
+            dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
+        auto mesh_ptrs = grid->get_mesh_ptrs();
+        auto &mesh = grid->mesh();
+        dim3 blockSize(32, 16);
+        dim3 gridSize(mesh.reduced_dim(0) / 32,
+                      mesh.reduced_dim(1) / 16);
 
-    //     Kernels::filter_current<<<gridSize, blockSize>>>(
-    //         data.J[n].ptr(0), m_tmp_j1[n].data_d(), mesh_ptrs.A1_e,
-    //         m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-    //         m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-    //     data.J[n].data(0).copy_from(m_tmp_j1[n]);
-    //     CudaCheckError();
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J[n].ptr(0), m_tmp_j1[n].data_d(), mesh_ptrs.A1_e,
+            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
+            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
+        data.J[n].data(0).copy_from(m_tmp_j1[n]);
+        CudaCheckError();
 
-    //     Kernels::filter_current<<<gridSize, blockSize>>>(
-    //         data.J[n].ptr(1), m_tmp_j2[n].data_d(), mesh_ptrs.A2_e,
-    //         m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-    //         m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-    //     data.J[n].data(1).copy_from(m_tmp_j2[n]);
-    //     CudaCheckError();
-    //   });
-    //   for_each_device(data.dev_map, [](int n) {
-    //     CudaSafeCall(cudaDeviceSynchronize());
-    //   });
-    // }
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J[n].ptr(1), m_tmp_j2[n].data_d(), mesh_ptrs.A2_e,
+            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
+            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
+        data.J[n].data(1).copy_from(m_tmp_j2[n]);
+        CudaCheckError();
+
+        Kernels::filter_current<<<gridSize, blockSize>>>(
+            data.J[n].ptr(2), m_tmp_j2[n].data_d(), mesh_ptrs.A3_e,
+            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
+            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
+        data.J[n].data(2).copy_from(m_tmp_j2[n]);
+        CudaCheckError();
+
+        if ((step + 1) % data.env.params().data_interval == 0) {
+          for (int i = 0; i < data.env.params().num_species; i++) {
+            Kernels::filter_current<<<gridSize, blockSize>>>(
+                data.Rho[i][n].ptr(), m_tmp_j1[n].data_d(),
+                mesh_ptrs.dV, m_env.is_boundary(n, 0),
+                m_env.is_boundary(n, 1), m_env.is_boundary(n, 2),
+                m_env.is_boundary(n, 3));
+            data.Rho[i][n].data().copy_from(m_tmp_j1[n]);
+            CudaCheckError();
+          }
+        }
+      });
+      for_each_device(data.dev_map, [](int n) {
+        CudaSafeCall(cudaDeviceSynchronize());
+      });
+    }
     // timer::stamp("ph_update");
     for_each_device(data.dev_map, [this, &data, dt, step](int n) {
       // Skip empty particle array
