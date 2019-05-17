@@ -18,9 +18,10 @@ from datalib import Data
 
 
 class Plots:
-    def __init__(self, data_dir, data_interval):
+    def __init__(self, data_dir, data_interval, data):
         self.data_dir = data_dir
         self.data_interval = data_interval
+        self.data = data
         # Define color map
         from matplotlib.colors import LinearSegmentedColormap
         from matplotlib.patches import Wedge, Arc, Rectangle
@@ -56,8 +57,8 @@ class Plots:
         if plotfile.exists():
             return
 
+        data = self.data
         # print(conf)
-        data = Data(self.data_dir)
         conf = data.conf
 
         x1 = data.x1
@@ -77,7 +78,8 @@ class Plots:
         j_max = rho_max
         rho_gj = 2.0 * conf["B0"] * conf["omega"]
         pair_max = 100
-        edotb_max = 0.005 * conf["B0"]
+        #edotb_max = 0.005 * conf["B0"]
+        edotb_max = 200.0
         plot_rho_t = axes[0, 0].pcolormesh(
             x1,
             x2,
@@ -231,13 +233,17 @@ else:
     steps = 10000
     data_interval = 200
 
-plots = Plots(data_dir, data_interval)
+data = Data(data_dir)
+plots = Plots(data_dir, data_interval, data)
 
 agents = 7
 
-steps_to_plot = list(range(0, steps, data_interval))
+# steps_to_plot = list(range(0, steps, data_interval))
+steps_to_plot = [n for n in data.steps if n < steps]
 for step in steps_to_plot:
-    plotfile = Path("plots/%06d.png" % (step // plots.data_interval))
+    if step > steps or step % data_interval != 0:
+        continue
+    plotfile = Path("plots/%06d.png" % (step // data_interval))
     if plotfile.exists():
         steps_to_plot.remove(step)
 chunksize = (len(steps_to_plot) + agents - 1) // agents
