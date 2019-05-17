@@ -108,9 +108,10 @@ class Data:
             self.B1 * self.rv * self.rv * np.sin(self.thetav) * dtheta, axis=0
         )
         self.B = np.sqrt(self.B1 * self.B1 + self.B2 * self.B2 + self.B3 * self.B3)
-        self.EdotB = (
-            self.E1 * self.B1 + self.E2 * self.B2 + self.E3 * self.B3
-        ) / self.B
+        # self.EdotB = (
+        #     self.E1 * self.B1 + self.E2 * self.B2 + self.E3 * self.B3
+        # ) / self.B
+        self.EdotB = data["EdotBavg"][()]
 
         data.close()
 
