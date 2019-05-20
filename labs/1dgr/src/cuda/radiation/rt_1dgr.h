@@ -16,8 +16,8 @@ class RadiationTransfer1DGR {
   RadiationTransfer1DGR(const cu_sim_environment& env);
   virtual ~RadiationTransfer1DGR();
 
-  void emit_photons(cu_sim_data& data);
-  void produce_pairs(cu_sim_data& data);
+  void emit_photons(cu_sim_data& data, Scalar dt);
+  void produce_pairs(cu_sim_data& data, Scalar dt);
 
  private:
   const cu_sim_environment& m_env;

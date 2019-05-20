@@ -48,7 +48,8 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     Scalar exp_xi = std::exp(xi * (rp - rm));
     Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
     // if (idx == 10)
-    //   printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx], u0, ptc.weight[idx]);
+    //   printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
+    //   u0, ptc.weight[idx]);
 
     // interpolate quantities
     Scalar alpha =
@@ -95,8 +96,8 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     Scalar E_term = Er * dev_charges[sp] / dev_masses[sp] * dt;
     p1 += E_term;
     // if (idx == 10)
-    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er, dev_charges[sp], dev_masses[sp]);
-
+    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er,
+    //   dev_charges[sp], dev_masses[sp]);
 
     u0 = sqrt((D2 + p1 * p1) / (D2 * (alpha * alpha - D3) + D1 * D1));
 
@@ -177,6 +178,92 @@ update_photon_1dgr(photon1d_data photons, size_t num,
     auto c = photons.cell[idx];
     // Skip empty particles
     if (c == MAX_CELL || idx >= num) continue;
+    if (!dev_mesh.is_in_bulk(c)) {
+      photons.cell[idx] = MAX_CELL;
+      continue;
+    }
+
+    auto p1 = photons.p1[idx];
+    auto p3 = photons.pf[idx];
+    auto x1 = photons.x1[idx];
+    auto u0 = std::abs(photons.E[idx]);
+    auto nx1 = 1.0f - x1;
+    auto flag = photons.flag[idx];
+    int sp = get_ptc_type(flag);
+    Scalar xi = dev_mesh.pos(0, c, x1);
+
+    // Compute the physical r of the photon
+    // FIXME: pass a in as a parameter
+    constexpr Scalar a = 0.99;
+    const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+    const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+    Scalar exp_xi = std::exp(xi * (rp - rm));
+    Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+
+    // interpolate quantities
+    Scalar alpha =
+        mesh_ptrs.alpha[c] * x1 + mesh_ptrs.alpha[c - 1] * nx1;
+    Scalar gamma11 =
+        mesh_ptrs.gamma_rr[c] * x1 + mesh_ptrs.gamma_rr[c - 1] * nx1;
+    Scalar gamma33 =
+        mesh_ptrs.gamma_ff[c] * x1 + mesh_ptrs.gamma_ff[c - 1] * nx1;
+    // Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
+
+    Scalar dDelta_dr = 2.0f * r - 2.0f;
+    Scalar Delta_sqr = square(r * r - 2.0f * r + a * a);
+    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) /
+         alpha;
+    // int c_0 = (x1 < 0.5f ? c - 1 : c);
+    Scalar da2dr =
+        (square(mesh_ptrs.alpha[c]) - square(mesh_ptrs.alpha[c - 1])) *
+        dev_mesh.inv_delta[0];
+    // Scalar da2dr = 2.0 * alpha * interp_deriv(x1, c, mesh_ptrs.alpha)
+    // *
+    //                dev_mesh.inv_delta[0];
+    Scalar dgamma11dxi =
+        (mesh_ptrs.gamma_rr[c] - mesh_ptrs.gamma_rr[c - 1]) *
+        dev_mesh.inv_delta[0];
+    Scalar dgamma33dxi =
+        (mesh_ptrs.gamma_ff[c] - mesh_ptrs.gamma_ff[c - 1]) *
+        dev_mesh.inv_delta[0];
+    Scalar dbetadxi =
+        (mesh_ptrs.beta_phi[c] - mesh_ptrs.beta_phi[c - 1]) *
+        dev_mesh.inv_delta[0];
+
+    // update momentum
+    Scalar gr_term =
+        (-0.5f * u0 * da2dr -
+         (p1 * p1 * dgamma11dxi / Delta_sqr + p3 * p3 * dgamma33dxi) *
+             0.5f / u0 +
+         p3 * dbetadxi +
+         gamma11 * p1 * p1 * dDelta_dr / (Delta_sqr * u0)) *
+        dt;
+    p1 += gr_term;
+    // if (idx == 10)
+    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er,
+    //   dev_charges[sp], dev_masses[sp]);
+
+    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) /
+         alpha;
+
+    // printf("cell is %d, old p1 is %f, new p1 is %f, gr_term is %f\n",
+    // c, ptc.p1[idx], p1, gr_term);
+    photons.p1[idx] = p1;
+    photons.E[idx] = sgn(p1) * u0;
+
+    Scalar vr = gamma11 * p1 / (Delta_sqr * u0);
+
+    // compute movement
+    Pos_t new_x1 = x1 + vr * dt * dev_mesh.inv_delta[0];
+    // if (c > 160 && c < 190) {
+    //   printf("new_x1 is %f\n", new_x1);
+    // }
+    int dc1 = floor(new_x1);
+    if (dc1 > 1 || dc1 < -1) printf("Moving more than 1 cell!\n");
+    new_x1 -= (Pos_t)dc1;
+
+    photons.cell[idx] = c + dc1;
+    photons.x1[idx] = new_x1;
   }
 }
 
@@ -199,20 +286,27 @@ void
 ptc_updater_1dgr_dev::update_particles(cu_sim_data1d& data, double dt,
                                        uint32_t step) {
   initialize_dev_fields(data);
+  const Grid_1dGR_dev& grid =
+      *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
+  auto mesh_ptrs = grid.get_mesh_ptrs();
   if (data.particles.number() > 0) {
     data.J.initialize();
     for (auto& rho : data.Rho) {
       rho.initialize();
     }
 
-    const Grid_1dGR_dev& grid =
-        *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
-    auto mesh_ptrs = grid.get_mesh_ptrs();
     Logger::print_info("Updating {} particles",
                        data.particles.number());
     Kernels::update_ptc_1dgr<<<256, 512>>>(data.particles.data(),
                                            data.particles.number(),
                                            m_dev_fields, mesh_ptrs, dt);
+    CudaCheckError();
+  }
+
+  if (data.photons.number() > 0) {
+    Logger::print_info("Updating {} photons", data.photons.number());
+    Kernels::update_photon_1dgr<<<256, 512>>>(
+        data.photons.data(), data.photons.number(), mesh_ptrs, dt);
     CudaCheckError();
   }
 }

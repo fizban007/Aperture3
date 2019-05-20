@@ -33,6 +33,7 @@ struct cu_sim_data1d {
   void init_grid(const cu_sim_environment& env);
   // void fill_multiplicity(Scalar weight, int multiplicity);
   void prepare_initial_condition(int multiplicity);
+  void prepare_initial_photons(int multiplicity);
   // template <class Func>
   // void init_bg_B_field(int component, const Func& f);
   // template <class Func>

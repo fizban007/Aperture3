@@ -19,7 +19,7 @@ class Particles_1D : public particle_base_dev<single_particle1d_t> {
   typedef particle1d_data DataClass;
   Particles_1D();
   Particles_1D(std::size_t max_num);
-  Particles_1D(const SimParams& env);
+  Particles_1D(const SimParams& params);
   Particles_1D(const Particles_1D& other);
   Particles_1D(Particles_1D&& other);
   virtual ~Particles_1D();
