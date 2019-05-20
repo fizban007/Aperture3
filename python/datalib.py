@@ -8,75 +8,122 @@ import os
 import glob
 import re
 
+
 class Data:
     def __init__(self, path):
         conf = self.load_conf(path)
-        N1 = (
-            conf["Grid"]["N"][0] // conf["Simulation"]["downsample"]
-            + conf["Grid"]["guard"][0] * 2
-        )
-        N2 = (
-            conf["Grid"]["N"][1] // conf["Simulation"]["downsample"]
-            + conf["Grid"]["guard"][1] * 2
-        )
-        self.conf = conf
-        self.path = path
-        self.rho_e = np.zeros((N1, N2))
-        self.rho_p = np.zeros((N1, N2))
-        self.rho_i = np.zeros((N1, N2))
-        self.pairs = np.zeros((N1, N2))
-        self.E1 = np.zeros((N1, N2))
-        self.E2 = np.zeros((N1, N2))
-        self.E3 = np.zeros((N1, N2))
-        self.B1 = np.zeros((N1, N2))
-        self.B2 = np.zeros((N1, N2))
-        self.B3 = np.zeros((N1, N2))
-        self.j1 = np.zeros((N1, N2))
-        self.j2 = np.zeros((N1, N2))
-        self.j3 = np.zeros((N1, N2))
-        self.flux = np.zeros((N1, N2))
-        self.B = np.zeros((N1, N2))
-        self.EdotB = np.zeros((N1, N2))
+        self._conf = conf
+        self._path = path
 
         # Load mesh file
-        meshfile = h5py.File(os.path.join(self.data_dir, "mesh.h5"), "r", swmr=True)
-
-        self.x1 = mesh["x1"].value
-        self.x2 = mesh["x2"].value
-
-        meshfile.close()
+        self._meshfile = os.path.join(path, "mesh.h5")
 
         # Generate a list of output steps
-        num_re = re.compile(r'\d+')
-        self.steps = [ int(regex.findall(f.stem)[0]) for f in Path(path).glob('data*.h5') ]
+        num_re = re.compile(r"\d+")
+        self.steps = [
+            int(num_re.findall(f.stem)[0]) for f in Path(path).glob("data*.h5")
+        ]
         self.steps.sort()
-        self.data_interval = self.step[-1] - self.step[-2]
+        self.data_interval = self.steps[-1] - self.steps[-2]
+        self._current_step = self.steps[0]
+        self._mesh_loaded = False
+        f = h5py.File(os.path.join(self._path, f"data{self._current_step:06d}.h5"))
+        self._keys = list(f.keys()) + [
+            "flux",
+            "B",
+            "x1",
+            "x2",
+            "r",
+            "theta",
+            "rv",
+            "thetav",
+        ]
+        self.__dict__.update(("_" + k, None) for k in self._keys)
+        f.close()
 
-    def load(self, fname):
-        data_dir = self.path
-        path = os.path.join(data_dir, fname)
+    def __getattr__(self, key):
+        if key in self._keys:
+            content = getattr(self, "_" + key)
+            if content is not None:
+                return content
+            else:
+                self._load_content(key)
+                return getattr(self, "_" + key)
+        else:
+            return None
+
+    def load(self, step):
+        if not step in self.steps:
+            print("Step not in data directory!")
+            return
+        self._current_step = step
+        for k in self._keys:
+            if k not in ["x1", "x2", "r", "theta", "rv", "thetav"]:
+                setattr(self, "_" + k, None)
+        # self._mesh_loaded = False
+
+    def _load_content(self, key):
+        path = os.path.join(self._path, f"data{self._current_step:06d}.h5")
         data = h5py.File(path, "r", swmr=True)
-
-        self.rho_e = data["Rho_e"].value
-        self.rho_p = data["Rho_p"].value
-        self.rho_i = data["Rho_i"].value
-        self.pairs = data["pair_produced"].value
-        self.E1 = data["E1"].value
-        self.E2 = data["E2"].value
-        self.E3 = data["E3"].value
-        self.B1 = data["B1"].value + data["B_bg1"].value
-        self.B2 = data["B2"].value + data["B_bg2"].value
-        self.B3 = data["B3"].value + data["B_bg3"].value
-        self.j1 = data["J1"].value
-        self.j2 = data["J2"].value
-        self.j3 = data["J3"].value
-        self.flux = data["flux"].value
-        self.B = np.sqrt(self.B1 * self.B1 + self.B2 * self.B2 + self.B3 * self.B3)
-        self.EdotB = (
-            self.E1 * self.B1 + self.E2 * self.B2 + self.E3 * self.B3
-        ) / self.B
-
+        if key == "flux":
+            self._load_mesh()
+            dtheta = (
+                self._theta[self._conf["Grid"]["guard"][1] + 2]
+                - self._theta[self._conf["Grid"]["guard"][1] + 1]
+            )
+            self._flux = np.cumsum(
+                self.B1 * self._rv * self._rv * np.sin(self._thetav) * dtheta, axis=0
+            )
+        elif key == "B":
+            self._B = np.sqrt(self.B1 * self.B1 + self.B2 * self.B2 + self.B3 * self.B3)
+        elif key in ["x1", "x2", "r", "theta", "rv", "thetav"]:
+            self._load_mesh()
+        elif key == "B1":
+            setattr(self, "_" + key, data["B1"][()] + data["B_bg1"][()])
+        elif key == "B2":
+            setattr(self, "_" + key, data["B2"][()] + data["B_bg2"][()])
+        elif key == "B3":
+            setattr(self, "_" + key, data["B3"][()] + data["B_bg3"][()])
+        # elif key == "EdotB":
+        #     setattr(self, "_" + key, data["EdotBavg"][()])
+        else:
+            setattr(self, "_" + key, data[key][()])
         data.close()
+
+    def _load_mesh(self):
+        if self._mesh_loaded:
+            return
+        meshfile = h5py.File(self._meshfile, "r", swmr=True)
+
+        self._x1 = meshfile["x1"][()]
+        self._x2 = meshfile["x2"][()]
+        self._r = np.pad(
+            np.exp(
+                np.linspace(
+                    0,
+                    self._conf["Grid"]["size"][0],
+                    self._conf["Grid"]["N"][0]
+                    // self._conf["Simulation"]["downsample"],
+                )
+                + self._conf["Grid"]["lower"][0]
+            ),
+            self._conf["Grid"]["guard"][0],
+            "constant",
+        )
+        self._theta = np.pad(
+            np.linspace(
+                0,
+                self._conf["Grid"]["size"][1],
+                self._conf["Grid"]["N"][1] // self._conf["Simulation"]["downsample"],
+            )
+            + self._conf["Grid"]["lower"][1],
+            self._conf["Grid"]["guard"][1],
+            "constant",
+        )
+
+        meshfile.close()
+        self._rv, self._thetav = np.meshgrid(self._r, self._theta)
+        self._mesh_loaded = True
 
     def load_conf(self, path):
         conf_path = os.path.join(path, "config.toml")
