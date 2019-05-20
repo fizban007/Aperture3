@@ -53,13 +53,17 @@ class Plots:
         plt.register_cmap(cmap=hot_cold_cmap)
 
     def make_plot(self, step):
+        # print(step)
         plotfile = Path("plots/%06d.png" % (step // self.data_interval))
         if plotfile.exists():
             return
 
         data = self.data
+        if step not in data.steps:
+            return
+
+        conf = data._conf
         # print(conf)
-        conf = data.conf
 
         x1 = data.x1
         x2 = data.x2
@@ -83,7 +87,7 @@ class Plots:
         plot_rho_t = axes[0, 0].pcolormesh(
             x1,
             x2,
-            (data.rho_e + data.rho_p + data.rho_i) / rho_gj * r2,
+            (data.Rho_e + data.Rho_p + data.Rho_i) / rho_gj * r2,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-rho_max,
@@ -92,7 +96,7 @@ class Plots:
         plot_rho_e = axes[0, 1].pcolormesh(
             x1,
             x2,
-            data.rho_e / rho_gj * r2,
+            data.Rho_e / rho_gj * r2,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-rho_max,
@@ -101,7 +105,7 @@ class Plots:
         plot_rho_p = axes[0, 2].pcolormesh(
             x1,
             x2,
-            data.rho_p / rho_gj * r2,
+            data.Rho_p / rho_gj * r2,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-rho_max,
@@ -110,7 +114,7 @@ class Plots:
         plot_rho_i = axes[0, 3].pcolormesh(
             x1,
             x2,
-            data.rho_i / rho_gj * r2,
+            data.Rho_i / rho_gj * r2,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-rho_max,
@@ -119,7 +123,7 @@ class Plots:
         plot_EdotB = axes[1, 0].pcolormesh(
             x1,
             x2,
-            data.EdotB,
+            data.EdotBavg,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-edotb_max,
@@ -128,7 +132,7 @@ class Plots:
         plot_pairs = axes[1, 1].pcolormesh(
             x1,
             x2,
-            0.001 + data.pairs,
+            0.001 + data.pair_produced,
             cmap="inferno",
             shading="gouraud",
             norm=LogNorm(vmin=0.001, vmax=pair_max),
@@ -136,7 +140,7 @@ class Plots:
         plot_jr = axes[1, 2].pcolormesh(
             x1,
             x2,
-            data.j1 / rho_gj * r2,
+            data.J1 / rho_gj * r2,
             cmap="hot_and_cold",
             shading="gouraud",
             vmin=-j_max,
@@ -233,10 +237,10 @@ else:
     steps = 10000
     data_interval = 200
 
+agents = 5
+
 data = Data(data_dir)
 plots = Plots(data_dir, data_interval, data)
-
-agents = 7
 
 # steps_to_plot = list(range(0, steps, data_interval))
 steps_to_plot = [n for n in data.steps if n < steps]
@@ -248,5 +252,11 @@ for step in steps_to_plot:
         steps_to_plot.remove(step)
 chunksize = (len(steps_to_plot) + agents - 1) // agents
 
+def make_plots(step):
+    data = Data(data_dir)
+    plots = Plots(data_dir, data_interval, data)
+    plots.make_plot(step)
+
 with Pool(processes=agents) as pool:
-    pool.map(plots.make_plot, steps_to_plot, chunksize)
+    pool.map(make_plots, steps_to_plot, chunksize)
+# plots.make_plot(steps_to_plot[-1])
