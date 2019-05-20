@@ -32,6 +32,10 @@ Grid_1dGR_dev::init(const SimParams& params) {
   m_agrr.resize(n_size);
   m_agrf.resize(n_size);
   m_rho0.resize(n_size);
+  m_gamma_rr.resize(n_size);
+  m_gamma_ff.resize(n_size);
+  m_beta_phi.resize(n_size);
+  m_B3B1.resize(n_size);
 
   Logger::print_info("Reading h5");
   HF::File coef_file("coef.h5", HF::File::ReadOnly);
@@ -87,6 +91,7 @@ Grid_1dGR_dev::init(const SimParams& params) {
     Scalar theta =
         v_theta[n_data] * (1.0 - x) + v_theta[n_data + 1] * x;
     Scalar b31 = B3 / B1;
+    m_B3B1[n] = b31;
     m_rho0[n] =
         params.B0 * (v_rho[n_data] * (1.0 - x) + v_rho[n_data + 1] * x);
 
@@ -123,6 +128,9 @@ Grid_1dGR_dev::init(const SimParams& params) {
     m_D3[n] = g33 * square(omega - w);
     m_alpha[n] = std::sqrt(Delta * Sigma / A);
     // m_agrr[n] = std::sqrt(m_alpha[n]) * g11;
+    m_gamma_rr[n] = 1.0 / g11;
+    m_gamma_ff[n] = 1.0 / g33;
+    m_beta_phi[n] = -2.0 * a * r / A;
 
     double xi_mid = m_mesh.lower[0] +
                    ((int)n - m_mesh.guard[0] + 0.5) * m_mesh.delta[0];
@@ -170,6 +178,10 @@ Grid_1dGR_dev::init(const SimParams& params) {
   m_rho0.sync_to_device();
   m_agrr.sync_to_device();
   m_agrf.sync_to_device();
+  m_gamma_rr.sync_to_device();
+  m_gamma_ff.sync_to_device();
+  m_beta_phi.sync_to_device();
+  m_B3B1.sync_to_device();
 
   HF::File test_out("debug.h5", HF::File::ReadWrite | HF::File::Create |
                                     HF::File::Truncate);
@@ -192,6 +204,10 @@ Grid_1dGR_dev::get_mesh_ptrs() const {
   ptrs.agrr = m_agrr.data_d();
   ptrs.agrf = m_agrf.data_d();
   ptrs.rho0 = m_rho0.data_d();
+  ptrs.gamma_rr = m_gamma_rr.data_d();
+  ptrs.gamma_ff = m_gamma_ff.data_d();
+  ptrs.beta_phi = m_beta_phi.data_d();
+  ptrs.B3B1 = m_B3B1.data_d();
 
   return ptrs;
 }

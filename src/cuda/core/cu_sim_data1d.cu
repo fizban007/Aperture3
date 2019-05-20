@@ -27,8 +27,8 @@ prepare_initial_condition(particle1d_data ptc,
     // if (cell != 350) continue;
     for (int n = 0; n < multiplicity; n++) {
       size_t idx = cell * multiplicity * 2 + n * 2;
-      ptc.x1[idx] = ptc.x1[idx + 1] = curand_uniform(&local_state);
-      // ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
+      // ptc.x1[idx] = ptc.x1[idx + 1] = curand_uniform(&local_state);
+      ptc.x1[idx] = ptc.x1[idx + 1] = 1.0f;
       ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
       Scalar D1 = mesh_ptrs.D1[cell];
       Scalar D2 = mesh_ptrs.D2[cell];
@@ -57,6 +57,58 @@ prepare_initial_condition(particle1d_data ptc,
   }
 }
 
+__global__ void
+prepare_initial_photons(photon1d_data photons,
+                        Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                        int multiplicity) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState local_state;
+  curand_init(1234, id, 0, &local_state);
+  for (int cell =
+           blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+       cell < dev_mesh.dims[0] - dev_mesh.guard[0];
+       cell += blockDim.x * gridDim.x) {
+    if (cell < dev_mesh.guard[0] ||
+        cell > dev_mesh.dims[0] - dev_mesh.guard[0])
+      continue;
+    for (int n = 0; n < multiplicity; n++) {
+      size_t idx = cell * multiplicity * 2 + n * 2;
+      // photons.x1[idx] = photons.x1[idx + 1] =
+      // curand_uniform(&local_state);
+      photons.x1[idx] = photons.x1[idx + 1] = 1.0f;
+      photons.pf[idx] = photons.pf[idx + 1] = 0.0f;
+      // TODO: Compute photon E
+      Scalar g11 = mesh_ptrs.gamma_rr[cell];
+      Scalar g33 = mesh_ptrs.gamma_ff[cell];
+      Scalar alpha = mesh_ptrs.alpha[cell];
+      constexpr Scalar a = 0.99;
+      Scalar xi = dev_mesh.pos(0, cell, 1.0f);
+      const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+      const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+      Scalar exp_xi = std::exp(xi * (rp - rm));
+      Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+      Scalar Delta = r * r - 2.0f * r + a * a;
+
+      photons.p1[idx] = 10.0f * curand_uniform(&local_state) * Delta;
+      photons.p1[idx + 1] = -10.0f * curand_uniform(&local_state) * Delta;
+      photons.E[idx] = sgn(photons.p1[idx]) *
+                       std::sqrt(g11 * square(photons.p1[idx] / Delta) +
+                                 g33 * square(photons.pf[idx])) /
+                       alpha;
+      photons.E[idx + 1] =
+          sgn(photons.p1[idx + 1]) *
+          std::sqrt(g11 * square(photons.p1[idx + 1] / Delta) +
+                    g33 * square(photons.pf[idx + 1])) /
+          alpha;
+
+      photons.weight[idx] = photons.weight[idx + 1] = 1.0f;
+      photons.cell[idx] = photons.cell[idx + 1] = cell;
+      photons.flag[idx] = bit_or(PhotonFlag::tracked);
+      photons.flag[idx + 1] = bit_or(PhotonFlag::tracked);
+    }
+  }
+}
+
 }  // namespace Kernels
 
 cu_sim_data1d::cu_sim_data1d(const cu_sim_environment& e)
@@ -65,26 +117,6 @@ cu_sim_data1d::cu_sim_data1d(const cu_sim_environment& e)
       particles(e.params().max_ptc_number),
       photons(e.params().max_photon_number) {
   initialize(e);
-  // E.initialize();
-  // B.initialize();
-  // J.initialize();
-
-  // for (int i = 0; i < env.params().num_species; i++) {
-  //   Rho.emplace_back(env.local_grid());
-  //   Rho[i].initialize();
-  //   Rho[i].sync_to_host();
-  // }
-
-  // E.sync_to_host();
-  // // B.sync_to_host();
-  // J.sync_to_host();
-
-  // // Wait for GPU to finish before accessing on host
-  // cudaDeviceSynchronize();
-  // Logger::print_info("Each particle is worth {} bytes",
-  //                    particle1d_data::size);
-  // Logger::print_info("Each photon is worth {} bytes",
-  //                    photon1d_data::size);
 }
 
 cu_sim_data1d::~cu_sim_data1d() {}
@@ -118,6 +150,20 @@ cu_sim_data1d::prepare_initial_condition(int multiplicity) {
     CudaCheckError();
 
     particles.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
+    // particles.append({0.5, 0.0, 4000})
+  }
+}
+
+void
+cu_sim_data1d::prepare_initial_photons(int multiplicity) {
+  const Grid_1dGR_dev* g =
+      dynamic_cast<const Grid_1dGR_dev*>(grid.get());
+  if (g != nullptr) {
+    Kernels::prepare_initial_photons<<<128, 256>>>(
+        photons.data(), g->get_mesh_ptrs(), multiplicity);
+    CudaCheckError();
+
+    photons.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
     // particles.append({0.5, 0.0, 4000})
   }
 }

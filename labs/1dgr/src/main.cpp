@@ -36,7 +36,8 @@ main(int argc, char* argv[]) {
   // Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  data.prepare_initial_condition(10);
+  // data.prepare_initial_condition(10);
+  data.prepare_initial_photons(1);
   Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter
@@ -47,6 +48,7 @@ main(int argc, char* argv[]) {
   exporter.add_field("Rho_e", data.Rho[0]);
   exporter.add_field("Rho_p", data.Rho[1]);
   exporter.add_ptc_output_1d("particles", "ptc", &data.particles);
+  exporter.add_ptc_output_1d("photons", "photon", &data.photons);
 
   exporter.copyConfigFile();
   exporter.WriteGrid();
