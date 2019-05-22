@@ -153,7 +153,7 @@ vay_push_2d(particle_data ptc, size_t num,
       //        gamma, inv_gamma2, dev_params.gravity_on);
       // Add an artificial gravity
       if (dev_params.gravity_on) {
-        p1 -= dt * alpha_gr(r) * gamma * dev_params.gravity / (r * r);
+        p1 -= dt * alpha_gr(r) * dev_params.gravity / (r * r);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
         if (gamma != gamma) {
           printf(
@@ -174,7 +174,8 @@ vay_push_2d(particle_data ptc, size_t num,
       // &&
       if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         // if (std::abs(pitch_angle) > 0.9) {
-        if (false) {
+        // if (p >= 2.0f) {
+        if (true) {
           Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
           Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
           Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
@@ -201,22 +202,23 @@ vay_push_2d(particle_data ptc, size_t num,
           p1 += delta_p1;
           p2 += delta_p2;
           p3 += delta_p3;
-        } else {
-          Scalar delta_p1 = -dev_params.rad_cooling_coef *
-                            (p1 - B1 * pdotB / (B_sqrt * B_sqrt));
-          Scalar delta_p2 = -dev_params.rad_cooling_coef *
-                            (p2 - B2 * pdotB / (B_sqrt * B_sqrt));
-          Scalar delta_p3 = -dev_params.rad_cooling_coef *
-                            (p3 - B3 * pdotB / (B_sqrt * B_sqrt));
-          Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-                           delta_p3 * delta_p3);
-          Scalar f = std::sqrt(B_sqrt / dev_params.B0);
-          p1 += delta_p1 * f;
-          p2 += delta_p2 * f;
-          p3 += delta_p3 * f;
+          p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+          gamma = sqrt(1.0f + p * p);
         }
-        p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-        gamma = sqrt(1.0f + p * p);
+        //else {
+          //Scalar delta_p1 = -dev_params.rad_cooling_coef *
+                            //(p1 - B1 * pdotB / (B_sqrt * B_sqrt));
+          //Scalar delta_p2 = -dev_params.rad_cooling_coef *
+                            //(p2 - B2 * pdotB / (B_sqrt * B_sqrt));
+          //Scalar delta_p3 = -dev_params.rad_cooling_coef *
+                            //(p3 - B3 * pdotB / (B_sqrt * B_sqrt));
+          //Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                           //delta_p3 * delta_p3);
+          //Scalar f = std::sqrt(B_sqrt / dev_params.B0);
+          //p1 += delta_p1 * f;
+          //p2 += delta_p2 * f;
+          //p3 += delta_p3 * f;
+        //}
       }
       // printf("gamma after cooling is %f\n", gamma);
       // printf("p is (%f, %f, %f)\n", p1, p2, p3);
@@ -340,6 +342,7 @@ __launch_bounds__(512, 4)
     v1 = v1 / gamma;
     v2 = v2 / gamma;
     v3 = v3 / gamma;
+    Scalar v3_gr = v3 - beta_phi(exp_r1, r2);
 
     // step 1: Compute particle movement and update position
     Scalar x = exp_r1 * std::sin(r2) * std::cos(old_x3);
@@ -347,24 +350,26 @@ __launch_bounds__(512, 4)
     Scalar z = exp_r1 * std::cos(r2);
     // printf("cart position is (%f, %f, %f)\n", x, y, z);
 
-    logsph2cart(v1, v2, v3, r1, r2, old_x3);
+    logsph2cart(v1, v2, v3_gr, r1, r2, old_x3);
     // printf("cart velocity is (%f, %f, %f)\n", v1, v2, v3);
     x += alpha_gr(exp_r1) * v1 * dt;
     y += alpha_gr(exp_r1) * v2 * dt;
-    z += alpha_gr(exp_r1) * (v3 - beta_phi(exp_r1, r2)) * dt;
+    // z += alpha_gr(exp_r1) * (v3 - beta_phi(exp_r1, r2)) * dt;
+    z += alpha_gr(exp_r1) * v3_gr * dt;
     // printf("new cart position is (%f, %f, %f)\n", x, y, z);
     Scalar r1p = sqrt(x * x + y * y + z * z);
     Scalar r2p = acos(z / r1p);
+    Scalar exp_r1p = r1p;
     r1p = log(r1p);
     Scalar r3p = atan2(y, x);
     // if (x < 0.0f) v1 *= -1.0f;
 
     // printf("new position is (%f, %f, %f)\n", exp(r1p), r2p, r3p);
 
-    cart2logsph(v1, v2, v3, r1p, r2p, r3p);
+    cart2logsph(v1, v2, v3_gr, r1p, r2p, r3p);
     ptc.p1[idx] = v1 * gamma;
     ptc.p2[idx] = v2 * gamma;
-    ptc.p3[idx] = v3 * gamma;
+    ptc.p3[idx] = (v3_gr + beta_phi(exp_r1p, r2p)) * gamma;
 
     // Scalar old_pos3 =
     Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
@@ -437,7 +442,8 @@ __launch_bounds__(512, 4)
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
         atomicAdd(&fields.J3[offset],
-                  -weight * v3 * val2 / mesh_ptrs.dV[offset]);
+                  // -weight * (v3 - beta_phi(exp_r1, r2)) * val2 / mesh_ptrs.dV[offset]);
+                  -weight * v3_gr * val2 / mesh_ptrs.dV[offset]);
 
         // rho is deposited at the final position
         if ((step + 1) % dev_params.data_interval == 0) {
@@ -494,9 +500,9 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
   ParticleType p_type =
       (dev_params.inject_ions ? ParticleType::ion
                               : ParticleType::positron);
-  for (int i = dev_mesh.guard[1] + 1 + id;
+  for (int i = dev_mesh.guard[1] + id;
        // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
-       i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
+       i < dev_mesh.dims[1] - dev_mesh.guard[1];
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Scalar r = exp(dev_mesh.pos(0, inject_i, 0.5f));
@@ -521,8 +527,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       // Scalar vphi = 0.0f;
-      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      Scalar w_ptc = w * sin(theta);
+      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      // Scalar w_ptc = w * sin(theta);
       Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;

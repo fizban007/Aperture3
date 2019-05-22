@@ -475,7 +475,7 @@ cu_vector_field<T>::cu_vector_field(const grid_type& grid)
     // Logger::print_debug("resizing {}", i);
     m_array[i].resize(grid.extent());
     // Default initialize to face-centered
-    m_stagger[i] = Stagger();
+    m_stagger[i] = Stagger(0b000);
     // m_stagger[i].set_bit(i, true);
     m_stagger[i].set_bit((i + 1) % 3, true);
     m_stagger[i].set_bit((i + 2) % 3, true);
