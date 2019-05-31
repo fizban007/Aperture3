@@ -74,6 +74,7 @@ vay_push_2d(particle_data ptc, size_t num,
           "is %f\n",
           p1, p2, p3, gamma);
       asm("trap;");
+      // p1 = p2 = p3 = 0.0f;
     }
     // step 0: Grab E & M fields at the particle position
     gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
@@ -153,7 +154,7 @@ vay_push_2d(particle_data ptc, size_t num,
       //        gamma, inv_gamma2, dev_params.gravity_on);
       // Add an artificial gravity
       if (dev_params.gravity_on) {
-        p1 -= dt * alpha_gr(r) * dev_params.gravity / (r * r);
+        p1 -= dt * alpha_gr(r) * dev_params.gravity / (r * r * r * r);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
         if (gamma != gamma) {
           printf(
@@ -172,52 +173,56 @@ vay_push_2d(particle_data ptc, size_t num,
 
       // if (dev_params.rad_cooling_on && std::abs(pitch_angle) < 0.6f
       // &&
-      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      if (dev_params.rad_cooling_on) {
         // if (std::abs(pitch_angle) > 0.9) {
-        // if (p >= 2.0f) {
-        if (true) {
-          Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
-          Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
-          Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
-          Scalar tmp_sq = tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3;
-          Scalar bE =
-              (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+        // if (p >= 1.0f) {
+        // // if (true) {
+          // Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) /
+          // q_over_m; Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma)
+          // / q_over_m; Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) /
+          // gamma) / q_over_m; Scalar tmp_sq = tmp1 * tmp1 + tmp2 *
+          // tmp2 + tmp3 * tmp3; Scalar bE =
+          //     (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
 
-          Scalar delta_p1 =
-              dev_params.rad_cooling_coef *
-              (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
-               gamma * p1 * (tmp_sq - bE * bE)) /
-              square(dev_params.B0);
-          Scalar delta_p2 =
-              dev_params.rad_cooling_coef *
-              (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
-               gamma * p2 * (tmp_sq - bE * bE)) /
-              square(dev_params.B0);
-          Scalar delta_p3 =
-              dev_params.rad_cooling_coef *
-              (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
-               gamma * p3 * (tmp_sq - bE * bE)) /
-              square(dev_params.B0);
+          // Scalar delta_p1 =
+          //     dev_params.rad_cooling_coef *
+          //     (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+          //      gamma * p1 * (tmp_sq - bE * bE)) /
+          //     square(dev_params.B0);
+          // Scalar delta_p2 =
+          //     dev_params.rad_cooling_coef *
+          //     (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+          //      gamma * p2 * (tmp_sq - bE * bE)) /
+          //     square(dev_params.B0);
+          // Scalar delta_p3 =
+          //     dev_params.rad_cooling_coef *
+          //     (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+          //      gamma * p3 * (tmp_sq - bE * bE)) /
+          //     square(dev_params.B0);
 
-          p1 += delta_p1;
-          p2 += delta_p2;
-          p3 += delta_p3;
-          p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-          gamma = sqrt(1.0f + p * p);
-        }
-        //else {
-          //Scalar delta_p1 = -dev_params.rad_cooling_coef *
-                            //(p1 - B1 * pdotB / (B_sqrt * B_sqrt));
-          //Scalar delta_p2 = -dev_params.rad_cooling_coef *
-                            //(p2 - B2 * pdotB / (B_sqrt * B_sqrt));
-          //Scalar delta_p3 = -dev_params.rad_cooling_coef *
-                            //(p3 - B3 * pdotB / (B_sqrt * B_sqrt));
-          //Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-                           //delta_p3 * delta_p3);
-          //Scalar f = std::sqrt(B_sqrt / dev_params.B0);
-          //p1 += delta_p1 * f;
-          //p2 += delta_p2 * f;
-          //p3 += delta_p3 * f;
+          // p1 += delta_p1;
+          // p2 += delta_p2;
+          // p3 += delta_p3;
+          // p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+          // gamma = sqrt(1.0f + p * p);
+        // }
+        // else {
+        Scalar delta_p1 = -dev_params.rad_cooling_coef *
+                          (p1 - B1 * pdotB / (B_sqrt * B_sqrt));
+        Scalar delta_p2 = -dev_params.rad_cooling_coef *
+                          (p2 - B2 * pdotB / (B_sqrt * B_sqrt));
+        Scalar delta_p3 = -dev_params.rad_cooling_coef *
+                          (p3 - B3 * pdotB / (B_sqrt * B_sqrt));
+        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+                         delta_p3 * delta_p3);
+        Scalar f = std::sqrt(B_sqrt / dev_params.B0);
+        if (sp == (int)ParticleType::ion) f *= 0.1f;
+        p1 += delta_p1 * f;
+        p2 += delta_p2 * f;
+        p3 += delta_p3 * f;
+        p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+        gamma = sqrt(1.0f + p * p);
         //}
       }
       // printf("gamma after cooling is %f\n", gamma);
@@ -442,7 +447,8 @@ __launch_bounds__(512, 4)
         // j3 is simply v3 times rho at volume average
         Scalar val2 = center2d(sx0, sx1, sy0, sy1);
         atomicAdd(&fields.J3[offset],
-                  // -weight * (v3 - beta_phi(exp_r1, r2)) * val2 / mesh_ptrs.dV[offset]);
+                  // -weight * (v3 - beta_phi(exp_r1, r2)) * val2 /
+                  // mesh_ptrs.dV[offset]);
                   -weight * v3_gr * val2 / mesh_ptrs.dV[offset]);
 
         // rho is deposited at the final position
@@ -496,13 +502,14 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
            Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
-  int inject_i = dev_mesh.guard[0] + 3;
+  // int inject_i = dev_mesh.guard[0] + 3;
+  int inject_i = dev_mesh.guard[0];
   ParticleType p_type =
       (dev_params.inject_ions ? ParticleType::ion
                               : ParticleType::positron);
-  for (int i = dev_mesh.guard[1] + id;
+  for (int i = dev_mesh.guard[1] + 1 + id;
        // i = dev_mesh.dims[1] - dev_mesh.guard[1] - 3 + id;
-       i < dev_mesh.dims[1] - dev_mesh.guard[1];
+       i < dev_mesh.dims[1] - dev_mesh.guard[1] - 1;
        i += blockDim.x * gridDim.x) {
     size_t offset = num + i * inj_per_cell * 2;
     Scalar r = exp(dev_mesh.pos(0, inject_i, 0.5f));
@@ -517,7 +524,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
-    if (dev_params.q_e * dens > 0.6f *
+    if (dev_params.q_e * dens > 0.5f *
                                     square(1.0f / dev_mesh.delta[1]) *
                                     std::sin(dev_mesh.pos(1, i, 0.5f)))
       continue;
@@ -527,8 +534,8 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       // Scalar vphi = 0.0f;
-      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      // Scalar w_ptc = w * sin(theta);
+      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      Scalar w_ptc = w * sin(theta);
       Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
@@ -622,17 +629,34 @@ measure_surface_density(particle_data ptc, size_t num,
     int c2 = dev_mesh.get_c2(c);
     // Sum over 3 cells, hense the w / 3.0f in the atomicAdd
     int sum_cells = 3;
-    int inject_cell = dev_mesh.guard[0] + 3;
+    // int inject_cell = dev_mesh.guard[0] + 3;
+    int inject_cell = dev_mesh.guard[0];
     if (c1 >= inject_cell - 1 && c1 <= inject_cell - 1 + sum_cells) {
       auto flag = ptc.flag[idx];
       int sp = get_ptc_type(flag);
       auto w = ptc.weight[idx];
       if (sp == (int)ParticleType::electron) {
+        atomicAdd(&surface_e[max(c2 - dev_mesh.guard[1] - 2, 0)],
+                  1.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_e[max(c2 - dev_mesh.guard[1] - 1, 0)],
+                  4.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_e[c2 - dev_mesh.guard[1]],
-                  w / float(sum_cells));
-      } else if (sp == (int)ParticleType::positron) {
+                  6.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_e[min(c2 - dev_mesh.guard[1] + 1, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+                  4.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_e[min(c2 - dev_mesh.guard[1] + 2, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+                  1.0f * w / float(sum_cells) / 16.0f);
+      } else if (sp == (int)ParticleType::ion) {
+        atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 2, 0)],
+                  1.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 1, 0)],
+                  4.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_p[c2 - dev_mesh.guard[1]],
-                  w / float(sum_cells));
+                  6.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_p[min(c2 - dev_mesh.guard[1] + 1, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+                  4.0f * w / float(sum_cells) / 16.0f);
+        atomicAdd(&surface_p[min(c2 - dev_mesh.guard[1] + 2, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+                  1.0f * w / float(sum_cells) / 16.0f);
       }
     }
   }
@@ -837,6 +861,8 @@ PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
                              m_env.dev_map()[n]);
     m_surface_p.emplace_back(m_env.sub_params(n).N[1],
                              m_env.dev_map()[n]);
+    m_surface_tmp.emplace_back(m_env.sub_params(n).N[1],
+                               m_env.dev_map()[n]);
   });
   for_each_device(env.dev_map(), [this](int n) {
     m_tmp_j1.emplace_back(Extent(
@@ -1017,6 +1043,8 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
 void
 PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
   for_each_device(data.dev_map, [this, &data](int n) {
+    if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
+    }
     data.particles[n].clear_guard_cells();
     data.photons[n].clear_guard_cells();
   });
@@ -1062,6 +1090,7 @@ PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
     if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
       m_surface_e[n].assign_dev(0.0);
       m_surface_p[n].assign_dev(0.0);
+      m_surface_tmp[n].assign_dev(0.0);
       Kernels::measure_surface_density<<<256, 512>>>(
           data.particles[n].data(), data.particles[n].number(),
           m_surface_e[n].data_d(), m_surface_p[n].data_d());

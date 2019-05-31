@@ -46,8 +46,8 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   Scalar r = std::exp(dev_mesh.pos(0, n1, true));
   Scalar theta = dev_mesh.pos(1, n2, true);
   Scalar theta0 = dev_mesh.pos(1, n2, false);
-  Scalar beta = 0.4f * dev_params.omega * dev_params.compactness *
-                std::sin(theta) / (r * r);
+  // Scalar beta = 0.4f * dev_params.omega * dev_params.compactness *
+  //               std::sin(theta) / (r * r);
   Scalar rho =
       rho0[globalOffset] + rho1[globalOffset] + rho2[globalOffset];
   Scalar r1 = std::exp(dev_mesh.pos(0, n1 + 1, 0));
@@ -151,15 +151,19 @@ compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   b3[globalOffset] +=
       -dt *
       (((e2(n1, n2) * alpha_gr(r1) +
+         // (b1(n1, n2) + dev_bg_fields.B1(n1, n2)) * beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
          dev_bg_fields.B1(n1, n2) * beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
             mesh_ptrs.l2_e(n1, n2) -
         (e2(n1 - 1, n2) * alpha_gr(r0) +
+         // (b1(n1 - 1, n2) + dev_bg_fields.B1(n1 - 1, n2)) * beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
          dev_bg_fields.B1(n1 - 1, n2) * beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
             mesh_ptrs.l2_e(n1 - 1, n2) +
         (e1(n1, n2 - 1) * alpha_gr(r) -
+         // (b2(n1, n2 - 1) + dev_bg_fields.B2(n1, n2 - 1)) * beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
          dev_bg_fields.B2(n1, n2 - 1) * beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
             mesh_ptrs.l1_e(n1, n2 - 1) -
         (e1(n1, n2) * alpha_gr(r) -
+         // (b2(n1, n2) + dev_bg_fields.B2(n1, n2)) * beta_phi(r, dev_mesh.pos(1, n2, 1))) *
          dev_bg_fields.B2(n1, n2) * beta_phi(r, dev_mesh.pos(1, n2, 1))) *
             mesh_ptrs.l1_e(n1, n2)) /
        mesh_ptrs.A3_b(n1, n2));
@@ -242,7 +246,8 @@ stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     Scalar theta_s = dev_mesh.pos(1, j, true);
     Scalar theta = dev_mesh.pos(1, j, false);
-    for (int i = 0; i < dev_mesh.guard[0] + 1; i++) {
+    // for (int i = 0; i < dev_mesh.guard[0] + 1; i++) {
+    for (int i = 0; i < dev_mesh.guard[0]; i++) {
       Scalar r_s = std::exp(dev_mesh.pos(0, i, true));
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
       Scalar omega_LT = 0.4f * omega * dev_params.compactness;
