@@ -31,3 +31,6 @@ relatively independent.
 
 Configurations of the simulation can be found in `config.toml` under each lab.
 Read through the file to see what can be changed without recompiling.
+
+To create a new lab, run `./newlab NAME`. A new directory will appear in `labs`
+which contains a config file, a `main.cpp`, and a `buick` script.
