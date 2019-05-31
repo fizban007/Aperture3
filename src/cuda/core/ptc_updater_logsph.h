@@ -25,7 +25,7 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
   std::vector<void*> d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  std::vector<cu_array<Scalar>> m_surface_e, m_surface_p;
+  std::vector<cu_array<Scalar>> m_surface_e, m_surface_p, m_surface_tmp;
   std::vector<cu_multi_array<Scalar>> m_tmp_j1, m_tmp_j2;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 

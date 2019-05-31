@@ -119,6 +119,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       // if (std::abs(Eph) < dev_params.E_ph_min) continue;
+      if (theta < 0.005f || theta > CONST_PI - 0.005f) continue;
 
       u = rng();
       // Add the new photon
