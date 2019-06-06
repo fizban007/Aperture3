@@ -121,6 +121,8 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
       config->get_as<double>("r_cutoff").value_or(defaults.r_cutoff);
   params.omega =
       config->get_as<double>("omega").value_or(defaults.omega);
+  params.a =
+      config->get_as<double>("a").value_or(defaults.a);
   params.damping_length = config->get_as<uint64_t>("damping_length")
                               .value_or(defaults.damping_length);
   auto periodic_boundary =

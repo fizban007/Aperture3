@@ -42,9 +42,10 @@ prepare_initial_condition(particle1d_data ptc,
       ptc.E[idx] = ptc.E[idx + 1] = u0;
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
       // ptc.cell[idx] = MAX_CELL;
-      ptc.weight[idx] =
-          K1 + std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
-      ptc.weight[idx + 1] = K1 + max(rho0 * K1, 0.0f) / multiplicity;
+      ptc.weight[idx] = 0.05 * dev_params.B0 * K1 +
+                        std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
+      ptc.weight[idx + 1] = 0.05 * dev_params.B0 * K1 +
+                            max(rho0 * K1, 0.0f) / multiplicity;
       // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
       // u0, ptc.weight[idx]);
       ptc.flag[idx] = set_ptc_type_flag(
@@ -90,7 +91,8 @@ prepare_initial_photons(photon1d_data photons,
       Scalar Delta = r * r - 2.0f * r + a * a;
 
       photons.p1[idx] = 10.0f * curand_uniform(&local_state) * Delta;
-      photons.p1[idx + 1] = -10.0f * curand_uniform(&local_state) * Delta;
+      photons.p1[idx + 1] =
+          -10.0f * curand_uniform(&local_state) * Delta;
       photons.E[idx] = sgn(photons.p1[idx]) *
                        std::sqrt(g11 * square(photons.p1[idx] / Delta) +
                                  g33 * square(photons.pf[idx])) /
