@@ -16,8 +16,7 @@
 
 using namespace Aperture;
 
-int
-main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   uint32_t start_step = 0;
   uint32_t step = start_step;
   float start_time = 0.0;
@@ -35,10 +34,31 @@ main(int argc, char* argv[]) {
   if (env.params().is_restart) {
     Logger::print_info("This is a restart");
     exporter.load_from_snapshot(env, data, start_step, start_time);
-    exporter.prepareXMFrestart(step, env.params().data_interval,
-                               start_time);
+    exporter.prepareXMFrestart(step, env.params().data_interval, start_time);
     step = start_step + 1;
     time = start_time + env.params().delta_t;
+    // data.fill_multiplicity(1.0, 1);
+    // for (int j = 100; j < data.grid[0]->mesh().dims[1] - 99; j++) {
+    //   Scalar th = data.grid[0]->mesh().pos(1, j, 0.5f);
+    //   // Scalar p = 10.0;
+    //   // Scalar pp1 = 2.0 * p * cos(th);
+    //   // Scalar pp2 = p * sin(th);
+    //   // Scalar rot = 1.0;
+    //   // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
+    //   // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
+    //   data.particles[0].append(
+    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+    //       // std::abs(p) * 0.1 * sin(th) *
+    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
+    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
+    //       200 + 1540 * j, ParticleType::electron, std::sin(th));
+    //   data.particles[0].append(
+    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+    //       // std::abs(p) * 0.1 * sin(th) *
+    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
+    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
+    //       200 + 1540 * j, ParticleType::positron, std::sin(th));
+    // }
   } else {
     exporter.copyConfigFile();
     exporter.copySrc();
@@ -58,8 +78,8 @@ main(int argc, char* argv[]) {
       return B0 * sin(x2) / (r * r * r);
       // return 0.0;
     });
-    data.init_bg_B_field(
-        2, [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
+    data.init_bg_B_field(2,
+                         [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
     data.init_bg_fields();
 
     // data.E[0].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
@@ -93,7 +113,7 @@ main(int argc, char* argv[]) {
     //     // 200 + 516 * 100, ParticleType::electron, 1.0);
     //     120 + 516 * j, ParticleType::electron, 1.0);
     // }
-    // data.fill_multiplicity(1.0, 2);
+    data.fill_multiplicity(1.0, 6);
   }
   // Initialize the field solver
   FieldSolver_LogSph field_solver;
@@ -121,8 +141,8 @@ main(int argc, char* argv[]) {
     } else {
       omega = env.params().omega;
     }
-    Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
-                       step, time, omega);
+    Logger::print_info("=== At timestep {}, time = {}, omega = {} ===", step,
+                       time, omega);
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
@@ -144,7 +164,7 @@ main(int argc, char* argv[]) {
 
     // Inject particles
     if (env.params().inject_particles && step % 1 == 0)
-      ptc_updater.inject_ptc(data, 2, 0.0, 0.0, 0.0,
+      ptc_updater.inject_ptc(data, 2, 0.1, 0.0, 0.0,
                              // 1.0 * omega / env.params().omega, omega);
                              1.0, omega);
 

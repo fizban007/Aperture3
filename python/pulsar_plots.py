@@ -166,13 +166,17 @@ class Plots:
         clevel = np.linspace(flux_lower, flux_upper, flux_num)
         tick_size = 20
         pair_limit = conf["r_cutoff"] * conf["omega"]
+        edotb_limit = 0.6 / conf["omega"]
         contours = []
         for i in range(8):
             axes[i // 4, i % 4].set_xlim([0, x_lim])
             axes[i // 4, i % 4].set_ylim([-y_lim, y_lim])
-            if i == 5:
-                axes[i // 4, i % 4].set_xlim([0, pair_limit*x_lim])
-                axes[i // 4, i % 4].set_ylim([-pair_limit*y_lim, pair_limit*y_lim])
+            # if i == 4:
+            #     axes[i // 4, i % 4].set_xlim([0, pair_limit*x_lim])
+            #     axes[i // 4, i % 4].set_ylim([-pair_limit*y_lim, pair_limit*y_lim])
+            # if i == 5:
+            #     axes[i // 4, i % 4].set_xlim([0, pair_limit*x_lim])
+            #     axes[i // 4, i % 4].set_ylim([-pair_limit*y_lim, pair_limit*y_lim])
             axes[i // 4, i % 4].set_aspect("equal", "datalim")
             axes[i // 4, i % 4].tick_params(axis="both", labelsize=tick_size)
             axes[i // 4, i % 4].axvline(1.0 / conf["omega"], linestyle="--", color="w")
@@ -237,7 +241,7 @@ else:
     steps = 10000
     data_interval = 200
 
-agents = 5
+agents = 7
 
 data = Data(data_dir)
 plots = Plots(data_dir, data_interval, data)
@@ -258,5 +262,5 @@ def make_plots(step):
     plots.make_plot(step)
 
 with Pool(processes=agents) as pool:
-    pool.map(make_plots, steps_to_plot, chunksize)
+    pool.map(make_plots, steps_to_plot)
 # plots.make_plot(steps_to_plot[-1])

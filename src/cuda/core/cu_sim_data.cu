@@ -67,7 +67,7 @@ check_mesh_ptrs(Grid_LogSph_dev::mesh_ptrs mesh_ptrs) {
 }
 
 __global__ void
-fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
+fill_particles(particle_data ptc, size_t number, Scalar weight, int multiplicity) {
   for (int j =
            blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
        j < dev_mesh.dims[1] - dev_mesh.guard[1];
@@ -80,7 +80,7 @@ fill_particles(particle_data ptc, Scalar weight, int multiplicity) {
       Scalar theta = dev_mesh.pos(1, j, 0.5f);
       // int Np = 3;
       for (int n = 0; n < multiplicity; n++) {
-        size_t idx = cell * multiplicity * 2 + n * 2;
+        size_t idx = number + cell * multiplicity * 2 + n * 2;
         ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
         ptc.x2[idx] = ptc.x2[idx + 1] = 0.5f;
         ptc.x3[idx] = ptc.x3[idx + 1] = 0.0f;
@@ -371,12 +371,12 @@ void
 cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   for_each_device(dev_map, [this, weight, multiplicity](int n) {
     Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(
-        particles[n].data(), weight, multiplicity);
+        particles[n].data(), particles[n].number(), weight, multiplicity);
     // cudaDeviceSynchronize();
     CudaCheckError();
 
     auto &mesh = grid[n]->mesh();
-    particles[n].set_num(mesh.dims[0] * mesh.dims[1] * 2 *
+    particles[n].set_num(particles[n].number() + mesh.dims[0] * mesh.dims[1] * 2 *
                          multiplicity);
   });
   for_each_device(dev_map,
