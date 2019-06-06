@@ -119,6 +119,8 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       // if (std::abs(Eph) < dev_params.E_ph_min) continue;
+      // if (theta < 0.265f || theta > CONST_PI - 0.265f) continue;
+      // if (theta < 0.165f || theta > CONST_PI - 0.165f) continue;
       if (theta < 0.005f || theta > CONST_PI - 0.005f) continue;
 
       u = rng();
@@ -201,10 +203,10 @@ count_pairs_produced(PhotonData photons, size_t number, int *pair_count,
       Scalar rho = max(std::abs(rho1(c1, c2) + rho0(c1, c2)), 0.0001f);
       Scalar N = rho1(c1, c2) - rho0(c1, c2);
       Scalar multiplicity = N / rho;
-      if (multiplicity > 20.0f) {
-        photons.cell[tid] = MAX_CELL;
-        continue;
-      }
+      // if (multiplicity > 20.0f) {
+      //   photons.cell[tid] = MAX_CELL;
+      //   continue;
+      // }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       Scalar w = photons.weight[tid];
@@ -250,12 +252,12 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
 
       if (gamma != gamma) {
-        printf(
-            "NaN detected in pair creation! ratio is %f, E_ph2 is %f, "
-            "p1 is "
-            "%f, "
-            "p2 is %f, p3 is %f\n",
-            ratio, E_ph2, p1, p2, p3);
+        // printf(
+        //     "NaN detected in pair creation! ratio is %f, E_ph2 is %f, "
+        //     "p1 is "
+        //     "%f, "
+        //     "p2 is %f, p3 is %f\n",
+        //     ratio, E_ph2, p1, p2, p3);
         // asm("trap;");
         photons.cell[tid] = MAX_CELL;
         continue;

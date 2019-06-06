@@ -17,6 +17,9 @@ namespace Aperture {
 
 namespace Kernels {
 
+__device__ Scalar
+beta_phi(Scalar r, Scalar theta);
+
 HD_INLINE void cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1,
                            Scalar x2, Scalar x3) {
   Scalar v1n = v1, v2n = v2, v3n = v3;
@@ -59,7 +62,8 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
     Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
     // step 0: Grab E & M fields at the particle position
     Scalar gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
-    if (!check_bit(flag, ParticleFlag::ignore_EM)) {
+    if (!check_bit(flag, ParticleFlag::ignore_EM) &&
+        c1 < dev_mesh.dims[0] - dev_params.damping_length) {
       Scalar E1 = (interp(fields.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
                   // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
                   //        Stagger(0b110))) *
@@ -150,8 +154,7 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
       if (gamma_thr_B > 3.0f && gamma > gamma_thr_B &&
           sp != (int)ParticleType::ion) {
         ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
-      }
-      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      } else if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
         // Process resonant drag
         // Scalar p_mag = std::abs(pdotB / B);
         Scalar p_mag_signed =
@@ -200,13 +203,17 @@ __global__ void vay_push_2d(particle_data ptc, size_t num,
           Scalar Eph =
               (g - std::abs(p_mag_signed) * u) *
               (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-          if (Eph < 1.0f || B < 0.2*dev_params.BQ) {
+          if (p1 > 0.0f && (Eph < 2.0f || B < 0.1*dev_params.BQ)) {
             Eph = std::log(Eph) / std::log(10.0f);
             if (Eph > 2.0f) Eph = 2.0f;
             if (Eph < -6.0f) Eph = -6.0f;
-            int n0 = ((Eph + 6.0f) / 8.0f *
+            int n0 = ((Eph + 6.0f) / 8.02f *
                       (ph_flux.xsize / sizeof(float) - 1));
-            int n1 = (std::abs(angle) / CONST_PI) * (ph_flux.ysize - 1);
+            if (n0 < 0) n0 = 0;
+            if (n0 >= ph_flux.xsize / sizeof(float)) n0 = ph_flux.xsize / sizeof(float) - 1;
+            int n1 = (std::abs(angle) / (CONST_PI + 1.0e-5)) * (ph_flux.ysize - 1);
+            if (n1 < 0) n1 = 0;
+            if (n1 >= ph_flux.ysize) n1 = ph_flux.ysize - 1;
             auto w = ptc.weight[idx];
             // printf("n0 is %d, n1 is %d, Ndot is %f\n", n0, n1, Ndot);
             atomicAdd(ptrAddr(ph_flux, n0, n1), Ndot * dt * w);
@@ -347,15 +354,15 @@ __global__ void __launch_bounds__(512, 4)
     int sp = get_ptc_type(flag);
     auto w = ptc.weight[idx];
     auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx], old_x3 = ptc.x3[idx];
-
-    v1 = v1 / gamma;
-    v2 = v2 / gamma;
-    v3 = v3 / gamma;
-
-    // step 1: Compute particle movement and update position
     Scalar r1 = dev_mesh.pos(0, c1, old_x1);
     Scalar exp_r1 = std::exp(r1);
     Scalar r2 = dev_mesh.pos(1, c2, old_x2);
+
+    v1 = v1 / gamma;
+    v2 = v2 / gamma;
+    v3 = v3 / gamma - beta_phi(exp_r1, r2);
+
+    // step 1: Compute particle movement and update position
     Scalar x = exp_r1 * std::sin(r2) * std::cos(old_x3);
     Scalar y = exp_r1 * std::sin(r2) * std::sin(old_x3);
     Scalar z = exp_r1 * std::cos(r2);

@@ -2,7 +2,7 @@
 delta_t = 0.001
 
 # Charge of an electron
-q_e = 20000.0
+q_e = 4000.0
 
 # Ion mass
 ion_mass = 1.0
@@ -11,7 +11,7 @@ ion_mass = 1.0
 num_species = 3
 
 # Maximum number of particles per node
-max_ptc_number = 110000000
+max_ptc_number = 310000000
 
 # Maximum number of photons per node
 max_photon_number = 10000000
@@ -23,16 +23,16 @@ create_pairs = true
 trace_photons = true
 
 # Threshold for creating a photon / pair
-gamma_thr = 20.0
+gamma_thr = 25.0
 
 # Free path for energetic photons
-photon_path = 0.01
+photon_path = 0.005
 
 # Secondary particle energy
-E_secondary = 8.0
+E_secondary = 6.5
 
 # Radius cutoff for pair creation
-r_cutoff = 2.0
+r_cutoff = 3.0
 
 # Gravity switch
 gravity_on = true
@@ -47,25 +47,28 @@ compactness = 0.5
 rad_cooling_on = true
 
 # Radiation cooling strength
-rad_cooling_coef = 2.0e-10
+rad_cooling_coef = 0.1
 
 # Whether to use periodic boundary condition in each direction
 periodic_boundary = [false, false]
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/Aperture3/2d_weak_pulsar/"
+data_dir = "/home/alex/storage/Data/Aperture3/2d_wp_experiment/"
+# data_dir = "/home/alex/storage/Data/Aperture3/2d_sync_experiment/"
+# data_dir = "/home/alex/storage/Data/Aperture3/gr_monopole/"
 
 # Dipole B0
-B0 = 160000.0
+B0 = 80000.0
 
 # Damping coefficient
-damping_coef = 0.003
+damping_coef = 0.002
 
 # Damping layer thickness in cells
-damping_length = 64
+damping_length = 96
 
 # Star rotating omega
 omega = 0.125
+# omega = 0.0
 
 # Whether to inject ions or positrons
 inject_ions = true
@@ -86,7 +89,7 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [3.3, 3.1415926535898, 1.0]
+size = [4.0, 3.1415926535898, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]
@@ -101,7 +104,7 @@ random_seed = 3333
 # resolution is divided by n. This should be a power of 2 as well
 downsample = 3
 
-max_steps = 200000
+max_steps = 300000
 
 data_interval = 200
 
@@ -109,8 +112,8 @@ snapshot_interval = 5000
 
 sort_interval = 20
 
-current_smoothing = 4
+current_smoothing = 5
 
 update_fields = true
 
-inject_particles = true
+inject_particles = false
