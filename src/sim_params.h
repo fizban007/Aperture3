@@ -59,6 +59,7 @@ struct SimParamsBase {
   float star_kT = 0.001;
   float res_drag_coef = 40.0;
   float omega = 0.2;
+  float a = 0.0;
   bool inject_ions = true;
 
   // These parameters are for radiative transfer

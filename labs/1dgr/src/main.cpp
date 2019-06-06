@@ -32,12 +32,12 @@ main(int argc, char* argv[]) {
   Logger::print_debug("Finished initializing ptc updater");
 
   // Initialize radiative transfer module
-  // RadiationTransfer1DGR rad(env);
-  // Logger::print_debug("Finished initializing radiation module");
+  RadiationTransfer1DGR rad(env);
+  Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  // data.prepare_initial_condition(10);
-  data.prepare_initial_photons(1);
+  data.prepare_initial_condition(20);
+  // data.prepare_initial_photons(1);
   Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter
@@ -77,11 +77,14 @@ main(int argc, char* argv[]) {
 
     solver.update_fields(data, dt);
 
+    rad.emit_photons(data, dt);
+    rad.produce_pairs(data, dt);
+
     // Sort the particles every once in a while
     if (step % env.params().sort_interval == 0 && step != 0) {
       timer::stamp();
       data.particles.sort_by_cell();
-      // data.photons.sort_by_cell();
+      data.photons.sort_by_cell();
       auto t_sort = timer::get_duration_since_stamp("us");
       Logger::print_info("Ptc sort took {}us", t_sort);
     }
