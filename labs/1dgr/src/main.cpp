@@ -11,8 +11,7 @@
 
 using namespace Aperture;
 
-int
-main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   // We declare the current timestep here because we might need to
   // restart from a snapshot
   uint32_t step = 0;
@@ -36,8 +35,8 @@ main(int argc, char* argv[]) {
   Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  data.prepare_initial_condition(20);
-  // data.prepare_initial_photons(1);
+  // data.prepare_initial_condition(8);
+  data.prepare_initial_photons(50);
   Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter
@@ -77,8 +76,10 @@ main(int argc, char* argv[]) {
 
     solver.update_fields(data, dt);
 
-    rad.emit_photons(data, dt);
-    rad.produce_pairs(data, dt);
+    if (env.params().create_pairs) {
+      rad.emit_photons(data, dt);
+      rad.produce_pairs(data, dt);
+    }
 
     // Sort the particles every once in a while
     if (step % env.params().sort_interval == 0 && step != 0) {
