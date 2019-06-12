@@ -8,10 +8,10 @@ q_e = 1.0
 num_species = 2
 
 # Maximum number of particles per node
-max_ptc_number = 10000000
+max_ptc_number = 180000000
 
 # Maximum number of photons per node
-max_photon_number = 10000000
+max_photon_number = 180000000
 
 # Create pairs or not
 create_pairs = true
@@ -35,7 +35,7 @@ E_ph_min = 10.0
 r_cutoff = 3.0
 
 # Free path for inverse Compton once a particle reaches threshold
-ic_path = 0.001
+ic_path = 0.1
 
 # Spectral index alpha for the background soft photon
 spectral_alpha = 1.2
@@ -53,10 +53,10 @@ periodic_boundary = [false, false]
 track_percent = 0.1
 
 # Data output directory
-data_dir = "/home/alex/Data/Aperture3/1dgr/"
+data_dir = "/home/alex/storage/Data/1DGR/1d_experiment"
 
 # Dipole B0
-B0 = 2.0e4
+B0 = 1.0e7
 
 # Damping coefficient
 damping_coef = 0.003
@@ -65,7 +65,7 @@ damping_coef = 0.003
 damping_length = 32
 
 # Star rotating omega
-omega = 0.1
+omega = 0.2117
 
 # Resolution for gamma grid used in IC scattering table
 n_gamma = 300
@@ -102,8 +102,10 @@ random_seed = 3333
 
 downsample = 1
 
-max_steps = 100000
+max_steps = 1000000
 
 data_interval = 1000
 
 sort_interval = 20
+
+current_smoothing = 8

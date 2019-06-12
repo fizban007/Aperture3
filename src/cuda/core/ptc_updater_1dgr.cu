@@ -10,25 +10,23 @@ namespace Aperture {
 
 namespace Kernels {
 
-__device__ Scalar
-interp_deriv(Scalar x, int c, const Scalar* array) {
-  Scalar d0 = (x < 0.5f ? array[c - 1] - array[c - 2]
-                        : array[c] - array[c - 1]);
-  Scalar d1 =
-      (x < 0.5f ? array[c] - array[c - 1] : array[c + 1] - array[c]);
+__device__ Scalar interp_deriv(Scalar x, int c, const Scalar *array) {
+  Scalar d0 =
+      (x < 0.5f ? array[c - 1] - array[c - 2] : array[c] - array[c - 1]);
+  Scalar d1 = (x < 0.5f ? array[c] - array[c - 1] : array[c + 1] - array[c]);
   return (x < 0.5f ? (0.5f + x) * d1 + (0.5f - x) * d0
                    : (x - 0.5f) * d1 + (1.5f - x) * d0);
 }
 
-__global__ void
-update_ptc_1dgr(particle1d_data ptc, size_t num,
-                ptc_updater_1dgr_dev::fields_data fields,
-                Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+__global__ void update_ptc_1dgr(particle1d_data ptc, size_t num,
+                                ptc_updater_1dgr_dev::fields_data fields,
+                                Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
     // Skip empty particles
-    if (c == MAX_CELL || idx >= num) continue;
+    if (c == MAX_CELL || idx >= num)
+      continue;
     if (!dev_mesh.is_in_bulk(c)) {
       ptc.cell[idx] = MAX_CELL;
       continue;
@@ -52,8 +50,7 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     //   u0, ptc.weight[idx]);
 
     // interpolate quantities
-    Scalar alpha =
-        mesh_ptrs.alpha[c] * x1 + mesh_ptrs.alpha[c - 1] * nx1;
+    Scalar alpha = mesh_ptrs.alpha[c] * x1 + mesh_ptrs.alpha[c - 1] * nx1;
     Scalar D1 = mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * nx1;
     Scalar D2 = mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * nx1;
     Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
@@ -113,21 +110,19 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
     //   printf("new_x1 is %f\n", new_x1);
     // }
     int dc1 = floor(new_x1);
-    if (dc1 > 1 || dc1 < -1) printf("Moving more than 1 cell!\n");
+    if (dc1 > 1 || dc1 < -1)
+      printf("Moving more than 1 cell!\n");
     new_x1 -= (Pos_t)dc1;
 
     ptc.cell[idx] = c + dc1;
     ptc.x1[idx] = new_x1;
 
     nx1 = 1.0f - new_x1;
-    alpha = mesh_ptrs.alpha[c + dc1] * new_x1 +
-            mesh_ptrs.alpha[c + dc1 - 1] * nx1;
-    D1 = mesh_ptrs.D1[c + dc1] * new_x1 +
-         mesh_ptrs.D1[c + dc1 - 1] * nx1;
-    D2 = mesh_ptrs.D2[c + dc1] * new_x1 +
-         mesh_ptrs.D2[c + dc1 - 1] * nx1;
-    D3 = mesh_ptrs.D3[c + dc1] * new_x1 +
-         mesh_ptrs.D3[c + dc1 - 1] * nx1;
+    alpha =
+        mesh_ptrs.alpha[c + dc1] * new_x1 + mesh_ptrs.alpha[c + dc1 - 1] * nx1;
+    D1 = mesh_ptrs.D1[c + dc1] * new_x1 + mesh_ptrs.D1[c + dc1 - 1] * nx1;
+    D2 = mesh_ptrs.D2[c + dc1] * new_x1 + mesh_ptrs.D2[c + dc1 - 1] * nx1;
+    D3 = mesh_ptrs.D3[c + dc1] * new_x1 + mesh_ptrs.D3[c + dc1 - 1] * nx1;
 
     // compute energy at the new position
     u0 = sqrt((D2 + p1 * p1) / (D2 * (alpha * alpha - D3) + D1 * D1));
@@ -149,14 +144,13 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
         // printf("djx%d is %f, ", i, sx1 - sx0);
 
         atomicAdd(&fields.J1[offset + sizeof(Scalar)],
-                  weight * djx / mesh_ptrs.K1_j[i + c + 1] *
-                      dev_mesh.delta[0] / dt);
+                  weight * djx / mesh_ptrs.K1_j[i + c + 1] * dev_mesh.delta[0] /
+                      dt);
         // if (sp == 0)
         //   printf("j1 is %f, ",
         //          fields.J1[offset + sizeof(Scalar)]);
 
-        atomicAdd(&fields.Rho[sp][offset],
-                  -weight * sx1 / mesh_ptrs.K1[i + c]);
+        atomicAdd(&fields.Rho[sp][offset], -weight * sx1 / mesh_ptrs.K1[i + c]);
         // if (sp == 0)
         //   printf("sx1 is %f\n", sx1);
       }
@@ -170,14 +164,15 @@ update_ptc_1dgr(particle1d_data ptc, size_t num,
   }
 }
 
-__global__ void
-update_photon_1dgr(photon1d_data photons, size_t num,
-                   Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
+__global__ void update_photon_1dgr(photon1d_data photons, size_t num,
+                                   Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                                   Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
     // Skip empty particles
-    if (c == MAX_CELL || idx >= num) continue;
+    if (c == MAX_CELL || idx >= num)
+      continue;
     if (!dev_mesh.is_in_bulk(c)) {
       photons.cell[idx] = MAX_CELL;
       continue;
@@ -201,8 +196,7 @@ update_photon_1dgr(photon1d_data photons, size_t num,
     Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
 
     // interpolate quantities
-    Scalar alpha =
-        mesh_ptrs.alpha[c] * x1 + mesh_ptrs.alpha[c - 1] * nx1;
+    Scalar alpha = mesh_ptrs.alpha[c] * x1 + mesh_ptrs.alpha[c - 1] * nx1;
     Scalar gamma11 =
         mesh_ptrs.gamma_rr[c] * x1 + mesh_ptrs.gamma_rr[c - 1] * nx1;
     Scalar gamma33 =
@@ -211,8 +205,7 @@ update_photon_1dgr(photon1d_data photons, size_t num,
 
     Scalar dDelta_dr = 2.0f * r - 2.0f;
     Scalar Delta_sqr = square(r * r - 2.0f * r + a * a);
-    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) /
-         alpha;
+    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) / alpha;
     // int c_0 = (x1 < 0.5f ? c - 1 : c);
     Scalar da2dr =
         (square(mesh_ptrs.alpha[c]) - square(mesh_ptrs.alpha[c - 1])) *
@@ -220,31 +213,25 @@ update_photon_1dgr(photon1d_data photons, size_t num,
     // Scalar da2dr = 2.0 * alpha * interp_deriv(x1, c, mesh_ptrs.alpha)
     // *
     //                dev_mesh.inv_delta[0];
-    Scalar dgamma11dxi =
-        (mesh_ptrs.gamma_rr[c] - mesh_ptrs.gamma_rr[c - 1]) *
-        dev_mesh.inv_delta[0];
-    Scalar dgamma33dxi =
-        (mesh_ptrs.gamma_ff[c] - mesh_ptrs.gamma_ff[c - 1]) *
-        dev_mesh.inv_delta[0];
-    Scalar dbetadxi =
-        (mesh_ptrs.beta_phi[c] - mesh_ptrs.beta_phi[c - 1]) *
-        dev_mesh.inv_delta[0];
+    Scalar dgamma11dxi = (mesh_ptrs.gamma_rr[c] - mesh_ptrs.gamma_rr[c - 1]) *
+                         dev_mesh.inv_delta[0];
+    Scalar dgamma33dxi = (mesh_ptrs.gamma_ff[c] - mesh_ptrs.gamma_ff[c - 1]) *
+                         dev_mesh.inv_delta[0];
+    Scalar dbetadxi = (mesh_ptrs.beta_phi[c] - mesh_ptrs.beta_phi[c - 1]) *
+                      dev_mesh.inv_delta[0];
 
     // update momentum
     Scalar gr_term =
         (-0.5f * u0 * da2dr -
-         (p1 * p1 * dgamma11dxi / Delta_sqr + p3 * p3 * dgamma33dxi) *
-             0.5f / u0 +
-         p3 * dbetadxi +
-         gamma11 * p1 * p1 * dDelta_dr / (Delta_sqr * u0)) *
+         (p1 * p1 * dgamma11dxi / Delta_sqr + p3 * p3 * dgamma33dxi) * 0.5f /
+             u0 +
+         p3 * dbetadxi + gamma11 * p1 * p1 * dDelta_dr / (Delta_sqr * u0)) *
         dt;
     p1 += gr_term;
     // if (idx == 10)
-    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er,
-    //   dev_charges[sp], dev_masses[sp]);
+    //   printf("gr_term %f, p1 %f\n", gr_term, p1);
 
-    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) /
-         alpha;
+    u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) / alpha;
 
     // printf("cell is %d, old p1 is %f, new p1 is %f, gr_term is %f\n",
     // c, ptc.p1[idx], p1, gr_term);
@@ -259,7 +246,8 @@ update_photon_1dgr(photon1d_data photons, size_t num,
     //   printf("new_x1 is %f\n", new_x1);
     // }
     int dc1 = floor(new_x1);
-    if (dc1 > 1 || dc1 < -1) printf("Moving more than 1 cell!\n");
+    if (dc1 > 1 || dc1 < -1)
+      printf("Moving more than 1 cell!\n");
     new_x1 -= (Pos_t)dc1;
 
     photons.cell[idx] = c + dc1;
@@ -267,14 +255,28 @@ update_photon_1dgr(photon1d_data photons, size_t num,
   }
 }
 
-}  // namespace Kernels
+__global__ void filter_current1d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+                                 const Scalar *k1, bool boundary_lower,
+                                 bool boundary_upper) {
+  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < dev_mesh.dims[0];
+       i += blockDim.x * gridDim.x) {
+    size_t dx_plus =
+        (boundary_upper && i == dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? 1
+                                                                         : 0);
+    size_t dx_minus = (boundary_lower && i == dev_mesh.guard[0] ? 1 : 0);
+    j_tmp(i, 0) = 0.5f * j(i, 0) * k1[i];
+    j_tmp(i, 0) += 0.25f * j(i + dx_plus, 0) * k1[i + dx_plus];
+    j_tmp(i, 0) += 0.25f * j(i - dx_minus, 0) * k1[i - dx_minus];
+    j_tmp(i, 0) /= k1[i];
+  }
+}
 
-ptc_updater_1dgr_dev::ptc_updater_1dgr_dev(
-    const cu_sim_environment& env)
-    : m_env(env) {
+} // namespace Kernels
+
+ptc_updater_1dgr_dev::ptc_updater_1dgr_dev(const cu_sim_environment &env)
+    : m_env(env), m_tmp_j(m_env.grid().extent()) {
   CudaSafeCall(cudaMallocManaged(
-      &m_dev_fields.Rho,
-      m_env.params().num_species * sizeof(cudaPitchedPtr)));
+      &m_dev_fields.Rho, m_env.params().num_species * sizeof(cudaPitchedPtr)));
   m_fields_initialized = false;
 }
 
@@ -282,25 +284,37 @@ ptc_updater_1dgr_dev::~ptc_updater_1dgr_dev() {
   CudaSafeCall(cudaFree(m_dev_fields.Rho));
 }
 
-void
-ptc_updater_1dgr_dev::update_particles(cu_sim_data1d& data, double dt,
-                                       uint32_t step) {
+void ptc_updater_1dgr_dev::update_particles(cu_sim_data1d &data, double dt,
+                                            uint32_t step) {
   initialize_dev_fields(data);
-  const Grid_1dGR_dev& grid =
-      *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
+  const Grid_1dGR_dev &grid =
+      *dynamic_cast<const Grid_1dGR_dev *>(data.grid.get());
   auto mesh_ptrs = grid.get_mesh_ptrs();
   if (data.particles.number() > 0) {
     data.J.initialize();
-    for (auto& rho : data.Rho) {
+    for (auto &rho : data.Rho) {
       rho.initialize();
     }
 
-    Logger::print_info("Updating {} particles",
-                       data.particles.number());
+    Logger::print_info("Updating {} particles", data.particles.number());
     Kernels::update_ptc_1dgr<<<256, 512>>>(data.particles.data(),
                                            data.particles.number(),
                                            m_dev_fields, mesh_ptrs, dt);
     CudaCheckError();
+
+    for (int i = 0; i < m_env.params().current_smoothing; i++) {
+      Kernels::filter_current1d<<<256, 256>>>(
+          data.J.ptr(0), m_tmp_j.data_d(), mesh_ptrs.K1_j, m_env.is_boundary(0),
+          m_env.is_boundary(1));
+      data.J.data(0).copy_from(m_tmp_j);
+
+      for (int sp = 0; sp < m_env.params().num_species; sp++) {
+        Kernels::filter_current1d<<<256, 256>>>(
+            data.Rho[sp].ptr(), m_tmp_j.data_d(), mesh_ptrs.K1,
+            m_env.is_boundary(0), m_env.is_boundary(1));
+        data.Rho[sp].data().copy_from(m_tmp_j);
+      }
+    }
   }
 
   if (data.photons.number() > 0) {
@@ -311,8 +325,7 @@ ptc_updater_1dgr_dev::update_particles(cu_sim_data1d& data, double dt,
   }
 }
 
-void
-ptc_updater_1dgr_dev::initialize_dev_fields(cu_sim_data1d& data) {
+void ptc_updater_1dgr_dev::initialize_dev_fields(cu_sim_data1d &data) {
   if (!m_fields_initialized) {
     m_dev_fields.E1 = data.E.ptr(0);
     m_dev_fields.E3 = data.E.ptr(2);
@@ -327,4 +340,4 @@ ptc_updater_1dgr_dev::initialize_dev_fields(cu_sim_data1d& data) {
   }
 }
 
-}  // namespace Aperture
+} // namespace Aperture

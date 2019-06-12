@@ -13,8 +13,8 @@ __global__ void
 update_e_1dgr(pitchptr<Scalar> e1, pitchptr<Scalar> e3,
               pitchptr<Scalar> j1, pitchptr<Scalar> rho,
               Grid_1dGR_dev::mesh_ptrs mesh_ptrs, Scalar dt) {
-  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-       i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0] + 1;
+       i < dev_mesh.dims[0] - dev_mesh.guard[0] - 5; i += blockDim.x * gridDim.x) {
     // Scalar j0 = mesh_ptrs.j0[i] * mesh_ptrs.dpsidth[i];
     Scalar j0 = mesh_ptrs.j0[i];
     // Scalar r = dev_mesh.pos(0, i, 0);

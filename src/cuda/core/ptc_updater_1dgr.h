@@ -32,6 +32,7 @@ class ptc_updater_1dgr_dev {
   bool m_fields_initialized = false;
 
   fields_data m_dev_fields;
+  cu_multi_array<Scalar> m_tmp_j;
 };  // ----- end of class ptc_updater_1dgr_dev -----
 
 }  // namespace Aperture
