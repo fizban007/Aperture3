@@ -10,6 +10,8 @@ import re
 
 
 class Data:
+    _coord_keys = ["x1", "x2", "r", "theta", "rv", "thetav", "dr", "dtheta"]
+
     def __init__(self, path):
         conf = self.load_conf(path)
         self._conf = conf
@@ -27,17 +29,10 @@ class Data:
         self.data_interval = self.steps[-1] - self.steps[-2]
         self._current_step = self.steps[0]
         self._mesh_loaded = False
-        f = h5py.File(os.path.join(self._path, f"data{self._current_step:06d}.h5"))
-        self._keys = list(f.keys()) + [
-            "flux",
-            "B",
-            "x1",
-            "x2",
-            "r",
-            "theta",
-            "rv",
-            "thetav",
-        ]
+        f = h5py.File(
+            os.path.join(self._path, f"data{self._current_step:06d}.h5"), "r", swmr=True
+        )
+        self._keys = list(f.keys()) + ["flux", "B"] + Data._coord_keys
         self.__dict__.update(("_" + k, None) for k in self._keys)
         f.close()
 
@@ -49,6 +44,8 @@ class Data:
             else:
                 self._load_content(key)
                 return getattr(self, "_" + key)
+        elif key == "keys":
+            return self._keys
         else:
             return None
 
@@ -58,7 +55,7 @@ class Data:
             return
         self._current_step = step
         for k in self._keys:
-            if k not in ["x1", "x2", "r", "theta", "rv", "thetav"]:
+            if k not in Data._coord_keys:
                 setattr(self, "_" + k, None)
         # self._mesh_loaded = False
 
@@ -76,7 +73,7 @@ class Data:
             )
         elif key == "B":
             self._B = np.sqrt(self.B1 * self.B1 + self.B2 * self.B2 + self.B3 * self.B3)
-        elif key in ["x1", "x2", "r", "theta", "rv", "thetav"]:
+        elif key in Data._coord_keys:
             self._load_mesh()
         elif key == "B1":
             setattr(self, "_" + key, data["B1"][()] + data["B_bg1"][()])
@@ -123,6 +120,15 @@ class Data:
 
         meshfile.close()
         self._rv, self._thetav = np.meshgrid(self._r, self._theta)
+        self._dr = (
+            self._r[self._conf["Grid"]["guard"][0] + 2]
+            - self._r[self._conf["Grid"]["guard"][0] + 1]
+        )
+        self._dtheta = (
+            self._theta[self._conf["Grid"]["guard"][1] + 2]
+            - self._theta[self._conf["Grid"]["guard"][1] + 1]
+        )
+
         self._mesh_loaded = True
 
     def load_conf(self, path):
