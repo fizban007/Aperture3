@@ -257,7 +257,6 @@ stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
                  dev_bg_fields.B1(i, j) / alpha_gr(r_s) / r_s / r_s;
       e1(i, j) = (omega - omega_LT) * std::sin(theta_s) *
                  dev_bg_fields.B2(i, j) / alpha_gr(r_s) / r / r;
-      e1(i, j) = 0.0f;
       b2(i, j) = 0.0f;
       b3(i, j) = 0.0f;
     }
