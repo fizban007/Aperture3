@@ -59,6 +59,7 @@ struct SimParamsBase {
   float star_kT = 0.001;
   float res_drag_coef = 40.0;
   float omega = 0.2;
+  float a = 0.0;
   bool inject_ions = true;
 
   // These parameters are for radiative transfer
@@ -101,7 +102,7 @@ struct SimParams : public SimParamsBase {
   std::string data_file_prefix = "output";
   std::string log_method = "stdout";
   std::string log_file = data_dir + "output.log";
-  std::string conf_file = "sim.toml";
+  std::string conf_file = "config.toml";
 
   // std::array<std::string, 3> grid_config;
   // std::array<std::string, 3> data_grid_config;

@@ -4,6 +4,24 @@
 
 namespace Aperture {
 
+namespace Kernels {
+
+__global__ void
+append_ptc(particle1d_data data, size_t num, Pos_t x,
+           Scalar p, int cell, ParticleType type, Scalar w,
+           uint32_t flag) {
+  data.x1[num] = x;
+  data.p1[num] = p;
+  data.E[num] =
+      std::sqrt(1.0f + p * p);
+  data.weight[num] = w;
+  data.cell[num] = cell;
+  data.flag[num] = flag | gen_ptc_type_flag(type);
+}
+
+
+}
+
 template class particle_base_dev<single_particle1d_t>;
 // template class particle_base<single_photon1d_t>;
 
@@ -40,10 +58,14 @@ Particles_1D::~Particles_1D() {}
 //   if (pos >= m_number) m_number = pos + 1;
 // }
 
-// void
-// Particles_1D::append(Pos_t x, Scalar p, int cell, ParticleType type,
-//                      Scalar weight, uint32_t flag) {
-//   put(m_number, x, p, cell, type, weight, flag);
-// }
+void
+Particles_1D::append(Pos_t x, Scalar p, int cell, ParticleType type,
+                     Scalar weight, uint32_t flag) {
+  Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type,
+                                weight, flag);
+  CudaCheckError();
+  m_number += 1;
+  cudaDeviceSynchronize();
+}
 
 }  // namespace Aperture

@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "core/grid.h"
-#include "data/particles.h"
+#include "cuda/data/particles_1d.h"
 // #include "cu_sim_data.h"
 #include "cuda/core/cu_sim_environment.h"
 #include "utils/logger.h"
@@ -10,27 +10,25 @@
 
 using namespace Aperture;
 
-// TEST_CASE("Sorting Particles by cell", "[Particles]") {
-//   cu_sim_environment env("test.toml");
-//   size_t N = 1000000;
-//   Particles ptc(N);
+TEST_CASE("Sorting Particles by cell", "[Particles]") {
+  // cu_sim_environment env("test.toml");
+  size_t N = 1000;
+  Particles_1D ptc(N);
 
-//   for (size_t i = 0; i < N; i++) {
-//     ptc.append({1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, N - i,
-//     ParticleType::electron);
-//   }
-//   ptc.set_num(N);
+  for (size_t i = 0; i < N; i++) {
+    ptc.append(1.0, 0.0, N - i, ParticleType::electron);
+  }
+  ptc.set_num(N);
 
-//   // ptc.compute_tile_num();
+  // ptc.compute_tile_num();
 
-//   ptc.sync_to_device(0);
+  // ptc.sync_to_device(0);
 
-//   timer::stamp();
-//   ptc.sort_by_cell();
-//   // ptc.sort_by_tile();
-//   timer::show_duration_since_stamp("sorting by cell on gpu, with
-//   copies", "ms");
-// }
+  timer::stamp();
+  ptc.sort_by_cell();
+  timer::show_duration_since_stamp(
+      "sorting by cell on gpu, with copies", "ms");
+}
 
 // TEST_CASE("Sorting particles on CPU", "[Particles]") {
 //   int N1 = 106, N2 = 5;
@@ -76,44 +74,44 @@ using namespace Aperture;
 
 // }
 
-TEST_CASE("Sorting random particles on CPU", "[Particles]") {
-  int N1 = 400, N2 = 400;
-  Grid grid(N1, N2);
-  auto& mesh = grid.mesh();
-  mesh.guard[0] = 3;
-  mesh.guard[1] = 2;
-  mesh.guard[2] = 0;
-  size_t N = 6000000;
-  particles_t ptc(N);
+// TEST_CASE("Sorting random particles on CPU", "[Particles]") {
+//   int N1 = 400, N2 = 400;
+//   Grid grid(N1, N2);
+//   auto& mesh = grid.mesh();
+//   mesh.guard[0] = 3;
+//   mesh.guard[1] = 2;
+//   mesh.guard[2] = 0;
+//   size_t N = 6000000;
+//   particles_t ptc(N);
 
-  std::default_random_engine gen;
-  std::uniform_int_distribution<int> dist(200, 300);
-  std::uniform_real_distribution<float> dist_f(0.0, 1.0);
-  uint32_t num = 5000000;
+//   std::default_random_engine gen;
+//   std::uniform_int_distribution<int> dist(200, 300);
+//   std::uniform_real_distribution<float> dist_f(0.0, 1.0);
+//   uint32_t num = 5000000;
 
-  for (uint32_t i = 0; i < num; i++) {
-    ptc.append(
-        {dist_f(gen), dist_f(gen), 0.0}, {0.0, 0.0, 0.0},
-        (i % 10 == 0 ? MAX_CELL : mesh.get_idx(dist(gen), dist(gen))),
-        ParticleType::electron, 1.0);
-  }
-  // for (int i = 0; i < 100; i++) {
-  //   ptc.append({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, MAX_CELL,
-  //              ParticleType::electron);
-  // }
-  // for (int i = 0; i < 900; i++) {
-  //   ptc.append({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
-  //              mesh.get_idx(1, dist(gen)), ParticleType::electron);
-  // }
-  CHECK(ptc.number() == num);
-  // ptc.clear_guard_cells();
-  timer::stamp();
-  ptc.sort_by_cell(grid);
+//   for (uint32_t i = 0; i < num; i++) {
+//     ptc.append(
+//         {dist_f(gen), dist_f(gen), 0.0}, {0.0, 0.0, 0.0},
+//         (i % 10 == 0 ? MAX_CELL : mesh.get_idx(dist(gen), dist(gen))),
+//         ParticleType::electron, 1.0);
+//   }
+//   // for (int i = 0; i < 100; i++) {
+//   //   ptc.append({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, MAX_CELL,
+//   //              ParticleType::electron);
+//   // }
+//   // for (int i = 0; i < 900; i++) {
+//   //   ptc.append({0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+//   //              mesh.get_idx(1, dist(gen)), ParticleType::electron);
+//   // }
+//   CHECK(ptc.number() == num);
+//   // ptc.clear_guard_cells();
+//   timer::stamp();
+//   ptc.sort_by_cell(grid);
 
-  CHECK(ptc.number() == num * 9 / 10);
-  timer::show_duration_since_stamp(
-      "sorting 5M particles by cell on cpu", "ms");
-}
+//   CHECK(ptc.number() == num * 9 / 10);
+//   timer::show_duration_since_stamp(
+//       "sorting 5M particles by cell on cpu", "ms");
+// }
 
 // TEST_CASE("Making photons", "[Particles]") {
 //   cu_sim_environment env("test_particles.toml");

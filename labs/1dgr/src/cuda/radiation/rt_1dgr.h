@@ -9,15 +9,15 @@
 namespace Aperture {
 
 class cu_sim_environment;
-struct cu_sim_data;
+struct cu_sim_data1d;
 
 class RadiationTransfer1DGR {
  public:
   RadiationTransfer1DGR(const cu_sim_environment& env);
   virtual ~RadiationTransfer1DGR();
 
-  void emit_photons(cu_sim_data& data);
-  void produce_pairs(cu_sim_data& data);
+  void emit_photons(cu_sim_data1d& data, Scalar dt);
+  void produce_pairs(cu_sim_data1d& data, Scalar dt);
 
  private:
   const cu_sim_environment& m_env;

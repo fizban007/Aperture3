@@ -18,20 +18,22 @@ struct cu_sim_data1d {
   // void prepare_initial_condition(int multiplicity);
 
   const cu_sim_environment& env;
-  std::vector<cu_vector_field<Scalar>> E;
+  cu_vector_field<Scalar> E;
   // cu_vector_field<Scalar> B;
-  std::vector<cu_vector_field<Scalar>> J;
-  std::vector<std::vector<cu_scalar_field<Scalar>>> Rho;
+  cu_vector_field<Scalar> J;
+  std::vector<cu_scalar_field<Scalar>> Rho;
 
-  std::vector<std::unique_ptr<Grid>> grid;
+  std::unique_ptr<Grid> grid;
 
-  std::vector<Particles_1D> particles;
-  std::vector<Photons_1D> photons;
-  // int devId;
-  std::vector<int> dev_map;
+  Particles_1D particles;
+  Photons_1D photons;
+  int dev_id;
+  // int> dev_map;
 
   void init_grid(const cu_sim_environment& env);
-  void fill_multiplicity(Scalar weight, int multiplicity);
+  // void fill_multiplicity(Scalar weight, int multiplicity);
+  void prepare_initial_condition(int multiplicity);
+  void prepare_initial_photons(int multiplicity);
   // template <class Func>
   // void init_bg_B_field(int component, const Func& f);
   // template <class Func>

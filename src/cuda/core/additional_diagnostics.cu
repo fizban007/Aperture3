@@ -64,61 +64,50 @@ collect_photon_diagnostics(photon_data photons, size_t num,
 AdditionalDiagnostics::AdditionalDiagnostics(
     const cu_sim_environment& env)
     : m_env(env) {
-  unsigned int num_devs = env.dev_map().size();
-  m_dev_gamma.resize(num_devs);
-  m_dev_ptc_num.resize(num_devs);
-  for_each_device(env.dev_map(), [this](int n) {
-    CudaSafeCall(cudaMallocManaged(
-        &m_dev_gamma[n],
-        sizeof(pitchptr<Scalar>) * m_env.params().num_species));
-    CudaSafeCall(cudaMallocManaged(
-        &m_dev_ptc_num[n],
-        sizeof(pitchptr<Scalar>) * m_env.params().num_species));
-  });
+  int num_species = env.params().num_species;
+  CudaSafeCall(cudaMallocManaged(
+      &m_dev_gamma, sizeof(pitchptr<Scalar>) * num_species));
+  CudaSafeCall(cudaMallocManaged(
+      &m_dev_ptc_num, sizeof(pitchptr<Scalar>) * num_species));
 }
 
 AdditionalDiagnostics::~AdditionalDiagnostics() {
-  for_each_device(m_env.dev_map(), [this](int n) {
-    CudaSafeCall(cudaFree(m_dev_gamma[n]));
-    CudaSafeCall(cudaFree(m_dev_ptc_num[n]));
-  });
+  CudaSafeCall(cudaFree(m_dev_gamma));
+  CudaSafeCall(cudaFree(m_dev_ptc_num));
 }
 
 void
 AdditionalDiagnostics::collect_diagnostics(cu_sim_data& data) {
   init_pointers(data);
-  for_each_device(data.dev_map, [this, &data](int n) {
-    data.photon_num[n].initialize();
+  data.photon_num.initialize();
 
-    for (int i = 0; i < data.env.params().num_species; i++) {
-      data.gamma[i][n].initialize();
-      data.ptc_num[i][n].initialize();
-    }
-    Kernels::collect_ptc_diagnostics<<<256, 512>>>(
-        data.particles[n].data(), data.particles[n].number(),
-        m_dev_gamma[n], m_dev_ptc_num[n]);
-    CudaCheckError();
-    Kernels::collect_photon_diagnostics<<<256, 512>>>(
-        data.photons[n].data(), data.photons[n].number(),
-        data.photon_num[n].ptr());
-    CudaCheckError();
-    for (int i = 0; i < m_env.params().num_species; i++) {
-      data.gamma[i][n].divideBy(data.ptc_num[i][n]);
-    }
-  });
+  for (int i = 0; i < data.env.params().num_species; i++) {
+    data.gamma[i].initialize();
+    data.ptc_num[i].initialize();
+  }
+  Kernels::collect_ptc_diagnostics<<<256, 512>>>(
+      data.particles.data(), data.particles.number(), m_dev_gamma,
+      m_dev_ptc_num);
+  CudaCheckError();
+  Kernels::collect_photon_diagnostics<<<256, 512>>>(
+      data.photons.data(), data.photons.number(),
+      data.photon_num.ptr());
+  CudaCheckError();
+  for (int i = 0; i < m_env.params().num_species; i++) {
+    data.gamma[i].divideBy(data.ptc_num[i]);
+  }
 
-  for_each_device(data.dev_map, [](int n) { cudaDeviceSynchronize(); });
+  CudaSafeCall(cudaDeviceSynchronize());
 }
 
 void
 AdditionalDiagnostics::init_pointers(cu_sim_data& data) {
   if (!m_initialized) {
-    for_each_device(data.dev_map, [this, &data](int n) {
-      for (int i = 0; i < m_env.params().num_species; i++) {
-        m_dev_gamma[n][i] = data.gamma[i][n].ptr();
-        m_dev_ptc_num[n][i] = data.ptc_num[i][n].ptr();
-      }
-    });
+    for (int i = 0; i < m_env.params().num_species; i++) {
+      m_dev_gamma[i] = data.gamma[i].ptr();
+      m_dev_ptc_num[i] = data.ptc_num[i].ptr();
+    }
+    m_initialized = true;
   }
 }
 

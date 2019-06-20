@@ -17,7 +17,11 @@ update_e_1dgr(pitchptr<Scalar> e1, pitchptr<Scalar> e3,
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     // Scalar j0 = mesh_ptrs.j0[i] * mesh_ptrs.dpsidth[i];
     Scalar j0 = mesh_ptrs.j0[i];
+    // Scalar r = dev_mesh.pos(0, i, 0);
     // *ptrAddr(e1, i, 0) += (j0 - *ptrAddr(j1, i, 0)) * dt;
+    // Scalar D1 = e1(i, 0);
+    // D1 *= mesh_ptrs.K1_j[i];
+    // D1 += mesh_ptrs.K1_j[i] * (j0 - j1(i, 0)) * dt;
     e1(i, 0) += (j0 - j1(i, 0)) * dt;
     // printf("E1 is %f\n", *ptrAddr(e1, i, 0));
     // TODO: Check all equations
@@ -32,8 +36,7 @@ update_e_1dgr(pitchptr<Scalar> e1, pitchptr<Scalar> e3,
 
 }  // namespace Kernels
 
-field_solver_1dgr_dev::field_solver_1dgr_dev(const Grid_1dGR_dev& g)
-    : m_grid(g) {}
+field_solver_1dgr_dev::field_solver_1dgr_dev() {}
 
 field_solver_1dgr_dev::~field_solver_1dgr_dev() {}
 
@@ -41,7 +44,10 @@ void
 field_solver_1dgr_dev::update_fields(cu_sim_data1d& data, double dt,
                                      double time) {
   Logger::print_info("Updating fields");
-  auto mesh_ptrs = m_grid.get_mesh_ptrs();
+
+  const Grid_1dGR_dev &grid =
+      *dynamic_cast<const Grid_1dGR_dev *>(data.grid.get());
+  auto mesh_ptrs = grid.get_mesh_ptrs();
   Kernels::update_e_1dgr<<<256, 512>>>(data.E.ptr(0), data.E.ptr(2),
                                        data.J.ptr(0), data.Rho[0].ptr(),
                                        mesh_ptrs, dt);

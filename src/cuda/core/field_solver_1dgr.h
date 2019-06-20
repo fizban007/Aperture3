@@ -9,13 +9,13 @@ struct cu_sim_data1d;
 
 class field_solver_1dgr_dev {
  public:
-  field_solver_1dgr_dev(const Grid_1dGR_dev& g);
+  field_solver_1dgr_dev();
   virtual ~field_solver_1dgr_dev();
 
   void update_fields(cu_sim_data1d& data, double dt, double time = 0.0);
 
- private:
-  const Grid_1dGR_dev& m_grid;
+ // private:
+ //  const Grid_1dGR_dev& m_grid;
 };  // ----- end of class field_solver_1dgr_dev -----
 
 }  // namespace Aperture

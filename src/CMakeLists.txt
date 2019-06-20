@@ -58,9 +58,9 @@ set(Aperture_src
   "sim_environment.cpp"
   "sim_data.cpp"
   # "pic_sim.cpp"
-  # "core/field_solver_default.cpp"
+  "core/field_solver_default.cpp"
   "core/field_solver_1d.cpp"
-  # "core/ptc_updater_default.cpp"
+  "core/ptc_updater_default.cpp"
   "core/ptc_updater_1d.cpp"
   "radiation/rt_1d.cpp"
   )
@@ -89,14 +89,14 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/grids/grid_log_sph_dev.cpp"
     "cuda/grids/grid_1dgr_dev.cpp"
     # "cuda/core/field_solver_log_sph.cu"
-    # "cuda/core/field_solver_1dgr.cu"
+    "cuda/core/field_solver_1dgr.cu"
     "cuda/core/cu_sim_environment.cpp"
     "cuda/core/cu_sim_data.cu"
     "cuda/core/cu_sim_data1d.cu"
     "cuda/core/additional_diagnostics.cu"
     "cuda/core/ptc_updater_dev.cu"
-    "cuda/core/ptc_updater_logsph.cu"
-    # "cuda/core/ptc_updater_1dgr.cu"
+    # "cuda/core/ptc_updater_logsph.cu"
+    "cuda/core/ptc_updater_1dgr.cu"
     # "cuda/core/finite_diff.cu"
     # "algorithms/ptc_pusher_constE.cu"
     # "algorithms/ptc_pusher_beadonwire.cu"
@@ -124,23 +124,22 @@ if(LAB_ROOT_DIR)
   message("${Yellow}Using shadowed main.cpp from lab ${LAB_NAME}${ColorReset}")
   add_executable(aperture "${LAB_ROOT_DIR}/src/main.cpp")
   target_link_libraries(aperture Aperture)
+  if (CMAKE_CUDA_COMPILER)
+    target_link_libraries(aperture cuAperture)
+  endif()
 else()
   message("${Yellow}Using default main.cpp${ColorReset}")
   add_executable(aperture "main.cpp")
   target_link_libraries(aperture Aperture)
-endif()
-if (CMAKE_CUDA_COMPILER)
-  target_link_libraries(aperture cuAperture)
+  if (CMAKE_CUDA_COMPILER)
+    target_link_libraries(aperture cuAperture)
+  endif()
 endif()
 
 # if (LAB_ROOT_DIR)
 # else()
 #   add_executable(aperture1D "main_1d.cpp")
 #   target_link_libraries(aperture1D Aperture)
-# endif()
-
-# if (CUDA_FOUND)
-#   target_link_libraries(aperture Pulsar_dev)
 # endif()
 
 if(LAB_ROOT_DIR)

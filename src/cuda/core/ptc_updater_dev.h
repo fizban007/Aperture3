@@ -30,7 +30,7 @@ class PtcUpdaterDev {
 
   const cu_sim_environment& m_env;
 
-  std::vector<fields_data> m_dev_fields;
+  fields_data m_dev_fields;
   // std::vector<Extent> m_extent;
   bool m_fields_initialized;
 };  // ----- end of class PtcUpdaterDev -----

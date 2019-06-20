@@ -15,7 +15,8 @@ r_cutoff = 6.0e7
 constE = 1.0
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/Aperture3/exponent/"
+#data_dir = "/home/alex/storage/Data/Aperture3/exponent/"
+data_dir = "/tigress/yuranc/Data/Aperture3/1dgr/"
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
