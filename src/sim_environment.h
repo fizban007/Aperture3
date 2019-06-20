@@ -81,8 +81,6 @@ class sim_environment {
 
   std::unique_ptr<Grid> m_grid;
   std::unique_ptr<Grid> m_super_grid;
-  // Grid m_local_grid, m_local_grid_dual;
-  // Grid m_super_grid;
   // Grid m_data_grid, m_data_super_grid;
   // MetricType m_metric_type;
 
