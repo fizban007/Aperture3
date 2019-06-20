@@ -34,97 +34,97 @@ cu_sim_environment::setup_env() {
     Logger::err("No usable Cuda device found!!");
     exit(1);
   }
-  m_dev_map.resize(n_devices);
-  Logger::print_info("Found {} Cuda devices:", n_devices);
-  for (int i = 0; i < n_devices; i++) {
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, i);
-    Logger::print_info("    Device Number: {}", i);
-    Logger::print_info("    Device Name: {}", prop.name);
-    Logger::print_info("    Device Total Memory: {}MiB",
-                       prop.totalGlobalMem / (1024 * 1024));
-    m_dev_map[i] = i;
-    // if (i > 0) {
-    //   int can_access_left, can_access_right;
-    //   //Check for peer access between participating GPUs:
-    //   cudaDeviceCanAccessPeer(&can_access_left, i, i - 1);
-    //   cudaDeviceCanAccessPeer(&can_access_right, i - 1, i);
-    //   if (can_access_left == 0 || can_access_right == 0) {
-    //     Logger::err("Device {} cannot access its neighbor!", i);
-    //   }
-    // }
-  }
+  // m_dev_map.resize(n_devices);
+  // Logger::print_info("Found {} Cuda devices:", n_devices);
+  // for (int i = 0; i < n_devices; i++) {
+  //   cudaDeviceProp prop;
+  //   cudaGetDeviceProperties(&prop, i);
+  //   Logger::print_info("    Device Number: {}", i);
+  //   Logger::print_info("    Device Name: {}", prop.name);
+  //   Logger::print_info("    Device Total Memory: {}MiB",
+  //                      prop.totalGlobalMem / (1024 * 1024));
+  //   m_dev_map[i] = i;
+  //   // if (i > 0) {
+  //   //   int can_access_left, can_access_right;
+  //   //   //Check for peer access between participating GPUs:
+  //   //   cudaDeviceCanAccessPeer(&can_access_left, i, i - 1);
+  //   //   cudaDeviceCanAccessPeer(&can_access_right, i - 1, i);
+  //   //   if (can_access_left == 0 || can_access_right == 0) {
+  //   //     Logger::err("Device {} cannot access its neighbor!", i);
+  //   //   }
+  //   // }
+  // }
 
-  m_sub_params.resize(n_devices);
-  m_boundary_info.resize(n_devices);
-  // m_sub_buffer.resize(n_devices);
-  for (int i = 0; i < n_devices; i++) {
-    int dev_id = m_dev_map[i];
-    CudaSafeCall(cudaSetDevice(dev_id));
+  // m_sub_params.resize(n_devices);
+  // m_boundary_info.resize(n_devices);
+  // // m_sub_buffer.resize(n_devices);
+  // for (int i = 0; i < n_devices; i++) {
+  //   int dev_id = m_dev_map[i];
+  //   CudaSafeCall(cudaSetDevice(dev_id));
 
-    // if (i > 0)
-    //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i - 1], 0));
-    // if (i < n_devices - 1)
-    //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i + 1], 0));
+  //   // if (i > 0)
+  //   //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i - 1], 0));
+  //   // if (i < n_devices - 1)
+  //   //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i + 1], 0));
 
-    m_sub_params[i] = m_params;
+  //   m_sub_params[i] = m_params;
 
-    int d = m_grid->dim() - 1;
-    m_sub_params[i].N[d] /= n_devices;
-    m_sub_params[i].size[d] /= n_devices;
-    m_sub_params[i].lower[d] += i * m_sub_params[i].size[d];
+  //   int d = m_grid->dim() - 1;
+  //   m_sub_params[i].N[d] /= n_devices;
+  //   m_sub_params[i].size[d] /= n_devices;
+  //   m_sub_params[i].lower[d] += i * m_sub_params[i].size[d];
 
-    init_dev_params(m_sub_params[i]);
-    // init_dev_mesh(m_grid->mesh());
+  //   init_dev_params(m_sub_params[i]);
+  //   // init_dev_mesh(m_grid->mesh());
 
-    init_dev_charges(m_charges.data());
-    init_dev_masses(m_masses.data());
+  //   init_dev_charges(m_charges.data());
+  //   init_dev_masses(m_masses.data());
 
-    if (m_super_grid->dim() == 1) {
-      m_sub_buffer_left.emplace_back(
-          Extent{m_sub_params[i].guard[0] + 1, 1, 1});
-      m_sub_buffer_right.emplace_back(
-          Extent{m_sub_params[i].guard[0] + 1, 1, 1});
-    } else if (m_super_grid->dim() == 2) {
-      m_sub_buffer_left.emplace_back(
-          Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
-                 m_sub_params[i].guard[1] + 1, 1});
-      m_sub_buffer_right.emplace_back(
-          Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
-                 m_sub_params[i].guard[1] + 1, 1});
-    } else if (m_super_grid->dim() == 3) {
-      m_sub_buffer_left.emplace_back(
-          Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
-                 m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
-                 m_sub_params[i].guard[2] + 1});
-      m_sub_buffer_right.emplace_back(
-          Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
-                 m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
-                 m_sub_params[i].guard[2] + 1});
-    }
+  //   if (m_super_grid->dim() == 1) {
+  //     m_sub_buffer_left.emplace_back(
+  //         Extent{m_sub_params[i].guard[0] + 1, 1, 1});
+  //     m_sub_buffer_right.emplace_back(
+  //         Extent{m_sub_params[i].guard[0] + 1, 1, 1});
+  //   } else if (m_super_grid->dim() == 2) {
+  //     m_sub_buffer_left.emplace_back(
+  //         Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+  //                m_sub_params[i].guard[1] + 1, 1});
+  //     m_sub_buffer_right.emplace_back(
+  //         Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+  //                m_sub_params[i].guard[1] + 1, 1});
+  //   } else if (m_super_grid->dim() == 3) {
+  //     m_sub_buffer_left.emplace_back(
+  //         Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+  //                m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
+  //                m_sub_params[i].guard[2] + 1});
+  //     m_sub_buffer_right.emplace_back(
+  //         Extent{m_sub_params[i].N[0] + 2 * m_sub_params[i].guard[0],
+  //                m_sub_params[i].N[1] + 2 * m_sub_params[i].guard[1],
+  //                m_sub_params[i].guard[2] + 1});
+  //   }
 
-    // Process boundary info
-    int highest_dim = m_domain_info.dim - 1;
-    for (int dim = 0; dim < highest_dim; dim++) {
-      m_boundary_info[i][dim * 2] = m_domain_info.is_boundary[dim * 2];
-      m_boundary_info[i][dim * 2 + 1] =
-          m_domain_info.is_boundary[dim * 2 + 1];
-    }
-    if (i == 0) {
-      m_boundary_info[i][highest_dim * 2] =
-          m_domain_info.is_boundary[highest_dim * 2];
-    } else if (i == n_devices - 1) {
-      m_boundary_info[i][highest_dim * 2 + 1] =
-          m_domain_info.is_boundary[highest_dim * 2 + 1];
-    } else {
-      m_boundary_info[i][highest_dim * 2] =
-          m_boundary_info[i][highest_dim * 2 + 1] = false;
-    }
-    for (int j = 0; j < 6; j++) {
-      Logger::print_debug("boundary info on dev {} at {} is {}", i, j,
-                          m_boundary_info[i][j]);
-    }
-  }
+  //   // Process boundary info
+  //   int highest_dim = m_domain_info.dim - 1;
+  //   for (int dim = 0; dim < highest_dim; dim++) {
+  //     m_boundary_info[i][dim * 2] = m_domain_info.is_boundary[dim * 2];
+  //     m_boundary_info[i][dim * 2 + 1] =
+  //         m_domain_info.is_boundary[dim * 2 + 1];
+  //   }
+  //   if (i == 0) {
+  //     m_boundary_info[i][highest_dim * 2] =
+  //         m_domain_info.is_boundary[highest_dim * 2];
+  //   } else if (i == n_devices - 1) {
+  //     m_boundary_info[i][highest_dim * 2 + 1] =
+  //         m_domain_info.is_boundary[highest_dim * 2 + 1];
+  //   } else {
+  //     m_boundary_info[i][highest_dim * 2] =
+  //         m_boundary_info[i][highest_dim * 2 + 1] = false;
+  //   }
+  //   for (int j = 0; j < 6; j++) {
+  //     Logger::print_debug("boundary info on dev {} at {} is {}", i, j,
+  //                         m_boundary_info[i][j]);
+  //   }
+  // }
 
   // Obtain the metric type and setup the grid mesh
   // m_metric_type = parse_metric(m_conf_file.data().metric);
@@ -160,328 +160,328 @@ cu_sim_environment::setup_env() {
   // Logger::print_debug("Current rank is {}", m_comm->world().rank());
 }
 
-void
-cu_sim_environment::get_sub_guard_cells_left(cudaPitchedPtr p_src,
-                                             cudaPitchedPtr p_dst,
-                                             const Quadmesh &mesh_src,
-                                             const Quadmesh &mesh_dst,
-                                             int src_dev,
-                                             int dst_dev) const {
-  cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = p_src;
-  myParms.dstPtr = p_dst;
-  // myParms.kind = cudaMemcpyDefault;
-  myParms.srcDevice = src_dev;
-  myParms.dstDevice = dst_dev;
-  if (mesh_src.dim() == 2) {
-    myParms.srcPos = make_cudaPos(0, mesh_src.guard[1], 0);
-    myParms.dstPos =
-        make_cudaPos(0, mesh_dst.dims[1] - mesh_dst.guard[1], 0);
-    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                                     mesh_src.guard[1], 1);
-  } else if (mesh_src.dim() == 3) {
-    myParms.srcPos = make_cudaPos(0, 0, mesh_src.guard[2]);
-    myParms.dstPos =
-        make_cudaPos(0, 0, mesh_dst.dims[2] - mesh_dst.guard[2]);
-    myParms.extent =
-        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                        mesh_src.dims[1], mesh_src.guard[2]);
-  }
+// void
+// cu_sim_environment::get_sub_guard_cells_left(cudaPitchedPtr p_src,
+//                                              cudaPitchedPtr p_dst,
+//                                              const Quadmesh &mesh_src,
+//                                              const Quadmesh &mesh_dst,
+//                                              int src_dev,
+//                                              int dst_dev) const {
+//   cudaMemcpy3DPeerParms myParms = {};
+//   myParms.srcPtr = p_src;
+//   myParms.dstPtr = p_dst;
+//   // myParms.kind = cudaMemcpyDefault;
+//   myParms.srcDevice = src_dev;
+//   myParms.dstDevice = dst_dev;
+//   if (mesh_src.dim() == 2) {
+//     myParms.srcPos = make_cudaPos(0, mesh_src.guard[1], 0);
+//     myParms.dstPos =
+//         make_cudaPos(0, mesh_dst.dims[1] - mesh_dst.guard[1], 0);
+//     myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                                      mesh_src.guard[1], 1);
+//   } else if (mesh_src.dim() == 3) {
+//     myParms.srcPos = make_cudaPos(0, 0, mesh_src.guard[2]);
+//     myParms.dstPos =
+//         make_cudaPos(0, 0, mesh_dst.dims[2] - mesh_dst.guard[2]);
+//     myParms.extent =
+//         make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                         mesh_src.dims[1], mesh_src.guard[2]);
+//   }
 
-  CudaSafeCall(cudaMemcpy3DPeer(&myParms));
-}
+//   CudaSafeCall(cudaMemcpy3DPeer(&myParms));
+// }
 
-void
-cu_sim_environment::get_sub_guard_cells_right(cudaPitchedPtr p_src,
-                                              cudaPitchedPtr p_dst,
-                                              const Quadmesh &mesh_src,
-                                              const Quadmesh &mesh_dst,
-                                              int src_dev,
-                                              int dst_dev) const {
-  cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = p_src;
-  myParms.dstPtr = p_dst;
-  // myParms.kind = cudaMemcpyDefault;
-  myParms.srcDevice = src_dev;
-  myParms.dstDevice = dst_dev;
-  if (mesh_src.dim() == 2) {
-    myParms.srcPos =
-        make_cudaPos(0, mesh_src.dims[1] - 2 * mesh_src.guard[1], 0);
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                                     mesh_src.guard[1], 1);
-  } else if (mesh_src.dim() == 3) {
-    myParms.srcPos =
-        make_cudaPos(0, 0, mesh_src.dims[2] - 2 * mesh_src.guard[2]);
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent =
-        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                        mesh_src.dims[1], mesh_src.guard[2]);
-  }
+// void
+// cu_sim_environment::get_sub_guard_cells_right(cudaPitchedPtr p_src,
+//                                               cudaPitchedPtr p_dst,
+//                                               const Quadmesh &mesh_src,
+//                                               const Quadmesh &mesh_dst,
+//                                               int src_dev,
+//                                               int dst_dev) const {
+//   cudaMemcpy3DPeerParms myParms = {};
+//   myParms.srcPtr = p_src;
+//   myParms.dstPtr = p_dst;
+//   // myParms.kind = cudaMemcpyDefault;
+//   myParms.srcDevice = src_dev;
+//   myParms.dstDevice = dst_dev;
+//   if (mesh_src.dim() == 2) {
+//     myParms.srcPos =
+//         make_cudaPos(0, mesh_src.dims[1] - 2 * mesh_src.guard[1], 0);
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                                      mesh_src.guard[1], 1);
+//   } else if (mesh_src.dim() == 3) {
+//     myParms.srcPos =
+//         make_cudaPos(0, 0, mesh_src.dims[2] - 2 * mesh_src.guard[2]);
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent =
+//         make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                         mesh_src.dims[1], mesh_src.guard[2]);
+//   }
 
-  CudaSafeCall(cudaMemcpy3DPeer(&myParms));
-}
+//   CudaSafeCall(cudaMemcpy3DPeer(&myParms));
+// }
 
-void
-cu_sim_environment::get_sub_guard_cells(
-    std::vector<cu_scalar_field<Scalar>> &field) const {
-  if (m_dev_map.size() <= 1) return;
-  if (m_super_grid->dim() == 1) {
-    Logger::print_err("1D communication is not implemented yet!");
-  } else {
-    // Sending right to left
-    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      get_sub_guard_cells_left(field[n].ptr().p, field[n - 1].ptr().p,
-                               field[n].grid().mesh(),
-                               field[n - 1].grid().mesh(), n, n - 1);
-    }
-    // Sending left to right
-    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      get_sub_guard_cells_right(field[n].ptr().p, field[n + 1].ptr().p,
-                                field[n].grid().mesh(),
-                                field[n + 1].grid().mesh(), n, n + 1);
-    }
-  }
-}
+// void
+// cu_sim_environment::get_sub_guard_cells(
+//     std::vector<cu_scalar_field<Scalar>> &field) const {
+//   if (m_dev_map.size() <= 1) return;
+//   if (m_super_grid->dim() == 1) {
+//     Logger::print_err("1D communication is not implemented yet!");
+//   } else {
+//     // Sending right to left
+//     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//       get_sub_guard_cells_left(field[n].ptr().p, field[n - 1].ptr().p,
+//                                field[n].grid().mesh(),
+//                                field[n - 1].grid().mesh(), n, n - 1);
+//     }
+//     // Sending left to right
+//     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//       get_sub_guard_cells_right(field[n].ptr().p, field[n + 1].ptr().p,
+//                                 field[n].grid().mesh(),
+//                                 field[n + 1].grid().mesh(), n, n + 1);
+//     }
+//   }
+// }
 
-void
-cu_sim_environment::get_sub_guard_cells(
-    std::vector<cu_vector_field<Scalar>> &field) const {
-  if (m_dev_map.size() <= 1) return;
-  if (m_super_grid->dim() == 1) {
-    Logger::print_err("1D communication is not implemented yet!");
-  } else {
-    // Sending right to left
-    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      for (int i = 0; i < VECTOR_DIM; i++) {
-        get_sub_guard_cells_left(field[n].ptr(i).p, field[n - 1].ptr(i).p,
-                                 field[n].grid().mesh(),
-                                 field[n - 1].grid().mesh(), n, n - 1);
-      }
-    }
-    // Sending left to right
-    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      for (int i = 0; i < VECTOR_DIM; i++) {
-        get_sub_guard_cells_right(field[n].ptr(i).p, field[n + 1].ptr(i).p,
-                                  field[n].grid().mesh(),
-                                  field[n + 1].grid().mesh(), n, n + 1);
-      }
-    }
-  }
-}
+// void
+// cu_sim_environment::get_sub_guard_cells(
+//     std::vector<cu_vector_field<Scalar>> &field) const {
+//   if (m_dev_map.size() <= 1) return;
+//   if (m_super_grid->dim() == 1) {
+//     Logger::print_err("1D communication is not implemented yet!");
+//   } else {
+//     // Sending right to left
+//     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//       for (int i = 0; i < VECTOR_DIM; i++) {
+//         get_sub_guard_cells_left(field[n].ptr(i).p, field[n - 1].ptr(i).p,
+//                                  field[n].grid().mesh(),
+//                                  field[n - 1].grid().mesh(), n, n - 1);
+//       }
+//     }
+//     // Sending left to right
+//     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//       for (int i = 0; i < VECTOR_DIM; i++) {
+//         get_sub_guard_cells_right(field[n].ptr(i).p, field[n + 1].ptr(i).p,
+//                                   field[n].grid().mesh(),
+//                                   field[n + 1].grid().mesh(), n, n + 1);
+//       }
+//     }
+//   }
+// }
 
-void
-cu_sim_environment::send_sub_guard_cells_left(
-    cu_multi_array<Scalar> &src, cu_multi_array<Scalar> &dst,
-    const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
-    int src_dev, int dst_dev, bool stagger) const {
-  cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = src.data_d().p;
-  myParms.dstPtr = m_sub_buffer_left[dst_dev].data_d().p;
-  // myParms.kind = cudaMemcpyDefault;
-  myParms.srcDevice = src_dev;
-  myParms.dstDevice = dst_dev;
-  if (mesh_src.dim() == 2) {
-    myParms.srcPos = make_cudaPos(0, 0, 0);
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                                     mesh_src.guard[1], 1);
-  } else if (mesh_src.dim() == 3) {
-    myParms.srcPos = make_cudaPos(0, 0, 0);
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent =
-        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                        mesh_src.dims[1], mesh_src.guard[2]);
-  }
+// void
+// cu_sim_environment::send_sub_guard_cells_left(
+//     cu_multi_array<Scalar> &src, cu_multi_array<Scalar> &dst,
+//     const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
+//     int src_dev, int dst_dev, bool stagger) const {
+//   cudaMemcpy3DPeerParms myParms = {};
+//   myParms.srcPtr = src.data_d().p;
+//   myParms.dstPtr = m_sub_buffer_left[dst_dev].data_d().p;
+//   // myParms.kind = cudaMemcpyDefault;
+//   myParms.srcDevice = src_dev;
+//   myParms.dstDevice = dst_dev;
+//   if (mesh_src.dim() == 2) {
+//     myParms.srcPos = make_cudaPos(0, 0, 0);
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent = make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                                      mesh_src.guard[1], 1);
+//   } else if (mesh_src.dim() == 3) {
+//     myParms.srcPos = make_cudaPos(0, 0, 0);
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent =
+//         make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                         mesh_src.dims[1], mesh_src.guard[2]);
+//   }
 
-  CudaSafeCall(cudaMemcpy3DPeer(&myParms));
-  // Logger::print_debug("Finished copying to peer");
-  // Add the buffer to the target
-  // if (mesh_src.dim() == 2) {
-  //   // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-  //   dst.add_from(m_sub_buffer_left[buffer_id], Index{0, 0, 0},
-  //                Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1],
-  //                0}, Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
-  // } else if (mesh_src.dim() == 3) {
-  //   // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-  //   dst.add_from(
-  //       m_sub_buffer_left[buffer_id], Index{0, 0, 0},
-  //       Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
-  //       Extent{mesh_dst.dims[0], mesh_dst.dims[1],
-  //       mesh_dst.guard[1]});
-  // }
-  // Logger::print_debug("Finished add_from");
-}
+//   CudaSafeCall(cudaMemcpy3DPeer(&myParms));
+//   // Logger::print_debug("Finished copying to peer");
+//   // Add the buffer to the target
+//   // if (mesh_src.dim() == 2) {
+//   //   // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//   //   dst.add_from(m_sub_buffer_left[buffer_id], Index{0, 0, 0},
+//   //                Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1],
+//   //                0}, Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
+//   // } else if (mesh_src.dim() == 3) {
+//   //   // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//   //   dst.add_from(
+//   //       m_sub_buffer_left[buffer_id], Index{0, 0, 0},
+//   //       Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
+//   //       Extent{mesh_dst.dims[0], mesh_dst.dims[1],
+//   //       mesh_dst.guard[1]});
+//   // }
+//   // Logger::print_debug("Finished add_from");
+// }
 
-void
-cu_sim_environment::send_sub_guard_cells_right(
-    cu_multi_array<Scalar> &src, cu_multi_array<Scalar> &dst,
-    const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
-    int src_dev, int dst_dev, bool stagger) const {
-  cudaMemcpy3DPeerParms myParms = {};
-  myParms.srcPtr = src.data_d().p;
-  myParms.dstPtr = m_sub_buffer_right[dst_dev].data_d().p;
-  // myParms.kind = cudaMemcpyDefault;
-  myParms.srcDevice = src_dev;
-  myParms.dstDevice = dst_dev;
-  if (mesh_src.dim() == 2) {
-    myParms.srcPos = make_cudaPos(
-        0, mesh_src.dims[1] - mesh_src.guard[1] - (stagger ? 1 : 0), 0);
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent =
-        make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
-                        mesh_src.guard[1] + (stagger ? 1 : 0), 1);
-  } else if (mesh_src.dim() == 3) {
-    myParms.srcPos = make_cudaPos(
-        0, 0, mesh_src.dims[2] - mesh_src.guard[2] - (stagger ? 1 : 0));
-    myParms.dstPos = make_cudaPos(0, 0, 0);
-    myParms.extent = make_cudaExtent(
-        mesh_src.dims[0] * sizeof(Scalar), mesh_src.dims[1],
-        mesh_src.guard[2] + (stagger ? 1 : 0));
-  }
+// void
+// cu_sim_environment::send_sub_guard_cells_right(
+//     cu_multi_array<Scalar> &src, cu_multi_array<Scalar> &dst,
+//     const Quadmesh &mesh_src, const Quadmesh &mesh_dst, int buffer_id,
+//     int src_dev, int dst_dev, bool stagger) const {
+//   cudaMemcpy3DPeerParms myParms = {};
+//   myParms.srcPtr = src.data_d().p;
+//   myParms.dstPtr = m_sub_buffer_right[dst_dev].data_d().p;
+//   // myParms.kind = cudaMemcpyDefault;
+//   myParms.srcDevice = src_dev;
+//   myParms.dstDevice = dst_dev;
+//   if (mesh_src.dim() == 2) {
+//     myParms.srcPos = make_cudaPos(
+//         0, mesh_src.dims[1] - mesh_src.guard[1] - (stagger ? 1 : 0), 0);
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent =
+//         make_cudaExtent(mesh_src.dims[0] * sizeof(Scalar),
+//                         mesh_src.guard[1] + (stagger ? 1 : 0), 1);
+//   } else if (mesh_src.dim() == 3) {
+//     myParms.srcPos = make_cudaPos(
+//         0, 0, mesh_src.dims[2] - mesh_src.guard[2] - (stagger ? 1 : 0));
+//     myParms.dstPos = make_cudaPos(0, 0, 0);
+//     myParms.extent = make_cudaExtent(
+//         mesh_src.dims[0] * sizeof(Scalar), mesh_src.dims[1],
+//         mesh_src.guard[2] + (stagger ? 1 : 0));
+//   }
 
-  CudaSafeCall(cudaMemcpy3DPeer(&myParms));
-}
+//   CudaSafeCall(cudaMemcpy3DPeer(&myParms));
+// }
 
-void
-cu_sim_environment::add_from_buffer_left(cu_multi_array<Scalar> &dst,
-                                         const Quadmesh &mesh_dst,
-                                         int buffer_id,
-                                         bool stagger) const {
-  // Add the buffer to the target
-  if (mesh_dst.dim() == 2) {
-    // Logger::print_debug("add left, buffer id is {}", buffer_id);
-    // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-    dst.add_from(m_sub_buffer_left[buffer_id], Index{0, 0, 0},
-                 Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1], 0},
-                 Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
-  } else if (mesh_dst.dim() == 3) {
-    // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-    dst.add_from(
-        m_sub_buffer_left[buffer_id], Index{0, 0, 0},
-        Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
-        Extent{mesh_dst.dims[0], mesh_dst.dims[1], mesh_dst.guard[2]});
-  }
-}
+// void
+// cu_sim_environment::add_from_buffer_left(cu_multi_array<Scalar> &dst,
+//                                          const Quadmesh &mesh_dst,
+//                                          int buffer_id,
+//                                          bool stagger) const {
+//   // Add the buffer to the target
+//   if (mesh_dst.dim() == 2) {
+//     // Logger::print_debug("add left, buffer id is {}", buffer_id);
+//     // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//     dst.add_from(m_sub_buffer_left[buffer_id], Index{0, 0, 0},
+//                  Index{0, mesh_dst.dims[1] - 2 * mesh_dst.guard[1], 0},
+//                  Extent{mesh_dst.dims[0], mesh_dst.guard[1], 1});
+//   } else if (mesh_dst.dim() == 3) {
+//     // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//     dst.add_from(
+//         m_sub_buffer_left[buffer_id], Index{0, 0, 0},
+//         Index{0, 0, mesh_dst.dims[2] - 2 * mesh_dst.guard[2]},
+//         Extent{mesh_dst.dims[0], mesh_dst.dims[1], mesh_dst.guard[2]});
+//   }
+// }
 
-void
-cu_sim_environment::add_from_buffer_right(cu_multi_array<Scalar> &dst,
-                                          const Quadmesh &mesh_dst,
-                                          int buffer_id,
-                                          bool stagger) const {
-  // Add the buffer to the target
-  if (mesh_dst.dim() == 2) {
-    // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-    // Logger::print_debug("add right, buffer id is {}, extent is
-    // {}x{}x1",
-    //                     buffer_id, mesh_dst.dims[0],
-    //                     mesh_dst.guard[1] + (stagger ? 1 : 0));
-    dst.add_from(m_sub_buffer_right[buffer_id], Index{0, 0, 0},
-                 Index{0, mesh_dst.guard[1] - (stagger ? 1 : 0), 0},
-                 Extent{mesh_dst.dims[0],
-                        mesh_dst.guard[1] + (stagger ? 1 : 0), 1});
-  } else if (mesh_dst.dim() == 3) {
-    // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
-    dst.add_from(m_sub_buffer_right[buffer_id], Index{0, 0, 0},
-                 Index{0, 0, mesh_dst.guard[2] - (stagger ? 1 : 0)},
-                 Extent{mesh_dst.dims[0], mesh_dst.dims[1],
-                        mesh_dst.guard[2] + (stagger ? 1 : 0)});
-  }
-}
+// void
+// cu_sim_environment::add_from_buffer_right(cu_multi_array<Scalar> &dst,
+//                                           const Quadmesh &mesh_dst,
+//                                           int buffer_id,
+//                                           bool stagger) const {
+//   // Add the buffer to the target
+//   if (mesh_dst.dim() == 2) {
+//     // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//     // Logger::print_debug("add right, buffer id is {}, extent is
+//     // {}x{}x1",
+//     //                     buffer_id, mesh_dst.dims[0],
+//     //                     mesh_dst.guard[1] + (stagger ? 1 : 0));
+//     dst.add_from(m_sub_buffer_right[buffer_id], Index{0, 0, 0},
+//                  Index{0, mesh_dst.guard[1] - (stagger ? 1 : 0), 0},
+//                  Extent{mesh_dst.dims[0],
+//                         mesh_dst.guard[1] + (stagger ? 1 : 0), 1});
+//   } else if (mesh_dst.dim() == 3) {
+//     // CudaSafeCall(cudaSetDevice(m_dev_map[buffer_id]));
+//     dst.add_from(m_sub_buffer_right[buffer_id], Index{0, 0, 0},
+//                  Index{0, 0, mesh_dst.guard[2] - (stagger ? 1 : 0)},
+//                  Extent{mesh_dst.dims[0], mesh_dst.dims[1],
+//                         mesh_dst.guard[2] + (stagger ? 1 : 0)});
+//   }
+// }
 
-void
-cu_sim_environment::send_sub_guard_cells(
-    std::vector<cu_scalar_field<Scalar>> &field) const {
-  if (m_dev_map.size() <= 1) return;
-  if (m_super_grid->dim() == 1) {
-    Logger::print_err("1D communication is not implemented yet!");
-  } else {
-    int last_dim = m_super_grid->dim() - 1;
-    // Sending right to left
-    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      send_sub_guard_cells_left(
-          field[n].data(), field[n - 1].data(), field[n].grid().mesh(),
-          field[n - 1].grid().mesh(), n - 1, m_dev_map[n],
-          m_dev_map[n - 1], field[n].stagger()[last_dim]);
-    }
-    // Sending left to right
-    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      send_sub_guard_cells_right(
-          field[n].data(), field[n + 1].data(), field[n].grid().mesh(),
-          field[n + 1].grid().mesh(), n + 1, m_dev_map[n],
-          m_dev_map[n + 1], field[n].stagger()[last_dim]);
-    }
-    for_each_device(m_dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
-    for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-      add_from_buffer_left(field[n - 1].data(),
-                           field[n - 1].grid().mesh(), n - 1,
-                           field[n - 1].stagger()[last_dim]);
-    }
-    for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-      CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-      add_from_buffer_right(field[n + 1].data(),
-                            field[n + 1].grid().mesh(), n + 1,
-                            field[n + 1].stagger()[last_dim]);
-    }
-    for_each_device(m_dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
-  }
-}
+// void
+// cu_sim_environment::send_sub_guard_cells(
+//     std::vector<cu_scalar_field<Scalar>> &field) const {
+//   if (m_dev_map.size() <= 1) return;
+//   if (m_super_grid->dim() == 1) {
+//     Logger::print_err("1D communication is not implemented yet!");
+//   } else {
+//     int last_dim = m_super_grid->dim() - 1;
+//     // Sending right to left
+//     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//       send_sub_guard_cells_left(
+//           field[n].data(), field[n - 1].data(), field[n].grid().mesh(),
+//           field[n - 1].grid().mesh(), n - 1, m_dev_map[n],
+//           m_dev_map[n - 1], field[n].stagger()[last_dim]);
+//     }
+//     // Sending left to right
+//     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//       send_sub_guard_cells_right(
+//           field[n].data(), field[n + 1].data(), field[n].grid().mesh(),
+//           field[n + 1].grid().mesh(), n + 1, m_dev_map[n],
+//           m_dev_map[n + 1], field[n].stagger()[last_dim]);
+//     }
+//     for_each_device(m_dev_map, [](int n) {
+//       CudaSafeCall(cudaDeviceSynchronize());
+//     });
+//     for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//       add_from_buffer_left(field[n - 1].data(),
+//                            field[n - 1].grid().mesh(), n - 1,
+//                            field[n - 1].stagger()[last_dim]);
+//     }
+//     for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//       CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//       add_from_buffer_right(field[n + 1].data(),
+//                             field[n + 1].grid().mesh(), n + 1,
+//                             field[n + 1].stagger()[last_dim]);
+//     }
+//     for_each_device(m_dev_map, [](int n) {
+//       CudaSafeCall(cudaDeviceSynchronize());
+//     });
+//   }
+// }
 
-void
-cu_sim_environment::send_sub_guard_cells(
-    std::vector<cu_vector_field<Scalar>> &field) const {
-  if (m_dev_map.size() <= 1) return;
-  if (m_super_grid->dim() == 1) {
-    Logger::print_err("1D communication is not implemented yet!");
-  } else {
-    int last_dim = m_super_grid->dim() - 1;
-    // Sending right to left
-    for (int i = 0; i < VECTOR_DIM; i++) {
-      for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-        CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-        send_sub_guard_cells_left(
-            field[n].data(i), field[n - 1].data(i),
-            field[n].grid().mesh(), field[n - 1].grid().mesh(), n - 1,
-            n, n - 1, field[n].stagger(i)[last_dim]);
-      }
-      // Sending left to right
-      for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-        CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-        send_sub_guard_cells_right(
-            field[n].data(i), field[n + 1].data(i),
-            field[n].grid().mesh(), field[n + 1].grid().mesh(), n + 1,
-            n, n + 1, field[n].stagger(i)[last_dim]);
-      }
-      for_each_device(m_dev_map,
-                      [](int n) { cudaDeviceSynchronize(); });
-      for (unsigned int n = 1; n < m_dev_map.size(); n++) {
-        CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
-        add_from_buffer_left(field[n - 1].data(i),
-                             field[n - 1].grid().mesh(), n - 1,
-                             field[n - 1].stagger(i)[last_dim]);
-      }
-      for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
-        CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
-        add_from_buffer_right(field[n + 1].data(i),
-                              field[n + 1].grid().mesh(), n + 1,
-                              field[n + 1].stagger(i)[last_dim]);
-      }
-      for_each_device(m_dev_map,
-                      [](int n) { cudaDeviceSynchronize(); });
-    }
-  }
-}
+// void
+// cu_sim_environment::send_sub_guard_cells(
+//     std::vector<cu_vector_field<Scalar>> &field) const {
+//   if (m_dev_map.size() <= 1) return;
+//   if (m_super_grid->dim() == 1) {
+//     Logger::print_err("1D communication is not implemented yet!");
+//   } else {
+//     int last_dim = m_super_grid->dim() - 1;
+//     // Sending right to left
+//     for (int i = 0; i < VECTOR_DIM; i++) {
+//       for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//         CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//         send_sub_guard_cells_left(
+//             field[n].data(i), field[n - 1].data(i),
+//             field[n].grid().mesh(), field[n - 1].grid().mesh(), n - 1,
+//             n, n - 1, field[n].stagger(i)[last_dim]);
+//       }
+//       // Sending left to right
+//       for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//         CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//         send_sub_guard_cells_right(
+//             field[n].data(i), field[n + 1].data(i),
+//             field[n].grid().mesh(), field[n + 1].grid().mesh(), n + 1,
+//             n, n + 1, field[n].stagger(i)[last_dim]);
+//       }
+//       for_each_device(m_dev_map,
+//                       [](int n) { cudaDeviceSynchronize(); });
+//       for (unsigned int n = 1; n < m_dev_map.size(); n++) {
+//         CudaSafeCall(cudaSetDevice(m_dev_map[n - 1]));
+//         add_from_buffer_left(field[n - 1].data(i),
+//                              field[n - 1].grid().mesh(), n - 1,
+//                              field[n - 1].stagger(i)[last_dim]);
+//       }
+//       for (unsigned int n = 0; n < m_dev_map.size() - 1; n++) {
+//         CudaSafeCall(cudaSetDevice(m_dev_map[n + 1]));
+//         add_from_buffer_right(field[n + 1].data(i),
+//                               field[n + 1].grid().mesh(), n + 1,
+//                               field[n + 1].stagger(i)[last_dim]);
+//       }
+//       for_each_device(m_dev_map,
+//                       [](int n) { cudaDeviceSynchronize(); });
+//     }
+//   }
+// }
 
 // void
 // cu_sim_environment::setup_domain(int num_nodes) {
