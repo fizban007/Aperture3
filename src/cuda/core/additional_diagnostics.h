@@ -23,8 +23,8 @@ class AdditionalDiagnostics
 
   void init_pointers(cu_sim_data& data);
 
-  std::vector<pitchptr<Scalar>*> m_dev_gamma;
-  std::vector<pitchptr<Scalar>*> m_dev_ptc_num;
+  pitchptr<Scalar>* m_dev_gamma;
+  pitchptr<Scalar>* m_dev_ptc_num;
   bool m_initialized = false;
 }; // ----- end of class AdditionalDiagnostics -----
 

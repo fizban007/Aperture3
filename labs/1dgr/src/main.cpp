@@ -1,7 +1,7 @@
 #include "cuda/core/cu_sim_data1d.h"
+#include "cuda/core/cu_sim_environment.h"
 #include "cuda/core/field_solver_1dgr.h"
 #include "cuda/core/ptc_updater_1dgr.h"
-#include "cuda/core/cu_sim_environment.h"
 #include "cuda/radiation/rt_1dgr.h"
 #include "cuda/utils/cu_data_exporter.h"
 #include "utils/logger.h"
@@ -24,17 +24,21 @@ main(int argc, char* argv[]) {
   cu_sim_data1d data(env);
 
   // Initialize the field solver
-  field_solver_1dgr_dev solver(
-      *dynamic_cast<const Grid_1dGR_dev*>(&env.grid()));
+  field_solver_1dgr_dev solver;
+  Logger::print_debug("Finished initializing field solver");
 
   // Initialize particle updater
   ptc_updater_1dgr_dev pusher(env);
+  Logger::print_debug("Finished initializing ptc updater");
 
   // Initialize radiative transfer module
   RadiationTransfer1DGR rad(env);
+  Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  data.prepare_initial_condition(100);
+  data.prepare_initial_condition(20);
+  // data.prepare_initial_photons(1);
+  Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter
   cu_data_exporter exporter(env.params(), step);
@@ -44,6 +48,7 @@ main(int argc, char* argv[]) {
   exporter.add_field("Rho_e", data.Rho[0]);
   exporter.add_field("Rho_p", data.Rho[1]);
   exporter.add_ptc_output_1d("particles", "ptc", &data.particles);
+  exporter.add_ptc_output_1d("photons", "photon", &data.photons);
 
   exporter.copyConfigFile();
   exporter.WriteGrid();
@@ -71,6 +76,9 @@ main(int argc, char* argv[]) {
                        data.particles.number(), t_ptc);
 
     solver.update_fields(data, dt);
+
+    rad.emit_photons(data, dt);
+    rad.produce_pairs(data, dt);
 
     // Sort the particles every once in a while
     if (step % env.params().sort_interval == 0 && step != 0) {

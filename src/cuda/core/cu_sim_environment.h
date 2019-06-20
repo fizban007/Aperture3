@@ -20,9 +20,12 @@
 namespace Aperture {
 
 struct cu_sim_data;
+// class DomainCommunicator;
 
+////////////////////////////////////////////////////////////////////////////////
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
+////////////////////////////////////////////////////////////////////////////////
 class cu_sim_environment : public sim_environment {
  public:
   cu_sim_environment(int* argc, char*** argv);
@@ -51,7 +54,18 @@ class cu_sim_environment : public sim_environment {
   // void send_sub_guard_cells(
   //     std::vector<cu_scalar_field<Scalar>>& field) const;
 
+  // const std::vector<int>& dev_map() const { return m_dev_map; }
+  // std::vector<int>& dev_map() { return m_dev_map; }
   int dev_id() const { return m_dev_id; }
+  // SimParams& sub_params(int i) { return m_sub_params[i]; }
+  // const SimParams& sub_params(int i) const { return m_sub_params[i];
+  // } bool is_boundary(int n, int bdy) const {
+  //   return m_boundary_info[n][bdy];
+  // }
+  // bool is_boundary(int bdy) const { return m_boundary_info[bdy]; }
+  // bool is_boundary(BoundaryPos bdy) const {
+  //   return m_boundary_info[(int)bdy];
+  // }
 
  private:
   void setup_env();
@@ -59,13 +73,13 @@ class cu_sim_environment : public sim_environment {
   // void get_sub_guard_cells_left(cudaPitchedPtr p_src,
   //                               cudaPitchedPtr p_dst,
   //                               const Quadmesh& mesh_src,
-  //                               const Quadmesh& mesh_dst, int src_dev,
-  //                               int dst_dev) const;
+  //                               const Quadmesh& mesh_dst, int
+  //                               src_dev, int dst_dev) const;
   // void get_sub_guard_cells_right(cudaPitchedPtr p_src,
   //                                cudaPitchedPtr p_dst,
   //                                const Quadmesh& mesh_src,
-  //                                const Quadmesh& mesh_dst, int src_dev,
-  //                                int dst_dev) const;
+  //                                const Quadmesh& mesh_dst, int
+  //                                src_dev, int dst_dev) const;
 
   // void send_sub_guard_cells_left(cu_multi_array<Scalar>& src,
   //                                cu_multi_array<Scalar>& dst,
@@ -89,7 +103,10 @@ class cu_sim_environment : public sim_environment {
 
   // std::vector<cu_multi_array<Scalar>> m_sub_buffer_left;
   // std::vector<cu_multi_array<Scalar>> m_sub_buffer_right;
+  // std::vector<int> m_dev_map;
   int m_dev_id;
+  // std::vector<SimParams> m_sub_params;
+  // std::array<bool, 6> m_boundary_info;
 };  // ----- end of class cu_sim_environment -----
 }  // namespace Aperture
 

@@ -70,6 +70,12 @@ class sim_environment {
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);
   void load_from_snapshot(const std::string& snapshot_file);
+  bool is_boundary(int bdy) const {
+    return m_domain_info.is_boundary[bdy];
+  }
+  bool is_boundary(BoundaryPos bdy) const {
+    return m_domain_info.is_boundary[(int)bdy];
+  }
 
  protected:
   // sim_environment() {}

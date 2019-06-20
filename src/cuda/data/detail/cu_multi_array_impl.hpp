@@ -210,7 +210,7 @@ cu_multi_array<T>::resize(Extent extent) {
 template <typename T>
 void
 cu_multi_array<T>::sync_to_device() {
-  CudaSafeCall(cudaSetDevice(_devId));
+  // CudaSafeCall(cudaSetDevice(_devId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = make_cudaPitchedPtr(this->_data, this->_pitch,
                                        this->_extent.x,
@@ -230,7 +230,7 @@ cu_multi_array<T>::sync_to_device() {
 template <typename T>
 void
 cu_multi_array<T>::sync_to_host() {
-  CudaSafeCall(cudaSetDevice(_devId));
+  // CudaSafeCall(cudaSetDevice(_devId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;
   myParms.srcPos = make_cudaPos(0, 0, 0);

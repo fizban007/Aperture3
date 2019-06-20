@@ -43,8 +43,9 @@ if (CMAKE_CUDA_COMPILER)
   add_executable(test_cuda "test.cu")
   target_sources(test_cuda PRIVATE
     "test_multiarray.cu"
+    "test_particles.cpp"
     # "test_env.cpp"
-    "test_domain.cpp"
+    # "test_domain.cpp"
     "test_pitchptr.cu"
     "test_config.cpp")
   set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)

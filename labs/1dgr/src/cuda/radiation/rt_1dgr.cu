@@ -1,12 +1,13 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
-#include "cuda/core/cu_sim_data.h"
+#include "cuda/core/cu_sim_data1d.h"
 #include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
 #include "cuda/data/particles_dev.h"
 #include "cuda/data/photons_dev.h"
+#include "cuda/grids/grid_1dgr_dev.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/radiation/rt_ic_dev.h"
@@ -26,8 +27,9 @@ namespace Kernels {
 
 template <typename PtcData>
 __global__ void
-count_photon_produced(PtcData ptc, size_t number, int* ph_count,
-                      int* phPos, curandState* states) {
+count_photon_produced(PtcData ptc, size_t number,
+                      Grid_1dGR_dev::mesh_ptrs mesh_ptrs, int* ph_count,
+                      int* phPos, curandState* states, Scalar dt) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   __shared__ int photonProduced;
   curandState local_state = states[id];
@@ -40,16 +42,19 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
     // Skip empty particles
     if (cell == MAX_CELL) continue;
     auto flag = ptc.flag[tid];
+    auto x1 = ptc.x1[tid];
+    // auto p1 = ptc.p1[tid];
     int sp = get_ptc_type(flag);
-    // if (sp == (int)ParticleType::ion) continue;
 
+    Scalar alpha = mesh_ptrs.alpha[cell] * x1 +
+                   mesh_ptrs.alpha[cell - 1] * (1.0f - x1);
     // Skip photon emission when outside given radius
-    Scalar gamma = ptc.E[tid];
-    
+    Scalar gamma = alpha * ptc.E[tid];
+
     float u = curand_uniform(&local_state);
     // TODO: Add a scaling factor here for the rate that may depend on
     // position
-    if (u < find_ic_rate(gamma)) {
+    if (u < find_ic_rate(gamma) * alpha * dt) {
       phPos[tid] = atomicAdd(&photonProduced, 1) + 1;
     }
   }
@@ -66,7 +71,8 @@ count_photon_produced(PtcData ptc, size_t number, int* ph_count,
 template <typename PtcData, typename PhotonData>
 __global__ void
 produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
-                size_t ph_num, int* phPos, int* ph_count, int* ph_cum,
+                size_t ph_num, Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                int* phPos, int* ph_count, int* ph_cum,
                 curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState local_state = states[id];
@@ -74,55 +80,77 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
   for (uint32_t tid = id; tid < ptc_num;
        tid += blockDim.x * gridDim.x) {
     int pos_in_block = phPos[tid] - 1;
-    if (pos_in_block > -1 && ptc.cell[tid] != MAX_CELL) {
+    uint32_t cell = ptc.cell[tid];
+    if (pos_in_block > -1 && cell != MAX_CELL) {
       int start_pos = ph_cum[blockIdx.x];
 
+      Scalar x1 = ptc.x1[tid];
       Scalar p1 = ptc.p1[tid];
-      Scalar p2 = ptc.p2[tid];
-      Scalar p3 = ptc.p3[tid];
-      Scalar gamma = ptc.E[tid];
+      Scalar u0_ptc = ptc.E[tid];
+      uint32_t c = ptc.cell[tid];
+      Scalar xi = dev_mesh.pos(0, c, x1);
+      // FIXME: pass a in as a parameter
+      constexpr Scalar a = 0.99;
+      const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+      const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+      Scalar exp_xi = std::exp(xi * (rp - rm));
+      Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+      Scalar Delta = r * r - 2.0 * r + a * a;
 
-      // TODO: May need to transform particle momenta to some other
-      // frame and do the photon spectrum there
-      Scalar pi = std::sqrt(gamma * gamma - 1.0f);
+      Scalar alpha = mesh_ptrs.alpha[cell] * x1 +
+                     mesh_ptrs.alpha[cell - 1] * (1.0f - x1);
+      Scalar D1 =
+          mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * (1.0f - x1);
+      Scalar D2 =
+          mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * (1.0f - x1);
+      Scalar D3 =
+          mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * (1.0f - x1);
+      Scalar B3B1 =
+          mesh_ptrs.B3B1[c] * x1 + mesh_ptrs.B3B1[c - 1] * (1.0f - x1);
+      Scalar gamma = alpha * ptc.E[tid];
+      Scalar g11 = mesh_ptrs.gamma_rr[c] * x1 +
+                   mesh_ptrs.gamma_rr[c - 1] * (1.0f - x1);
+      Scalar g33 = mesh_ptrs.gamma_ff[c] * x1 +
+                   mesh_ptrs.gamma_ff[c - 1] * (1.0f - x1);
+      Scalar beta = mesh_ptrs.beta_phi[c] * x1 +
+                    mesh_ptrs.beta_phi[c - 1] * (1.0f - x1);
+
+      Scalar ur_ptc = u0_ptc * Delta * (p1 / u0_ptc - D1) / D2;
+      // Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
+
       Scalar Eph = gen_photon_e(gamma, &local_state);
-      Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
-      // gamma = (gamma - std::abs(Eph));
-      ptc.p1[tid] = p1 * pf / pi;
-      ptc.p2[tid] = p2 * pf / pi;
-      ptc.p3[tid] = p3 * pf / pi;
-      ptc.E[tid] = gamma - Eph;
+      // Limit energy loss so that remaining particle momentum still
+      // makes sense
+      if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
 
-      auto c = ptc.cell[tid];
-      Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
-      Scalar lph = min(10.0f, 0.03f * (1.0f / std::sin(theta) - 1.0f) +
-                                  dev_params.photon_path);
+      ptc.E[tid] = (gamma - Eph) / alpha;
+      // TODO: What happens if p1 becomes NaN??
+      ptc.p1[tid] =
+          sgn(p1) *
+          std::sqrt(square(ptc.E[tid]) *
+                        (D2 * (alpha * alpha - D3) + D1 * D1) -
+                    D2);
+      if (ptc.p1[tid] != ptc.p1[tid]) ptc.p1[tid] = 0.0f;
+
       // If photon energy is too low, do not track it, but still
       // subtract its energy as done above
       if (std::abs(Eph) < dev_params.E_ph_min) continue;
 
       // Add the new photon
       // Scalar path = rad_model.draw_photon_freepath(Eph);
-      Scalar u = curand_uniform(&local_state);
-      // Scalar path =
-      //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
-      // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-      Scalar path = lph * (0.01f + 0.99f * u);
-      if (path > dev_params.r_cutoff) continue;
-      // Scalar path = dev_params.photon_path;
-      // if (path > dev_params.lph_cutoff) continue;
-      // if (true) continue;
       // printf("Eph is %f, path is %f\n", Eph, path);
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
-      photons.x2[offset] = ptc.x2[tid];
-      photons.x3[offset] = ptc.x3[tid];
-      photons.p1[offset] = Eph * p1 / pi;
-      photons.p2[offset] = Eph * p2 / pi;
-      photons.p3[offset] = Eph * p3 / pi;
+      photons.p1[offset] = (Eph / gamma) * ur_ptc / g11;
+      photons.pf[offset] =
+          (Eph / gamma) *
+          (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
+      photons.E[offset] = Eph / alpha;
       photons.weight[offset] = ptc.weight[tid];
-      photons.path_left[offset] = path;
       photons.cell[offset] = ptc.cell[tid];
+      float u = curand_uniform(&local_state);
+      photons.flag[offset] = (u < dev_params.track_percent ?
+                              bit_or(PhotonFlag::tracked) : 0);
     }
   }
   states[id] = local_state;
@@ -130,15 +158,12 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons,
 
 template <typename PhotonData>
 __global__ void
-count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
-                     int* pair_pos, curandState* states) {
+count_pairs_produced(PhotonData photons, size_t number,
+                     Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                     int* pair_count, int* pair_pos,
+                     curandState* states, Scalar dt) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL(dev_params.spectral_alpha,
-  // dev_params.e_s,
-  //                                         dev_params.e_min,
-  //                                         dev_params.photon_path,
-  //                                         rng);
+  CudaRng rng(&states[id]);
   __shared__ int pairsProduced;
   if (threadIdx.x == 0) pairsProduced = 0;
 
@@ -147,45 +172,30 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
   for (uint32_t tid = id; tid < number; tid += blockDim.x * gridDim.x) {
     // if (tid >= number) continue;
     uint32_t cell = photons.cell[tid];
-    // Skip empty photons
     if (cell == MAX_CELL) continue;
-    int c1 = dev_mesh.get_c1(cell);
-    int c2 = dev_mesh.get_c2(cell);
-    // Remove photon if it is too close to the axis
-    if (c2 == dev_mesh.guard[1] ||
-        c2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
-      photons.cell[tid] = MAX_CELL;
-      continue;
-    }
-    if (!dev_mesh.is_in_bulk(c1, c2)) {
+    if (!dev_mesh.is_in_bulk(cell)) {
       photons.cell[tid] = MAX_CELL;
       continue;
     }
 
-    // Get the B field at the current location
-    // Scalar B1v = interp(b1, photons.x1[tid], photons.x2[tid], c1, c2,
-    // Stagger(0b001)); Scalar B2v = interp(b2, photons.x1[tid],
-    // photons.x2[tid], c1, c2, Stagger(0b010)); Scalar B3v = interp(b3,
-    // photons.x1[tid], photons.x2[tid], c1, c2, Stagger(0b100));
+    auto x1 = photons.x1[tid];
 
-    if (photons.path_left[tid] <= 0.0f) {
-      // if (*ptrAddr(rho0, c1, c2))
-      // Scalar rho =
-      //     max(std::abs(*ptrAddr(rho1, c1, c2) + *ptrAddr(rho0, c1, c2)),
-      //         0.0001f);
-      // Scalar N = max(*ptrAddr(rho1, c1, c2), -*ptrAddr(rho0, c1, c2));
-      // Scalar multiplicity = N / rho;
-      // if (N > 1.0e6f) {
-      //   photons.cell[tid] = MAX_CELL;
-      //   continue;
-      // }
+    Scalar alpha = mesh_ptrs.alpha[cell] * x1 +
+                   mesh_ptrs.alpha[cell - 1] * (1.0f - x1);
+    // Skip photon emission when outside given radius
+    Scalar u0_hat = alpha * std::abs(photons.E[tid]);
+    if (u0_hat < dev_params.E_ph_min) {
+      photons.cell[tid] = MAX_CELL;
+      continue;
+    }
+
+    Scalar prob = find_gg_rate(u0_hat) * alpha * dt;
+    if (tid == 0)
+      printf("u0_hat is %f, prob is %f\n", u0_hat, prob);
+
+    float u = rng();
+    if (u < prob) {
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
-      // int c1 = dev_mesh.get_c1(cell);
-      // Scalar w = photons.weight[tid];
-
-      // atomicAdd(ptrAddr(pair_events,
-      //                   c2 * pair_events.pitch + c1 * sizeof(Scalar)),
-      //           w);
     }
   }
 
@@ -200,12 +210,10 @@ count_pairs_produced(PhotonData photons, size_t number, int* pair_count,
 template <typename PtcData, typename PhotonData>
 __global__ void
 produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
-              size_t ptc_num, int* pair_pos, int* pair_count,
-              int* pair_cum, curandState* states) {
+              size_t ptc_num, Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+              int* pair_pos, int* pair_count, int* pair_cum,
+              curandState* states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
-  // CudaRng rng(&states[id]);
-  // auto inv_comp = make_inverse_compton_PL1D(dev_params,
-  // dev_params.photon_path, rng); RadModel rad_model(dev_params, rng);
 
   for (uint32_t tid = id; tid < ph_num; tid += blockDim.x * gridDim.x) {
     int pos_in_block = pair_pos[tid] - 1;
@@ -213,38 +221,51 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc,
       int start_pos = pair_cum[blockIdx.x] * 2;
 
       // Split the photon energy evenly between the pairs
-      Scalar p1 = photons.p1[tid];
-      Scalar p2 = photons.p2[tid];
-      Scalar p3 = photons.p3[tid];
-      Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
-      // Scalar new_p = std::sqrt(max(0.25f * E_ph * E_ph, 1.0f)
-      // - 1.0f);
-      Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
+      Scalar u0 = 0.5f * std::abs(photons.E[tid]);
+
+      uint32_t c = photons.cell[tid];
+      Pos_t x1 = photons.x1[tid];
+      // Scalar xi = dev_mesh.pos(0, c, x1);
+      // // FIXME: pass a in as a parameter
+      // constexpr Scalar a = 0.99;
+      // const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+      // const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+      // Scalar exp_xi = std::exp(xi * (rp - rm));
+      // Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+      // Scalar Delta = r * r - 2.0 * r + a * a;
+
+      Scalar alpha = mesh_ptrs.alpha[c] * x1 +
+                     mesh_ptrs.alpha[c - 1] * (1.0f - x1);
+      Scalar D1 =
+          mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * (1.0f - x1);
+      Scalar D2 =
+          mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * (1.0f - x1);
+      Scalar D3 =
+          mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * (1.0f - x1);
+
+      Scalar p1 =
+          sgn(photons.p1[tid]) *
+          std::sqrt(u0 * u0 * (D2 * (alpha * alpha - D3) + D1 * D1) -
+                    D2);
+      if (p1 != p1) p1 = 0.0f;
 
       // Add the two new particles
       int offset_e = ptc_num + start_pos + pos_in_block * 2;
       int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
-      // int offset_p = ptc_num + start_pos + pos_in_block +
-      // pair_count[blockIdx.x];
 
-      ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
-      ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
-      ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
+      ptc.x1[offset_e] = ptc.x1[offset_p] = x1;
       // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
       // ptc.x2[offset_e], ptc.x3[offset_e]);
 
-      ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
-      ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
-      ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
-      ptc.E[offset_e] = ptc.E[offset_p] =
-          sqrt(1.0f + ratio * ratio * E_ph2);
+      ptc.p1[offset_e] = ptc.p1[offset_p] = p1;
+      ptc.E[offset_e] = ptc.E[offset_p] = u0;
 
 #ifndef NDEBUG
       assert(ptc.cell[offset_e] == MAX_CELL);
       assert(ptc.cell[offset_p] == MAX_CELL);
 #endif
       ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
-      ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
+      ptc.cell[offset_e] = ptc.cell[offset_p] = c;
       ptc.flag[offset_e] = set_ptc_type_flag(
           bit_or(ParticleFlag::secondary), ParticleType::electron);
       ptc.flag[offset_p] = set_ptc_type_flag(
@@ -277,8 +298,12 @@ RadiationTransfer1DGR::RadiationTransfer1DGR(
                    m_blocksPerGrid);
 
   // Init inverse compton module
-  Spectra::black_body ne(env.params().star_kT);
-  m_ic.init(ne, ne.emin(), ne.emax());
+  // Spectra::black_body ne(env.params().star_kT);
+  Spectra::broken_power_law ne(1.25, 1.1, m_env.params().e_min, 1.0e-10, 0.1);
+  // FIXME: Insert correct normalization here for the background photon
+  // field
+  // m_ic.init(ne, ne.emin(), ne.emax(), 1.23529e18 / m_env.params().ic_path);
+  m_ic.init(ne, ne.emin(), ne.emax(), 1.50e24 / m_env.params().ic_path);
 }
 
 RadiationTransfer1DGR::~RadiationTransfer1DGR() {
@@ -286,7 +311,7 @@ RadiationTransfer1DGR::~RadiationTransfer1DGR() {
 }
 
 void
-RadiationTransfer1DGR::emit_photons(cu_sim_data& data) {
+RadiationTransfer1DGR::emit_photons(cu_sim_data1d& data, Scalar dt) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
@@ -294,12 +319,15 @@ RadiationTransfer1DGR::emit_photons(cu_sim_data& data) {
   m_cumNumPerBlock.assign_dev(0);
 
   cudaDeviceSynchronize();
+  const Grid_1dGR_dev& grid =
+      *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
+  auto mesh_ptrs = grid.get_mesh_ptrs();
 
   // Count the number of photons produced
-  Kernels::count_photon_produced<particle_data>
+  Kernels::count_photon_produced<particle1d_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          ptc.data(), ptc.number(), m_numPerBlock.data_d(),
-          m_posInBlock.data_d(), (curandState*)d_rand_states);
+          ptc.data(), ptc.number(), mesh_ptrs, m_numPerBlock.data_d(),
+          m_posInBlock.data_d(), (curandState*)d_rand_states, dt);
   CudaCheckError();
 
   thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
@@ -316,15 +344,66 @@ RadiationTransfer1DGR::emit_photons(cu_sim_data& data) {
   Logger::print_info("{} photons are produced!", new_photons);
 
   // Actually produce the photons
-  Kernels::produce_photons<particle_data, photon_data>
+  Kernels::produce_photons<particle1d_data, photon1d_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           ptc.data(), ptc.number(), photons.data(), photons.number(),
-          m_posInBlock.data_d(), m_numPerBlock.data_d(),
+          mesh_ptrs, m_posInBlock.data_d(), m_numPerBlock.data_d(),
           m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
   CudaCheckError();
 
   int padding = 1;
   photons.set_num(photons.number() + new_photons + padding);
+}
+
+void
+RadiationTransfer1DGR::produce_pairs(cu_sim_data1d& data, Scalar dt) {
+  auto& ptc = data.particles;
+  auto& photons = data.photons;
+  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
+  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
+  int new_pairs;
+
+  m_posInBlock.assign_dev(0, photons.number());
+  m_numPerBlock.assign_dev(0);
+  m_cumNumPerBlock.assign_dev(0);
+
+  cudaDeviceSynchronize();
+  const Grid_1dGR_dev& grid =
+      *dynamic_cast<const Grid_1dGR_dev*>(data.grid.get());
+  auto mesh_ptrs = grid.get_mesh_ptrs();
+
+  // Count the number of photons produced
+  Kernels::count_pairs_produced<photon1d_data>
+      <<<m_blocksPerGrid, m_threadsPerBlock>>>(
+          photons.data(), photons.number(), mesh_ptrs,
+          m_numPerBlock.data_d(), m_posInBlock.data_d(),
+          (curandState*)d_rand_states, dt);
+  CudaCheckError();
+
+  // Scan the number of photons produced per block. The result gives the
+  // offset for each block
+  thrust::exclusive_scan(ptrNumPerBlock,
+                         ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
+  CudaCheckError();
+  m_cumNumPerBlock.sync_to_host();
+  m_numPerBlock.sync_to_host();
+  new_pairs = m_cumNumPerBlock[m_blocksPerGrid - 1] +
+              m_numPerBlock[m_blocksPerGrid - 1];
+  Logger::print_info("{} electron-positron pairs are produced!",
+                     new_pairs);
+
+  // Actually produce the photons
+  Kernels::produce_pairs<particle1d_data, photon1d_data>
+      <<<m_blocksPerGrid, m_threadsPerBlock>>>(
+          photons.data(), photons.number(), ptc.data(), ptc.number(),
+          mesh_ptrs, m_posInBlock.data_d(), m_numPerBlock.data_d(),
+          m_cumNumPerBlock.data_d(), (curandState*)d_rand_states);
+  CudaCheckError();
+
+  int padding = 10;
+  ptc.set_num(ptc.number() + new_pairs * 2 + padding);
+
+  CudaSafeCall(cudaDeviceSynchronize());
 }
 
 }  // namespace Aperture
