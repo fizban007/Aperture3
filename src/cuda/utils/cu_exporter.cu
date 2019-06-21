@@ -1,8 +1,12 @@
+#include "H5Cpp.h"
 #include "cu_exporter.h"
 #include "cuda/constant_mem.h"
 #include "cuda/core/cu_sim_data.h"
 #include "cuda/core/cu_sim_environment.h"
 #include "cuda/cudaUtility.h"
+#include <vector>
+
+using namespace H5;
 
 namespace Aperture {
 
@@ -39,67 +43,160 @@ cu_exporter::cu_exporter(cu_sim_environment& env, uint32_t& timestep)
 cu_exporter::~cu_exporter() {}
 
 void
-cu_exporter::write_output(cu_sim_data& data) {
-  add_grid_output(data, "E1",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.E1(idx) + ptrs.Ebg1(idx);
-                  });
-  add_grid_output(data, "E2",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.E2(idx) + ptrs.Ebg2(idx);
-                  });
-  add_grid_output(data, "E3",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.E3(idx) + ptrs.Ebg3(idx);
-                  });
-  add_grid_output(data, "B1",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.B1(idx) + ptrs.Bbg1(idx);
-                  });
-  add_grid_output(data, "B2",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.B2(idx) + ptrs.Bbg2(idx);
-                  });
-  add_grid_output(data, "B3",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.B3(idx) + ptrs.Bbg3(idx);
-                  });
-  add_grid_output(data, "J1",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.J1(idx);
-                  });
-  add_grid_output(data, "J2",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.J2(idx);
-                  });
-  add_grid_output(data, "J3",
-                  [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
-                                         pitchptr<Scalar> & p,
-                                         Index idx, Index idx_out) {
-                    p(idx_out) = ptrs.J3(idx);
-                  });
+cu_exporter::write_output(cu_sim_data& data, uint32_t timestep,
+                          double time) {
+  H5File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                              filePrefix, timestep)
+                      .c_str(),
+                  H5F_ACC_RDWR | H5F_ACC_TRUNC);
+  add_grid_output(
+      data, "E1",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.E1(idx) + ptrs.Ebg1(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "E2",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.E2(idx) + ptrs.Ebg2(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "E3",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.E3(idx) + ptrs.Ebg3(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "B1",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.B1(idx) + ptrs.Bbg1(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "B2",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.B2(idx) + ptrs.Bbg2(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "B3",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.B3(idx) + ptrs.Bbg3(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "J1",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.J1(idx); },
+      datafile);
+  add_grid_output(
+      data, "J2",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.J2(idx); },
+      datafile);
+  add_grid_output(
+      data, "J3",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.J3(idx); },
+      datafile);
+  add_grid_output(
+      data, "Rho_e",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.Rho[0](idx); },
+      datafile);
+  add_grid_output(
+      data, "Rho_p",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.Rho[1](idx); },
+      datafile);
+  if (data.env.params().num_species > 2) {
+    add_grid_output(
+        data, "Rho_i",
+        [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                               pitchptr<Scalar> & p, Index idx,
+                               Index idx_out) {
+          p(idx_out) = ptrs.Rho[2](idx);
+        },
+        datafile);
+  }
+  add_grid_output(
+      data, "photon_produced",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.photon_produced(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "pair_produced",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.pair_produced(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "photon_num",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.photon_num(idx);
+      },
+      datafile);
+  add_grid_output(
+      data, "divE",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.divE(idx); },
+      datafile);
+  add_grid_output(
+      data, "divB",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.divB(idx); },
+      datafile);
+  add_grid_output(
+      data, "EdotB_avg",
+      [] __host__ __device__(
+          cu_sim_data::data_ptrs & ptrs, pitchptr<Scalar> & p,
+          Index idx, Index idx_out) { p(idx_out) = ptrs.EdotB(idx); },
+      datafile);
+  add_grid_output(
+      data, "EdotB",
+      [] __host__ __device__(cu_sim_data::data_ptrs & ptrs,
+                             pitchptr<Scalar> & p, Index idx,
+                             Index idx_out) {
+        p(idx_out) = ptrs.E1(idx) * ptrs.B1(idx) +
+                     ptrs.E2(idx) * ptrs.B2(idx) +
+                     ptrs.E3(idx) * ptrs.B3(idx);
+      },
+      datafile);
+
+  datafile.close();
 }
 
 template <typename Func>
 void
 cu_exporter::add_grid_output(cu_sim_data& data, const std::string& name,
-                             Func f) {
+                             Func f, H5File& file) {
   if (data.env.grid().dim() == 2) {
     dim3 grid_size(32, 32);
     dim3 block_size(32, 32);
@@ -109,6 +206,14 @@ cu_exporter::add_grid_output(cu_sim_data& data, const std::string& name,
     CudaCheckError();
 
     tmp_grid_cudata.sync_to_host();
+
+    // Actually write the temp array to hdf
+    hsize_t dims[2] = {(uint32_t)tmp_grid_cudata.width(),
+                       (uint32_t)tmp_grid_cudata.height()};
+    DataSpace dataspace(2, dims);
+    DataSet dataset =
+        file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
+    dataset.write(tmp_grid_cudata.data(), PredType::NATIVE_FLOAT);
   }
 }
 
