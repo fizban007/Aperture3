@@ -21,7 +21,7 @@ class FieldSolver_LogSph : public FieldSolverDev {
   // void compute_E_update(vfield_t& E, const vfield_t& B,
   //                       const vfield_t& J, double dt);
   // void compute_B_update(vfield_t& B, const vfield_t& E, double dt);
-  virtual void set_background_j(const vfield_t& J) override;
+  // virtual void set_background_j(const vfield_t& J) override;
   void boundary_conditions(cu_sim_data& data, double omega);
   // void clean_divergence(cu_sim_data& data);
   // void init_dev_rho(cu_sim_data& data);

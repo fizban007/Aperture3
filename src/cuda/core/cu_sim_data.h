@@ -19,7 +19,7 @@ struct cu_sim_data {
 
   void initialize(const cu_sim_environment& env);
 
-  void init_grid(const cu_sim_environment& env);
+  // void init_grid(const cu_sim_environment& env);
 
   void fill_multiplicity(Scalar weight, int multiplicity);
 
@@ -62,7 +62,7 @@ struct cu_sim_data {
   cu_vector_field<Scalar> Ebg;
   cu_vector_field<Scalar> Bbg;
 
-  std::unique_ptr<Grid> grid;
+  // std::unique_ptr<Grid> grid;
 
   Particles particles;
   Photons photons;

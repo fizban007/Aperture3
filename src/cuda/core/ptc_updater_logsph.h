@@ -22,11 +22,11 @@ class PtcUpdaterLogSph : public PtcUpdaterDev {
 
  private:
   // Grid_LogSph_dev::mesh_ptrs m_mesh_ptrs;
-  std::vector<void*> d_rand_states;
+  void* d_rand_states;
   int m_threadsPerBlock, m_blocksPerGrid;
 
-  std::vector<cu_array<Scalar>> m_surface_e, m_surface_p, m_surface_tmp;
-  std::vector<cu_multi_array<Scalar>> m_tmp_j1, m_tmp_j2;
+  cu_array<Scalar> m_surface_e, m_surface_p, m_surface_tmp;
+  cu_multi_array<Scalar> m_tmp_j1, m_tmp_j2;
 };  // ----- end of class PtcUpdaterLogSph : public PtcUpdaterDev -----
 
 }  // namespace Aperture

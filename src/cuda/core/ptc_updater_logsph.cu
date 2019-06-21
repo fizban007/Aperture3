@@ -173,39 +173,40 @@ vay_push_2d(particle_data ptc, size_t num,
 
       // if (dev_params.rad_cooling_on && std::abs(pitch_angle) < 0.6f
       // &&
-      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+      // if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion)
+      // {
       if (dev_params.rad_cooling_on) {
         // if (std::abs(pitch_angle) > 0.9) {
         // if (p >= 1.0f) {
         // // if (true) {
-          // Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) /
-          // q_over_m; Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma)
-          // / q_over_m; Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) /
-          // gamma) / q_over_m; Scalar tmp_sq = tmp1 * tmp1 + tmp2 *
-          // tmp2 + tmp3 * tmp3; Scalar bE =
-          //     (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
+        // Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) /
+        // q_over_m; Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma)
+        // / q_over_m; Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) /
+        // gamma) / q_over_m; Scalar tmp_sq = tmp1 * tmp1 + tmp2 *
+        // tmp2 + tmp3 * tmp3; Scalar bE =
+        //     (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
 
-          // Scalar delta_p1 =
-          //     dev_params.rad_cooling_coef *
-          //     (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
-          //      gamma * p1 * (tmp_sq - bE * bE)) /
-          //     square(dev_params.B0);
-          // Scalar delta_p2 =
-          //     dev_params.rad_cooling_coef *
-          //     (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
-          //      gamma * p2 * (tmp_sq - bE * bE)) /
-          //     square(dev_params.B0);
-          // Scalar delta_p3 =
-          //     dev_params.rad_cooling_coef *
-          //     (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
-          //      gamma * p3 * (tmp_sq - bE * bE)) /
-          //     square(dev_params.B0);
+        // Scalar delta_p1 =
+        //     dev_params.rad_cooling_coef *
+        //     (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
+        //      gamma * p1 * (tmp_sq - bE * bE)) /
+        //     square(dev_params.B0);
+        // Scalar delta_p2 =
+        //     dev_params.rad_cooling_coef *
+        //     (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
+        //      gamma * p2 * (tmp_sq - bE * bE)) /
+        //     square(dev_params.B0);
+        // Scalar delta_p3 =
+        //     dev_params.rad_cooling_coef *
+        //     (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
+        //      gamma * p3 * (tmp_sq - bE * bE)) /
+        //     square(dev_params.B0);
 
-          // p1 += delta_p1;
-          // p2 += delta_p2;
-          // p3 += delta_p3;
-          // p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-          // gamma = sqrt(1.0f + p * p);
+        // p1 += delta_p1;
+        // p2 += delta_p2;
+        // p3 += delta_p3;
+        // p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+        // gamma = sqrt(1.0f + p * p);
         // }
         // else {
         Scalar delta_p1 = -dev_params.rad_cooling_coef *
@@ -643,9 +644,13 @@ measure_surface_density(particle_data ptc, size_t num,
                   4.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_e[c2 - dev_mesh.guard[1]],
                   6.0f * w / float(sum_cells) / 16.0f);
-        atomicAdd(&surface_e[min(c2 - dev_mesh.guard[1] + 1, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+        atomicAdd(&surface_e[min(
+                      c2 - dev_mesh.guard[1] + 1,
+                      dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   4.0f * w / float(sum_cells) / 16.0f);
-        atomicAdd(&surface_e[min(c2 - dev_mesh.guard[1] + 2, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+        atomicAdd(&surface_e[min(
+                      c2 - dev_mesh.guard[1] + 2,
+                      dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   1.0f * w / float(sum_cells) / 16.0f);
       } else if (sp == (int)ParticleType::ion) {
         atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 2, 0)],
@@ -654,9 +659,13 @@ measure_surface_density(particle_data ptc, size_t num,
                   4.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_p[c2 - dev_mesh.guard[1]],
                   6.0f * w / float(sum_cells) / 16.0f);
-        atomicAdd(&surface_p[min(c2 - dev_mesh.guard[1] + 1, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+        atomicAdd(&surface_p[min(
+                      c2 - dev_mesh.guard[1] + 1,
+                      dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   4.0f * w / float(sum_cells) / 16.0f);
-        atomicAdd(&surface_p[min(c2 - dev_mesh.guard[1] + 2, dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
+        atomicAdd(&surface_p[min(
+                      c2 - dev_mesh.guard[1] + 2,
+                      dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   1.0f * w / float(sum_cells) / 16.0f);
       }
     }
@@ -840,47 +849,42 @@ filter_current(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
 
 PtcUpdaterLogSph::PtcUpdaterLogSph(const cu_sim_environment &env)
     : PtcUpdaterDev(env),
-      d_rand_states(env.dev_map().size()),
+      d_rand_states(nullptr),
       m_threadsPerBlock(256),
-      m_blocksPerGrid(128) {
+      m_blocksPerGrid(128),
+      m_surface_e(env.params().N[1], m_env.dev_id()),
+      m_surface_p(env.params().N[1], m_env.dev_id()),
+      m_surface_tmp(env.params().N[1], m_env.dev_id()) {
   // const Grid_LogSph_dev &grid =
   //     dynamic_cast<const Grid_LogSph_dev &>(env.grid());
   // m_mesh_ptrs = grid.get_mesh_ptrs();
 
   int seed = m_env.params().random_seed;
 
-  for_each_device(env.dev_map(), [this, seed](int n) {
-    CudaSafeCall(cudaMalloc(
-        &(this->d_rand_states[n]),
-        m_threadsPerBlock * m_blocksPerGrid * sizeof(curandState)));
-    init_rand_states((curandState *)this->d_rand_states[n], seed + n,
-                     this->m_threadsPerBlock, this->m_blocksPerGrid);
-  });
+  CudaSafeCall(cudaMalloc(
+      &d_rand_states,
+      m_threadsPerBlock * m_blocksPerGrid * sizeof(curandState)));
+  init_rand_states((curandState *)d_rand_states, seed,
+                   m_threadsPerBlock, m_blocksPerGrid);
 
-  for_each_device(env.dev_map(), [this](int n) {
-    m_surface_e.emplace_back(m_env.sub_params(n).N[1],
-                             m_env.dev_map()[n]);
-    m_surface_p.emplace_back(m_env.sub_params(n).N[1],
-                             m_env.dev_map()[n]);
-    m_surface_tmp.emplace_back(m_env.sub_params(n).N[1],
-                               m_env.dev_map()[n]);
-  });
-  for_each_device(env.dev_map(), [this](int n) {
-    m_tmp_j1.emplace_back(Extent(
-        m_env.sub_params(n).N[0] + 2 * m_env.sub_params(n).guard[0],
-        m_env.sub_params(n).N[1] + 2 * m_env.sub_params(n).guard[1]));
-    m_tmp_j2.emplace_back(Extent(
-        m_env.sub_params(n).N[0] + 2 * m_env.sub_params(n).guard[0],
-        m_env.sub_params(n).N[1] + 2 * m_env.sub_params(n).guard[1]));
-  });
+  // m_surface_e = cu_array<Scalar>(m_env.params().N[1],
+  // m_env.dev_id()); m_surface_p =
+  // cu_array<Scalar>(m_env.params().N[1], m_env.dev_id());
+  // m_surface_tmp = cu_array<Scalar>(m_env.params().N[1],
+  // m_env.dev_id());
+
+  m_tmp_j1 = cu_multi_array<Scalar>(
+      Extent(m_env.params().N[0] + 2 * m_env.params().guard[0],
+             m_env.params().N[1] + 2 * m_env.params().guard[1]));
+  m_tmp_j2 = cu_multi_array<Scalar>(
+      Extent(m_env.params().N[0] + 2 * m_env.params().guard[0],
+             m_env.params().N[1] + 2 * m_env.params().guard[1]));
   // m_J1.initialize();
   // m_J2.initialize();
 }
 
 PtcUpdaterLogSph::~PtcUpdaterLogSph() {
-  for_each_device(m_env.dev_map(), [this](int n) {
-    cudaFree((curandState *)this->d_rand_states[n]);
-  });
+  cudaFree((curandState *)d_rand_states);
 }
 
 void
@@ -890,224 +894,181 @@ PtcUpdaterLogSph::update_particles(cu_sim_data &data, double dt,
   initialize_dev_fields(data);
 
   if (m_env.grid().dim() == 2) {
-    for_each_device(data.dev_map, [this, &data](int n) {
-      data.J[n].initialize();
-      for (int i = 0; i < data.env.params().num_species; i++) {
-        data.Rho[i][n].initialize();
-      }
-    });
+    data.J.initialize();
+    for (int i = 0; i < data.env.params().num_species; i++) {
+      data.Rho[i].initialize();
+    }
+    const Grid_LogSph_dev *grid =
+        dynamic_cast<const Grid_LogSph_dev *>(&data.env.local_grid());
+    auto mesh_ptrs = grid->get_mesh_ptrs();
     timer::stamp("ptc_push");
     // Skip empty particle array
-    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
-      if (data.particles[n].number() > 0) {
-        Logger::print_info(
-            "Updating {} particles in log spherical coordinates",
-            data.particles[n].number());
-        Kernels::vay_push_2d<<<256, 512>>>(data.particles[n].data(),
-                                           data.particles[n].number(),
-                                           m_dev_fields[n], dt);
-        CudaCheckError();
-      }
-    });
-    for_each_device(data.dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
+    if (data.particles.number() > 0) {
+      Logger::print_info(
+          "Updating {} particles in log spherical coordinates",
+          data.particles.number());
+      Kernels::vay_push_2d<<<256, 512>>>(data.particles.data(),
+                                         data.particles.number(),
+                                         m_dev_fields, dt);
+      CudaCheckError();
+    }
+    CudaSafeCall(cudaDeviceSynchronize());
     timer::show_duration_since_stamp("Pushing particles", "us",
                                      "ptc_push");
 
     timer::stamp("ptc_deposit");
-    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
-      if (data.particles[n].number() > 0) {
-        const Grid_LogSph_dev *grid =
-            dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-        auto mesh_ptrs = grid->get_mesh_ptrs();
-        // m_J1.initialize();
-        // m_J2.initialize();
-        Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
-            data.particles[n].data(), data.particles[n].number(),
-            m_dev_fields[n], mesh_ptrs, dt, step,
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        CudaCheckError();
-        // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
-        //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
-        // CudaCheckError();
-      }
-    });
-    for_each_device(data.dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
+
+    if (data.particles.number() > 0) {
+      // m_J1.initialize();
+      // m_J2.initialize();
+      Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
+          data.particles.data(), data.particles.number(), m_dev_fields,
+          mesh_ptrs, dt, step, m_env.is_boundary(2),
+          m_env.is_boundary(3));
+      CudaCheckError();
+      // Kernels::convert_j<<<dim3(32, 32), dim3(32, 32)>>>(
+      //     m_J1.ptr(), m_J2.ptr(), m_dev_fields);
+      // CudaCheckError();
+    }
+    CudaSafeCall(cudaDeviceSynchronize());
     timer::show_duration_since_stamp("Depositing particles", "us",
                                      "ptc_deposit");
 
     // timer::stamp("comm");
-    m_env.send_sub_guard_cells(data.J);
-    for (int i = 0; i < data.env.params().num_species; i++) {
-      m_env.send_sub_guard_cells(data.Rho[i]);
-    }
-    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
-      const Grid_LogSph_dev *grid =
-          dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-      auto mesh_ptrs = grid->get_mesh_ptrs();
-      Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(
-          m_dev_fields[n], mesh_ptrs, dt);
-      CudaCheckError();
-    });
-    for_each_device(data.dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
+    // m_env.send_sub_guard_cells(data.J);
+    // for (int i = 0; i < data.env.params().num_species; i++) {
+    //   m_env.send_sub_guard_cells(data.Rho[i]);
+    // }
+    Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(m_dev_fields,
+                                                       mesh_ptrs, dt);
+    CudaCheckError();
+    CudaSafeCall(cudaDeviceSynchronize());
 
     Logger::print_debug("current smoothing {} times",
                         m_env.params().current_smoothing);
     for (int i = 0; i < m_env.params().current_smoothing; i++) {
-      m_env.get_sub_guard_cells(data.J);
+      // m_env.get_sub_guard_cells(data.J);
+      // if ((step + 1) % data.env.params().data_interval == 0) {
+      //   for (int i = 0; i < data.env.params().num_species; i++) {
+      //     m_env.get_sub_guard_cells(data.Rho[i]);
+      //   }
+      // }
+      auto &mesh = grid->mesh();
+      dim3 blockSize(32, 16);
+      dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+
+      Kernels::filter_current<<<gridSize, blockSize>>>(
+          data.J.ptr(0), m_tmp_j1.data_d(), mesh_ptrs.A1_e,
+          m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(2), m_env.is_boundary(3));
+      data.J.data(0).copy_from(m_tmp_j1);
+      CudaCheckError();
+
+      Kernels::filter_current<<<gridSize, blockSize>>>(
+          data.J.ptr(1), m_tmp_j2.data_d(), mesh_ptrs.A2_e,
+          m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(2), m_env.is_boundary(3));
+      data.J.data(1).copy_from(m_tmp_j2);
+      CudaCheckError();
+
+      Kernels::filter_current<<<gridSize, blockSize>>>(
+          data.J.ptr(2), m_tmp_j2.data_d(), mesh_ptrs.A3_e,
+          m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(2), m_env.is_boundary(3));
+      data.J.data(2).copy_from(m_tmp_j2);
+      CudaCheckError();
+
       if ((step + 1) % data.env.params().data_interval == 0) {
         for (int i = 0; i < data.env.params().num_species; i++) {
-          m_env.get_sub_guard_cells(data.Rho[i]);
+          Kernels::filter_current<<<gridSize, blockSize>>>(
+              data.Rho[i].ptr(), m_tmp_j1.data_d(), mesh_ptrs.dV,
+              m_env.is_boundary(0), m_env.is_boundary(1),
+              m_env.is_boundary(2), m_env.is_boundary(3));
+          data.Rho[i].data().copy_from(m_tmp_j1);
+          CudaCheckError();
         }
       }
-      // Logger::print_debug("current smoothing {}", i);
-      for_each_device(data.dev_map, [this, &data, step](int n) {
-        // Logger::print_debug(
-        //     "on device {}, tmp_j1 is on {}, tmp_j2 is on {}", n,
-        //     m_tmp_j1[n].devId(), m_tmp_j2[n].devId());
-        const Grid_LogSph_dev *grid =
-            dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-        auto mesh_ptrs = grid->get_mesh_ptrs();
-        auto &mesh = grid->mesh();
-        dim3 blockSize(32, 16);
-        dim3 gridSize(mesh.reduced_dim(0) / 32,
-                      mesh.reduced_dim(1) / 16);
-
-        Kernels::filter_current<<<gridSize, blockSize>>>(
-            data.J[n].ptr(0), m_tmp_j1[n].data_d(), mesh_ptrs.A1_e,
-            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        data.J[n].data(0).copy_from(m_tmp_j1[n]);
-        CudaCheckError();
-
-        Kernels::filter_current<<<gridSize, blockSize>>>(
-            data.J[n].ptr(1), m_tmp_j2[n].data_d(), mesh_ptrs.A2_e,
-            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        data.J[n].data(1).copy_from(m_tmp_j2[n]);
-        CudaCheckError();
-
-        Kernels::filter_current<<<gridSize, blockSize>>>(
-            data.J[n].ptr(2), m_tmp_j2[n].data_d(), mesh_ptrs.A3_e,
-            m_env.is_boundary(n, 0), m_env.is_boundary(n, 1),
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        data.J[n].data(2).copy_from(m_tmp_j2[n]);
-        CudaCheckError();
-
-        if ((step + 1) % data.env.params().data_interval == 0) {
-          for (int i = 0; i < data.env.params().num_species; i++) {
-            Kernels::filter_current<<<gridSize, blockSize>>>(
-                data.Rho[i][n].ptr(), m_tmp_j1[n].data_d(),
-                mesh_ptrs.dV, m_env.is_boundary(n, 0),
-                m_env.is_boundary(n, 1), m_env.is_boundary(n, 2),
-                m_env.is_boundary(n, 3));
-            data.Rho[i][n].data().copy_from(m_tmp_j1[n]);
-            CudaCheckError();
-          }
-        }
-      });
-      for_each_device(data.dev_map, [](int n) {
-        CudaSafeCall(cudaDeviceSynchronize());
-      });
+      CudaSafeCall(cudaDeviceSynchronize());
     }
     // timer::stamp("ph_update");
-    for_each_device(data.dev_map, [this, &data, dt, step](int n) {
-      // Skip empty particle array
-      if (data.photons[n].number() > 0) {
-        Logger::print_info(
-            "Updating {} photons in log spherical coordinates",
-            data.photons[n].number());
-        Kernels::move_photons<<<256, 512>>>(
-            data.photons[n].data(), data.photons[n].number(), dt,
-            m_env.is_boundary(n, 2), m_env.is_boundary(n, 3));
-        CudaCheckError();
-      }
-    });
-    for_each_device(data.dev_map, [](int n) {
-      CudaSafeCall(cudaDeviceSynchronize());
-    });
+    // Skip empty particle array
+    if (data.photons.number() > 0) {
+      Logger::print_info(
+          "Updating {} photons in log spherical coordinates",
+          data.photons.number());
+      Kernels::move_photons<<<256, 512>>>(
+          data.photons.data(), data.photons.number(), dt,
+          m_env.is_boundary(2), m_env.is_boundary(3));
+      CudaCheckError();
+    }
+    CudaSafeCall(cudaDeviceSynchronize());
     // timer::show_duration_since_stamp("Updating photons", "us",
     //                                  "ph_update");
   }
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
-  data.send_particles();
+  // data.send_particles();
   handle_boundary(data);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
 }
 
 void
 PtcUpdaterLogSph::handle_boundary(cu_sim_data &data) {
-  for_each_device(data.dev_map, [this, &data](int n) {
-    if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
-    }
-    data.particles[n].clear_guard_cells();
-    data.photons[n].clear_guard_cells();
-  });
-  for_each_device(data.dev_map,
-                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
-  for_each_device(data.dev_map, [this, &data](int n) {
-    const Grid_LogSph_dev *grid =
-        dynamic_cast<const Grid_LogSph_dev *>(data.grid[n].get());
-    auto mesh_ptrs = grid->get_mesh_ptrs();
+  if (data.env.is_boundary((int)BoundaryPos::lower0)) {
+  }
+  data.particles.clear_guard_cells();
+  data.photons.clear_guard_cells();
+  CudaSafeCall(cudaDeviceSynchronize());
+  const Grid_LogSph_dev *grid =
+      dynamic_cast<const Grid_LogSph_dev *>(&data.env.local_grid());
+  auto mesh_ptrs = grid->get_mesh_ptrs();
 
-    if (data.env.is_boundary(n, (int)BoundaryPos::lower1)) {
-      // CudaSafeCall(cudaSetDevice(n));
-      // Logger::print_debug("Processing boundary {} on device {}",
-      // (int)BoundaryPos::lower1, n);
-      Kernels::axis_rho_lower<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
-      CudaCheckError();
-      // cudaDeviceSynchronize();
-    }
-    if (data.env.is_boundary(n, (int)BoundaryPos::upper1)) {
-      // CudaSafeCall(cudaSetDevice(n));
-      // Logger::print_debug("Processing boundary {} on device {}",
-      //                     (int)BoundaryPos::upper1, n);
-      Kernels::axis_rho_upper<<<1, 512>>>(m_dev_fields[n], mesh_ptrs);
-      CudaCheckError();
-      // cudaDeviceSynchronize();
-    }
-    if (data.env.is_boundary(n, (int)BoundaryPos::upper0)) {
-      Kernels::ptc_outflow<<<256, 512>>>(data.particles[n].data(),
-                                         data.particles[n].number());
-      CudaCheckError();
-    }
-  });
-  for_each_device(data.dev_map,
-                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+  if (data.env.is_boundary((int)BoundaryPos::lower1)) {
+    // CudaSafeCall(cudaSetDevice(n));
+    // Logger::print_debug("Processing boundary {} on device {}",
+    // (int)BoundaryPos::lower1, n);
+    Kernels::axis_rho_lower<<<1, 512>>>(m_dev_fields, mesh_ptrs);
+    CudaCheckError();
+    // cudaDeviceSynchronize();
+  }
+  if (data.env.is_boundary((int)BoundaryPos::upper1)) {
+    // CudaSafeCall(cudaSetDevice(n));
+    // Logger::print_debug("Processing boundary {} on device {}",
+    //                     (int)BoundaryPos::upper1, n);
+    Kernels::axis_rho_upper<<<1, 512>>>(m_dev_fields, mesh_ptrs);
+    CudaCheckError();
+    // cudaDeviceSynchronize();
+  }
+  if (data.env.is_boundary((int)BoundaryPos::upper0)) {
+    Kernels::ptc_outflow<<<256, 512>>>(data.particles.data(),
+                                       data.particles.number());
+    CudaCheckError();
+  }
+  CudaSafeCall(cudaDeviceSynchronize());
 }
 
 void
 PtcUpdaterLogSph::inject_ptc(cu_sim_data &data, int inj_per_cell,
                              Scalar p1, Scalar p2, Scalar p3, Scalar w,
                              Scalar omega) {
-  for_each_device(data.dev_map, [this, &data, &inj_per_cell, &p1, &p2,
-                                 &p3, &w, &omega](int n) {
-    if (data.env.is_boundary(n, (int)BoundaryPos::lower0)) {
-      m_surface_e[n].assign_dev(0.0);
-      m_surface_p[n].assign_dev(0.0);
-      m_surface_tmp[n].assign_dev(0.0);
-      Kernels::measure_surface_density<<<256, 512>>>(
-          data.particles[n].data(), data.particles[n].number(),
-          m_surface_e[n].data_d(), m_surface_p[n].data_d());
-      CudaCheckError();
-      Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          data.particles[n].data(), data.particles[n].number(),
-          inj_per_cell, p1, p2, p3, w, m_surface_e[n].data_d(),
-          m_surface_p[n].data_d(), (curandState *)d_rand_states[n],
-          omega);
-      CudaCheckError();
+  if (data.env.is_boundary((int)BoundaryPos::lower0)) {
+    m_surface_e.assign_dev(0.0);
+    m_surface_p.assign_dev(0.0);
+    m_surface_tmp.assign_dev(0.0);
+    Kernels::measure_surface_density<<<256, 512>>>(
+        data.particles.data(), data.particles.number(),
+        m_surface_e.data_d(), m_surface_p.data_d());
+    CudaCheckError();
+    Kernels::inject_ptc<<<m_blocksPerGrid, m_threadsPerBlock>>>(
+        data.particles.data(), data.particles.number(), inj_per_cell,
+        p1, p2, p3, w, m_surface_e.data_d(), m_surface_p.data_d(),
+        (curandState *)d_rand_states, omega);
+    CudaCheckError();
 
-      data.particles[n].set_num(
-          data.particles[n].number() +
-          2 * inj_per_cell * data.E[n].grid().mesh().reduced_dim(1));
-    }
-  });
+    data.particles.set_num(data.particles.number() +
+                           2 * inj_per_cell *
+                               data.E.grid().mesh().reduced_dim(1));
+  }
 }
 
 // void

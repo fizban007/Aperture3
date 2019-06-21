@@ -46,42 +46,23 @@ cu_sim_environment::setup_env() {
   Logger::print_info("    Device Name: {}", prop.name);
   Logger::print_info("    Device Total Memory: {}MiB",
                      prop.totalGlobalMem / (1024 * 1024));
-  // if (i > 0) {
-  //   int can_access_left, can_access_right;
-  //   //Check for peer access between participating GPUs:
-  //   cudaDeviceCanAccessPeer(&can_access_left, i, i - 1);
-  //   cudaDeviceCanAccessPeer(&can_access_right, i - 1, i);
-  //   if (can_access_left == 0 || can_access_right == 0) {
-  //     Logger::err("Device {} cannot access its neighbor!", i);
-  //   }
-  // }
-
-  // m_sub_params.resize(n_devices);
-  // m_boundary_info.resize(n_devices);
-  // m_sub_buffer.resize(n_devices);
-  // for (int i = 0; i < n_devices; i++) {
-  //   int dev_id = m_dev_map[i];
-  //   CudaSafeCall(cudaSetDevice(dev_id));
-
-  //   // if (i > 0)
-  //   //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i - 1],
-  //   0));
-  //   // if (i < n_devices - 1)
-  //   //   CudaSafeCall(cudaDeviceEnablePeerAccess(m_dev_map[i + 1],
-  //   0));
-
-  //   m_sub_params[i] = m_params;
-
-  //   int d = m_grid->dim() - 1;
-  //   m_sub_params[i].N[d] /= n_devices;
-  //   m_sub_params[i].size[d] /= n_devices;
-  //   m_sub_params[i].lower[d] += i * m_sub_params[i].size[d];
 
   init_dev_params(m_params);
-  //   // init_dev_mesh(m_grid->mesh());
+  init_dev_mesh(m_grid->mesh());
 
   init_dev_charges(m_charges.data());
   init_dev_masses(m_masses.data());
+
+  // Setup the local grid
+  if (m_params.coord_system == "LogSpherical") {
+    m_grid.reset(new Grid_LogSph_dev());
+  } else if (m_params.coord_system == "1DGR" &&
+             m_grid->dim() == 1) {
+    m_grid.reset(new Grid_1dGR_dev());
+  } else {
+    m_grid.reset(new Grid());
+  }
+  m_grid->init(m_params);
 
   //   if (m_super_grid->dim() == 1) {
   //     m_sub_buffer_left.emplace_back(
@@ -135,13 +116,6 @@ cu_sim_environment::setup_env() {
   // NOTE: parsing the grid does not create the cache arrays.
   // m_super_grid.parse(m_conf_file.data().grid_config);
   // m_data_super_grid.parse(m_conf_file.data().data_grid_config);
-
-  // setup the domain
-  // setup_domain(m_args.dimx(), m_args.dimy(), m_args.dimz());
-
-  // setup the local grid and the local data output grid
-  // setup_local_grid(m_local_grid, m_super_grid, m_domain_info);
-  // setup_local_grid(m_data_grid, m_data_super_grid, m_domain_info);
 
   // Now we need to decide what to initiate depending on what is the
   // user configuration. Need to discuss this and think it through.

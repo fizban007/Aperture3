@@ -424,7 +424,7 @@ FieldSolver_LogSph::update_fields(cu_sim_data &data, double dt,
   // data.env.get_sub_guard_cells(data.E);
 
   const Grid_LogSph_dev &grid =
-      *dynamic_cast<const Grid_LogSph_dev *>(data.grid.get());
+      *dynamic_cast<const Grid_LogSph_dev *>(&data.env.grid());
   auto mesh_ptrs = grid.get_mesh_ptrs();
   auto &mesh = grid.mesh();
 
@@ -464,8 +464,8 @@ FieldSolver_LogSph::update_fields(cu_sim_data &data, double dt,
                                    "field_update");
 }
 
-void
-FieldSolver_LogSph::set_background_j(const vfield_t &J) {}
+// void
+// FieldSolver_LogSph::set_background_j(const vfield_t &J) {}
 
 void
 FieldSolver_LogSph::boundary_conditions(cu_sim_data &data,
