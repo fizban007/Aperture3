@@ -43,16 +43,19 @@ set(Aperture_src
   "utils/mpi_comm.cpp"
   "utils/memory.cpp"
   "utils/filesystem.cpp"
+  "core/grid.cpp"
   )
 if (CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
-    "cuda/core/multi_array.cu"
     "cuda/data/array.cu"
+    "cuda/core/multi_array.cu"
+    "cuda/core/fields.cu"
     )
 
 else()
   list(APPEND Aperture_src
     "core/multi_array.cpp"
+    "core/fields.cpp"
     # "core/grid.cpp"
     # "grids/grid_log_sph.cpp"
     # "data/fields.cpp"
