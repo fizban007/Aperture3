@@ -64,3 +64,6 @@ endif()
 
 add_executable(test_IC "test_IC.cpp")
 target_link_libraries(test_IC Aperture cuAperture)
+
+add_executable(print_data_size "data.cpp")
+target_link_libraries(print_data_size Aperture cuAperture)

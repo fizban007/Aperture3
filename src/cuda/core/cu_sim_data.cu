@@ -285,9 +285,18 @@ cu_sim_data::cu_sim_data(const cu_sim_environment &e)
   gamma.resize(num_species);
   ptc_num.resize(num_species);
   initialize(e);
+
+  Logger::print_info("data_ptr has size", sizeof(data_ptrs));
 }
 
-cu_sim_data::~cu_sim_data() {}
+cu_sim_data::~cu_sim_data() {
+  if (ptrs.Rho != nullptr)
+    CudaSafeCall(cudaFree(ptrs.Rho));
+  if (ptrs.gamma != nullptr)
+    CudaSafeCall(cudaFree(ptrs.gamma));
+  if (ptrs.ptc_num != nullptr)
+    CudaSafeCall(cudaFree(ptrs.ptc_num));
+}
 
 void
 cu_sim_data::initialize(const cu_sim_environment &env) {
@@ -303,22 +312,37 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
   E = cu_vector_field<Scalar>(grid);
   E.set_field_type(FieldType::E);
   E.initialize();
+  ptrs.E1 = E.ptr(0);
+  ptrs.E2 = E.ptr(1);
+  ptrs.E3 = E.ptr(2);
 
   Ebg = cu_vector_field<Scalar>(grid);
   Ebg.set_field_type(FieldType::E);
   Ebg.initialize();
+  ptrs.Ebg1 = Ebg.ptr(0);
+  ptrs.Ebg2 = Ebg.ptr(1);
+  ptrs.Ebg3 = Ebg.ptr(2);
 
   B = cu_vector_field<Scalar>(grid);
   B.set_field_type(FieldType::B);
   B.initialize();
+  ptrs.B1 = B.ptr(0);
+  ptrs.B2 = B.ptr(1);
+  ptrs.B3 = B.ptr(2);
 
   Bbg = cu_vector_field<Scalar>(grid);
   Bbg.set_field_type(FieldType::B);
   Bbg.initialize();
+  ptrs.Bbg1 = Bbg.ptr(0);
+  ptrs.Bbg2 = Bbg.ptr(1);
+  ptrs.Bbg3 = Bbg.ptr(2);
 
   J = cu_vector_field<Scalar>(grid);
   J.set_field_type(FieldType::E);
   J.initialize();
+  ptrs.J1 = J.ptr(0);
+  ptrs.J2 = J.ptr(1);
+  ptrs.J3 = J.ptr(2);
 
   flux = cu_scalar_field<Scalar>(grid);
   flux.initialize();
@@ -328,6 +352,9 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
   divB.set_stagger(0b000);
   EdotB = cu_scalar_field<Scalar>(grid);
   EdotB.set_stagger(0b000);
+  ptrs.divE = divE.ptr();
+  ptrs.divB = divB.ptr();
+  ptrs.EdotB = EdotB.ptr();
 
   photon_produced = cu_scalar_field<Scalar>(grid);
   photon_produced.initialize();
@@ -335,19 +362,28 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
   pair_produced.initialize();
   photon_num = cu_scalar_field<Scalar>(grid);
   photon_num.initialize();
+  ptrs.photon_produced = photon_produced.ptr();
+  ptrs.pair_produced = pair_produced.ptr();
+  ptrs.photon_num = photon_num.ptr();
 
+  CudaSafeCall(cudaMallocManaged(&ptrs.Rho, num_species * sizeof(pitchptr<Scalar>)));
+  CudaSafeCall(cudaMallocManaged(&ptrs.gamma, num_species * sizeof(pitchptr<Scalar>)));
+  CudaSafeCall(cudaMallocManaged(&ptrs.ptc_num, num_species * sizeof(pitchptr<Scalar>)));
   for (int i = 0; i < num_species; i++) {
     Rho[i] = cu_scalar_field<Scalar>(grid);
     Rho[i].initialize();
     Rho[i].sync_to_host();
+    ptrs.Rho[i] = Rho[i].ptr();
 
     gamma[i] = cu_scalar_field<Scalar>(grid);
     gamma[i].initialize();
     gamma[i].sync_to_host();
+    ptrs.gamma[i] = gamma[i].ptr();
 
     ptc_num[i] = cu_scalar_field<Scalar>(grid);
     ptc_num[i].initialize();
     ptc_num[i].sync_to_host();
+    ptrs.ptc_num[i] = ptc_num[i].ptr();
   }
 
   CudaSafeCall(cudaDeviceSynchronize());
@@ -618,6 +654,11 @@ cu_sim_data::check_mesh_ptrs() {
   auto mesh_ptrs = g.get_mesh_ptrs();
   Kernels::check_mesh_ptrs<<<1, 1>>>(mesh_ptrs);
   CudaCheckError();
+}
+
+cu_sim_data::data_ptrs
+cu_sim_data::get_ptrs() {
+  return ptrs;
 }
 
 }  // namespace Aperture
