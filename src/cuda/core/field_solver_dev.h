@@ -20,7 +20,7 @@ class FieldSolverDev {
   virtual void update_fields(cu_sim_data& data, double dt,
                              double time = 0.0) = 0;
 
-  virtual void set_background_j(const vfield_t& j) = 0;
+  // virtual void set_background_j(const vfield_t& j) = 0;
 
   // virtual void compute_E_update(vfield_t& E, const vfield_t& B, const
   // vfield_t& J, double dt) = 0; virtual void

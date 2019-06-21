@@ -291,60 +291,61 @@ cu_sim_data::~cu_sim_data() {}
 
 void
 cu_sim_data::initialize(const cu_sim_environment &env) {
-  init_grid(env);
+  // init_grid(env);
 
   // int dev_id = dev_map[n];
   CudaSafeCall(cudaSetDevice(devId));
   Logger::print_debug("using device {}", devId);
-  auto &mesh = grid->mesh();
+  auto &grid = env.local_grid();
+  auto &mesh = grid.mesh();
   Logger::print_debug("Mesh dims are {}x{}x{}", mesh.dims[0],
                       mesh.dims[1], mesh.dims[2]);
-  E = cu_vector_field<Scalar>(*grid);
+  E = cu_vector_field<Scalar>(grid);
   E.set_field_type(FieldType::E);
   E.initialize();
 
-  Ebg = cu_vector_field<Scalar>(*grid);
+  Ebg = cu_vector_field<Scalar>(grid);
   Ebg.set_field_type(FieldType::E);
   Ebg.initialize();
 
-  B = cu_vector_field<Scalar>(*grid);
+  B = cu_vector_field<Scalar>(grid);
   B.set_field_type(FieldType::B);
   B.initialize();
 
-  Bbg = cu_vector_field<Scalar>(*grid);
+  Bbg = cu_vector_field<Scalar>(grid);
   Bbg.set_field_type(FieldType::B);
   Bbg.initialize();
 
-  J = cu_vector_field<Scalar>(*grid);
+  J = cu_vector_field<Scalar>(grid);
   J.set_field_type(FieldType::E);
   J.initialize();
 
-  flux = cu_scalar_field<Scalar>(*grid);
+  flux = cu_scalar_field<Scalar>(grid);
   flux.initialize();
 
-  divE = cu_scalar_field<Scalar>(*grid);
-  divB = cu_scalar_field<Scalar>(*grid);
+  divE = cu_scalar_field<Scalar>(grid);
+  divB = cu_scalar_field<Scalar>(grid);
   divB.set_stagger(0b000);
-  EdotB = cu_scalar_field<Scalar>(*grid);
+  EdotB = cu_scalar_field<Scalar>(grid);
   EdotB.set_stagger(0b000);
 
-  photon_produced = cu_scalar_field<Scalar>(*grid);
+  photon_produced = cu_scalar_field<Scalar>(grid);
   photon_produced.initialize();
-  pair_produced = cu_scalar_field<Scalar>(*grid);
+  pair_produced = cu_scalar_field<Scalar>(grid);
   pair_produced.initialize();
-  photon_num = cu_scalar_field<Scalar>(*grid);
+  photon_num = cu_scalar_field<Scalar>(grid);
   photon_num.initialize();
 
   for (int i = 0; i < num_species; i++) {
-    Rho[i] = cu_scalar_field<Scalar>(*grid);
+    Rho[i] = cu_scalar_field<Scalar>(grid);
     Rho[i].initialize();
     Rho[i].sync_to_host();
 
-    gamma[i] = cu_scalar_field<Scalar>(*grid);
+    gamma[i] = cu_scalar_field<Scalar>(grid);
     gamma[i].initialize();
     gamma[i].sync_to_host();
 
-    ptc_num[i] = cu_scalar_field<Scalar>(*grid);
+    ptc_num[i] = cu_scalar_field<Scalar>(grid);
     ptc_num[i].initialize();
     ptc_num[i].sync_to_host();
   }
@@ -361,14 +362,14 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   // cudaDeviceSynchronize();
   CudaCheckError();
 
-  auto &mesh = grid->mesh();
+  auto &mesh = env.local_grid().mesh();
   particles.set_num(particles.number() +
                     mesh.dims[0] * mesh.dims[1] * 2 * multiplicity);
   CudaSafeCall(cudaDeviceSynchronize());
 }
 
-void
-cu_sim_data::init_grid(const cu_sim_environment &env) {
+// void
+// cu_sim_data::init_grid(const cu_sim_environment &env) {
   // grid.resize(dev_map.size());
   // int last_dim = env.grid().dim() - 1;
   // int offset = 0;
@@ -406,7 +407,7 @@ cu_sim_data::init_grid(const cu_sim_environment &env) {
   // }
   // check_dev_mesh();
   // check_mesh_ptrs();
-}
+// }
 
 // void
 // cu_sim_data::send_particles() {
@@ -594,7 +595,7 @@ cu_sim_data::init_bg_fields() {
 
 void
 cu_sim_data::compute_edotb() {
-  auto &mesh = grid->mesh();
+  auto &mesh = env.local_grid().mesh();
   dim3 blockSize(32, 16);
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
   Kernels::compute_EdotB<<<gridSize, blockSize>>>(
@@ -613,7 +614,7 @@ cu_sim_data::check_dev_mesh() {
 void
 cu_sim_data::check_mesh_ptrs() {
   const Grid_LogSph_dev &g =
-      *dynamic_cast<const Grid_LogSph_dev *>(grid.get());
+      *dynamic_cast<const Grid_LogSph_dev *>(&env.local_grid());
   auto mesh_ptrs = g.get_mesh_ptrs();
   Kernels::check_mesh_ptrs<<<1, 1>>>(mesh_ptrs);
   CudaCheckError();

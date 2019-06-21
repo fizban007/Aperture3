@@ -9,7 +9,7 @@
 #include "sim_environment.h"
 #include "sim_params.h"
 #include "utils/logger.h"
-#include <cuda_runtime.h>
+// #include <cuda_runtime.h>
 #include <memory>
 #include <random>
 #include <string>
