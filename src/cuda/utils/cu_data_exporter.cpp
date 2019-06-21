@@ -125,8 +125,8 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
     data_Rho.write((char *)data.Rho[i].data().data());
   }
   DataSet data_devId = snapshotfile.createDataSet<int>(
-      "devId", DataSpace::From(data.dev_id));
-  data_devId.write(data.dev_id);
+      "devId", DataSpace::From(data.devId));
+  data_devId.write(data.devId);
 
   // Write particle data
   size_t ptcNum = data.particles.number();

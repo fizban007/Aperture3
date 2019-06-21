@@ -99,7 +99,7 @@ if (CMAKE_CUDA_COMPILER)
     "cuda/core/ptc_updater_1dgr.cu"
     # "cuda/core/finite_diff.cu"
     # "algorithms/ptc_pusher_geodesic.cpp"
-    # "cuda/utils/cu_data_exporter.cpp"
+    "cuda/utils/cu_data_exporter.cpp"
     "cuda/utils/pitchptr.cu"
     "cuda/constant_mem.cu"
     "cuda/kernels.cu"
