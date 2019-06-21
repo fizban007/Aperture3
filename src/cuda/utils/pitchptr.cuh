@@ -2,6 +2,7 @@
 #define _PITCHPTR_CUH_
 
 #include "core/vec3.h"
+#include "core/multi_array.h"
 #include "cuda/cuda_control.h"
 #include <cuda_runtime.h>
 
@@ -63,6 +64,12 @@ struct pitchptr {
     return (j + k * p.ysize) * p.pitch + i * sizeof(T);
   }
 };
+
+template <typename T>
+pitchptr<T> get_pitchptr(multi_array<T>& array);
+
+template <typename T>
+cudaPitchedPtr get_cudaPitchedPtr(multi_array<T>& array);
 
 }  // namespace Aperture
 

@@ -12,12 +12,12 @@ add_custom_target(check)
 # add_executable(tests ${tests_src})
 add_executable(tests "test.cpp")
 target_sources(tests PRIVATE
-  "test_stagger.cpp"
+  # "test_stagger.cpp"
   "test_multi_array.cpp"
-  "test_fields.cpp"
-  "test_field_solver.cpp"
-  "test_avx.cpp"
-  "test_ptc_update.cpp"
+  # "test_fields.cpp"
+  # "test_field_solver.cpp"
+  # "test_avx.cpp"
+  # "test_ptc_update.cpp"
 )
 target_link_libraries(tests
   # PUBLIC AperCuda
@@ -42,15 +42,15 @@ if (CMAKE_CUDA_COMPILER)
   # "test_cuda.cu" "test_particles.cu")
   add_executable(test_cuda "test.cu")
   target_sources(test_cuda PRIVATE
-    "test_multiarray.cu"
-    "test_particles.cpp"
+    # "test_multiarray.cu"
+    # "test_particles.cpp"
     # "test_env.cpp"
     # "test_domain.cpp"
     "test_pitchptr.cu"
-    "test_config.cpp")
+    # "test_config.cpp"
+    )
   set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
-    PUBLIC cuAperture
     PUBLIC Aperture)
   add_custom_target(run_cuda_tests
     COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_cuda"
@@ -62,8 +62,8 @@ endif()
 # add_executable(test_parse "test_parse.cpp")
 # target_link_libraries(test_parse Aperture)
 
-add_executable(test_IC "test_IC.cpp")
-target_link_libraries(test_IC Aperture cuAperture)
+# add_executable(test_IC "test_IC.cpp")
+# target_link_libraries(test_IC Aperture)
 
-add_executable(print_data_size "data.cpp")
-target_link_libraries(print_data_size Aperture cuAperture)
+# add_executable(print_data_size "data.cpp")
+# target_link_libraries(print_data_size Aperture)
