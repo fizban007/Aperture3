@@ -4,6 +4,12 @@
 #include "cuda/data/cu_multi_array.h"
 #include "utils/exporter.h"
 
+namespace H5 {
+
+class H5File;
+
+}
+
 namespace Aperture {
 
 struct cu_sim_data;
@@ -19,14 +25,16 @@ class cu_exporter : public exporter {
   cu_exporter(cu_sim_environment& env, uint32_t& timestep);
   virtual ~cu_exporter();
 
-  void write_output(cu_sim_data& data);
+  void write_output(cu_sim_data& data, uint32_t timestep, double time);
 
  private:
   template <typename Func>
-  void add_grid_output(cu_sim_data& data, const std::string& name, Func f);
+  void add_grid_output(cu_sim_data& data, const std::string& name,
+                       Func f, H5::H5File& file);
 
   template <typename Func>
-  void add_array_output(cu_sim_data& data, const std::string& name, Func f);
+  void add_array_output(cu_sim_data& data, const std::string& name,
+                        Func f, H5::H5File& file);
 
   cu_dataset m_tmp_cudata;
   cu_multi_array<float> tmp_grid_cudata;
