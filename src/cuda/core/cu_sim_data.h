@@ -2,7 +2,6 @@
 #define _CU_SIM_DATA_H_
 
 #include "core/enum_types.h"
-#include "core/grid.h"
 #include "cuda/core/cu_sim_environment.h"
 #include "cuda/data/fields_dev.h"
 #include "cuda/data/detail/fields_dev_impl.hpp"
@@ -43,6 +42,9 @@ struct cu_sim_data {
   const cu_sim_environment& env;
   cu_vector_field<Scalar> E;
   cu_vector_field<Scalar> B;
+  cu_vector_field<Scalar> Ebg;
+  cu_vector_field<Scalar> Bbg;
+
   cu_vector_field<Scalar> J;
   std::vector<cu_scalar_field<Scalar>> Rho;
   std::vector<cu_scalar_field<Scalar>> gamma;
@@ -59,9 +61,6 @@ struct cu_sim_data {
   // std::vector<cu_scalar_field<Scalar>> J_s;
   // std::vector<cu_scalar_field<Scalar>> J_avg;
 
-  cu_vector_field<Scalar> Ebg;
-  cu_vector_field<Scalar> Bbg;
-
   // std::unique_ptr<Grid> grid;
 
   Particles particles;
@@ -72,6 +71,28 @@ struct cu_sim_data {
   int num_species;
   double time = 0.0;
   int devId;
+
+  struct data_ptrs {
+    pitchptr<Scalar> E1, E2, E3;
+    pitchptr<Scalar> Ebg1, Ebg2, Ebg3;
+    pitchptr<Scalar> B1, B2, B3;
+    pitchptr<Scalar> Bbg1, Bbg2, Bbg3;
+    pitchptr<Scalar> J1, J2, J3;
+    pitchptr<Scalar>* Rho;
+    pitchptr<Scalar>* gamma;
+    pitchptr<Scalar>* ptc_num;
+
+    pitchptr<Scalar> divE, divB, EdotB;
+    pitchptr<Scalar> photon_produced;
+    pitchptr<Scalar> pair_produced;
+    pitchptr<Scalar> photon_num;
+    pitchptr<Scalar> ph_flux;
+
+    particle_data particles;
+    photon_data photons;
+  } ptrs;
+
+  data_ptrs get_ptrs();
   // std::vector<int> dev_map;
 };
 
