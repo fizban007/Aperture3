@@ -11,9 +11,9 @@
 // #include "cuda/core/cu_sim_data.h"
 // #include "cuda/core/field_solver_log_sph.h"
 // #include "cuda/core/ptc_updater_logsph.h"
-#include "cuda/core/cu_sim_environment.h"
+// #include "cuda/core/cu_sim_environment.h"
 // #include "cuda/radiation/rt_pulsar.h"
-#include "cuda/utils/cu_data_exporter.h"
+// #include "cuda/utils/cu_data_exporter.h"
 // #include "utils/data_exporter.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -26,7 +26,7 @@ int
 main(int argc, char* argv[]) {
   uint32_t step = 0;
   // Construct the simulation environment
-  cu_sim_environment env(&argc, &argv);
+  // cu_sim_environment env(&argc, &argv);
 
   // Allocate simulation data
   // cu_sim_data data(env);

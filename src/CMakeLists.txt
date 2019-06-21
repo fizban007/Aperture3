@@ -1,5 +1,5 @@
 # if (CUDA_FOUND)
-add_definitions(-DCUDA_ENABLED)
+# add_definitions(-DCUDA_ENABLED)
 # include_directories(${CUDA_INCLUDE_DIRS})
 # message("Cuda library found, enabling the GPU part of the code.")
 # else()
@@ -11,7 +11,6 @@ if(LAB_ROOT_DIR)
   include_directories(BEFORE "${LAB_ROOT_DIR}/include")
   include_directories(BEFORE "${LAB_ROOT_DIR}/src")
   set(shadows "${LAB_SHADOWS}")
-  set(cu_shadows "${LAB_CU_SHADOWS}")
   # list(FIND shadows "UserControl.cpp" Lab_User_Control_Found)
   # if(Lab_User_Control_Found LESS 0)
   #   set(Lab_User_Control_Found NO)
@@ -26,13 +25,13 @@ if(LAB_ROOT_DIR)
   foreach(ARG ${LAB_SHADOWS})
       message("${Yellow}    ${ARG}${ColorReset}")
   endforeach()
-  if (cu_shadows)
-    message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following CUDA sources shadowed${ColorReset}")
-  endif()
-  set(Lab_cuAperture_src ${cu_shadows})
-  foreach(ARG ${LAB_CU_SHADOWS})
-      message("${Yellow}    ${ARG}${ColorReset}")
-  endforeach()
+  # if (cu_shadows)
+  #   message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following CUDA sources shadowed${ColorReset}")
+  # endif()
+  # set(Lab_cuAperture_src ${cu_shadows})
+  # foreach(ARG ${LAB_CU_SHADOWS})
+  #     message("${Yellow}    ${ARG}${ColorReset}")
+  # endforeach()
 else()
   message("${Yellow}No lab is invoked.${ColorReset}")
 endif()
@@ -44,29 +43,38 @@ set(Aperture_src
   "utils/mpi_comm.cpp"
   "utils/memory.cpp"
   "utils/filesystem.cpp"
-  "core/multi_array.cpp"
-  "core/grid.cpp"
-  "grids/grid_log_sph.cpp"
-  "data/fields.cpp"
-  "data/detail/particle_data_impl.cpp"
-  "data/particles.cpp"
-  "data/photons.cpp"
-  # "utils/hdf_exporter.cpp"
-  "utils/data_exporter.cpp"
-  "utils/exporter.cpp"
-  "commandline_args.cpp"
-  "config_file.cpp"
-  "sim_environment.cpp"
-  "sim_data.cpp"
-  # "pic_sim.cpp"
-  "core/field_solver_default.cpp"
-  "core/field_solver_1d.cpp"
-  "core/ptc_updater_default.cpp"
-  "core/ptc_updater_1d.cpp"
-  "radiation/rt_1d.cpp"
   )
+if (CMAKE_CUDA_COMPILER)
+  list(APPEND Aperture_src
+    "cuda/core/multi_array.cu"
+    "cuda/data/array.cu"
+    )
 
-# modify Aperture_src using the files in the lab
+else()
+  list(APPEND Aperture_src
+    "core/multi_array.cpp"
+    # "core/grid.cpp"
+    # "grids/grid_log_sph.cpp"
+    # "data/fields.cpp"
+    # "data/detail/particle_data_impl.cpp"
+    # "data/particles.cpp"
+    # "data/photons.cpp"
+    # # "utils/hdf_exporter.cpp"
+    # "utils/data_exporter.cpp"
+    # "utils/exporter.cpp"
+    # "commandline_args.cpp"
+    # "config_file.cpp"
+    # "sim_environment.cpp"
+    # "sim_data.cpp"
+    # # "pic_sim.cpp"
+    # "core/field_solver_default.cpp"
+    # "core/field_solver_1d.cpp"
+    # "core/ptc_updater_default.cpp"
+    # "core/ptc_updater_1d.cpp"
+    # "radiation/rt_1d.cpp"
+    )
+endif()
+
 if(LAB_ROOT_DIR)
   foreach(ARG ${Lab_Aperture_src})
     list(REMOVE_ITEM Aperture_src ${ARG})
@@ -74,66 +82,24 @@ if(LAB_ROOT_DIR)
   endforeach()
 endif()
 
-add_library(Aperture ${Aperture_src})
-target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt)
-
 if (CMAKE_CUDA_COMPILER)
-  set(cuAperture_src
-    "cuda/data/fields_utils.cu"
-    "cuda/data/particles_dev.cu"
-    "cuda/data/photons_dev.cu"
-    "cuda/data/particles_1d.cu"
-    "cuda/data/photons_1d.cu"
-    "cuda/data/fields_dev.cu"
-    "cuda/data/array.cu"
-    "cuda/data/cu_multi_array.cu"
-    "cuda/grids/grid_log_sph_dev.cpp"
-    "cuda/grids/grid_1dgr_dev.cpp"
-    "cuda/core/field_solver_log_sph.cu"
-    "cuda/core/field_solver_1dgr.cu"
-    "cuda/core/cu_sim_environment.cpp"
-    "cuda/core/cu_sim_data.cu"
-    "cuda/core/cu_sim_data1d.cu"
-    "cuda/core/additional_diagnostics.cu"
-    "cuda/core/ptc_updater_dev.cu"
-    "cuda/core/ptc_updater_logsph.cu"
-    "cuda/core/ptc_updater_1dgr.cu"
-    # "cuda/core/finite_diff.cu"
-    # "algorithms/ptc_pusher_geodesic.cpp"
-    "cuda/utils/cu_data_exporter.cpp"
-    "cuda/utils/cu_exporter.cu"
-    "cuda/utils/pitchptr.cu"
-    "cuda/constant_mem.cu"
-    "cuda/kernels.cu"
-    "cuda/radiation/rt_ic.cu"
-    "cuda/radiation/rt_tpp.cu"
-    )
-
-  if(LAB_ROOT_DIR)
-    foreach(ARG ${Lab_cuAperture_src})
-      list(REMOVE_ITEM cuAperture_src ${ARG})
-      list(APPEND cuAperture_src "${LAB_ROOT_DIR}/src/${ARG}")
-    endforeach()
-  endif()
-
-  add_cuda_target(cuAperture ${cuAperture_src})
-  target_link_libraries(cuAperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES} ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES} Aperture)
+  add_cuda_target(Aperture ${Aperture_src})
+  target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
+    ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
+else()
+  add_library(Aperture ${Aperture_src})
+  target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
+    ${HDF5_LIBRARIES} fmt)
 endif()
 
 if(LAB_ROOT_DIR)
   message("${Yellow}Using shadowed main.cpp from lab ${LAB_NAME}${ColorReset}")
   add_executable(aperture "${LAB_ROOT_DIR}/src/main.cpp")
   target_link_libraries(aperture Aperture)
-  if (CMAKE_CUDA_COMPILER)
-    target_link_libraries(aperture cuAperture)
-  endif()
 else()
   message("${Yellow}Using default main.cpp${ColorReset}")
   add_executable(aperture "main.cpp")
   target_link_libraries(aperture Aperture)
-  if (CMAKE_CUDA_COMPILER)
-    target_link_libraries(aperture cuAperture)
-  endif()
 endif()
 
 # if (LAB_ROOT_DIR)
