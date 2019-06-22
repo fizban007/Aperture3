@@ -71,6 +71,7 @@ class sim_environment {
  protected:
   // sim_environment() {}
   void setup_env();
+  void setup_env_extra();
 
   CommandArgs m_args;
   SimParams m_params;
@@ -89,7 +90,7 @@ class sim_environment {
   std::array<float, 8> m_charges;
   std::array<float, 8> m_masses;
   std::array<float, 8> m_q_over_m;
-
+  int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 
 }  // namespace Aperture

@@ -4,6 +4,7 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/timer.h"
+#include "core/stagger.h"
 
 namespace Aperture {
 
