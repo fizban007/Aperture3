@@ -1,4 +1,3 @@
-#include "grids/grid_log_sph.h"
 #include "sim_data_impl.hpp"
 
 namespace Aperture {
