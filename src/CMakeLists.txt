@@ -22,6 +22,8 @@ set(Aperture_src
   "utils/memory.cpp"
   "utils/filesystem.cpp"
   "core/grid.cpp"
+  "commandline_args.cpp"
+  "config_file.cpp"
   )
 if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
@@ -32,26 +34,21 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/core/multi_array.cu"
     "cuda/core/fields.cu"
     "cuda/core/particles.cu"
+    "cuda/core/photons.cu"
     )
 else()
   list(APPEND Aperture_src
     "core/multi_array.cpp"
     "core/fields.cpp"
     "core/particles.cpp"
-    # "core/grid.cpp"
+    "core/photons.cpp"
     # "grids/grid_log_sph.cpp"
-    # "data/fields.cpp"
-    # "data/detail/particle_data_impl.cpp"
-    # "data/particles.cpp"
     # "data/photons.cpp"
-    # # "utils/hdf_exporter.cpp"
+    # "utils/hdf_exporter.cpp"
     # "utils/data_exporter.cpp"
     # "utils/exporter.cpp"
-    # "commandline_args.cpp"
-    # "config_file.cpp"
     # "sim_environment.cpp"
     # "sim_data.cpp"
-    # # "pic_sim.cpp"
     # "core/field_solver_default.cpp"
     # "core/field_solver_1d.cpp"
     # "core/ptc_updater_default.cpp"

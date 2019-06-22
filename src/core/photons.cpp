@@ -1,4 +1,4 @@
-#include "data/photons.h"
+#include "photons.h"
 
 namespace Aperture {
 

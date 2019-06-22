@@ -308,8 +308,7 @@ particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
 
 template <typename ParticleClass>
 void
-particle_base<ParticleClass>::rearrange_arrays(
-    const std::string& skip) {
+particle_base<ParticleClass>::rearrange_arrays(const std::string& skip) {
   const uint32_t padding = 100;
   auto ptc = ParticleClass();
   for_each_arg_with_name(
