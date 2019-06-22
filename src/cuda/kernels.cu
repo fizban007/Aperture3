@@ -17,7 +17,6 @@ __global__ void
 compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
-    // tile[i] = cell[i] / dev_mesh.tileSize[0];
     if (i < num) tile[i] = dev_mesh.tile_id(cell[i]);
   }
 }
@@ -26,16 +25,9 @@ __global__ void
 erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
-    // if (i == 0) printf("num is %d\n", num);
     if (i < num) {
       auto c = cell[i];
       if (!dev_mesh.is_in_bulk(c))
-      // int c1 = dev_mesh.get_c1(c);
-      // int c2 = dev_mesh.get_c2(c);
-      // if (c1 < dev_mesh.guard[0] ||
-      //     c1 >= dev_mesh.dims[0] - dev_mesh.guard[0] ||
-      //     c2 < dev_mesh.guard[1] ||
-      //     c2 >= dev_mesh.dims[1] - dev_mesh.guard[1])
         cell[i] = MAX_CELL;
     }
   }
