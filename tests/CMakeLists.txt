@@ -29,8 +29,7 @@ add_custom_target(run_tests
   WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 add_dependencies(check run_tests)
 
-# if(CUDA_FOUND)
-if (CMAKE_CUDA_COMPILER)
+if (use_cuda AND CMAKE_CUDA_COMPILER)
   # add_executable(test_fd "test.cpp")
   # target_sources(test_fd PRIVATE "test_finite_diff.cpp")
   # target_link_libraries(test_fd
@@ -41,7 +40,7 @@ if (CMAKE_CUDA_COMPILER)
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
   add_executable(test_cuda "test.cu")
-  target_sources(test_cuda PRIVATE
+  target_sources(test_cuda PUBLIC
     # "test_multiarray.cu"
     # "test_particles.cpp"
     # "test_env.cpp"
@@ -49,7 +48,7 @@ if (CMAKE_CUDA_COMPILER)
     "test_pitchptr.cu"
     # "test_config.cpp"
     )
-  set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
+  # set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
     PUBLIC Aperture)
   add_custom_target(run_cuda_tests

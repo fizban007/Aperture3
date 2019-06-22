@@ -15,9 +15,9 @@ multi_array<T>::multi_array()
 
 template <typename T>
 multi_array<T>::multi_array(int width, int height, int depth)
-    : m_extent(width, height, depth),
-      m_data_h(nullptr),
+    : m_data_h(nullptr),
       m_data_d(nullptr),
+      m_extent(width, height, depth),
       m_pitch(0) {
   m_size = width * height * depth;
 
