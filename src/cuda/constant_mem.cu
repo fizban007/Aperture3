@@ -1,6 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/utils/pitchptr.cuh"
 
 namespace Aperture {
 
@@ -36,15 +37,15 @@ init_dev_masses(const float masses[8]) {
 }
 
 void
-init_dev_bg_fields(const cu_vector_field<Scalar>& E,
-                   const cu_vector_field<Scalar>& B) {
+init_dev_bg_fields(vector_field<Scalar>& E,
+                   vector_field<Scalar>& B) {
   FieldData data;
-  data.E1 = E.ptr(0);
-  data.E2 = E.ptr(1);
-  data.E3 = E.ptr(2);
-  data.B1 = B.ptr(0);
-  data.B2 = B.ptr(1);
-  data.B3 = B.ptr(2);
+  data.E1 = get_pitchptr(E.data(0));
+  data.E2 = get_pitchptr(E.data(1));
+  data.E3 = get_pitchptr(E.data(2));
+  data.B1 = get_pitchptr(B.data(0));
+  data.B2 = get_pitchptr(B.data(1));
+  data.B3 = get_pitchptr(B.data(2));
   CudaSafeCall(cudaMemcpyToSymbol(dev_bg_fields, (void*)&data,
                                   sizeof(FieldData)));
 }

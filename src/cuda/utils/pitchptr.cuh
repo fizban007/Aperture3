@@ -66,10 +66,16 @@ struct pitchptr {
 };
 
 template <typename T>
-pitchptr<T> get_pitchptr(multi_array<T>& array);
+pitchptr<T> get_pitchptr(multi_array<T>& array) {
+  return pitchptr<T>(get_cudaPitchedPtr(array));
+}
 
 template <typename T>
-cudaPitchedPtr get_cudaPitchedPtr(multi_array<T>& array);
+cudaPitchedPtr get_cudaPitchedPtr(multi_array<T>& array) {
+  return make_cudaPitchedPtr(array.dev_ptr(), array.pitch(),
+                             array.extent().width(),
+                             array.extent().height());
+}
 
 }  // namespace Aperture
 

@@ -11,7 +11,6 @@
 #include <memory>
 #include <random>
 #include <string>
-// #include "utils/hdf_exporter.h"
 #include "utils/mpi_comm.h"
 
 namespace Aperture {
@@ -42,7 +41,6 @@ class sim_environment {
   const CommandArgs& args() const { return m_args; }
   SimParams& params() { return m_params; }
   const SimParams& params() const { return m_params; }
-  // const ConfigFile& conf_file() const { return m_conf_file; }
   const Grid& grid() const { return *m_grid; }
   const Grid& super_grid() const { return *m_super_grid; }
   const Grid& local_grid() const { return *m_grid; }
@@ -55,17 +53,10 @@ class sim_environment {
   float mass(int sp) const { return m_masses[sp]; }
   float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
-  // MetricType metric_type() const { return m_metric_type; }
-
-  // DataExporter& exporter() { return *m_exporter; }
   // const MPICommWorld& world() const { return m_comm->world(); }
   // const MPICommCartesian& cartesian() const { return
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
   // return m_domain_info; }
-  // // const BoundaryConditions& boundary_conditions() const { return
-  // m_bc; }
-  // // const InitialCondition& initial_condition() const { return
-  // *m_ic; }
 
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);
@@ -87,11 +78,8 @@ class sim_environment {
 
   std::unique_ptr<Grid> m_grid;
   std::unique_ptr<Grid> m_super_grid;
-  // Grid m_data_grid, m_data_super_grid;
-  // MetricType m_metric_type;
 
   domain_info m_domain_info;
-  // BoundaryConditions m_bc;
 
   std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;

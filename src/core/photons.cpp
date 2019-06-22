@@ -6,9 +6,6 @@ photons_t::photons_t() : base_class() {}
 
 photons_t::photons_t(size_t max_num) : base_class(max_num) {}
 
-photons_t::photons_t(const SimParams& params)
-    : base_class((std::size_t)params.max_ptc_number) {}
-
 photons_t::photons_t(const photons_t& other) : base_class(other) {}
 
 photons_t::photons_t(photons_t&& other)

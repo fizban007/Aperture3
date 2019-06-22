@@ -35,6 +35,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/core/fields.cu"
     "cuda/core/particles.cu"
     "cuda/core/photons.cu"
+    "cuda/sim_data.cu"
     )
 else()
   list(APPEND Aperture_src
@@ -42,6 +43,8 @@ else()
     "core/fields.cpp"
     "core/particles.cpp"
     "core/photons.cpp"
+    "sim_data.cpp"
+    "sim_environment.cpp"
     # "grids/grid_log_sph.cpp"
     # "data/photons.cpp"
     # "utils/hdf_exporter.cpp"
