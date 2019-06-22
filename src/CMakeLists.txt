@@ -1,23 +1,8 @@
-# if (CUDA_FOUND)
-# add_definitions(-DCUDA_ENABLED)
-# include_directories(${CUDA_INCLUDE_DIRS})
-# message("Cuda library found, enabling the GPU part of the code.")
-# else()
-  # message("Cuda library not found, skipping the GPU part of the code.")
-# endif()
-
 if(LAB_ROOT_DIR)
   include("${LAB_ROOT_DIR}/src/CMakeLists.txt")
   include_directories(BEFORE "${LAB_ROOT_DIR}/include")
   include_directories(BEFORE "${LAB_ROOT_DIR}/src")
   set(shadows "${LAB_SHADOWS}")
-  # list(FIND shadows "UserControl.cpp" Lab_User_Control_Found)
-  # if(Lab_User_Control_Found LESS 0)
-  #   set(Lab_User_Control_Found NO)
-  # else()
-  #   set(Lab_User_Control_Found YES)
-  # endif()
-  # list(REMOVE_ITEM shadows "UserControl.cpp")
   if (shadows)
     message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following shadowed${ColorReset}")
   endif()
@@ -25,13 +10,6 @@ if(LAB_ROOT_DIR)
   foreach(ARG ${LAB_SHADOWS})
       message("${Yellow}    ${ARG}${ColorReset}")
   endforeach()
-  # if (cu_shadows)
-  #   message("${Yellow}Invoked LAB ${LAB_NAME} from ${LAB_ROOT_DIR}, with following CUDA sources shadowed${ColorReset}")
-  # endif()
-  # set(Lab_cuAperture_src ${cu_shadows})
-  # foreach(ARG ${LAB_CU_SHADOWS})
-  #     message("${Yellow}    ${ARG}${ColorReset}")
-  # endforeach()
 else()
   message("${Yellow}No lab is invoked.${ColorReset}")
 endif()
@@ -45,17 +23,21 @@ set(Aperture_src
   "utils/filesystem.cpp"
   "core/grid.cpp"
   )
-if (CMAKE_CUDA_COMPILER)
+if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
+    "cuda/kernels.cu"
+    "cuda/constant_mem.cu"
+    "cuda/utils/pitchptr.cu"
     "cuda/data/array.cu"
     "cuda/core/multi_array.cu"
     "cuda/core/fields.cu"
+    "cuda/core/particles.cu"
     )
-
 else()
   list(APPEND Aperture_src
     "core/multi_array.cpp"
     "core/fields.cpp"
+    "core/particles.cpp"
     # "core/grid.cpp"
     # "grids/grid_log_sph.cpp"
     # "data/fields.cpp"
@@ -85,25 +67,24 @@ if(LAB_ROOT_DIR)
   endforeach()
 endif()
 
-if (CMAKE_CUDA_COMPILER)
-  add_cuda_target(Aperture ${Aperture_src})
-  target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
-    ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
-else()
-  add_library(Aperture ${Aperture_src})
-  target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
-    ${HDF5_LIBRARIES} fmt)
-endif()
+add_library(Aperture ${Aperture_src})
+target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
+  ${HDF5_LIBRARIES} fmt ${CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES})
+# else()
+#   add_library(Aperture ${Aperture_src})
+#   target_link_libraries(Aperture ${MPI_LIBRARIES} ${Boost_LIBRARIES} ${Silo_LIBRARIES}
+#     ${HDF5_LIBRARIES} fmt)
+# endif()
 
+add_executable(aperture)
 if(LAB_ROOT_DIR)
   message("${Yellow}Using shadowed main.cpp from lab ${LAB_NAME}${ColorReset}")
-  add_executable(aperture "${LAB_ROOT_DIR}/src/main.cpp")
-  target_link_libraries(aperture Aperture)
+  target_sources(aperture PUBLIC "${LAB_ROOT_DIR}/src/main.cpp")
 else()
   message("${Yellow}Using default main.cpp${ColorReset}")
-  add_executable(aperture "main.cpp")
-  target_link_libraries(aperture Aperture)
+  target_sources(aperture PUBLIC "main.cpp")
 endif()
+target_link_libraries(aperture Aperture)
 
 # if (LAB_ROOT_DIR)
 # else()

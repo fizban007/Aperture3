@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.8)
 # include(ExternalProject)
 project (Aperture LANGUAGES CXX)
+
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 message ("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
 option(build_tests "Build the test suite." ON)
@@ -14,6 +19,10 @@ if(NOT WIN32)
   set(Yellow      "${Esc}[33m")
 endif()
 
+if(POLICY CMP0076)
+  cmake_policy(SET CMP0076 NEW)
+endif()
+
 # Set CXX flags
 set(CMAKE_CXX_STANDARD 14)
 set(CXX_EXTRA_FLAGS "-DBOOST_ALL_NO_LIB=1 -DBOOST_NO_CXX14_CONSTEXPR")
@@ -25,11 +34,9 @@ else()
   set(CXX_EXTRA_FLAGS "${CXX_EXTRA_FLAGS} -Wno-unused-parameter")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -DNDEBUG -march=native ${CXX_EXTRA_FLAGS}")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 ${CXX_EXTRA_FLAGS}
-   -fsanitize=address -fsanitize=undefined -fsanitize=leak -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS "-std=c++14 -pthread -Wall -Wextra -fPIC")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 ${CXX_EXTRA_FLAGS} -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS "-pthread -Wall -Wextra -fPIC")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
-set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=gold")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(LAB_ROOT_DIR)
@@ -45,10 +52,6 @@ find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS CXX)
 # set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
-# find_package(Eigen3)
-# if (EIGEN3_FOUND)
-#   message(${EIGEN3_INCLUDE_DIR})
-# endif()
 find_package(OpenMP)
 if(OPENMP_FOUND)
   message("OPENMP FOUND")
@@ -67,11 +70,12 @@ set(CPPTOML_INCLUDE_DIR deps/cpptoml/include)
 set(VISIT_STRUCT_INCLUDE_DIR deps/visit_struct/include)
 set(HIGHFIVE_INCLUDE_DIR deps/highfive/include)
 set(CATCH_INCLUDE_DIR deps/catch/single_include)
-set(FADBAD_INCLUDE_DIR deps/FADBAD++)
-set(CUB_INCLUDE_DIR deps/cub)
 set(VECTOR_INCLUDE_DIR deps/vectorclass)
 
-include_directories(${MPI_INCLUDE_PATH} ${EIGEN3_INCLUDE_DIR} ${FMT_INCLUDE_DIR} ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR} ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR} ${CUB_INCLUDE_DIR} ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${VECTOR_INCLUDE_DIR} include src)
+include_directories(${MPI_INCLUDE_PATH} ${FMT_INCLUDE_DIR}
+  ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR}
+  ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR}
+  ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${VECTOR_INCLUDE_DIR} include src)
 
 ######### Check for cuda support
 if (use_cuda)
