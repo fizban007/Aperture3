@@ -196,6 +196,7 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                      data.E(2, idx) * data.B(2, idx);
       },
       datafile);
+  add_array_output(data.ph_flux, "ph_flux", datafile);
 
   datafile.close();
 }
@@ -216,6 +217,19 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
         file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
     dataset.write(tmp_grid_data.host_ptr(), PredType::NATIVE_FLOAT);
   }
+}
+
+void
+data_exporter::add_array_output(multi_array<float>& array, const std::string& name,
+                                H5File& file) {
+  // Actually write the temp array to hdf
+  hsize_t dims[3] = {(uint32_t)array.width(),
+                     (uint32_t)array.height(),
+                     (uint32_t)array.depth()};
+  DataSpace dataspace(3, dims);
+  DataSet dataset =
+      file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
+  dataset.write(array.host_ptr(), PredType::NATIVE_FLOAT);
 }
 
 template <typename Func>

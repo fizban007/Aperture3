@@ -44,6 +44,7 @@ class sim_environment {
   const Grid& grid() const { return *m_grid; }
   const Grid& super_grid() const { return *m_super_grid; }
   const Grid& local_grid() const { return *m_grid; }
+  Grid& local_grid() { return *m_grid; }
   const Quadmesh& mesh() const { return m_grid->mesh(); }
 
   const float* charges() const { return m_charges.data(); }

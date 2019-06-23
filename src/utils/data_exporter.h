@@ -30,13 +30,12 @@ class data_exporter {
   void write_ptc_output(sim_data& data, uint32_t timestep, double time);
 
  protected:
+  void add_array_output(multi_array<float>& array, const std::string& name,
+                        H5::H5File& file);
+
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
                        H5::H5File& file);
-
-  template <typename Func>
-  void add_array_output(sim_data& data, const std::string& name, Func f,
-                        H5::H5File& file);
 
   template <typename Func>
   void add_ptc_float_output(sim_data& data, const std::string& name, Func f,

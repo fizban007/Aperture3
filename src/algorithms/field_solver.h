@@ -1,0 +1,23 @@
+#ifndef _FIELD_SOLVER_H_
+#define _FIELD_SOLVER_H_
+
+namespace Aperture {
+
+struct sim_data;
+class sim_environment;
+
+class field_solver {
+ public:
+  field_solver(const sim_environment& env);
+  ~field_solver();
+
+  void update_fields(sim_data& data, double dt, double time = 0.0);
+  void apply_boundary(sim_data& data, double time = 0.0);
+
+ private:
+  const sim_environment& m_env;
+};
+
+}  // namespace Aperture
+
+#endif  // _FIELD_SOLVER_H_
