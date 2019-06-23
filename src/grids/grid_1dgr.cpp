@@ -15,6 +15,8 @@ Grid_1dGR::Grid_1dGR() : Grid() {}
 
 Grid_1dGR::Grid_1dGR(int N) : Grid(N, 1, 1) {}
 
+Grid_1dGR::~Grid_1dGR() {}
+
 void
 Grid_1dGR::compute_coef(const SimParams& params) {
   Logger::print_info("Resizing arrays");
