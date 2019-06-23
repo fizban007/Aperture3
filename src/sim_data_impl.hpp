@@ -35,7 +35,6 @@ sim_data::sim_data(const sim_environment& e)
     ptc_num[i].set_stagger(0, Stagger(0b111));
   }
 
-  flux.resize(env.local_grid());
   divE.resize(env.local_grid());
   divB.resize(env.local_grid());
   EdotB.resize(env.local_grid());

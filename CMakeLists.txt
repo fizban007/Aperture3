@@ -85,7 +85,9 @@ if (use_cuda)
     enable_language(CUDA)
     message("Enabling Cuda, ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${CUDA_INCLUDE_DIRS}")
     include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${CUDA_INCLUDE_DIRS})
-    set(CMAKE_CUDA_FLAGS "--expt-extended-lambda -lcublas -lcurand -Xcompiler -fPIC -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored -Xcudafe --diag_suppress=code_is_unreachable")
+    set(CMAKE_CUDA_FLAGS "--expt-extended-lambda --expt-relaxed-constexpr \
+      -lcublas -lcurand -Xcompiler -fPIC -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored \
+      -Xcudafe --diag_suppress=code_is_unreachable")
     set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
     set(CMAKE_CUDA_FLAGS_RELEASE "-lineinfo -O3 -DNDEBUG")
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)

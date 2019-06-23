@@ -7,6 +7,7 @@
 #include "core/particle_base.h"
 #include "cuda/kernels.h"
 #include "cuda/memory.h"
+#include "cuda/cuda_control.h"
 #include "utils/for_each_arg.hpp"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -31,6 +32,35 @@
 // #include "types/particles_dev.h"
 
 namespace Aperture {
+
+namespace Kernels {
+
+struct assign_helper {
+  size_t _nt, _n;
+
+  HOST_DEVICE assign_helper(size_t nt, size_t n) : _nt(nt), _n(n) {}
+
+  template <typename T>
+  HD_INLINE void operator()(const char* name, const T& x1, T& x2) {
+    x2[_nt] = x1[_n];
+  }
+};
+
+template <typename PtcData>
+__global__ void
+get_tracked_ptc(PtcData ptc_data, size_t num, PtcData tracked_data, uint32_t* num_tracked) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x;
+       n < num;
+       n += blockDim.x * gridDim.x) {
+    if (check_bit(ptc_data.flag[n], ParticleFlag::tracked)) {
+      size_t nt = atomicAdd(num_tracked, 1u);
+      visit_struct::for_each(ptc_data, tracked_data,
+                             assign_helper{nt, n});
+    }
+  }
+}
+
+}
 
 // These are helper functors for for_each loops
 
@@ -193,12 +223,14 @@ void
 particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
                                         std::size_t alignment) {
   alloc_struct_of_arrays(m_data, max_num);
+  alloc_struct_of_arrays_managed(m_tracked, MAX_TRACKED);
 }
 
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::free_mem() {
   free_struct_of_arrays(m_data);
+  free_struct_of_arrays(m_tracked);
 }
 
 template <typename ParticleClass>
@@ -321,6 +353,22 @@ template <typename ParticleClass>
 void
 particle_base<ParticleClass>::clear_guard_cells(const Grid& grid) {
   erase_ptc_in_guard_cells(m_data.cell, m_number);
+}
+
+template <typename ParticleClass>
+void
+particle_base<ParticleClass>::get_tracked_ptc() {
+  uint32_t* num_tracked;
+  CudaSafeCall(cudaMalloc(&num_tracked, sizeof(uint32_t)));
+  CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
+
+  Kernels::get_tracked_ptc<<<512, 512>>>(m_data, m_number,
+                                         m_tracked, num_tracked);
+  CudaCheckError();
+  CudaSafeCall(cudaDeviceSynchronize());
+  CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
+                          cudaMemcpyDeviceToHost));
+  CudaSafeCall(cudaFree(num_tracked));
 }
 
 // template <typename ParticleClass>

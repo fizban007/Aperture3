@@ -14,12 +14,14 @@ class particle_base {
   typedef typename particle_array_type<ParticleClass>::type array_type;
 
   array_type m_data;
+  array_type m_tracked;
   size_t* m_index = nullptr;
   void* m_tmp_data_ptr = nullptr;
   std::vector<size_t> m_partition;
 
   size_t m_size = 0;
   size_t m_number = 0;
+  uint32_t m_num_tracked = 0;
 
  public:
   /// Default constructor, initializing everything to 0 and set pointers
@@ -58,12 +60,15 @@ class particle_base {
 
   void sort_by_cell(const Grid& grid);
   // void rearrange_arrays(const std::string& skip);
+  void get_tracked_ptc();
 
   void clear_guard_cells(const Grid& grid);
 
   // Accessor methods
   array_type& data() { return m_data; }
   const array_type& data() const { return m_data; }
+  array_type& tracked_data() { return m_tracked; }
+  const array_type& tracked_data() const { return m_tracked; }
 
   /// @return Returns the value of the current number of particles
   std::size_t number() const { return m_number; }
@@ -71,6 +76,9 @@ class particle_base {
   /// @return Returns the maximum number of particles
   std::size_t size() const { return m_size; }
 
+  /// @return Returns the number of tracked particles
+  uint32_t tracked_number() const { return m_num_tracked; }
+ 
   /// Set the current number of particles in the array to a given value
   /// @param num New number of particles in the array
   void set_num(size_t num) { m_number = num; }
