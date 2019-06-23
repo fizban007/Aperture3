@@ -52,7 +52,7 @@ struct sim_data {
   scalar_field<Scalar> photon_produced;
   scalar_field<Scalar> pair_produced;
   scalar_field<Scalar> photon_num;
-  multi_array<Scalar> ph_flux;
+  multi_array<float> ph_flux;
 
   particles_t particles;
   photons_t photons;

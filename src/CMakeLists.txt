@@ -41,6 +41,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/sim_data.cu"
     "cuda/sim_environment.cpp"
     "cuda/grids/grid_log_sph_ptrs.cu"
+    "cuda/algorithms/field_solver_logsph.cu"
     )
 else()
   list(APPEND Aperture_src
