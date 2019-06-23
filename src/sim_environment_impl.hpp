@@ -2,6 +2,7 @@
 #define __SIM_ENVIRONMENT_IMPL_H_
 
 #include "grids/grid_log_sph.h"
+#include "grids/grid_1dgr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -224,9 +225,8 @@ void
 sim_environment::setup_local_grid() {
   if (m_params.coord_system == "LogSpherical") {
     m_grid.reset(new Grid_LogSph());
-    // } else if (m_params.coord_system == "1DGR" &&
-    //            m_grid->dim() == 1) {
-    //   m_grid.reset(new Grid_1dGR_dev());
+  } else if (m_params.coord_system == "1DGR" && m_grid->dim() == 1) {
+    m_grid.reset(new Grid_1dGR());
   } else {
     m_grid.reset(new Grid());
   }
