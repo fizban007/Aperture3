@@ -42,6 +42,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/sim_environment.cpp"
     "cuda/grids/grid_log_sph_ptrs.cu"
     "cuda/algorithms/field_solver_logsph.cu"
+    "cuda/algorithms/field_solver_1dgr.cu"
     "cuda/algorithms/ptc_updater_logsph.cu"
     "cuda/algorithms/ptc_updater_1dgr.cu"
     )
