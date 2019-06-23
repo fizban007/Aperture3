@@ -12,7 +12,7 @@ class Grid_LogSph : public Grid {
   Grid_LogSph();
   virtual ~Grid_LogSph();
 
-  virtual void compute_coef() override;
+  virtual void compute_coef(const SimParams& params) override;
 
   static void coord_to_cart(float& x, float& y, float& z,
                             const float& x1, const float& x2,

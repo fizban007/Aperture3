@@ -25,6 +25,7 @@ set(Aperture_src
   "commandline_args.cpp"
   "config_file.cpp"
   "grids/grid_log_sph.cpp"
+  "grids/grid_1dgr.cpp"
   )
 if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
@@ -42,6 +43,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     )
 else()
   list(APPEND Aperture_src
+    "core/array.cpp"
     "core/multi_array.cpp"
     "core/fields.cpp"
     "core/particles.cpp"

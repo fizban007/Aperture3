@@ -1,10 +1,10 @@
 #ifndef __SIM_ENVIRONMENT_IMPL_H_
 #define __SIM_ENVIRONMENT_IMPL_H_
 
-#include "sim_environment.h"
-#include "sim_data.h"
-#include "utils/logger.h"
 #include "grids/grid_log_sph.h"
+#include "sim_data.h"
+#include "sim_environment.h"
+#include "utils/logger.h"
 #include <boost/filesystem.hpp>
 #include <memory>
 // #include "domain_communicator.h"
@@ -80,8 +80,8 @@ sim_environment::setup_env() {
     m_charges[i] = m_params.q_e;
     m_masses[i] = m_params.q_e;
   }
-  Logger::print_debug("Electron particle type is {}, charge_e is {}", (int)ParticleType::electron,
-                      m_charges[0]);
+  Logger::print_debug("Electron particle type is {}, charge_e is {}",
+                      (int)ParticleType::electron, m_charges[0]);
   m_charges[(int)ParticleType::electron] *= -1.0;
   m_masses[(int)ParticleType::ion] *= m_params.ion_mass;
   for (int i = 0; i < 8; i++) {
@@ -183,18 +183,6 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
   //   m_domain_info.is_boundary[1], m_domain_info.is_boundary[2],
   //   m_domain_info.is_boundary[3]);
 
-  // Cache whether this node is boundary on all 6 directions
-  // for (int i = 0; i < NUM_BOUNDARIES; ++i)
-  //   m_domain_info.is_boundary[i] = false;
-  // if (m_domain_info.cart_neighbor_left[0] == NEIGHBOR_NULL)
-  //   m_domain_info.is_boundary[0] = true;
-  // if (m_domain_info.cart_neighbor_right[0] == NEIGHBOR_NULL)
-  //   m_domain_info.is_boundary[1] = true;
-  // if (m_domain_info.cart_neighbor_left[1] == NEIGHBOR_NULL)
-  //   m_domain_info.is_boundary[2] = true;
-  // if (m_domain_info.cart_neighbor_right[1] == NEIGHBOR_NULL)
-  //   m_domain_info.is_boundary[3] = true;
-
   //   // resize domain map
   //   // for (auto& v : m_domain_info.rank_map) {
   //   //   v.resize(dimy);
@@ -234,34 +222,33 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
 
 void
 sim_environment::setup_local_grid() {
-  for (int d = 0; d < 3; d++) {
-    if (m_domain_info.cart_dims[d] > 0) {
-      // local_mesh.dims[d] = super_mesh.reduced_dim(d) /
-      // info.cart_dims[d] +
-      //                     2 * super_mesh.guard[d];
-      // local_mesh.sizes[d] /= info.cart_dims[d];
-      // local_mesh.lower[d] += info.cart_pos[d] *
-      // local_mesh.reduced_dim(d) * local_mesh.delta[d];
-
-      // We adjust local params, and use these params to init the grid
-      m_params.N[d] /= m_domain_info.cart_dims[d];
-      m_params.size[d] /= m_domain_info.cart_dims[d];
-      m_params.lower[d] += m_domain_info.cart_pos[d] * m_params.size[d];
-    }
-  }
   if (m_params.coord_system == "LogSpherical") {
     m_grid.reset(new Grid_LogSph());
-  // } else if (m_params.coord_system == "1DGR" &&
-  //            m_grid->dim() == 1) {
-  //   m_grid.reset(new Grid_1dGR_dev());
+    // } else if (m_params.coord_system == "1DGR" &&
+    //            m_grid->dim() == 1) {
+    //   m_grid.reset(new Grid_1dGR_dev());
   } else {
     m_grid.reset(new Grid());
   }
   m_grid->init(m_params);
-  m_grid->compute_coef();
+  auto& mesh = m_grid->mesh();
+  for (int d = 0; d < 3; d++) {
+    if (m_domain_info.cart_dims[d] > 0) {
+      // We adjust local params, and use these params to init the grid
+      // m_params.N[d] /= m_domain_info.cart_dims[d];
+      // m_params.size[d] /= m_domain_info.cart_dims[d];
+      // m_params.lower[d] += m_domain_info.cart_pos[d] *
+      // m_params.size[d];
+      mesh.dims[d] = mesh.reduced_dim(d) / m_domain_info.cart_dims[d] +
+          2 * mesh.guard[d];
+      mesh.sizes[d] /= m_domain_info.cart_dims[d];
+      mesh.lower[d] += m_domain_info.cart_pos[d] * mesh.sizes[d];
+      mesh.offset[d] = m_domain_info.cart_pos[d] * mesh.reduced_dim(d);
+    }
+  }
+  m_grid->compute_coef(m_params);
 }
 
 }  // namespace Aperture
 
-
-#endif // __SIM_ENVIRONMENT_IMPL_H_
+#endif  // __SIM_ENVIRONMENT_IMPL_H_
