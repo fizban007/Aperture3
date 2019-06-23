@@ -15,6 +15,9 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep) :
   auto d = m_env.params().downsample;
   tmp_grid_data.resize(ext.width() / d, ext.height() / d,
                        ext.depth() / d);
+
+  tmp_ptc_uint_data.resize(MAX_TRACKED);
+  tmp_ptc_float_data.resize(MAX_TRACKED);
 }
 
 data_exporter::~data_exporter() {}

@@ -2,8 +2,9 @@
 #define __PARTICLE_BASE_IMPL_H_
 
 #include "particle_base.h"
-
+#include "core/constant_defs.h"
 #include "utils/for_each_arg.hpp"
+#include "utils/util_functions.h"
 #include "utils/logger.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
@@ -23,6 +24,8 @@ template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base() {
   visit_struct::for_each(
       m_data, [](const char* name, auto& x) { x = nullptr; });
+  visit_struct::for_each(
+      m_tracked, [](const char* name, auto& x) { x = nullptr; });
 }
 
 template <typename ParticleClass>
@@ -66,11 +69,17 @@ template <typename ParticleClass>
 void
 particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
                                         std::size_t alignment) {
-  // alloc_struct_of_arrays(m_data, max_num);
   visit_struct::for_each(m_data, [max_num, alignment](const char* name,
                                                       auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
+    x = reinterpret_cast<
+        typename std::remove_reference<decltype(x)>::type>(p);
+  });
+  visit_struct::for_each(m_tracked, [alignment](const char* name,
+                                                      auto& x) {
+    typedef typename std::remove_reference<decltype(*x)>::type x_type;
+    void* p = aligned_malloc(MAX_TRACKED * sizeof(x_type), alignment);
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   });
@@ -85,6 +94,12 @@ template <typename ParticleClass>
 void
 particle_base<ParticleClass>::free_mem() {
   visit_struct::for_each(m_data, [](const char* name, auto& x) {
+    if (x != nullptr) {
+      aligned_free(x);
+      x = nullptr;
+    }
+  });
+  visit_struct::for_each(m_tracked, [](const char* name, auto& x) {
     if (x != nullptr) {
       aligned_free(x);
       x = nullptr;
@@ -268,6 +283,24 @@ particle_base<ParticleClass>::clear_guard_cells(const Grid& grid) {
       m_data.cell[idx] = MAX_CELL;
     }
   }
+}
+
+template <typename ParticleClass>
+void
+particle_base<ParticleClass>::get_tracked_ptc() {
+  uint32_t num_tracked = 0;
+  for (size_t n = 0; n < m_number; n++) {
+    if (check_bit(m_data.flag[n], ParticleFlag::tracked)) {
+      visit_struct::for_each(
+          m_data, m_tracked,
+          [num_tracked, n](const char* name, const auto& x1,
+                           const auto& x2) {
+            x2[num_tracked] = x1[n];
+          });
+      num_tracked += 1;
+    }
+  }
+  m_num_tracked = num_tracked;
 }
 
 }  // namespace Aperture

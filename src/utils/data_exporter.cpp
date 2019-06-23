@@ -1,5 +1,9 @@
 #include "H5Cpp.h"
-#include "data_exporter_impl.hpp"
+#include "core/constant_defs.h"
+#include "data_exporter.h"
+#include "sim_params.h"
+#include "sim_data.h"
+#include "sim_environment.h"
 
 #define ADD_GRID_OUTPUT(input, name, func, file)               \
   add_grid_output(input, name,                                 \
@@ -46,18 +50,90 @@ sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
   }
 }
 
+data_exporter::data_exporter(sim_environment& env, uint32_t& timestep) :
+    m_env(env) {
+  auto& mesh = m_env.local_grid().mesh();
+  auto ext = mesh.extent_less();
+  auto d = m_env.params().downsample;
+  tmp_grid_data.resize(ext.width() / d, ext.height() / d,
+                       ext.depth() / d);
+
+  tmp_ptc_uint_data.resize(MAX_TRACKED);
+  tmp_ptc_float_data.resize(MAX_TRACKED);
+}
+
+data_exporter::~data_exporter() {}
+
 void
-data_exporter::write_output(sim_data &data, uint32_t timestep, double time) {
+data_exporter::write_output(sim_data& data, uint32_t timestep,
+                            double time) {
+  if (m_fld_thread && m_fld_thread->joinable()) m_fld_thread->join();
+  if (m_ptc_thread && m_ptc_thread->joinable()) m_ptc_thread->join();
+
   data.sync_to_host();
+
+  // Launch a new thread to handle the field output
+  m_fld_thread.reset(
+      new std::thread(&Aperture::data_exporter::write_field_output,
+                      this, std::ref(data), timestep, time));
+
+  data.particles.get_tracked_ptc();
+  data.photons.get_tracked_ptc();
+
+  // Launch a new thread to handle the particle output
+  m_ptc_thread.reset(
+      new std::thread(&Aperture::data_exporter::write_ptc_output, this,
+                      std::ref(data), timestep, time));
+}
+
+void
+data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
+                                double time) {
+  H5File datafile(
+      fmt::format("{}ptc{:04d}.h5", outputDirectory,
+                  timestep / m_env.params().data_interval).c_str(),
+      H5F_ACC_RDWR | H5F_ACC_TRUNC);
+
+  add_ptc_uint_output(data, "id", [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
+                                    v[n] = data.particles.tracked_data().id[n];
+                                  }, datafile);
+
+  add_ptc_float_output(data, "p1", [](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                    v[n] = data.particles.tracked_data().p1[n];
+                                  }, datafile);
+  add_ptc_float_output(data, "p2", [](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                    v[n] = data.particles.tracked_data().p2[n];
+                                  }, datafile);
+  add_ptc_float_output(data, "p3", [](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                    v[n] = data.particles.tracked_data().p3[n];
+                                  }, datafile);
+
+  auto& mesh = m_env.local_grid().mesh();
+  add_ptc_float_output(data, "x1", [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                     auto cell = data.particles.tracked_data().cell[n];
+                                     auto x = data.particles.tracked_data().x1[n];
+                                     v[n] = mesh.pos(0, mesh.get_c1(cell), x);
+                                  }, datafile);
+  add_ptc_float_output(data, "x2", [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                     auto cell = data.particles.tracked_data().cell[n];
+                                     auto x = data.particles.tracked_data().x2[n];
+                                     v[n] = mesh.pos(1, mesh.get_c2(cell), x);
+                                  }, datafile);
+  add_ptc_float_output(data, "x3", [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+                                     auto cell = data.particles.tracked_data().cell[n];
+                                     auto x = data.particles.tracked_data().x3[n];
+                                     v[n] = mesh.pos(2, mesh.get_c3(cell), x);
+                                  }, datafile);
+  datafile.close();
 }
 
 void
 data_exporter::write_field_output(sim_data& data, uint32_t timestep,
-                            double time) {
-  H5File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-                              filePrefix, timestep)
-                      .c_str(),
-                  H5F_ACC_RDWR | H5F_ACC_TRUNC);
+                                  double time) {
+  H5File datafile(
+      fmt::format("{}fld{:04d}.h5", outputDirectory,
+                  timestep / m_env.params().data_interval).c_str(),
+      H5F_ACC_RDWR | H5F_ACC_TRUNC);
   // add_grid_output(
   //     data, "E1",
   //     [](sim_data& data, multi_array<Scalar>& p, Index idx,
@@ -140,6 +216,36 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
         file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
     dataset.write(tmp_grid_data.host_ptr(), PredType::NATIVE_FLOAT);
   }
+}
+
+template <typename Func>
+void
+data_exporter::add_ptc_float_output(sim_data& data, const std::string& name, Func f,
+                                    H5::H5File& file) {
+  for (uint32_t n = 0; n < data.particles.tracked_number(); n++) {
+    f(data, tmp_ptc_float_data, n);
+  }
+
+  hsize_t dims[1] = {data.particles.tracked_number()};
+  DataSpace dataspace(1, dims);
+  DataSet dataset =
+      file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
+  dataset.write(tmp_ptc_float_data.data(), PredType::NATIVE_FLOAT);
+}
+
+template <typename Func>
+void
+data_exporter::add_ptc_uint_output(sim_data& data, const std::string& name, Func f,
+                                   H5::H5File& file) {
+  for (uint32_t n = 0; n < data.particles.tracked_number(); n++) {
+    f(data, tmp_ptc_uint_data, n);
+  }
+
+  hsize_t dims[1] = {data.particles.tracked_number()};
+  DataSpace dataspace(1, dims);
+  DataSet dataset =
+      file.createDataSet(name, PredType::NATIVE_UINT32, dataspace);
+  dataset.write(tmp_ptc_uint_data.data(), PredType::NATIVE_UINT32);
 }
 
 }  // namespace Aperture

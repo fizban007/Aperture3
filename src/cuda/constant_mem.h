@@ -19,6 +19,10 @@ extern __device__ __constant__ float dev_charges[8];
 extern __device__ __constant__ float dev_masses[8];
 // This is the structure for background fields
 extern __device__ __constant__ FieldData dev_bg_fields;
+// This is the MPI rank of the current GPU
+extern __device__ uint32_t dev_rank;
+// This is a counter for tracked particles
+extern __device__ uint32_t dev_ptc_id;
 
 }  // namespace Aperture
 

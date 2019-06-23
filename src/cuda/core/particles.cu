@@ -19,8 +19,9 @@ compute_ptc_energies(const Scalar* p1, const Scalar* p2,
   }
 }
 
+template <typename PtcData>
 __global__ void
-append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
+append_ptc(PtcData data, size_t num, Vec3<Pos_t> x,
            Vec3<Scalar> p, int cell, ParticleType type, Scalar w,
            uint32_t flag) {
   data.x1[num] = x[0];
