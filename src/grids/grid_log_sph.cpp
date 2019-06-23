@@ -7,7 +7,7 @@ Grid_LogSph::Grid_LogSph() {}
 Grid_LogSph::~Grid_LogSph() {}
 
 void
-Grid_LogSph::compute_coef() {
+Grid_LogSph::compute_coef(const SimParams& params) {
   if (m_mesh.dim() == 2) {
     // Scalar r_g = params.compactness;
     Scalar r_g = 0.0;

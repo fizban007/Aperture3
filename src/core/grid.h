@@ -27,7 +27,7 @@ class Grid {
 
   /// Initialize the grid parameters
   void init(const SimParams& params);
-  virtual void compute_coef();
+  virtual void compute_coef(const SimParams& params);
 
   Grid& operator=(const Grid& g);
   Grid& operator=(Grid&& g);

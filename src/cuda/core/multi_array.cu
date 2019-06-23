@@ -1,4 +1,6 @@
 #include "core/multi_array_impl.hpp"
+#include "cuda/data/multi_array_utils.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include "cuda/cudaUtility.h"
 #include "utils/logger.h"
 #include <algorithm>
@@ -67,7 +69,32 @@ multi_array<T>::free_mem() {
 
 template <typename T>
 void
-multi_array<T>::assign_dev(const T& value) {}
+multi_array<T>::assign_dev(const T& value) {
+  cudaPitchedPtr p = get_cudaPitchedPtr(*this);
+  if (m_extent.depth() > 1) {
+    // Logger::print_info("assign_dev 3d version");
+    dim3 blockSize(8, 8, 8);
+    // dim3 gridSize(8, 8, 8);
+    dim3 gridSize((this->m_extent.x + 7) / 8, (this->m_extent.y + 7) / 8,
+                  (this->m_extent.z + 7) / 8);
+    Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
+        p, this->m_extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
+  } else if (m_extent.height() > 1) {
+    // Logger::print_info("assign_dev 2d version");
+    dim3 blockSize(32, 16);
+    dim3 gridSize((this->m_extent.x + 31) / 32,
+                  (this->m_extent.y + 15) / 16);
+    Kernels::map_array_unary_op_2d<T><<<gridSize, blockSize>>>(
+        p, this->m_extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
+  } else if (m_extent.width() > 1) {
+    Kernels::map_array_unary_op_1d<T><<<64, 128>>>(
+        p, this->m_extent, detail::Op_AssignConst<T>(value));
+    CudaCheckError();
+  }
+
+}
 
 template <typename T>
 void
