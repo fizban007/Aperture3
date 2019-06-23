@@ -33,7 +33,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/kernels.cu"
     "cuda/constant_mem.cu"
     "cuda/utils/pitchptr.cu"
-    "cuda/data/array.cu"
+    "cuda/core/array.cu"
     "cuda/core/multi_array.cu"
     "cuda/core/fields.cu"
     "cuda/core/particles.cu"
@@ -42,6 +42,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/sim_environment.cpp"
     "cuda/grids/grid_log_sph_ptrs.cu"
     "cuda/algorithms/field_solver_logsph.cu"
+    "cuda/algorithms/ptc_updater_logsph.cu"
     )
 else()
   list(APPEND Aperture_src
