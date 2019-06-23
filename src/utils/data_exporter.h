@@ -1,40 +1,53 @@
 #ifndef _DATA_EXPORTER_H_
 #define _DATA_EXPORTER_H_
 
-#include "utils/hdf_exporter.h"
+#include "core/multi_array.h"
+#include <fstream>
+
+namespace H5 {
+
+class H5File;
+
+}
 
 namespace Aperture {
 
-class sim_environment;
 struct sim_data;
-template <typename T>
-class scalar_field;
-template <typename T>
-class vector_field;
+class sim_environment;
 
-class data_exporter : public hdf_exporter<data_exporter> {
+class data_exporter {
  public:
-  data_exporter(SimParams& params, uint32_t& timestep);
+  data_exporter(sim_environment& env, uint32_t& timestep);
   virtual ~data_exporter();
 
-  template <typename T>
-  void add_field(const std::string& name, scalar_field<T>& field);
-  template <typename T>
-  void add_field(const std::string& name, vector_field<T>& field);
+  void write_output(sim_data& data, uint32_t timestep, double time);
 
-  void write_snapshot(sim_environment& env, sim_data& data,
-                     uint32_t timestep);
-  void load_from_snapshot(sim_environment& env, sim_data& data,
-                          uint32_t& timestep);
-  void write_particles(uint32_t step, double time);
+  void write_field_output(sim_data& data, uint32_t timestep, double time);
+  void write_ptc_output(sim_data& data, uint32_t timestep, double time);
 
-  template <typename T>
-  void interpolate_field_values(fieldoutput<1>& field, int components, const T& t);
-  template <typename T>
-  void interpolate_field_values(fieldoutput<2>& field, int components, const T& t);
-  template <typename T>
-  void interpolate_field_values(fieldoutput<3>& field, int components, const T& t);
-};  // ----- end of class cu_data_exporter : public hdf_exporter -----
+ protected:
+  template <typename Func>
+  void add_grid_output(sim_data& data, const std::string& name, Func f,
+                       H5::H5File& file);
+
+  template <typename Func>
+  void add_array_output(sim_data& data, const std::string& name, Func f,
+                        H5::H5File& file);
+
+  // std::unique_ptr<Grid> grid;
+  sim_environment& m_env;
+  std::string
+      outputDirectory;  //!< Sets the directory of all the data files
+  std::string subDirectory;  //!< Sets the directory of current rank
+  std::string subName;
+  std::string filePrefix;  //!< Sets the common prefix of the data files
+
+  std::ofstream xmf;  //!< This is the accompanying xmf file describing
+                      //!< the hdf structure
+
+  multi_array<float> tmp_grid_data;  //!< This stores the temporary
+                                     //!< downsampled data for output
+};
 
 }  // namespace Aperture
 
