@@ -50,6 +50,7 @@ else()
     "core/photons.cpp"
     "sim_data.cpp"
     "sim_environment.cpp"
+    "utils/data_exporter.cpp"
     # "grids/grid_log_sph.cpp"
     # "data/photons.cpp"
     # "utils/hdf_exporter.cpp"

@@ -34,6 +34,7 @@ struct sim_data {
   void init_bg_fields();
   void check_dev_mesh();
   void compute_edotb();
+  void sync_to_host();
 
   const sim_environment& env;
   vector_field<Scalar> E;
@@ -45,7 +46,6 @@ struct sim_data {
   std::vector<scalar_field<Scalar>> gamma;
   std::vector<scalar_field<Scalar>> ptc_num;
   // std::vector<scalar_field<Scalar>> J_s;
-  scalar_field<Scalar> flux;
   scalar_field<Scalar> divE;
   scalar_field<Scalar> divB;
   scalar_field<Scalar> EdotB;

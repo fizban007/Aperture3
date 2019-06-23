@@ -59,6 +59,24 @@ sim_data::sort_particles() {
                                    "ptc_sort");
 }
 
+void
+sim_data::sync_to_host() {
+  E.sync_to_host();
+  B.sync_to_host();
+  J.sync_to_host();
+  for (int n = 0; n < num_species; n++) {
+    Rho[n].sync_to_host();
+    gamma[n].sync_to_host();
+    ptc_num[n].sync_to_host();
+  }
+  divE.sync_to_host();
+  divB.sync_to_host();
+  EdotB.sync_to_host();
+  photon_produced.sync_to_host();
+  pair_produced.sync_to_host();
+  photon_num.sync_to_host();
+  ph_flux.sync_to_host();
+}
 
 }
 

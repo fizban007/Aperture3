@@ -1,326 +1,145 @@
-#include "utils/data_exporter.h"
-#include "sim_data.h"
-#include "sim_environment.h"
-#include "sim_params.h"
-#include "utils/hdf_exporter_impl.hpp"
-#include "utils/type_name.h"
+#include "H5Cpp.h"
+#include "data_exporter_impl.hpp"
 
-#define H5_USE_BOOST
+#define ADD_GRID_OUTPUT(input, name, func, file)               \
+  add_grid_output(input, name,                                 \
+                  [](sim_data & data, multi_array<Scalar> & p, \
+                     Index idx, Index idx_out) func,           \
+                  file)
 
-#include <highfive/H5DataSet.hpp>
-#include <highfive/H5DataSpace.hpp>
-#include <highfive/H5File.hpp>
-#include <time.h>
-
-#include "visit_struct/visit_struct.hpp"
-
-using namespace HighFive;
+using namespace H5;
 
 namespace Aperture {
 
-template class hdf_exporter<data_exporter>;
-
-data_exporter::data_exporter(SimParams &params, uint32_t &timestep)
-    : hdf_exporter(params, timestep) {}
-
-data_exporter::~data_exporter() {}
-
-template <typename T>
+template <typename Func>
 void
-data_exporter::add_field(const std::string &name,
-                         scalar_field<T> &field) {
-  add_field_output(name, TypeName<T>::Get(), 1, &field,
-                   field.grid().dim(), false);
-}
-
-template <typename T>
-void
-data_exporter::add_field(const std::string &name,
-                         vector_field<T> &field) {
-  add_field_output(name, TypeName<T>::Get(), VECTOR_DIM, &field,
-                   field.grid().dim(), false);
-}
-
-template <typename T>
-void
-data_exporter::interpolate_field_values(fieldoutput<1> &field,
-                                        int components, const T &t) {
-  if (components == 1) {
-    auto fptr = dynamic_cast<scalar_field<T> *>(field.field);
-    auto &mesh = fptr->grid().mesh();
-    for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
-      field.f[0][i / downsample_factor + mesh.guard[0]] = 0.0;
-      for (int n1 = 0; n1 < downsample_factor; n1++) {
-        field.f[0][i / downsample_factor + mesh.guard[0]] +=
-            (*fptr)(i + n1 + mesh.guard[0]) / downsample_factor;
-      }
+sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
+                       multi_array<Scalar>& result, Func f) {
+  const auto& ext = g.extent();
+  auto& mesh = g.mesh();
+  for (int j = 0; j < ext.height(); j++) {
+    for (int i = 0; i < ext.width(); i++) {
+      Index idx_out(i, j, 0);
+      Index idx_data(i * downsample + mesh.guard[0],
+                     j * downsample + mesh.guard[1], 0);
+      f(data, result, idx_data, idx_out);
     }
-  } else if (components == 3) {
-    auto fptr = dynamic_cast<vector_field<T> *>(field.field);
-    auto &mesh = fptr->grid().mesh();
-    for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
-      field.f[0][i / downsample_factor + mesh.guard[0]] = 0.0;
-      // field.f[1][i / downsample_factor + mesh.guard[0]] = 0.0;
-      // field.f[2][i / downsample_factor + mesh.guard[0]] = 0.0;
-      for (int n1 = 0; n1 < downsample_factor; n1++) {
-        field.f[0][i / downsample_factor + mesh.guard[0]] +=
-            (*fptr)(0, i + n1 + mesh.guard[0]) / downsample_factor;
+  }
+}
+
+template <typename Func>
+void
+sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
+                       multi_array<Scalar>& result, Func f) {
+  const auto& ext = g.extent();
+  auto& mesh = g.mesh();
+  for (int k = 0; k < ext.depth(); k++) {
+    for (int j = 0; j < ext.height(); j++) {
+      for (int i = 0; i < ext.width(); i++) {
+        Index idx_out(i, j, k);
+        Index idx_data(i * downsample + mesh.guard[0],
+                       j * downsample + mesh.guard[1],
+                       k * downsample + mesh.guard[2]);
+        f(data, result, idx_data, idx_out);
       }
     }
   }
 }
 
-template <typename T>
 void
-data_exporter::interpolate_field_values(fieldoutput<2> &field,
-                                        int components, const T &t) {
-  if (components == 1) {
-    auto fptr = dynamic_cast<scalar_field<T> *>(field.field);
-    auto &mesh = fptr->grid().mesh();
-    for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
-      for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
-        field.f[0][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] = 0.0;
-        for (int n2 = 0; n2 < downsample_factor; n2++) {
-          for (int n1 = 0; n1 < downsample_factor; n1++) {
-            field.f[0][j / downsample_factor + mesh.guard[1]]
-                   [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
-                square(downsample_factor);
-          }
-        }
-      }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   field.f[0][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
-      // }
-    }
-  } else if (components == 3) {
-    auto fptr = dynamic_cast<vector_field<T> *>(field.field);
-    auto &mesh = fptr->grid().mesh();
-    for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
-      for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
-        field.f[0][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] = 0.0;
-        field.f[1][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] = 0.0;
-        field.f[2][j / downsample_factor + mesh.guard[1]]
-               [i / downsample_factor + mesh.guard[0]] = 0.0;
-        for (int n2 = 0; n2 < downsample_factor; n2++) {
-          for (int n1 = 0; n1 < downsample_factor; n1++) {
-            field.f[0][j / downsample_factor + mesh.guard[1]]
-                   [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(0, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
-                square(downsample_factor);
-            // std::cout << vf.f1[j / downsample_factor +
-            // mesh.guard[1]
-            //     [i / downsample_factor + mesh.guard[0]] <<
-            // std::endl;
-            field.f[1][j / downsample_factor + mesh.guard[1]]
-                   [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(1, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
-                square(downsample_factor);
-
-            field.f[2][j / downsample_factor + mesh.guard[1]]
-                   [i / downsample_factor + mesh.guard[0]] +=
-                (*fptr)(2, i + n1 + mesh.guard[0],
-                        j + n2 + mesh.guard[1]) /
-                square(downsample_factor);
-          }
-        }
-      }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   field.f[0][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   field.f[1][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(1, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   field.f[2][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(2, i + mesh.guard[0], mesh.guard[1] - 1);
-      // }
-    }
-  }
-}
-
-template <typename T>
-void
-data_exporter::interpolate_field_values(fieldoutput<3> &field,
-                                        int components, const T &t) {
-  if (components == 1) {
-    auto fptr = dynamic_cast<scalar_field<T> *>(field.field);
-    auto &mesh = fptr->grid().mesh();
-    for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
-      for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
-        for (int i = 0; i < mesh.reduced_dim(0);
-             i += downsample_factor) {
-          field.f[0][k / downsample_factor + mesh.guard[2]]
-                 [j / downsample_factor + mesh.guard[1]]
-                 [i / downsample_factor + mesh.guard[0]] = 0.0;
-
-          for (int n3 = 0; n3 < downsample_factor; n3++) {
-            for (int n2 = 0; n2 < downsample_factor; n2++) {
-              for (int n1 = 0; n1 < downsample_factor; n1++) {
-                field.f[0][k / downsample_factor + mesh.guard[2]]
-                       [j / downsample_factor + mesh.guard[1]]
-                       [i / downsample_factor + mesh.guard[0]] +=
-                    (*fptr)(i + n1 + mesh.guard[0],
-                            j + n2 + mesh.guard[1],
-                            k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor *
-                     downsample_factor);
-              }
-            }
-          }
-        }
-      }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   field.f[0][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(i + mesh.guard[0], mesh.guard[1] - 1);
-      // }
-    }
-  } else if (components == 3) {
-    auto fptr = dynamic_cast<vector_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
-    auto &mesh = fptr->grid().mesh();
-    for (int k = 0; k < mesh.reduced_dim(2); k += downsample_factor) {
-      for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
-        for (int i = 0; i < mesh.reduced_dim(0);
-             i += downsample_factor) {
-          field.f[0][k / downsample_factor + mesh.guard[2]]
-                 [j / downsample_factor + mesh.guard[1]]
-                 [i / downsample_factor + mesh.guard[0]] = 0.0;
-          field.f[1][k / downsample_factor + mesh.guard[2]]
-                 [j / downsample_factor + mesh.guard[1]]
-                 [i / downsample_factor + mesh.guard[0]] = 0.0;
-          field.f[2][k / downsample_factor + mesh.guard[2]]
-                 [j / downsample_factor + mesh.guard[1]]
-                 [i / downsample_factor + mesh.guard[0]] = 0.0;
-          for (int n3 = 0; n3 < downsample_factor; n3++) {
-            for (int n2 = 0; n2 < downsample_factor; n2++) {
-              for (int n1 = 0; n1 < downsample_factor; n1++) {
-                field.f[0][k / downsample_factor + mesh.guard[2]]
-                       [j / downsample_factor + mesh.guard[1]]
-                       [i / downsample_factor + mesh.guard[0]] +=
-                    (*fptr)(0, i + n1 + mesh.guard[0],
-                            j + n2 + mesh.guard[1],
-                            k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor *
-                     downsample_factor);
-                // std::cout << vf.f1[j / downsample_factor +
-                // mesh.guard[1]
-                //     [i / downsample_factor + mesh.guard[0]] <<
-                // std::endl;
-                field.f[1][k / downsample_factor + mesh.guard[2]]
-                       [j / downsample_factor + mesh.guard[1]]
-                       [i / downsample_factor + mesh.guard[0]] +=
-                    (*fptr)(1, i + n1 + mesh.guard[0],
-                            j + n2 + mesh.guard[1],
-                            k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor *
-                     downsample_factor);
-
-                field.f[2][k / downsample_factor + mesh.guard[2]]
-                       [j / downsample_factor + mesh.guard[1]]
-                       [i / downsample_factor + mesh.guard[0]] +=
-                    (*fptr)(2, i + n1 + mesh.guard[0],
-                            j + n2 + mesh.guard[1],
-                            k + n3 + mesh.guard[2]) /
-                    (downsample_factor * downsample_factor *
-                     downsample_factor);
-              }
-            }
-          }
-        }
-      }
-      // for (int i = 0; i < mesh.reduced_dim(0); i +=
-      // downsample_factor) {
-      //   field.f[0][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(0, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   field.f[1][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(1, i + mesh.guard[0], mesh.guard[1] - 1);
-      //   field.f[2][mesh.guard[1] - 1]
-      //          [i / downsample_factor + mesh.guard[0]] =
-      //       (*fptr)(2, i + mesh.guard[0], mesh.guard[1] - 1);
-      // }
-    }
-  }
+data_exporter::write_output(sim_data &data, uint32_t timestep, double time) {
+  data.sync_to_host();
 }
 
 void
-data_exporter::write_particles(uint32_t step, double time) {
-  auto &mesh = grid->mesh();
-  for (auto &ptcoutput : dbPtcData1d) {
-    particles_t *ptc = dynamic_cast<particles_t *>(ptcoutput.ptc);
-    if (ptc != nullptr) {
-      Logger::print_info("Writing tracked particles");
-      File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
-                                filePrefix, step)
-                        .c_str(),
-                    File::ReadWrite);
-      for (int sp = 0; sp < m_params.num_species; sp++) {
-        unsigned int idx = 0;
-        std::string name_x = NameStr((ParticleType)sp) + "_x";
-        std::string name_p = NameStr((ParticleType)sp) + "_p";
-        for (Index_t n = 0; n < ptc->number(); n++) {
-          if (!ptc->is_empty(n) &&
-              ptc->check_flag(n, ParticleFlag::tracked) &&
-              ptc->check_type(n) == (ParticleType)sp &&
-              idx < MAX_TRACKED) {
-            Scalar x =
-                mesh.pos(0, ptc->data().cell[n], ptc->data().x1[n]);
-            ptcoutput.x[idx] = x;
-            ptcoutput.p[idx] = ptc->data().p1[n];
-            idx += 1;
-          }
-        }
-        DataSet data_x =
-            datafile.createDataSet<float>(name_x, DataSpace{idx});
-        data_x.write(ptcoutput.x);
-        DataSet data_p =
-            datafile.createDataSet<float>(name_p, DataSpace{idx});
-        data_p.write(ptcoutput.p);
-
-        // Logger::print_info("Written {} tracked particles", idx);
-      }
-      // hsize_t sizes[1] = {idx};
-      // H5::DataSpace space(1, sizes);
-      // H5::DataSet *dataset_x = new H5::DataSet(file->createDataSet(
-      //     name_x, H5::PredType::NATIVE_FLOAT, space));
-      // dataset_x->write((void *)ds.data_x.data(),
-      //                  H5::PredType::NATIVE_FLOAT);
-      // H5::DataSet *dataset_p = new H5::DataSet(file->createDataSet(
-      //     name_p, H5::PredType::NATIVE_FLOAT, space));
-      // dataset_p->write((void *)ds.data_p.data(),
-      //                  H5::PredType::NATIVE_FLOAT);
-
-      // delete dataset_x;
-      // delete dataset_p;
-    }
+data_exporter::write_field_output(sim_data& data, uint32_t timestep,
+                            double time) {
+  H5File datafile(fmt::format("{}{}{:06d}.h5", outputDirectory,
+                              filePrefix, timestep)
+                      .c_str(),
+                  H5F_ACC_RDWR | H5F_ACC_TRUNC);
+  // add_grid_output(
+  //     data, "E1",
+  //     [](sim_data& data, multi_array<Scalar>& p, Index idx,
+  //        Index idx_out) {
+  //       p(idx_out) = data.E(0, idx) + data.Ebg(0, idx);
+  //     },
+  //     datafile);
+  ADD_GRID_OUTPUT(
+      data, "E1", { p(idx_out) = data.E(0, idx) + data.Ebg(0, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "E2", { p(idx_out) = data.E(1, idx) + data.Ebg(1, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "E3", { p(idx_out) = data.E(2, idx) + data.Ebg(2, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "B1", { p(idx_out) = data.B(0, idx) + data.Bbg(0, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "B2", { p(idx_out) = data.B(1, idx) + data.Bbg(1, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "B3", { p(idx_out) = data.B(2, idx) + data.Bbg(2, idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "J1", { p(idx_out) = data.J(0, idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "J2", { p(idx_out) = data.J(1, idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "J3", { p(idx_out) = data.J(2, idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "Rho_e", { p(idx_out) = data.Rho[0](0, idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "Rho_p", { p(idx_out) = data.Rho[1](0, idx); }, datafile);
+  if (data.env.params().num_species > 2) {
+    ADD_GRID_OUTPUT(
+        data, "Rho_i", { p(idx_out) = data.Rho[2](0, idx); }, datafile);
   }
+  ADD_GRID_OUTPUT(
+      data, "photon_produced",
+      { p(idx_out) = data.photon_produced(idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "pair_produced", { p(idx_out) = data.pair_produced(idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "photon_num", { p(idx_out) = data.photon_num(idx); },
+      datafile);
+  ADD_GRID_OUTPUT(
+      data, "divE", { p(idx_out) = data.divE(idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "divB", { p(idx_out) = data.divB(idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "EdotB_avg", { p(idx_out) = data.EdotB(idx); }, datafile);
+  ADD_GRID_OUTPUT(
+      data, "EdotB",
+      {
+        p(idx_out) = data.E(0, idx) * data.B(0, idx) +
+                     data.E(1, idx) * data.B(1, idx) +
+                     data.E(2, idx) * data.B(2, idx);
+      },
+      datafile);
+
+  datafile.close();
 }
 
-// Explicit instantiation
-template void data_exporter::add_field<float>(
-    const std::string &name, scalar_field<float> &field);
-template void data_exporter::add_field<float>(
-    const std::string &name, vector_field<float> &field);
-template void data_exporter::add_field<double>(
-    const std::string &name, scalar_field<double> &field);
-template void data_exporter::add_field<double>(
-    const std::string &name, vector_field<double> &field);
-template void hdf_exporter<data_exporter>::add_array_output<float>(
-    const std::string &name, multi_array<float> &array);
+template <typename Func>
+void
+data_exporter::add_grid_output(sim_data& data, const std::string& name,
+                               Func f, H5File& file) {
+  if (data.env.grid().dim() == 2) {
+    sample_grid_quantity2d(data, m_env.local_grid(),
+                           m_env.params().downsample, tmp_grid_data, f);
+
+    // Actually write the temp array to hdf
+    hsize_t dims[2] = {(uint32_t)tmp_grid_data.width(),
+                       (uint32_t)tmp_grid_data.height()};
+    DataSpace dataspace(2, dims);
+    DataSet dataset =
+        file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
+    dataset.write(tmp_grid_data.host_ptr(), PredType::NATIVE_FLOAT);
+  }
+}
 
 }  // namespace Aperture
