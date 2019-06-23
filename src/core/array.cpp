@@ -36,4 +36,17 @@ array<T>::copy_from(const self_type &other) {
   std::copy(other.m_data_h, other.m_data_h + n, m_data_h);
 }
 
+
+template class array<long long>;
+template class array<long>;
+template class array<int>;
+template class array<short>;
+template class array<char>;
+template class array<uint16_t>;
+template class array<uint32_t>;
+template class array<uint64_t>;
+template class array<float>;
+template class array<double>;
+template class array<long double>;
+
 }  // namespace Aperture

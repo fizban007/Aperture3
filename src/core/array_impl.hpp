@@ -17,7 +17,7 @@ array<T>::array(size_t length) {
 
 template <typename T>
 array<T>::array(const self_type& other) {
-  alloc_mem(other.m_length);
+  alloc_mem(other.m_size);
   copy_from(other);
 }
 

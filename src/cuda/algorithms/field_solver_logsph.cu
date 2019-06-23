@@ -1,12 +1,12 @@
 #include "algorithms/field_solver_logsph.h"
-#include "sim_data.h"
-#include "sim_environment.h"
 #include "cuda/constant_mem.h"
-#include "cuda/grids/grid_log_sph_ptrs.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
+#include "cuda/grids/grid_log_sph_ptrs.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/pitchptr.cuh"
+#include "sim_data.h"
+#include "sim_environment.h"
 #include "utils/timer.h"
 
 namespace Aperture {
@@ -31,8 +31,8 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
                  pitchptr<Scalar> e3, pitchptr<Scalar> b1,
                  pitchptr<Scalar> b2, pitchptr<Scalar> b3,
                  pitchptr<Scalar> j1, pitchptr<Scalar> j2,
-                 pitchptr<Scalar> j3,
-                 mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
+                 pitchptr<Scalar> j3, mesh_ptrs_log_sph mesh_ptrs,
+                 Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -339,8 +339,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   // First communicate to get the E field guard cells
   // data.env.get_sub_guard_cells(data.E);
 
-  Grid_LogSph &grid =
-      *dynamic_cast<Grid_LogSph *>(&m_env.local_grid());
+  Grid_LogSph &grid = *dynamic_cast<Grid_LogSph *>(&m_env.local_grid());
   auto mesh_ptrs = get_mesh_ptrs(grid);
   auto &mesh = grid.mesh();
 
@@ -348,12 +347,9 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
   // Update B
   Kernels::compute_b_update<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)),
+      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
       mesh_ptrs, dt);
   CudaCheckError();
 
@@ -363,16 +359,11 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
 
   // Update E
   Kernels::compute_e_update<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)),
-      get_pitchptr(data.J.data(0)),
-      get_pitchptr(data.J.data(1)),
-      get_pitchptr(data.J.data(2)),
-      mesh_ptrs, dt);
+      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+      get_pitchptr(data.J.data(0)), get_pitchptr(data.J.data(1)),
+      get_pitchptr(data.J.data(2)), mesh_ptrs, dt);
   CudaCheckError();
 
   // Communicate the new E values to guard cells
@@ -380,14 +371,10 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
 
   // Update B
   Kernels::compute_divs<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)),
-      get_pitchptr(data.divE.data()),
-      get_pitchptr(data.divB.data()),
+      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+      get_pitchptr(data.divE.data()), get_pitchptr(data.divB.data()),
       mesh_ptrs);
   CudaCheckError();
   data.compute_edotb();
@@ -407,46 +394,34 @@ field_solver_logsph::apply_boundary(sim_data &data, double omega,
   // CudaSafeCall(cudaSetDevice(dev_id));
   if (data.env.is_boundary(BoundaryPos::lower0)) {
     Kernels::stellar_boundary<<<32, 256>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)),
-      omega);
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        omega);
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::upper0)) {
     Kernels::outflow_boundary<<<32, 256>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)));
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::lower1)) {
     Kernels::axis_boundary_lower<<<32, 256>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)));
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::upper1)) {
     Kernels::axis_boundary_upper<<<32, 256>>>(
-      get_pitchptr(data.E.data(0)),
-      get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)),
-      get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)),
-      get_pitchptr(data.B.data(2)));
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
     CudaCheckError();
   }
   // Logger::print_info("omega is {}", omega);

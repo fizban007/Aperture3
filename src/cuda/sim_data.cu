@@ -1,9 +1,10 @@
-#include "sim_data_impl.hpp"
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
-#include "cuda/utils/pitchptr.cuh"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
+#include "cuda/utils/pitchptr.cuh"
+#include "cuda/kernels.h"
+#include "sim_data_impl.hpp"
 
 namespace Aperture {
 
@@ -292,14 +293,24 @@ sim_data::initialize(const sim_environment& env) {
   g_ptrs.pair_produced = get_pitchptr(pair_produced.data());
   g_ptrs.photon_num = get_pitchptr(photon_num.data());
 
-  CudaSafeCall(cudaMallocManaged(&g_ptrs.Rho, num_species * sizeof(pitchptr<Scalar>)));
-  CudaSafeCall(cudaMallocManaged(&g_ptrs.gamma, num_species * sizeof(pitchptr<Scalar>)));
-  CudaSafeCall(cudaMallocManaged(&g_ptrs.ptc_num, num_species * sizeof(pitchptr<Scalar>)));
+  CudaSafeCall(cudaMallocManaged(
+      &g_ptrs.Rho, num_species * sizeof(pitchptr<Scalar>)));
+  CudaSafeCall(cudaMallocManaged(
+      &g_ptrs.gamma, num_species * sizeof(pitchptr<Scalar>)));
+  CudaSafeCall(cudaMallocManaged(
+      &g_ptrs.ptc_num, num_species * sizeof(pitchptr<Scalar>)));
   for (int n = 0; n < num_species; n++) {
     g_ptrs.Rho[n] = get_pitchptr(Rho[n].data());
     g_ptrs.gamma[n] = get_pitchptr(gamma[n].data());
     g_ptrs.ptc_num[n] = get_pitchptr(ptc_num[n].data());
   }
+
+  int seed = env.params().random_seed;
+
+  CudaSafeCall(
+      cudaMalloc(&d_rand_states, 1024 * 1024 * sizeof(curandState)));
+  init_rand_states((curandState*)d_rand_states, seed,
+                   1024, 1024);
 }
 
 void
@@ -307,6 +318,8 @@ sim_data::finalize() {
   CudaSafeCall(cudaFree(g_ptrs.Rho));
   CudaSafeCall(cudaFree(g_ptrs.gamma));
   CudaSafeCall(cudaFree(g_ptrs.ptc_num));
+  cudaFree((curandState *)d_rand_states);
+
 }
 
 void
@@ -333,14 +346,15 @@ sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   // cudaDeviceSynchronize();
   CudaCheckError();
 
-  auto &mesh = env.local_grid().mesh();
+  auto& mesh = env.local_grid().mesh();
   particles.set_num(particles.number() +
                     mesh.dims[0] * mesh.dims[1] * 2 * multiplicity);
   CudaSafeCall(cudaDeviceSynchronize());
 }
 
-data_ptrs get_data_ptrs(sim_data& data) {
+data_ptrs
+get_data_ptrs(sim_data& data) {
   return g_ptrs;
 }
 
-}
+}  // namespace Aperture

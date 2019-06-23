@@ -2,6 +2,7 @@
 #define _DATA_PTRS_H_
 
 #include "cuda/utils/pitchptr.cuh"
+#include "data/particle_data.h"
 
 namespace Aperture {
 
