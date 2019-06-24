@@ -45,6 +45,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/algorithms/field_solver_1dgr.cu"
     "cuda/algorithms/ptc_updater_logsph.cu"
     "cuda/algorithms/ptc_updater_1dgr.cu"
+    "cuda/radiation/radiative_transfer.cu"
     )
 else()
   list(APPEND Aperture_src
