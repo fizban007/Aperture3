@@ -36,6 +36,26 @@ array<T>::~array() {
   free_mem();
 }
 
+template <typename T>
+array<T>&
+array<T>::operator=(self_type&& other) {
+  m_data_d = other.m_data_d;
+  m_data_h = other.m_data_h;
+  m_size = other.m_size;
+
+  other.m_data_d = nullptr;
+  other.m_data_h = nullptr;
+  return *this;
+}
+
+template <typename T>
+array<T>&
+array<T>::operator=(const self_type& other) {
+  alloc_mem(other.m_size);
+  copy_from(other);
+  return *this;
+}
+
 /// Set the whole array to a single initial value on the host
 template <typename T>
 void
