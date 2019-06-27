@@ -30,12 +30,11 @@ add_custom_target(run_tests
 add_dependencies(check run_tests)
 
 if (use_cuda AND CMAKE_CUDA_COMPILER)
-  # add_executable(test_fd "test.cpp")
-  # target_sources(test_fd PRIVATE "test_finite_diff.cpp")
-  # target_link_libraries(test_fd
-  #   PUBLIC cuAperture
-  #   PUBLIC Aperture)
-  # add_dependencies(check test_fd)
+  add_executable(test_fd "test.cpp")
+  target_sources(test_fd PRIVATE "test_finite_diff.cpp")
+  target_link_libraries(test_fd
+    PUBLIC Aperture)
+  add_dependencies(check test_fd)
 
   # "test_pair_creation.cu")
   # "test_cuda.cu" "test_particles.cu")
