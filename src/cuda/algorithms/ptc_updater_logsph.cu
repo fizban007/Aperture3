@@ -13,6 +13,9 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 
+#include "vay_push.cuh"
+#include "sync_cooling.cuh"
+
 #define DEPOSIT_EPS 1.0e-10f
 
 namespace Aperture {
@@ -123,32 +126,7 @@ vay_push_2d(data_ptrs data, size_t num, Scalar dt) {
       // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
       // printf("gamma before is %f\n", gamma);
       // printf("p is (%f, %f, %f), gamma is %f\n", p1, p2, p3, gamma);
-
-      // step 1: Update particle momentum using vay pusher
-      Scalar up1 = p1 + 2.0f * E1 + (p2 * B3 - p3 * B2) / gamma;
-      Scalar up2 = p2 + 2.0f * E2 + (p3 * B1 - p1 * B3) / gamma;
-      Scalar up3 = p3 + 2.0f * E3 + (p1 * B2 - p2 * B1) / gamma;
-      // printf("p prime is (%f, %f, %f), gamma is %f\n", up1, up2, up3,
-      // gamma);
-      Scalar tt = B1 * B1 + B2 * B2 + B3 * B3;
-      Scalar ut = up1 * B1 + up2 * B2 + up3 * B3;
-
-      Scalar sigma = 1.0f + up1 * up1 + up2 * up2 + up3 * up3 - tt;
-      Scalar inv_gamma2 =
-          2.0f /
-          (sigma + std::sqrt(sigma * sigma + 4.0f * (tt + ut * ut)));
-      Scalar s = 1.0f / (1.0f + inv_gamma2 * tt);
-      gamma = 1.0f / std::sqrt(inv_gamma2);
-
-      p1 =
-          (up1 + B1 * ut * inv_gamma2 + (up2 * B3 - up3 * B2) / gamma) *
-          s;
-      p2 =
-          (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) *
-          s;
-      p3 =
-          (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) *
-          s;
+      vay_push(p1, p2, p3, gamma, E1, E2, E3, B1, B2, B3, q_over_m, dt);
 
       // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
       // %d\n", p1, p2, p3,
@@ -168,61 +146,13 @@ vay_push_2d(data_ptrs data, size_t num, Scalar dt) {
         }
       }
 
-      Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-      Scalar B_sqrt = std::sqrt(tt) / std::abs(q_over_m);
-      Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3) / q_over_m;
+      // Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+      // Scalar B_sqrt = std::sqrt(tt) / std::abs(q_over_m);
+      // Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3) / q_over_m;
       // Scalar pitch_angle = pdotB / (p * B_sqrt);
 
-      if (dev_params.rad_cooling_on) {
-        // if (std::abs(pitch_angle) > 0.9) {
-        // if (p >= 1.0f) {
-        // // if (true) {
-        // Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) /
-        // q_over_m; Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma)
-        // / q_over_m; Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) /
-        // gamma) / q_over_m; Scalar tmp_sq = tmp1 * tmp1 + tmp2 *
-        // tmp2 + tmp3 * tmp3; Scalar bE =
-        //     (p1 * E1 + p2 * E2 + p3 * E3) / (gamma * q_over_m);
-
-        // Scalar delta_p1 =
-        //     dev_params.rad_cooling_coef *
-        //     (((tmp2 * B3 - tmp3 * B2) + bE * E1) / q_over_m -
-        //      gamma * p1 * (tmp_sq - bE * bE)) /
-        //     square(dev_params.B0);
-        // Scalar delta_p2 =
-        //     dev_params.rad_cooling_coef *
-        //     (((tmp3 * B1 - tmp1 * B3) + bE * E2) / q_over_m -
-        //      gamma * p2 * (tmp_sq - bE * bE)) /
-        //     square(dev_params.B0);
-        // Scalar delta_p3 =
-        //     dev_params.rad_cooling_coef *
-        //     (((tmp1 * B2 - tmp2 * B1) + bE * E3) / q_over_m -
-        //      gamma * p3 * (tmp_sq - bE * bE)) /
-        //     square(dev_params.B0);
-
-        // p1 += delta_p1;
-        // p2 += delta_p2;
-        // p3 += delta_p3;
-        // p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-        // gamma = sqrt(1.0f + p * p);
-        // }
-        // else {
-        Scalar delta_p1 = -dev_params.rad_cooling_coef *
-                          (p1 - B1 * pdotB / (B_sqrt * B_sqrt));
-        Scalar delta_p2 = -dev_params.rad_cooling_coef *
-                          (p2 - B2 * pdotB / (B_sqrt * B_sqrt));
-        Scalar delta_p3 = -dev_params.rad_cooling_coef *
-                          (p3 - B3 * pdotB / (B_sqrt * B_sqrt));
-        Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-                         delta_p3 * delta_p3);
-        Scalar f = std::sqrt(B_sqrt / dev_params.B0);
-        if (sp == (int)ParticleType::ion) f *= 0.1f;
-        p1 += delta_p1 * f;
-        p2 += delta_p2 * f;
-        p3 += delta_p3 * f;
-        p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-        gamma = sqrt(1.0f + p * p);
-        //}
+      if (dev_params.rad_cooling_on && sp != (int)ParticleType::ion) {
+        sync_kill_perp(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3, q_over_m);
       }
       // printf("gamma after cooling is %f\n", gamma);
       // printf("p is (%f, %f, %f)\n", p1, p2, p3);
