@@ -1,9 +1,11 @@
-#ifndef _SYNC_COOLING_H_
-#define _SYNC_COOLING_H_
+#ifndef _SYNC_COOLING_CUH_
+#define _SYNC_COOLING_CUH_
 
 #include "cuda/constant_mem.h"
 
 namespace Aperture {
+
+namespace Kernels {
 
 __device__ __forceinline__ void
 sync_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
@@ -58,6 +60,8 @@ sync_kill_perp(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
   p3 += delta_p3 * f;
   p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
   gamma = sqrt(1.0f + p * p);
+}
+
 }
 
 }  // namespace Aperture

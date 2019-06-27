@@ -1,5 +1,5 @@
-#ifndef _VAY_PUSH_H_
-#define _VAY_PUSH_H_
+#ifndef _VAY_PUSH_CUH_
+#define _VAY_PUSH_CUH_
 
 namespace Aperture {
 
