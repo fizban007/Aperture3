@@ -2,14 +2,15 @@
 #define _DATA_EXPORTER_H_
 
 #include "core/multi_array.h"
+#include <boost/multi_array.hpp>
 #include <fstream>
 #include <memory>
 #include <thread>
 #include <vector>
 
-namespace H5 {
+namespace HighFive {
 
-class H5File;
+class File;
 
 }
 
@@ -30,39 +31,40 @@ class data_exporter {
   void write_ptc_output(sim_data& data, uint32_t timestep, double time);
 
  protected:
-  void add_array_output(multi_array<float>& array, const std::string& name,
-                        H5::H5File& file);
+  void add_array_output(multi_array<float>& array,
+                        const std::string& name, HighFive::File& file);
 
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
-                       H5::H5File& file);
+                       HighFive::File& file);
 
   template <typename Func>
-  void add_ptc_float_output(sim_data& data, const std::string& name, Func f,
-                            H5::H5File& file);
+  void add_ptc_float_output(sim_data& data, const std::string& name,
+                            Func f, HighFive::File& file);
 
   template <typename Func>
-  void add_ptc_uint_output(sim_data& data, const std::string& name, Func f,
-                           H5::H5File& file);
+  void add_ptc_uint_output(sim_data& data, const std::string& name,
+                           Func f, HighFive::File& file);
 
   // std::unique_ptr<Grid> grid;
   sim_environment& m_env;
   std::string
       outputDirectory;  //!< Sets the directory of all the data files
-  std::string subDirectory;  //!< Sets the directory of current rank
-  std::string subName;
-  // std::string filePrefix;  //!< Sets the common prefix of the data files
 
   std::ofstream xmf;  //!< This is the accompanying xmf file describing
                       //!< the hdf structure
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output
+  boost::multi_array<float, 3> m_output_3d;
+  boost::multi_array<float, 2> m_output_2d;
+  std::vector<float> m_output_1d;
+
   std::vector<float> tmp_ptc_float_data;
   std::vector<uint32_t> tmp_ptc_uint_data;
 
-  std::unique_ptr<std::thread> m_fld_thread;
-  std::unique_ptr<std::thread> m_ptc_thread;
+  // std::unique_ptr<std::thread> m_fld_thread;
+  // std::unique_ptr<std::thread> m_ptc_thread;
 };
 
 }  // namespace Aperture
