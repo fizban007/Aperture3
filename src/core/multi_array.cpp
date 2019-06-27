@@ -1,5 +1,5 @@
 #include "multi_array_impl.hpp"
-#include "utils/simd.h"
+// #include "utils/simd.h"
 #include <algorithm>
 #include <cstring>
 
@@ -60,6 +60,6 @@ template class multi_array<unsigned long long>;
 template class multi_array<float>;
 template class multi_array<double>;
 template class multi_array<long double>;
-template class multi_array<simd::simd_buffer>;
+// template class multi_array<simd::simd_buffer>;
 
 }  // namespace Aperture
