@@ -105,8 +105,6 @@ count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
     uint32_t cell = data.photons.cell[tid];
     // Skip empty photons
     if (cell == MAX_CELL) continue;
-    //   int c1 = dev_mesh.get_c1(cell);
-    //   int c2 = dev_mesh.get_c2(cell);
     //   // Remove photon if it is too close to the axis
     //   Scalar theta = dev_mesh.pos(1, c2, photons.x2[tid]);
     //   if (theta < dev_mesh.delta[1] ||
@@ -149,69 +147,18 @@ produce_pairs(data_ptrs data, size_t ph_num, size_t ptc_num,
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   CudaRng rng(&states[id]);
 
-  //   for (uint32_t tid = id; tid < ph_num; tid += blockDim.x *
-  //   gridDim.x) {
-  //     int pos_in_block = pair_pos[tid] - 1;
-  //     uint32_t cell = photons.cell[tid];
-  //     if (pos_in_block > -1 && cell != MAX_CELL) {
-  //       if (!dev_mesh.is_in_bulk(cell)) continue;
-  //       int start_pos = pair_cum[blockIdx.x] * 2;
+  for (uint32_t tid = id; tid < ph_num; tid += blockDim.x * gridDim.x) {
+    int pos_in_block = pair_pos[tid] - 1;
+    uint32_t cell = data.photons.cell[tid];
+    if (pos_in_block > -1 && cell != MAX_CELL) {
+      if (!dev_mesh.is_in_bulk(cell)) continue;
+      int start_pos = pair_cum[blockIdx.x] * 2;
 
-  //       // Split the photon energy evenly between the pairs
-  //       Scalar p1 = photons.p1[tid];
-  //       Scalar p2 = photons.p2[tid];
-  //       Scalar p3 = photons.p3[tid];
-  //       Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
-  //       if (E_ph2 <= 4.01f) E_ph2 = 4.01f;
-  //       // Scalar new_p = std::sqrt(max(0.25f * E_ph * E_ph, 1.0f)
-  //       // - 1.0f);
-  //       Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
-  //       Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
+      uint32_t offset = ptc_num + start_pos + pos_in_block * 2;
 
-  //       if (gamma != gamma) {
-  //         // printf(
-  //         //     "NaN detected in pair creation! ratio is %f, E_ph2
-  //         is %f,
-  //         //     " "p1 is "
-  //         //     "%f, "
-  //         //     "p2 is %f, p3 is %f\n",
-  //         //     ratio, E_ph2, p1, p2, p3);
-  //         // asm("trap;");
-  //         photons.cell[tid] = MAX_CELL;
-  //         continue;
-  //       }
-  //       // Add the two new particles
-  //       int offset_e = ptc_num + start_pos + pos_in_block * 2;
-  //       int offset_p = ptc_num + start_pos + pos_in_block * 2 + 1;
-  //       // int offset_p = ptc_num + start_pos + pos_in_block +
-  //       // pair_count[blockIdx.x];
-
-  //       ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
-  //       ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
-  //       ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
-  //       // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
-  //       // ptc.x2[offset_e], ptc.x3[offset_e]);
-
-  //       ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
-  //       ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
-  //       ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
-  //       ptc.E[offset_e] = ptc.E[offset_p] = gamma;
-
-  // #ifndef NDEBUG
-  //       assert(ptc.cell[offset_e] == MAX_CELL);
-  //       assert(ptc.cell[offset_p] == MAX_CELL);
-  // #endif
-  //       ptc.weight[offset_e] = ptc.weight[offset_p] =
-  //       photons.weight[tid]; ptc.cell[offset_e] = ptc.cell[offset_p]
-  //       = photons.cell[tid]; ptc.flag[offset_e] = set_ptc_type_flag(
-  //           bit_or(ParticleFlag::secondary), ParticleType::electron);
-  //       ptc.flag[offset_p] = set_ptc_type_flag(
-  //           bit_or(ParticleFlag::secondary), ParticleType::positron);
-
-  //       // Set this photon to be empty
-  //       photons.cell[tid] = MAX_CELL;
-  //     }
-  //   }
+      produce_pair(data, tid, offset, rng);
+    }
+  }
 }
 
 }  // namespace Kernels

@@ -66,6 +66,63 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   return data.photons.path_left[tid] <= 0.0f;
 }
 
+__device__ void
+produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
+             CudaRng& rng) {
+  auto& ptc = data.particles;
+  auto& photons = data.photons;
+
+  Scalar p1 = photons.p1[tid];
+  Scalar p2 = photons.p2[tid];
+  Scalar p3 = photons.p3[tid];
+  Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
+  if (E_ph2 <= 4.01f) E_ph2 = 4.01f;
+  // Scalar new_p = std::sqrt(max(0.25f * E_ph *
+  // E_ph, 1.0f)
+  // - 1.0f);
+  Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
+  Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
+  if (gamma != gamma) {
+    // printf(
+    //     "NaN detected in pair creation! ratio is %f, // E_ph2 is %f,
+    //     " "p1 is "
+    //     "%f, "
+    //     "p2 is %f, p3 is %f\n",
+    //     ratio, E_ph2, p1, p2, p3);
+    // asm("trap;");
+    photons.cell[tid] = MAX_CELL;
+    return;
+  }
+  uint32_t offset_e = offset;
+  uint32_t offset_p = offset + 1;
+
+  ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
+  ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
+  ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
+  // printf("x1 = %f, x2 = %f, x3 = %f\n",
+  // ptc.x1[offset_e],
+  // ptc.x2[offset_e], ptc.x3[offset_e]);
+
+  ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
+  ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
+  ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
+  ptc.E[offset_e] = ptc.E[offset_p] = gamma;
+
+#ifndef NDEBUG
+  assert(ptc.cell[offset_e] == MAX_CELL);
+  assert(ptc.cell[offset_p] == MAX_CELL);
+#endif
+  ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
+  ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
+  ptc.flag[offset_e] = set_ptc_type_flag(
+      bit_or(ParticleFlag::secondary), ParticleType::electron);
+  ptc.flag[offset_p] = set_ptc_type_flag(
+      bit_or(ParticleFlag::secondary), ParticleType::positron);
+
+  // Set this photon to be empty
+  photons.cell[tid] = MAX_CELL;
+}
+
 }  // namespace Kernels
 
 }  // namespace Aperture
