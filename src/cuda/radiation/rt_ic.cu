@@ -2,6 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
+#include "cuda/utils/pitchptr.cuh"
 #include "cuda/radiation/rt_ic.h"
 #include "radiation/spectra.h"
 #include "sim_params.h"
@@ -258,17 +259,17 @@ inverse_compton::inverse_compton(const SimParams& params)
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
                                   sizeof(Scalar)));
-  cudaPitchedPtr p_dNde =m_dNde.data_d().p;
-  cudaPitchedPtr p_dNde_t =m_dNde_thompson.data_d().p;
+  cudaPitchedPtr p_dNde = get_cudaPitchedPtr(m_dNde);
+  cudaPitchedPtr p_dNde_t = get_cudaPitchedPtr(m_dNde_thompson);
 
   CudaSafeCall(cudaMemcpyToSymbol(
       Kernels::dev_ic_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
                                   &p_dNde_t,
                                   sizeof(cudaPitchedPtr)));
-  Scalar* dev_ic_rates = m_ic_rate.data_d();
-  Scalar* dev_gg_rates = m_gg_rate.data_d();
-  Scalar* dev_g = m_gammas.data_d();
+  Scalar* dev_ic_rates = m_ic_rate.dev_ptr();
+  Scalar* dev_gg_rates = m_gg_rate.dev_ptr();
+  Scalar* dev_g = m_gammas.dev_ptr();
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rates,
                                   sizeof(Scalar*)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rates,
@@ -434,7 +435,7 @@ inverse_compton::find_n_gamma(Scalar gamma) const {
 
 int
 inverse_compton::binary_search(float u, int n,
-                               const cu_multi_array<Scalar>& array,
+                               const multi_array<Scalar>& array,
                                Scalar& v1, Scalar& v2) const {
   int a = 0, b = m_ep.size() - 1, tmp = 0;
   Scalar v = 0.0f;
@@ -504,18 +505,18 @@ inverse_compton::gen_photon_e(Scalar gamma) {
 }
 
 void
-inverse_compton::generate_photon_energies(cu_array<Scalar>& e_ph,
-                                          cu_array<Scalar>& gammas) {
+inverse_compton::generate_photon_energies(array<Scalar>& e_ph,
+                                          array<Scalar>& gammas) {
   Kernels::gen_photon_energies<<<m_blocks, m_threads>>>(
-      e_ph.data_d(), gammas.data_d(), gammas.size(),
+      e_ph.dev_ptr(), gammas.dev_ptr(), gammas.size(),
       (curandState*)m_states);
   CudaCheckError();
 }
 
 void
-inverse_compton::generate_random_gamma(cu_array<Scalar>& gammas) {
+inverse_compton::generate_random_gamma(array<Scalar>& gammas) {
   Kernels::gen_rand_gammas<<<m_blocks, m_threads>>>(
-      gammas.data_d(), gammas.size(), (curandState*)m_states);
+      gammas.dev_ptr(), gammas.size(), (curandState*)m_states);
   CudaCheckError();
 }
 

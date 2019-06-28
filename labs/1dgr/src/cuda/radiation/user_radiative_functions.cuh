@@ -1,14 +1,19 @@
 #ifndef _USER_RADIATIVE_FUNCTIONS_H_
 #define _USER_RADIATIVE_FUNCTIONS_H_
 
-#include "sim_environment.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudarng.h"
 #include "cuda/data_ptrs.h"
+#include "cuda/radiation/rt_ic.h"
+#include "grids/grid_1dgr.h"
+#include "radiation/spectra.h"
+#include "sim_environment.h"
 
 namespace Aperture {
 
 namespace Kernels {
+
+__device__ Grid_1dGR::mesh_ptrs dev_mesh_ptrs_1dgr;
 
 __device__ bool
 check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
@@ -127,7 +132,19 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
 }  // namespace Kernels
 
 void
-user_rt_init(sim_environment& env) {}
+user_rt_init(sim_environment& env) {
+  static inverse_compton rt_ic(env.params());
+  static Spectra::broken_power_law rt_ne(
+      1.25, 1.1, env.params().e_min, 1.0e-10, 0.1);
+  rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
+             1.50e24 / env.params().ic_path);
+
+  // TODO: copy the mesh pointer to device memory
+  Grid_1dGR* grid = dynamic_cast<Grid_1dGR*>(&env.local_grid());
+  auto ptrs = grid->get_mesh_ptrs();
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_mesh_ptrs_1dgr, (void*)&ptrs,
+                                  sizeof(Grid_1dGR::mesh_ptrs)));
+}
 
 }  // namespace Aperture
 

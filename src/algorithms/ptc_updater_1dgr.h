@@ -14,6 +14,8 @@ class ptc_updater_1dgr {
   ~ptc_updater_1dgr();
 
   void update_particles(sim_data& data, double dt, uint32_t step = 0);
+  void prepare_initial_condition(sim_data& data, int multiplicity);
+  void prepare_initial_photons(sim_data& data, int multiplicity);
 
  protected:
   sim_environment& m_env;

@@ -6,10 +6,112 @@
 #include "cuda/utils/interpolation.cuh"
 #include "sim_data.h"
 #include "sim_environment.h"
+#include <curand_kernel.h>
 
 namespace Aperture {
 
 namespace Kernels {
+
+__global__ void
+prepare_initial_condition(particle_data ptc,
+                          Grid_1dGR::mesh_ptrs mesh_ptrs,
+                          int multiplicity) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState local_state;
+  curand_init(1234, id, 0, &local_state);
+  for (int cell =
+           blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+       cell < dev_mesh.dims[0] - dev_mesh.guard[0];
+       cell += blockDim.x * gridDim.x) {
+    if (cell < dev_mesh.guard[0] ||
+        cell > dev_mesh.dims[0] - dev_mesh.guard[0])
+      continue;
+    // if (cell != 350) continue;
+    for (int n = 0; n < multiplicity; n++) {
+      size_t idx = cell * multiplicity * 2 + n * 2;
+      // ptc.x1[idx] = ptc.x1[idx + 1] = curand_uniform(&local_state);
+      ptc.x1[idx] = ptc.x1[idx + 1] = 1.0f;
+      ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
+      Scalar D1 = mesh_ptrs.D1[cell];
+      Scalar D2 = mesh_ptrs.D2[cell];
+      Scalar D3 = mesh_ptrs.D3[cell];
+      Scalar alpha = mesh_ptrs.alpha[cell];
+      Scalar K1 = mesh_ptrs.K1[cell];
+      Scalar rho0 = mesh_ptrs.rho0[cell];
+      Scalar u0 = sqrt(D2 / (D2 * (alpha * alpha - D3) + D1 * D1));
+
+      float u = curand_uniform(&local_state);
+      ptc.E[idx] = ptc.E[idx + 1] = u0;
+      ptc.cell[idx] = ptc.cell[idx + 1] = cell;
+      // ptc.cell[idx] = MAX_CELL;
+      ptc.weight[idx] = 0.05 * dev_params.B0 * K1 +
+                        std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
+      ptc.weight[idx + 1] = 0.05 * dev_params.B0 * K1 +
+                            max(rho0 * K1, 0.0f) / multiplicity;
+      // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
+      // u0, ptc.weight[idx]);
+      ptc.flag[idx] = set_ptc_type_flag(
+          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          ParticleType::electron);
+      ptc.flag[idx + 1] = set_ptc_type_flag(
+          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          ParticleType::positron);
+    }
+  }
+}
+
+__global__ void
+prepare_initial_photons(photon_data photons,
+                        Grid_1dGR::mesh_ptrs mesh_ptrs,
+                        int multiplicity) {
+  int id = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState local_state;
+  curand_init(1234, id, 0, &local_state);
+  for (int cell =
+           blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+       cell < dev_mesh.dims[0] - dev_mesh.guard[0];
+       cell += blockDim.x * gridDim.x) {
+    if (cell < dev_mesh.guard[0] ||
+        cell > dev_mesh.dims[0] - dev_mesh.guard[0])
+      continue;
+    for (int n = 0; n < multiplicity; n++) {
+      size_t idx = cell * multiplicity * 2 + n * 2;
+      // photons.x1[idx] = photons.x1[idx + 1] =
+      // curand_uniform(&local_state);
+      photons.x1[idx] = photons.x1[idx + 1] = 1.0f;
+      photons.p3[idx] = photons.p3[idx + 1] = 0.0f;
+      // TODO: Compute photon E
+      Scalar g11 = mesh_ptrs.gamma_rr[cell];
+      Scalar g33 = mesh_ptrs.gamma_ff[cell];
+      Scalar alpha = mesh_ptrs.alpha[cell];
+      constexpr Scalar a = 0.99;
+      Scalar xi = dev_mesh.pos(0, cell, 1.0f);
+      const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+      const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+      Scalar exp_xi = std::exp(xi * (rp - rm));
+      Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+      Scalar Delta = r * r - 2.0f * r + a * a;
+
+      photons.p1[idx] = 10.0f * curand_uniform(&local_state) * Delta;
+      photons.p1[idx + 1] =
+          -10.0f * curand_uniform(&local_state) * Delta;
+      photons.E[idx] = sgn(photons.p1[idx]) *
+                       std::sqrt(g11 * square(photons.p1[idx] / Delta) +
+                                 g33 * square(photons.p3[idx])) /
+                       alpha;
+      photons.E[idx + 1] =
+          sgn(photons.p1[idx + 1]) *
+          std::sqrt(g11 * square(photons.p1[idx + 1] / Delta) +
+                    g33 * square(photons.p3[idx + 1])) /
+          alpha;
+
+      photons.weight[idx] = photons.weight[idx + 1] = 1.0f;
+      photons.cell[idx] = photons.cell[idx + 1] = cell;
+      photons.flag[idx] = bit_or(PhotonFlag::tracked);
+      photons.flag[idx + 1] = bit_or(PhotonFlag::tracked);
+    }
+  }
+}
 
 __device__ Scalar
 interp_deriv(Scalar x, int c, const Scalar* array) {
@@ -299,6 +401,34 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
     Kernels::update_photon_1dgr<<<256, 512>>>(
         data.photons.data(), data.photons.number(), mesh_ptrs, dt);
     CudaCheckError();
+  }
+}
+
+void
+ptc_updater_1dgr::prepare_initial_condition(sim_data &data, int multiplicity) {
+  const Grid_1dGR* g =
+      dynamic_cast<const Grid_1dGR*>(&data.env.grid());
+  if (g != nullptr) {
+    Kernels::prepare_initial_condition<<<128, 256>>>(
+        data.particles.data(), g->get_mesh_ptrs(), multiplicity);
+    CudaCheckError();
+
+    data.particles.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
+    // particles.append({0.5, 0.0, 4000})
+  }
+}
+
+void
+ptc_updater_1dgr::prepare_initial_photons(sim_data &data, int multiplicity) {
+  const Grid_1dGR* g =
+      dynamic_cast<const Grid_1dGR*>(&data.env.grid());
+  if (g != nullptr) {
+    Kernels::prepare_initial_photons<<<128, 256>>>(
+        data.photons.data(), g->get_mesh_ptrs(), multiplicity);
+    CudaCheckError();
+
+    data.photons.set_num(g->mesh().reduced_dim(0) * 2 * multiplicity);
+    // particles.append({0.5, 0.0, 4000})
   }
 }
 

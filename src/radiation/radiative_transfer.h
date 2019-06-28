@@ -13,6 +13,7 @@ class radiative_transfer {
   radiative_transfer(sim_environment& env);
   ~radiative_transfer();
 
+  void initialize();
   void emit_photons(sim_data& data);
   void produce_pairs(sim_data& data);
 
