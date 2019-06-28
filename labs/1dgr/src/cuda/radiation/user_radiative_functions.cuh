@@ -5,6 +5,7 @@
 #include "cuda/cudarng.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/radiation/rt_ic.h"
+#include "cuda/radiation/rt_ic_dev.h"
 #include "grids/grid_1dgr.h"
 #include "radiation/spectra.h"
 #include "sim_environment.h"
@@ -17,8 +18,15 @@ __device__ Grid_1dGR::mesh_ptrs dev_mesh_ptrs_1dgr;
 
 __device__ bool
 check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
-  Scalar gamma = data.particles.E[tid];
-  return (gamma > dev_params.gamma_thr);
+  auto& ptc = data.particles;
+  uint32_t cell = ptc.cell[tid];
+  auto x1 = ptc.x1[tid];
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
+  Scalar gamma = alpha * ptc.E[tid];
+  float u = rng();
+  // Scalar gamma = data.particles.E[tid];
+  return (u < find_ic_rate(gamma) * alpha * dev_params.delta_t);
 }
 
 __device__ void
@@ -26,50 +34,91 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   auto& ptc = data.particles;
   auto& photons = data.photons;
 
+  Scalar x1 = ptc.x1[tid];
   Scalar p1 = ptc.p1[tid];
-  Scalar p2 = ptc.p2[tid];
-  Scalar p3 = ptc.p3[tid];
-  //   // Scalar gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
-  Scalar gamma = ptc.E[tid];
-  Scalar pi = std::sqrt(gamma * gamma - 1.0f);
+  Scalar u0_ptc = ptc.E[tid];
+  uint32_t c = ptc.cell[tid];
+  Scalar xi = dev_mesh.pos(0, c, x1);
+  // FIXME: pass a in as a parameter
+  const Scalar a = dev_params.a;
+  const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+  const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+  Scalar exp_xi = std::exp(xi * (rp - rm));
+  Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+  Scalar Delta = r * r - 2.0 * r + a * a;
 
-  Scalar u = rng();
-  Scalar Eph = 2.5f + u * (dev_params.E_secondary - 1.0f) * 2.0f;
-  Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
+  Scalar D1 = dev_mesh_ptrs_1dgr.D1[c] * x1 +
+              dev_mesh_ptrs_1dgr.D1[c - 1] * (1.0f - x1);
+  Scalar D2 = dev_mesh_ptrs_1dgr.D2[c] * x1 +
+              dev_mesh_ptrs_1dgr.D2[c - 1] * (1.0f - x1);
+  Scalar D3 = dev_mesh_ptrs_1dgr.D3[c] * x1 +
+              dev_mesh_ptrs_1dgr.D3[c - 1] * (1.0f - x1);
+  Scalar B3B1 = dev_mesh_ptrs_1dgr.B3B1[c] * x1 +
+                dev_mesh_ptrs_1dgr.B3B1[c - 1] * (1.0f - x1);
+  Scalar gamma = alpha * ptc.E[tid];
+  Scalar g11 = dev_mesh_ptrs_1dgr.gamma_rr[c] * x1 +
+               dev_mesh_ptrs_1dgr.gamma_rr[c - 1] * (1.0f - x1);
+  Scalar g33 = dev_mesh_ptrs_1dgr.gamma_ff[c] * x1 +
+               dev_mesh_ptrs_1dgr.gamma_ff[c - 1] * (1.0f - x1);
+  Scalar beta = dev_mesh_ptrs_1dgr.beta_phi[c] * x1 +
+                dev_mesh_ptrs_1dgr.beta_phi[c - 1] * (1.0f - x1);
 
-  ptc.p1[tid] = p1 * pf / pi;
-  ptc.p2[tid] = p2 * pf / pi;
-  ptc.p3[tid] = p3 * pf / pi;
-  ptc.E[tid] = gamma - Eph;
+  Scalar ur_ptc = u0_ptc * Delta * (p1 / u0_ptc - D1) / D2;
+  // Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
 
-  auto c = ptc.cell[tid];
-  Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
-  Scalar lph = min(
-      10.0f, (1.0f / std::sin(theta) - 1.0f) * dev_params.photon_path);
+  Scalar Eph = gen_photon_e(gamma, &rng.m_local_state);
+  // Limit energy loss so that remaining particle momentum still
+  // makes sense
+  if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
+
+  ptc.E[tid] = (gamma - Eph) / alpha;
+  // TODO: What happens if p1 becomes NaN??
+  ptc.p1[tid] =
+      sgn(p1) * std::sqrt(square(ptc.E[tid]) *
+                              (D2 * (alpha * alpha - D3) + D1 * D1) -
+                          D2);
+  if (ptc.p1[tid] != ptc.p1[tid]) ptc.p1[tid] = 0.0f;
+
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
-  // if (std::abs(Eph) < dev_params.E_ph_min) continue;
-  if (theta < 0.005f || theta > CONST_PI - 0.005f) return;
+  if (std::abs(Eph) < dev_params.E_ph_min) return;
 
-  u = rng();
-  // Add the new photo
-  Scalar path = lph * (0.5f + 0.5f * u);
-  if (path > dev_params.r_cutoff) return;
+  // Add the new photon
+  // Scalar path = rad_model.draw_photon_freepath(Eph);
   // printf("Eph is %f, path is %f\n", Eph, path);
   photons.x1[offset] = ptc.x1[tid];
-  photons.x2[offset] = ptc.x2[tid];
-  photons.x3[offset] = ptc.x3[tid];
-  photons.p1[offset] = Eph * p1 / pi;
-  photons.p2[offset] = Eph * p2 / pi;
-  photons.p3[offset] = Eph * p3 / pi;
+  photons.p1[offset] = (Eph / gamma) * ur_ptc / g11;
+  photons.p3[offset] =
+      (Eph / gamma) *
+      (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
+  photons.E[offset] = Eph / alpha;
   photons.weight[offset] = ptc.weight[tid];
-  photons.path_left[offset] = path;
-  photons.cell[offset] = ptc.cell[tid];
+  photons.cell[offset] = c;
+  float u = rng();
+  photons.flag[offset] =
+      (u < dev_params.track_percent ? bit_or(PhotonFlag::tracked) : 0);
 }
 
 __device__ bool
 check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
-  return data.photons.path_left[tid] <= 0.0f;
+  auto& photons = data.photons;
+  uint32_t cell = photons.cell[tid];
+
+  auto x1 = photons.x1[tid];
+
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
+  Scalar u0_hat = alpha * std::abs(photons.E[tid]);
+  if (u0_hat < dev_params.E_ph_min) {
+    photons.cell[tid] = MAX_CELL;
+    return false;
+  }
+
+  Scalar prob = find_gg_rate(u0_hat) * alpha * dev_params.delta_t;
+  float u = rng();
+  return u < prob;
 }
 
 __device__ void
@@ -78,48 +127,43 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   auto& ptc = data.particles;
   auto& photons = data.photons;
 
-  Scalar p1 = photons.p1[tid];
-  Scalar p2 = photons.p2[tid];
-  Scalar p3 = photons.p3[tid];
-  Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
-  if (E_ph2 <= 4.01f) E_ph2 = 4.01f;
-  // Scalar new_p = std::sqrt(max(0.25f * E_ph *
-  // E_ph, 1.0f)
-  // - 1.0f);
-  Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
-  Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
-  if (gamma != gamma) {
-    // printf(
-    //     "NaN detected in pair creation! ratio is %f, // E_ph2 is %f,
-    //     " "p1 is "
-    //     "%f, "
-    //     "p2 is %f, p3 is %f\n",
-    //     ratio, E_ph2, p1, p2, p3);
-    // asm("trap;");
-    photons.cell[tid] = MAX_CELL;
-    return;
-  }
+  Scalar u0 = 0.5f * std::abs(photons.E[tid]);
+
+  uint32_t c = photons.cell[tid];
+  Pos_t x1 = photons.x1[tid];
+
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
+  Scalar D1 = dev_mesh_ptrs_1dgr.D1[c] * x1 +
+              dev_mesh_ptrs_1dgr.D1[c - 1] * (1.0f - x1);
+  Scalar D2 = dev_mesh_ptrs_1dgr.D2[c] * x1 +
+              dev_mesh_ptrs_1dgr.D2[c - 1] * (1.0f - x1);
+  Scalar D3 = dev_mesh_ptrs_1dgr.D3[c] * x1 +
+              dev_mesh_ptrs_1dgr.D3[c - 1] * (1.0f - x1);
+
+  Scalar p1 =
+      sgn(photons.p1[tid]) *
+      std::sqrt(u0 * u0 * (D2 * (alpha * alpha - D3) + D1 * D1) - D2);
+  if (p1 != p1) p1 = 0.0f;
+
   uint32_t offset_e = offset;
   uint32_t offset_p = offset + 1;
 
-  ptc.x1[offset_e] = ptc.x1[offset_p] = photons.x1[tid];
-  ptc.x2[offset_e] = ptc.x2[offset_p] = photons.x2[tid];
-  ptc.x3[offset_e] = ptc.x3[offset_p] = photons.x3[tid];
-  // printf("x1 = %f, x2 = %f, x3 = %f\n",
-  // ptc.x1[offset_e],
+  // Add the two new particles
+  ptc.x1[offset_e] = ptc.x1[offset_p] = x1;
+  // printf("x1 = %f, x2 = %f, x3 = %f\n", ptc.x1[offset_e],
   // ptc.x2[offset_e], ptc.x3[offset_e]);
 
-  ptc.p1[offset_e] = ptc.p1[offset_p] = ratio * p1;
-  ptc.p2[offset_e] = ptc.p2[offset_p] = ratio * p2;
-  ptc.p3[offset_e] = ptc.p3[offset_p] = ratio * p3;
-  ptc.E[offset_e] = ptc.E[offset_p] = gamma;
+  ptc.p1[offset_e] = ptc.p1[offset_p] = p1;
+  ptc.E[offset_e] = ptc.E[offset_p] = u0;
 
 #ifndef NDEBUG
   assert(ptc.cell[offset_e] == MAX_CELL);
   assert(ptc.cell[offset_p] == MAX_CELL);
 #endif
+
   ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
-  ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
+  ptc.cell[offset_e] = ptc.cell[offset_p] = c;
   ptc.flag[offset_e] = set_ptc_type_flag(
       bit_or(ParticleFlag::secondary), ParticleType::electron);
   ptc.flag[offset_p] = set_ptc_type_flag(
@@ -134,15 +178,16 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
 void
 user_rt_init(sim_environment& env) {
   static inverse_compton rt_ic(env.params());
-  static Spectra::broken_power_law rt_ne(
-      1.25, 1.1, env.params().e_min, 1.0e-10, 0.1);
+  static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
+                                         1.0e-10, 0.1);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
              1.50e24 / env.params().ic_path);
 
-  // TODO: copy the mesh pointer to device memory
+  // Copy the mesh pointer to device memory
   Grid_1dGR* grid = dynamic_cast<Grid_1dGR*>(&env.local_grid());
   auto ptrs = grid->get_mesh_ptrs();
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_mesh_ptrs_1dgr, (void*)&ptrs,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_mesh_ptrs_1dgr,
+                                  (void*)&ptrs,
                                   sizeof(Grid_1dGR::mesh_ptrs)));
 }
 
