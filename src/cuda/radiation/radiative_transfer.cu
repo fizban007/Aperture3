@@ -168,9 +168,15 @@ radiative_transfer::radiative_transfer(sim_environment &env)
   m_numPerBlock = array<int>(m_blocksPerGrid);
   m_cumNumPerBlock = array<int>(m_blocksPerGrid);
   m_posInBlock = array<int>(m_env.params().max_ptc_number);
+  initialize();
 }
 
 radiative_transfer::~radiative_transfer() {}
+
+void
+radiative_transfer::initialize() {
+  user_rt_init(m_env);
+}
 
 void
 radiative_transfer::emit_photons(sim_data &data) {

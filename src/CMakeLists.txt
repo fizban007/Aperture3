@@ -47,6 +47,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     "cuda/algorithms/ptc_updater_logsph.cu"
     "cuda/algorithms/ptc_updater_1dgr.cu"
     "cuda/radiation/radiative_transfer.cu"
+    "cuda/radiation/rt_ic.cu"
     "cuda/core/finite_diff.cu"
     )
 else()
