@@ -39,7 +39,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar u0_ptc = ptc.E[tid];
   uint32_t c = ptc.cell[tid];
   Scalar xi = dev_mesh.pos(0, c, x1);
-  // FIXME: pass a in as a parameter
+
   const Scalar a = dev_params.a;
   const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
   const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
@@ -74,11 +74,12 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
 
   ptc.E[tid] = (gamma - Eph) / alpha;
-  // TODO: What happens if p1 becomes NaN??
+   
   ptc.p1[tid] =
       sgn(p1) * std::sqrt(square(ptc.E[tid]) *
                               (D2 * (alpha * alpha - D3) + D1 * D1) -
                           D2);
+  // if p1 becomes NaN, set it to zero
   if (ptc.p1[tid] != ptc.p1[tid]) ptc.p1[tid] = 0.0f;
 
   // If photon energy is too low, do not track it, but still
