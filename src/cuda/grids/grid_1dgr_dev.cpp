@@ -66,8 +66,9 @@ Grid_1dGR_dev::init(const SimParams& params) {
   data_dpsidth.read(v_dpsidth.data());
 
   Scalar omega, a;
-  HF::DataSet data_omega = coef_file.getDataSet("w");
-  data_omega.read(omega);
+  // HF::DataSet data_omega = coef_file.getDataSet("w");
+  // data_omega.read(omega);
+  omega = params.omega;
   HF::DataSet data_a = coef_file.getDataSet("a");
   data_a.read(a);
   Logger::print_info("------- omega is {}, a is {}", omega, a);
@@ -88,6 +89,7 @@ Grid_1dGR_dev::init(const SimParams& params) {
     double x = (r - v_r[n_data]) / (v_r[n_data + 1] - v_r[n_data]);
     Scalar B1 = v_B1[n_data] * (1.0 - x) + v_B1[n_data + 1] * x;
     Scalar B3 = v_B3[n_data] * (1.0 - x) + v_B3[n_data + 1] * x;
+    // Scalar B3 = 0.0;
     Scalar theta =
         v_theta[n_data] * (1.0 - x) + v_theta[n_data + 1] * x;
     Scalar b31 = B3 / B1;
