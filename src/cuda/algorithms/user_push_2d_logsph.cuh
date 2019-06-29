@@ -1,5 +1,5 @@
-#ifndef _USER_PUSH_2D_CUH_
-#define _USER_PUSH_2D_CUH_
+#ifndef _USER_PUSH_2D_LOGSPH_CUH_
+#define _USER_PUSH_2D_LOGSPH_CUH_
 
 #include "cuda/constant_mem.h"
 #include "cuda/data_ptrs.h"
@@ -12,7 +12,7 @@ namespace Aperture {
 namespace Kernels {
 
 __device__ __forceinline__ void
-user_push_2d(data_ptrs& data, size_t idx, Scalar dt) {
+user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt) {
   auto& ptc = data.particles;
 
   auto c = ptc.cell[idx];
@@ -117,4 +117,4 @@ user_push_2d(data_ptrs& data, size_t idx, Scalar dt) {
 
 }  // namespace Aperture
 
-#endif  // _USER_PUSH_2D_CUH_
+#endif  // _USER_PUSH_2D_LOGSPH_CUH_

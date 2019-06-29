@@ -13,9 +13,7 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 
-#include "cuda/algorithms/user_push_2d.cuh"
-
-#define DEPOSIT_EPS 1.0e-10f
+#include "cuda/algorithms/user_push_2d_logsph.cuh"
 
 namespace Aperture {
 
@@ -48,10 +46,10 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
-vay_push_2d(data_ptrs data, size_t num, Scalar dt) {
+vay_push_logsph_2d(data_ptrs data, size_t num, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
-    user_push_2d(data, idx, dt);
+    user_push_2d_logsph(data, idx, dt);
   }
 }
 
@@ -591,10 +589,10 @@ add_extra_particles(particle_data ptc, size_t num,
 }
 
 __global__ void
-filter_current(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
-               pitchptr<Scalar> A, bool boundary_lower0,
-               bool boundary_upper0, bool boundary_lower1,
-               bool boundary_upper1) {
+filter_current_logsph(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+                      pitchptr<Scalar> A, bool boundary_lower0,
+                      bool boundary_upper0, bool boundary_lower1,
+                      bool boundary_upper1) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -648,7 +646,10 @@ ptc_updater_logsph::ptc_updater_logsph(sim_environment &env)
     : m_env(env),
       m_surface_e(env.params().N[1]),
       m_surface_p(env.params().N[1]),
-      m_surface_tmp(env.params().N[1]) {}
+        m_surface_tmp(env.params().N[1]) {
+  m_tmp_j1 = multi_array<Scalar>(env.local_grid().extent());
+  m_tmp_j2 = multi_array<Scalar>(env.local_grid().extent());
+}
 
 ptc_updater_logsph::~ptc_updater_logsph() {}
 
@@ -672,8 +673,8 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       Logger::print_info(
           "Updating {} particles in log spherical coordinates",
           data.particles.number());
-      Kernels::vay_push_2d<<<256, 512>>>(data_p,
-                                         data.particles.number(), dt);
+      Kernels::vay_push_logsph_2d<<<256, 512>>>(
+          data_p, data.particles.number(), dt);
       CudaCheckError();
     }
     CudaSafeCall(cudaDeviceSynchronize());
@@ -720,21 +721,21 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       dim3 blockSize(32, 16);
       dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
-      Kernels::filter_current<<<gridSize, blockSize>>>(
+      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(0)), get_pitchptr(m_tmp_j1),
           mesh_ptrs.A1_e, m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(0).copy_from(m_tmp_j1);
       CudaCheckError();
 
-      Kernels::filter_current<<<gridSize, blockSize>>>(
+      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(1)), get_pitchptr(m_tmp_j2),
           mesh_ptrs.A2_e, m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(1).copy_from(m_tmp_j2);
       CudaCheckError();
 
-      Kernels::filter_current<<<gridSize, blockSize>>>(
+      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(2)), get_pitchptr(m_tmp_j2),
           mesh_ptrs.A3_e, m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
@@ -743,7 +744,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
 
       if ((step + 1) % data.env.params().data_interval == 0) {
         for (int i = 0; i < data.env.params().num_species; i++) {
-          Kernels::filter_current<<<gridSize, blockSize>>>(
+          Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
               get_pitchptr(data.Rho[i].data()), get_pitchptr(m_tmp_j1),
               mesh_ptrs.dV, m_env.is_boundary(0), m_env.is_boundary(1),
               m_env.is_boundary(2), m_env.is_boundary(3));

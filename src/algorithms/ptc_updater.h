@@ -1,6 +1,8 @@
 #ifndef _PTC_UPDATER_H_
 #define _PTC_UPDATER_H_
 
+#include "core/multi_array.h"
+
 namespace Aperture {
 
 struct sim_data;
@@ -16,6 +18,7 @@ class ptc_updater {
 
  protected:
   sim_environment& m_env;
+  multi_array<Scalar> m_tmp_j;
 };
 
 }  // namespace Aperture
