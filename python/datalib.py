@@ -36,6 +36,9 @@ class Data:
         self.__dict__.update(("_" + k, None) for k in self._keys)
         f.close()
 
+    def __dir__(self):
+        return self._keys + ["load"]
+
     def __getattr__(self, key):
         if key in self._keys:
             content = getattr(self, "_" + key)

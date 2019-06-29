@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
   Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  // data.prepare_initial_condition(8);
-  data.prepare_initial_photons(50);
+  data.prepare_initial_condition(8);
+  // data.prepare_initial_photons(10);
   Logger::print_debug("Finished initializing initial condition");
 
   // Initialize data exporter

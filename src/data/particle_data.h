@@ -65,6 +65,7 @@ DEF_PARTICLE_STRUCT(particle1d,
                     (Aperture::Scalar, p1, 0.0)
                     (Aperture::Scalar, E, 0.0)
                     (Aperture::Scalar, weight, 0.0)
+                    (Aperture::Scalar, u0inf, 0.0)
                     (uint32_t, cell, MAX_CELL)
                     (uint32_t, flag, 0));
 
@@ -94,6 +95,7 @@ DEF_PARTICLE_STRUCT(photon1d,
                     (Aperture::Scalar, E, 0.0)
                     (Aperture::Scalar, weight, 0.0)
                     (Aperture::Scalar, path_left, 0.0)
+                    (Aperture::Scalar, u0inf, 0.0)
                     (uint32_t, cell, MAX_CELL)
                     (uint32_t, flag, 0));
 
