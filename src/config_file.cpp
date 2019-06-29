@@ -161,6 +161,11 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
     if (tile_size) {
       for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i];
     }
+
+    auto nodes = mesh_table->get_array_of<int64_t>("nodes");
+    if (nodes) {
+      for (int i = 0; i < 3; i++) params.nodes[i] = (*nodes)[i];
+    }
   }
 
   // Simulation configuration

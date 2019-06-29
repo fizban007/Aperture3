@@ -11,21 +11,18 @@ namespace Aperture {
 
 struct domain_info {
  public:
-  int dim = 1;
+  int size = 1;
   int rank = 0;
-  std::array<bool, 6> is_boundary = {false, false, false,
-                                     false, false, false};
-  std::array<bool, 3> is_periodic = {
-      false, false, false};  ///< Marks whether the domain is
-                             ///  periodic in each direction
-  std::array<int, 3>
-      cart_neighbor_right;  ///< Ranks of the right neighbors in each
-                            ///< direction
-  std::array<int, 3>
-      cart_neighbor_left;  ///< Ranks of the left neighbors in each
-                           ///< direction
-  std::array<int, 3> cart_dims;
-  Index cart_pos;
+  bool is_boundary[6] = {false, false, false, false, false, false};
+  int is_periodic[3] = {false, false,
+                         false};  ///< Marks whether the domain is
+                                  ///  periodic in each direction
+  int neighbor_right[3];  ///< Ranks of the right neighbors in each
+                          ///< direction
+  int neighbor_left[3];   ///< Ranks of the left neighbors in each
+                          ///< direction
+  int cart_dims[3] = {1};
+  int cart_coord[3] = {0};
 
   // std::vector<std::vector<std::vector<int>>>
   //     rank_map;  ///< Rank map of the domain decomposition

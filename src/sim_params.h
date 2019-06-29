@@ -93,6 +93,7 @@ struct SimParamsBase {
   float size[3] = {0.0};
   int tile_size[3] = {1};
   int grid_dim = 1;
+  int nodes[3] = {1};
 };
 
 struct SimParams : public SimParamsBase {
