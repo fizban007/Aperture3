@@ -81,9 +81,12 @@ class sim_environment {
   std::unique_ptr<Grid> m_grid;
   std::unique_ptr<Grid> m_super_grid;
 
+  MPI_Comm m_world;
+  MPI_Comm m_cart;
+  MPI_Datatype m_scalar_type;
   domain_info m_domain_info;
 
-  std::unique_ptr<MPIComm> m_comm;
+  // std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;
   // std::unique_ptr<InitialCondition> m_ic;
   std::default_random_engine m_generator;

@@ -349,6 +349,11 @@ ptc_updater::update_particles(sim_data &data, double dt,
 }
 
 void
-ptc_updater::apply_boundary(sim_data &data, double dt, uint32_t step) {}
+ptc_updater::apply_boundary(sim_data &data, double dt, uint32_t step) {
+  data.particles.clear_guard_cells(m_env.local_grid());
+  data.photons.clear_guard_cells(m_env.local_grid());
+  CudaSafeCall(cudaDeviceSynchronize());
+
+}
 
 }  // namespace Aperture

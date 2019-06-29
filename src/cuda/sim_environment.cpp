@@ -13,8 +13,7 @@ sim_environment::setup_env_extra() {
     Logger::err("No usable Cuda device found!!");
     exit(1);
   }
-  int rank = m_comm->world().rank();
-  m_dev_id = rank % n_devices;
+  m_dev_id = m_domain_info.rank % n_devices;
 
   // m_dev_map.resize(n_devices);
   Logger::print_info("Found {} Cuda devices, using dev {}", n_devices,
