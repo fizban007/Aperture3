@@ -108,8 +108,8 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
 }
 
 void
-init_rand_states(curandState* states, int seed, int threadPerBlock,
-                 int blockPerGrid) {
+init_rand_states(curandState* states, int seed, int blockPerGrid,
+                 int threadPerBlock) {
   Kernels::init_rand_states<<<blockPerGrid, threadPerBlock>>>(states,
                                                               seed);
   CudaCheckError();

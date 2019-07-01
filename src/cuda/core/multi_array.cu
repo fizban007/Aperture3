@@ -53,6 +53,7 @@ multi_array<T>::alloc_mem(const Extent& ext) {
   CudaSafeCall(cudaMalloc3D(&ptr, extent));
   m_data_d = ptr.ptr;
   m_pitch = ptr.pitch;
+  Logger::print_info("pitch is {}, x is {}, y is {}", m_pitch, ptr.xsize, ptr.ysize);
 }
 
 template <typename T>
@@ -64,6 +65,7 @@ multi_array<T>::free_mem() {
   }
   if (m_data_d != nullptr) {
     CudaSafeCall(cudaFree(m_data_d));
+    m_data_d = nullptr;
   }
 }
 
@@ -110,6 +112,13 @@ multi_array<T>::sync_to_host() {
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
+
+  Logger::print_info("myParms.ext is {}x{}x{}", myParms.extent.width,
+                     myParms.extent.height, myParms.extent.depth);
+  Logger::print_info("srcPtr has pitch = {}, xsize = {}, ysize = {}",
+                     myParms.srcPtr.pitch, myParms.srcPtr.xsize, myParms.srcPtr.ysize);
+  Logger::print_info("dstPtr has pitch = {}, xsize = {}, ysize = {}",
+                     myParms.dstPtr.pitch, myParms.dstPtr.xsize, myParms.dstPtr.ysize);
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }

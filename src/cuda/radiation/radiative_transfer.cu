@@ -104,7 +104,7 @@ count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
   for (uint32_t tid = id; tid < number; tid += blockDim.x * gridDim.x) {
     uint32_t cell = data.photons.cell[tid];
     // Skip empty photons
-    if (cell == MAX_CELL) continue;
+    if (cell == MAX_CELL || !dev_mesh.is_in_bulk(cell)) continue;
     //   // Remove photon if it is too close to the axis
     //   Scalar theta = dev_mesh.pos(1, c2, photons.x2[tid]);
     //   if (theta < dev_mesh.delta[1] ||

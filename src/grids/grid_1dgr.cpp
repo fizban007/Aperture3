@@ -153,13 +153,13 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     m_agrr[n] = Delta * Delta * std::sqrt(Delta * Sigma / A) * g11;
     // Scalar denom = (m_alpha2[n] - m_D3[n]) * m_D2[n] +
     // square(m_D1[n]);
-    if (n % 10 == 0) {
-      Logger::print_info(
-          "rho0 is {}, rho0*K1 is {}, sqrt_gamma is {}, j0 is "
-          "{}, K1 is "
-          "{}",
-          m_rho0[n], m_rho0[n] * m_K1[n], sqrt_gamma, m_j0[n], m_K1[n]);
-    }
+    // if (n % 10 == 0) {
+    //   Logger::print_info(
+    //       "rho0 is {}, rho0*K1 is {}, sqrt_gamma is {}, j0 is "
+    //       "{}, K1 is "
+    //       "{}",
+    //       m_rho0[n], m_rho0[n] * m_K1[n], sqrt_gamma, m_j0[n], m_K1[n]);
+    // }
   }
   m_D1.sync_to_device();
   m_D2.sync_to_device();

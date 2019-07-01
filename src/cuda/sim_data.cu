@@ -2,9 +2,10 @@
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
-#include "cuda/utils/pitchptr.cuh"
 #include "cuda/kernels.h"
+#include "cuda/utils/pitchptr.cuh"
 #include "sim_data_impl.hpp"
+#include "visit_struct/visit_struct.hpp"
 
 namespace Aperture {
 
@@ -305,12 +306,18 @@ sim_data::initialize(const sim_environment& env) {
     g_ptrs.ptc_num[n] = get_pitchptr(ptc_num[n].data());
   }
 
+  visit_struct::for_each(
+      g_ptrs.particles, particles.data(),
+      [](const char* name, auto& u, auto& v) { u = v; });
+  visit_struct::for_each(
+      g_ptrs.photons, photons.data(),
+      [](const char* name, auto& u, auto& v) { u = v; });
+
   int seed = env.params().random_seed;
 
   CudaSafeCall(
-      cudaMalloc(&d_rand_states, 1024 * 1024 * sizeof(curandState)));
-  init_rand_states((curandState*)d_rand_states, seed,
-                   1024, 1024);
+      cudaMalloc(&d_rand_states, 1024 * 512 * sizeof(curandState)));
+  init_rand_states((curandState*)d_rand_states, seed, 1024, 512);
 }
 
 void
@@ -318,13 +325,11 @@ sim_data::finalize() {
   CudaSafeCall(cudaFree(g_ptrs.Rho));
   CudaSafeCall(cudaFree(g_ptrs.gamma));
   CudaSafeCall(cudaFree(g_ptrs.ptc_num));
-  cudaFree((curandState *)d_rand_states);
-
+  cudaFree((curandState*)d_rand_states);
 }
 
 void
 sim_data::init_bg_fields() {
-  Logger::print_debug("on host, B0 is {}", Bbg(0, 5, 4, 0));
   init_dev_bg_fields(Ebg, Bbg);
   Kernels::check_bg_fields<<<1, 1>>>();
   CudaCheckError();

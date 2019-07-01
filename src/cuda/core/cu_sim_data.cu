@@ -445,172 +445,172 @@ cu_sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   // check_mesh_ptrs();
 // }
 
-// void
-// cu_sim_data::send_particles() {
-//   timer::stamp("send_ptc");
-//   std::vector<int *> ptc_send_left(dev_map.size());
-//   std::vector<int *> ptc_send_right(dev_map.size());
-//   std::vector<int *> ph_send_left(dev_map.size());
-//   std::vector<int *> ph_send_right(dev_map.size());
-//   for (int i = 0; i < dev_map.size(); i++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[i]));
-//     CudaSafeCall(cudaMallocManaged(&(ptc_send_left[i]), sizeof(int)));
-//     *ptc_send_left[i] = 0;
-//     CudaSafeCall(cudaMallocManaged(&(ptc_send_right[i]), sizeof(int)));
-//     *ptc_send_right[i] = 0;
-//     CudaSafeCall(cudaMallocManaged(&(ph_send_left[i]), sizeof(int)));
-//     *ph_send_left[i] = 0;
-//     CudaSafeCall(cudaMallocManaged(&(ph_send_right[i]), sizeof(int)));
-//     *ph_send_right[i] = 0;
-//   }
-//   int last_dim = grid[0]->dim() - 1;
-//   // Logger::print_debug("last_dim is {}", last_dim);
-//   for (int n = 0; n < dev_map.size(); n++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[n]));
-//     Kernels::send_particles<<<256, 512>>>(
-//         particles[n].data(), particles[n].number(),
-//         ptc_buffer[2 * n].data(), ptc_buffer[2 * n + 1].data(),
-//         last_dim, ptc_send_left[n], ptc_send_right[n]);
-//     CudaCheckError();
+void
+cu_sim_data::send_particles() {
+  timer::stamp("send_ptc");
+  std::vector<int *> ptc_send_left(dev_map.size());
+  std::vector<int *> ptc_send_right(dev_map.size());
+  std::vector<int *> ph_send_left(dev_map.size());
+  std::vector<int *> ph_send_right(dev_map.size());
+  for (int i = 0; i < dev_map.size(); i++) {
+    CudaSafeCall(cudaSetDevice(dev_map[i]));
+    CudaSafeCall(cudaMallocManaged(&(ptc_send_left[i]), sizeof(int)));
+    *ptc_send_left[i] = 0;
+    CudaSafeCall(cudaMallocManaged(&(ptc_send_right[i]), sizeof(int)));
+    *ptc_send_right[i] = 0;
+    CudaSafeCall(cudaMallocManaged(&(ph_send_left[i]), sizeof(int)));
+    *ph_send_left[i] = 0;
+    CudaSafeCall(cudaMallocManaged(&(ph_send_right[i]), sizeof(int)));
+    *ph_send_right[i] = 0;
+  }
+  int last_dim = grid[0]->dim() - 1;
+  // Logger::print_debug("last_dim is {}", last_dim);
+  for (int n = 0; n < dev_map.size(); n++) {
+    CudaSafeCall(cudaSetDevice(dev_map[n]));
+    Kernels::send_particles<<<256, 512>>>(
+        particles[n].data(), particles[n].number(),
+        ptc_buffer[2 * n].data(), ptc_buffer[2 * n + 1].data(),
+        last_dim, ptc_send_left[n], ptc_send_right[n]);
+    CudaCheckError();
 
-//     Kernels::send_photons<<<256, 512>>>(
-//         photons[n].data(), photons[n].number(), ph_buffer[2 * n].data(),
-//         ph_buffer[2 * n + 1].data(), last_dim, ph_send_left[n],
-//         ph_send_right[n]);
-//     CudaCheckError();
-//   }
-//   for_each_device(dev_map,
-//                   [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
-//   for (int n = 1; n < dev_map.size(); n++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[n - 1]));
-//     visit_struct::for_each(
-//         particles[n - 1].data(), ptc_buffer[2 * n].data(),
-//         [&](const char *name, auto &x1, auto &x2) {
-//           typedef typename std::remove_reference<decltype(*x1)>::type
-//               x_type;
-//           CudaSafeCall(cudaMemcpyPeer(
-//               x1 + particles[n - 1].number(), dev_map[n - 1], x2,
-//               dev_map[n], *ptc_send_left[n] * sizeof(x_type)));
-//         });
-//     particles[n - 1].set_num(particles[n - 1].number() +
-//                              *ptc_send_left[n]);
-//     Logger::print_info("Sending {} particles from dev {} to dev {}",
-//                        *ptc_send_left[n], n, n - 1);
-//   }
-//   for (int n = 0; n < dev_map.size() - 1; n++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[n + 1]));
-//     visit_struct::for_each(
-//         particles[n + 1].data(), ptc_buffer[2 * n + 1].data(),
-//         [&](const char *name, auto &x1, auto &x2) {
-//           typedef typename std::remove_reference<decltype(*x1)>::type
-//               x_type;
-//           CudaSafeCall(cudaMemcpyPeer(
-//               x1 + particles[n + 1].number(), dev_map[n + 1], x2,
-//               dev_map[n], *ptc_send_right[n] * sizeof(x_type)));
-//         });
-//     particles[n + 1].set_num(particles[n + 1].number() +
-//                              *ptc_send_right[n]);
-//     Logger::print_info("Sending {} particles from dev {} to dev {}",
-//                        *ptc_send_right[n], n, n + 1);
-//   }
-//   for (int n = 1; n < dev_map.size(); n++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[n - 1]));
-//     visit_struct::for_each(
-//         photons[n - 1].data(), ph_buffer[2 * n].data(),
-//         [&](const char *name, auto &x1, auto &x2) {
-//           typedef typename std::remove_reference<decltype(*x1)>::type
-//               x_type;
-//           CudaSafeCall(cudaMemcpyPeer(
-//               x1 + photons[n - 1].number(), dev_map[n - 1], x2,
-//               dev_map[n], *ph_send_left[n] * sizeof(x_type)));
-//         });
-//     photons[n - 1].set_num(photons[n - 1].number() + *ph_send_left[n]);
-//   }
-//   for (int n = 0; n < dev_map.size() - 1; n++) {
-//     CudaSafeCall(cudaSetDevice(dev_map[n + 1]));
-//     visit_struct::for_each(
-//         photons[n + 1].data(), ph_buffer[2 * n + 1].data(),
-//         [&](const char *name, auto &x1, auto &x2) {
-//           typedef typename std::remove_reference<decltype(*x1)>::type
-//               x_type;
-//           CudaSafeCall(cudaMemcpyPeer(
-//               x1 + photons[n + 1].number(), dev_map[n + 1], x2,
-//               dev_map[n], *ph_send_right[n] * sizeof(x_type)));
-//         });
-//     photons[n + 1].set_num(photons[n + 1].number() + *ph_send_right[n]);
-//   }
-//   for_each_device(dev_map,
-//                   [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
-//   // for (int i = 0; i < dev_map.size(); i++) {
-//   //   if (particles[i].number() == 0)
-//   //     continue;
-//   //   CudaSafeCall(cudaSetDevice(dev_map[i]));
-//   //   if (i > 0) {
-//   //     // Send particles right
-//   //     Kernels::send_particles<<<256, 512>>>(
-//   //         particles[i - 1].data(), particles[i - 1].number(),
-//   //         particles[i].data(), particles[i].number(),
-//   //         ptc_recv_left[i], grid[0]->dim() - 1, 1);
-//   //     CudaCheckError();
-//   //   }
-//   //   if (i < dev_map.size() - 1) {
-//   //     // Send particles left
-//   //     Kernels::send_particles<<<256, 512>>>(
-//   //         particles[i + 1].data(), particles[i + 1].number(),
-//   //         particles[i].data(), particles[i].number(),
-//   //         ptc_recv_right[i], grid[0]->dim() - 1, 0);
-//   //     CudaCheckError();
-//   //   }
-//   // }
-//   // for (int i = 0; i < dev_map.size(); i++) {
-//   //   if (photons[i].number() == 0)
-//   //     continue;
-//   //   CudaSafeCall(cudaSetDevice(dev_map[i]));
-//   //   if (i > 0) {
-//   //     // Send particles right
-//   //     Kernels::send_photons<<<256, 512>>>(
-//   //         photons[i - 1].data(), photons[i - 1].number(),
-//   //         photons[i].data(), photons[i].number(), ph_recv_left[i],
-//   //         grid[0]->dim() - 1, 1);
-//   //     CudaCheckError();
-//   //   }
-//   //   if (i < dev_map.size() - 1) {
-//   //     // Send particles left
-//   //     Kernels::send_photons<<<256, 512>>>(
-//   //         photons[i + 1].data(), photons[i + 1].number(),
-//   //         photons[i].data(), photons[i].number(), ph_recv_right[i],
-//   //         grid[0]->dim() - 1, 0);
-//   //     CudaCheckError();
-//   //   }
-//   // }
-//   // for (int i = 0; i < dev_map.size(); i++) {
-//   //   CudaSafeCall(cudaSetDevice(dev_map[i]));
-//   //   CudaSafeCall(cudaDeviceSynchronize());
-//   //   if (i > 0) {
-//   //     particles[i].set_num(particles[i].number() +
-//   //     *ptc_recv_left[i]); photons[i].set_num(photons[i].number() +
-//   //     *ph_recv_left[i]); Logger::print_info("Sent {} particles from
-//   //     dev {} to dev {}", *ptc_recv_left[i],
-//   //                        i - 1, i);
-//   //   }
-//   //   if (i < dev_map.size() - 1) {
-//   //     particles[i].set_num(particles[i].number() +
-//   //     *ptc_recv_right[i]); photons[i].set_num(photons[i].number() +
-//   //                            *ph_recv_right[i]);
-//   //     Logger::print_info("Sent {} particles from dev {} to dev {}",
-//   //     *ptc_recv_right[i],
-//   //                        i + 1, i);
-//   //   }
-//   // }
-//   for_each_device(dev_map, [&](int i) {
-//     CudaSafeCall(cudaFree(ptc_send_left[i]));
-//     CudaSafeCall(cudaFree(ptc_send_right[i]));
-//     CudaSafeCall(cudaFree(ph_send_left[i]));
-//     CudaSafeCall(cudaFree(ph_send_right[i]));
-//   });
-//   timer::show_duration_since_stamp("Sending particles", "ms",
-//                                    "send_ptc");
-// }
+    Kernels::send_photons<<<256, 512>>>(
+        photons[n].data(), photons[n].number(), ph_buffer[2 * n].data(),
+        ph_buffer[2 * n + 1].data(), last_dim, ph_send_left[n],
+        ph_send_right[n]);
+    CudaCheckError();
+  }
+  for_each_device(dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+  for (int n = 1; n < dev_map.size(); n++) {
+    CudaSafeCall(cudaSetDevice(dev_map[n - 1]));
+    visit_struct::for_each(
+        particles[n - 1].data(), ptc_buffer[2 * n].data(),
+        [&](const char *name, auto &x1, auto &x2) {
+          typedef typename std::remove_reference<decltype(*x1)>::type
+              x_type;
+          CudaSafeCall(cudaMemcpyPeer(
+              x1 + particles[n - 1].number(), dev_map[n - 1], x2,
+              dev_map[n], *ptc_send_left[n] * sizeof(x_type)));
+        });
+    particles[n - 1].set_num(particles[n - 1].number() +
+                             *ptc_send_left[n]);
+    Logger::print_info("Sending {} particles from dev {} to dev {}",
+                       *ptc_send_left[n], n, n - 1);
+  }
+  for (int n = 0; n < dev_map.size() - 1; n++) {
+    CudaSafeCall(cudaSetDevice(dev_map[n + 1]));
+    visit_struct::for_each(
+        particles[n + 1].data(), ptc_buffer[2 * n + 1].data(),
+        [&](const char *name, auto &x1, auto &x2) {
+          typedef typename std::remove_reference<decltype(*x1)>::type
+              x_type;
+          CudaSafeCall(cudaMemcpyPeer(
+              x1 + particles[n + 1].number(), dev_map[n + 1], x2,
+              dev_map[n], *ptc_send_right[n] * sizeof(x_type)));
+        });
+    particles[n + 1].set_num(particles[n + 1].number() +
+                             *ptc_send_right[n]);
+    Logger::print_info("Sending {} particles from dev {} to dev {}",
+                       *ptc_send_right[n], n, n + 1);
+  }
+  for (int n = 1; n < dev_map.size(); n++) {
+    CudaSafeCall(cudaSetDevice(dev_map[n - 1]));
+    visit_struct::for_each(
+        photons[n - 1].data(), ph_buffer[2 * n].data(),
+        [&](const char *name, auto &x1, auto &x2) {
+          typedef typename std::remove_reference<decltype(*x1)>::type
+              x_type;
+          CudaSafeCall(cudaMemcpyPeer(
+              x1 + photons[n - 1].number(), dev_map[n - 1], x2,
+              dev_map[n], *ph_send_left[n] * sizeof(x_type)));
+        });
+    photons[n - 1].set_num(photons[n - 1].number() + *ph_send_left[n]);
+  }
+  for (int n = 0; n < dev_map.size() - 1; n++) {
+    CudaSafeCall(cudaSetDevice(dev_map[n + 1]));
+    visit_struct::for_each(
+        photons[n + 1].data(), ph_buffer[2 * n + 1].data(),
+        [&](const char *name, auto &x1, auto &x2) {
+          typedef typename std::remove_reference<decltype(*x1)>::type
+              x_type;
+          CudaSafeCall(cudaMemcpyPeer(
+              x1 + photons[n + 1].number(), dev_map[n + 1], x2,
+              dev_map[n], *ph_send_right[n] * sizeof(x_type)));
+        });
+    photons[n + 1].set_num(photons[n + 1].number() + *ph_send_right[n]);
+  }
+  for_each_device(dev_map,
+                  [](int n) { CudaSafeCall(cudaDeviceSynchronize()); });
+  // for (int i = 0; i < dev_map.size(); i++) {
+  //   if (particles[i].number() == 0)
+  //     continue;
+  //   CudaSafeCall(cudaSetDevice(dev_map[i]));
+  //   if (i > 0) {
+  //     // Send particles right
+  //     Kernels::send_particles<<<256, 512>>>(
+  //         particles[i - 1].data(), particles[i - 1].number(),
+  //         particles[i].data(), particles[i].number(),
+  //         ptc_recv_left[i], grid[0]->dim() - 1, 1);
+  //     CudaCheckError();
+  //   }
+  //   if (i < dev_map.size() - 1) {
+  //     // Send particles left
+  //     Kernels::send_particles<<<256, 512>>>(
+  //         particles[i + 1].data(), particles[i + 1].number(),
+  //         particles[i].data(), particles[i].number(),
+  //         ptc_recv_right[i], grid[0]->dim() - 1, 0);
+  //     CudaCheckError();
+  //   }
+  // }
+  // for (int i = 0; i < dev_map.size(); i++) {
+  //   if (photons[i].number() == 0)
+  //     continue;
+  //   CudaSafeCall(cudaSetDevice(dev_map[i]));
+  //   if (i > 0) {
+  //     // Send particles right
+  //     Kernels::send_photons<<<256, 512>>>(
+  //         photons[i - 1].data(), photons[i - 1].number(),
+  //         photons[i].data(), photons[i].number(), ph_recv_left[i],
+  //         grid[0]->dim() - 1, 1);
+  //     CudaCheckError();
+  //   }
+  //   if (i < dev_map.size() - 1) {
+  //     // Send particles left
+  //     Kernels::send_photons<<<256, 512>>>(
+  //         photons[i + 1].data(), photons[i + 1].number(),
+  //         photons[i].data(), photons[i].number(), ph_recv_right[i],
+  //         grid[0]->dim() - 1, 0);
+  //     CudaCheckError();
+  //   }
+  // }
+  // for (int i = 0; i < dev_map.size(); i++) {
+  //   CudaSafeCall(cudaSetDevice(dev_map[i]));
+  //   CudaSafeCall(cudaDeviceSynchronize());
+  //   if (i > 0) {
+  //     particles[i].set_num(particles[i].number() +
+  //     *ptc_recv_left[i]); photons[i].set_num(photons[i].number() +
+  //     *ph_recv_left[i]); Logger::print_info("Sent {} particles from
+  //     dev {} to dev {}", *ptc_recv_left[i],
+  //                        i - 1, i);
+  //   }
+  //   if (i < dev_map.size() - 1) {
+  //     particles[i].set_num(particles[i].number() +
+  //     *ptc_recv_right[i]); photons[i].set_num(photons[i].number() +
+  //                            *ph_recv_right[i]);
+  //     Logger::print_info("Sent {} particles from dev {} to dev {}",
+  //     *ptc_recv_right[i],
+  //                        i + 1, i);
+  //   }
+  // }
+  for_each_device(dev_map, [&](int i) {
+    CudaSafeCall(cudaFree(ptc_send_left[i]));
+    CudaSafeCall(cudaFree(ptc_send_right[i]));
+    CudaSafeCall(cudaFree(ph_send_left[i]));
+    CudaSafeCall(cudaFree(ph_send_right[i]));
+  });
+  timer::show_duration_since_stamp("Sending particles", "ms",
+                                   "send_ptc");
+}
 
 void
 cu_sim_data::sort_particles() {

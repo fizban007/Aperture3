@@ -4,6 +4,7 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/timer.h"
+#include "utils/logger.h"
 #include "core/stagger.h"
 
 namespace Aperture {
@@ -16,6 +17,9 @@ sim_data::sim_data(const sim_environment& e)
 
   E.resize(env.local_grid());
   E.set_field_type(FieldType::E);
+  Logger::print_info("Local grid extent is {}x{}x{}", env.local_grid().extent().x,
+                     env.local_grid().extent().y, env.local_grid().extent().z);
+
   Ebg.resize(env.local_grid());
   E.set_field_type(FieldType::E);
 
@@ -26,12 +30,16 @@ sim_data::sim_data(const sim_environment& e)
 
   J.resize(env.local_grid());
   J.set_field_type(FieldType::E);
+
+  Rho.resize(num_species);
+  gamma.resize(num_species);
+  ptc_num.resize(num_species);
   for (int i = 0; i < num_species; i++) {
-    Rho.emplace_back(env.local_grid());
+    Rho[i] = scalar_field<Scalar>(env.local_grid());
     Rho[i].set_stagger(0, Stagger(0b111));
-    gamma.emplace_back(env.local_grid());
+    gamma[i] = scalar_field<Scalar>(env.local_grid());
     gamma[i].set_stagger(0, Stagger(0b111));
-    ptc_num.emplace_back(env.local_grid());
+    ptc_num[i] = scalar_field<Scalar>(env.local_grid());
     ptc_num[i].set_stagger(0, Stagger(0b111));
   }
 
@@ -60,21 +68,33 @@ sim_data::sort_particles() {
 
 void
 sim_data::sync_to_host() {
+  Logger::print_info("Sync E");
   E.sync_to_host();
+  Logger::print_info("Sync B");
   B.sync_to_host();
+  Logger::print_info("Sync J");
   J.sync_to_host();
-  for (int n = 0; n < num_species; n++) {
+  Logger::print_info("Sync rho");
+  for (int n = 0; n < num_species; n++)
     Rho[n].sync_to_host();
+  Logger::print_info("Sync gamma");
+  for (int n = 0; n < num_species; n++)
     gamma[n].sync_to_host();
+  Logger::print_info("Sync ptc_num");
+  for (int n = 0; n < num_species; n++)
     ptc_num[n].sync_to_host();
-  }
+  Logger::print_info("Sync divE");
   divE.sync_to_host();
+  Logger::print_info("Sync divB");
   divB.sync_to_host();
+  Logger::print_info("Sync EdotB");
   EdotB.sync_to_host();
+  Logger::print_info("Sync photon_produced");
   photon_produced.sync_to_host();
+  Logger::print_info("Sync pair_produced");
   pair_produced.sync_to_host();
+  Logger::print_info("Sync photon_num");
   photon_num.sync_to_host();
-  ph_flux.sync_to_host();
 }
 
 }
