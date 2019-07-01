@@ -184,7 +184,7 @@ struct Extent : public Vec3<int> {
   // Default initialize to 0 in the first size and 1 in the rest for
   // safety reasons
   HOST_DEVICE Extent() : Vec3(0, 1, 1) {}
-  HOST_DEVICE Extent(int w, int h = 1, int d = 1) : Vec3(w, h, d) {}
+  HOST_DEVICE explicit Extent(int w, int h = 1, int d = 1) : Vec3(w, h, d) {}
   HOST_DEVICE Extent(const Vec3<int>& vec) : Vec3(vec) {}
 
   HD_INLINE int& width() { return x; }

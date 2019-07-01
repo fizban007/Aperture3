@@ -141,8 +141,8 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
                                 double time) {
   File datafile(fmt::format("{}ptc.{:05d}.h5", outputDirectory,
                             timestep / m_env.params().data_interval),
-                File::ReadWrite | File::Create | File::Truncate,
-                MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
+                File::ReadWrite | File::Create | File::Truncate);
+                // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
 
   add_ptc_uint_output(
       data, "id",
@@ -352,6 +352,7 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> offsets(1);
     offsets[0] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[0] = tmp_grid_data.extent()[0];
+    Logger::print_info("offset is {}, dim is {}", offsets[0], out_dim[0]);
     dataset.select(offsets, out_dim).write(m_output_1d);
   }
 }

@@ -281,6 +281,8 @@ inverse_compton::inverse_compton(const SimParams& params)
                           m_threads * m_blocks * sizeof(curandState)));
   init_rand_states((curandState*)m_states, params.random_seed,
                    m_threads, m_blocks);
+
+  Logger::print_info("After init, m_dNde has pitch {}", m_dNde.pitch());
 }
 
 inverse_compton::~inverse_compton() {}
@@ -389,6 +391,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   }
 
   m_dNde.sync_to_device();
+  Logger::print_info("Finished copying m_dNde to device");
 
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     double gamma = m_gammas[n];
@@ -415,6 +418,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   }
 
   m_dNde_thompson.sync_to_device();
+  Logger::print_info("Finished copying m_dNde_thompson to device");
   // m_npep.sync_to_device();
   // m_dnde1p.sync_to_device();
 }

@@ -7,6 +7,7 @@
 
 #include "core/domain_info.h"
 #include "core/grid.h"
+#include "core/array.h"
 #include <array>
 #include <memory>
 #include <random>
@@ -74,6 +75,9 @@ class sim_environment {
   void setup_env();
   void setup_env_extra();
 
+  void send_array_x(multi_array<Scalar>& array, int dir);
+  void send_array_y(multi_array<Scalar>& array, int dir);
+
   CommandArgs m_args;
   SimParams m_params;
   ConfigFile m_conf_file;
@@ -94,6 +98,11 @@ class sim_environment {
   std::array<float, 8> m_charges;
   std::array<float, 8> m_masses;
   std::array<float, 8> m_q_over_m;
+
+  std::vector<multi_array<Scalar>> m_send_buffers;
+  std::vector<multi_array<Scalar>> m_recv_buffers;
+  std::vector<array<char>> m_ptc_send_buffers;
+  std::vector<array<char>> m_ptc_recv_buffers;
   int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 

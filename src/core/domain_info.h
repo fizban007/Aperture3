@@ -21,8 +21,8 @@ struct domain_info {
                           ///< direction
   int neighbor_left[3];   ///< Ranks of the left neighbors in each
                           ///< direction
-  int cart_dims[3] = {1};
-  int cart_coord[3] = {0};
+  int cart_dims[3] = {1, 1, 1};
+  int cart_coord[3] = {0, 0, 0};
 
   // std::vector<std::vector<std::vector<int>>>
   //     rank_map;  ///< Rank map of the domain decomposition

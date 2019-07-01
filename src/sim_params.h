@@ -87,13 +87,13 @@ struct SimParamsBase {
   int dim_z = 1;
 
   // Mesh parameters
-  int N[3] = {1};
-  int guard[3] = {0};
-  float lower[3] = {0.0};
-  float size[3] = {0.0};
-  int tile_size[3] = {1};
+  int N[3] = {1, 1, 1};
+  int guard[3] = {0, 0, 0};
+  float lower[3] = {0.0, 0.0, 0.0};
+  float size[3] = {1.0, 1.0, 1.0};
+  int tile_size[3] = {1, 1, 1};
   int grid_dim = 1;
-  int nodes[3] = {1};
+  int nodes[3] = {1, 1, 1};
 };
 
 struct SimParams : public SimParamsBase {

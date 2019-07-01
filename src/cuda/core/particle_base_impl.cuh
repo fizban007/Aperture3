@@ -5,9 +5,9 @@
 #include "cuda/cudaUtility.h"
 // #include "cuda/data/particle_base_dev.h"
 #include "core/particle_base.h"
+#include "cuda/cuda_control.h"
 #include "cuda/kernels.h"
 #include "cuda/memory.h"
-#include "cuda/cuda_control.h"
 #include "utils/for_each_arg.hpp"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -46,21 +46,20 @@ struct assign_helper {
   }
 };
 
-template <typename PtcData>
+template <typename T>
 __global__ void
-get_tracked_ptc(PtcData ptc_data, size_t num, PtcData tracked_data, uint32_t* num_tracked) {
-  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x;
-       n < num;
+get_tracked_ptc_attr(T* ptr, uint32_t* flags, size_t num,
+                     T* tracked_ptr, uint32_t* num_tracked) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
-    if (check_bit(ptc_data.flag[n], ParticleFlag::tracked)) {
+    if (check_bit(flags[n], ParticleFlag::tracked)) {
       size_t nt = atomicAdd(num_tracked, 1u);
-      visit_struct::for_each(ptc_data, tracked_data,
-                             assign_helper{nt, n});
+      tracked_ptr[nt] = ptr[n];
     }
   }
 }
 
-}
+}  // namespace Kernels
 
 // These are helper functors for for_each loops
 
@@ -340,7 +339,8 @@ particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
 
 template <typename ParticleClass>
 void
-particle_base<ParticleClass>::rearrange_arrays(const std::string& skip) {
+particle_base<ParticleClass>::rearrange_arrays(
+    const std::string& skip) {
   const uint32_t padding = 100;
   auto ptc = ParticleClass();
   for_each_arg_with_name(
@@ -362,10 +362,15 @@ particle_base<ParticleClass>::get_tracked_ptc() {
   CudaSafeCall(cudaMalloc(&num_tracked, sizeof(uint32_t)));
   CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
 
-  Kernels::get_tracked_ptc<<<512, 512>>>(m_data, m_number,
-                                         m_tracked, num_tracked);
-  CudaCheckError();
-  CudaSafeCall(cudaDeviceSynchronize());
+  visit_struct::for_each(
+      m_data, m_tracked,
+      [this, &num_tracked](const char* name, auto& u, auto& v) {
+        CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
+        Kernels::get_tracked_ptc_attr<<<512, 512>>>(
+            u, m_data.flag, m_number, v, num_tracked);
+        CudaCheckError();
+        CudaSafeCall(cudaDeviceSynchronize());
+      });
   CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
                           cudaMemcpyDeviceToHost));
   CudaSafeCall(cudaFree(num_tracked));

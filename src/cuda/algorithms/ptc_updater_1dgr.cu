@@ -130,6 +130,7 @@ update_ptc_1dgr(data_ptrs data, size_t num,
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = ptc.cell[idx];
+    // printf("%u\n", c);
     // Skip empty particles
     if (c == MAX_CELL || idx >= num) continue;
     if (!dev_mesh.is_in_bulk(c)) {
@@ -391,7 +392,7 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
 
     Logger::print_info("Updating {} particles",
                        data.particles.number());
-    Kernels::update_ptc_1dgr<<<256, 512>>>(
+    Kernels::update_ptc_1dgr<<<2048, 512>>>(
         data_p, data.particles.number(), mesh_ptrs, dt);
     CudaCheckError();
   }

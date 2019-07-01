@@ -21,7 +21,7 @@ multi_array<T>::multi_array(int width, int height, int depth)
       m_pitch(0) {
   m_size = width * height * depth;
 
-  alloc_mem(m_size);
+  alloc_mem(m_extent);
 }
 
 template <typename T>
@@ -57,7 +57,7 @@ multi_array<T>::operator=(const self_type& other) {
   m_size = other.m_size;
   m_extent = other.m_extent;
 
-  alloc_mem(other.m_size);
+  alloc_mem(other.m_extent);
   copy_from(other);
   return *this;
 }
@@ -126,12 +126,8 @@ multi_array<T>::resize(int width, int height, int depth) {
   m_extent = Extent(width, height, depth);
   m_size = size;
 
-  // Do nothing if the sizes already match
-  if (m_size == size) {
-    return;
-  }
   free_mem();
-  alloc_mem(size);
+  alloc_mem(m_extent);
 }
 
 template <typename T>
