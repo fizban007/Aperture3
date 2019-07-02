@@ -366,7 +366,7 @@ particle_base<ParticleClass>::get_tracked_ptc() {
       m_data, m_tracked,
       [this, &num_tracked](const char* name, auto& u, auto& v) {
         CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
-        Kernels::get_tracked_ptc_attr<<<512, 512>>>(
+        Kernels::get_tracked_ptc_attr<<<2048, 512>>>(
             u, m_data.flag, m_number, v, num_tracked);
         CudaCheckError();
         CudaSafeCall(cudaDeviceSynchronize());
@@ -374,6 +374,7 @@ particle_base<ParticleClass>::get_tracked_ptc() {
   CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
                           cudaMemcpyDeviceToHost));
   CudaSafeCall(cudaFree(num_tracked));
+  Logger::print_info("Got {} tracked particles", m_num_tracked);
 }
 
 // template <typename ParticleClass>
