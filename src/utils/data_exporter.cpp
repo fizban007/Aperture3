@@ -115,6 +115,30 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
 data_exporter::~data_exporter() {}
 
 void
+data_exporter::write_grid() {}
+
+void
+data_exporter::copy_config_file() {}
+
+void
+data_exporter::write_xmf_head(std::ofstream &fs) {}
+
+void
+data_exporter::write_xmf_step(std::ofstream &fs) {}
+
+void
+data_exporter::write_xmf_tail(std::ofstream &fs) {}
+
+void
+data_exporter::prepare_xmf_restart(uint32_t restart_step, int data_interval, float time) {}
+
+void
+data_exporter::write_snapshot(sim_data& data, uint32_t step) {}
+
+void
+data_exporter::load_from_snapshot(sim_data& data, uint32_t step, double time) {}
+
+void
 data_exporter::write_output(sim_data& data, uint32_t timestep,
                             double time) {
   data.sync_to_host();

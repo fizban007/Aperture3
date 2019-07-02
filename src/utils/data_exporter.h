@@ -24,6 +24,16 @@ class data_exporter {
   data_exporter(sim_environment& env, uint32_t& timestep);
   virtual ~data_exporter();
 
+  void write_grid();
+  void copy_config_file();
+  void write_xmf_head(std::ofstream& fs);
+  void write_xmf_step(std::ofstream& fs);
+  void write_xmf_tail(std::ofstream& fs);
+  void write_xmf(uint32_t step, double time);
+  void prepare_xmf_restart(uint32_t restart_step, int data_interval, float time);
+  void write_snapshot(sim_data& data, uint32_t step);
+  void load_from_snapshot(sim_data& data, uint32_t step, double time);
+
   void write_output(sim_data& data, uint32_t timestep, double time);
 
   void write_field_output(sim_data& data, uint32_t timestep,
