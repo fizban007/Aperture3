@@ -12,11 +12,13 @@
 #include <highfive/H5DataSpace.hpp>
 #include <highfive/H5File.hpp>
 
-#define ADD_GRID_OUTPUT(input, name, func, file)              \
-  add_grid_output(input, name,                                \
-                  [](sim_data & data, multi_array<float> & p, \
-                     Index idx, Index idx_out) func,          \
-                  file)
+#define ADD_GRID_OUTPUT(exporter, input, name, func, file)              \
+  exporter.add_grid_output(input, name,                                 \
+                           [](sim_data & data, multi_array<float> & p,  \
+                              Index idx, Index idx_out) func,           \
+                           file)
+
+#include "utils/user_data_output.hpp"
 
 using namespace HighFive;
 
@@ -167,58 +169,58 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
                             timestep / m_env.params().data_interval),
                 File::ReadWrite | File::Create | File::Truncate);
                 // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
+  user_write_ptc_output(data, *this, timestep, time, datafile);
+  // add_ptc_uint_output(
+  //     data, "id",
+  //     [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
+  //       v[n] = data.particles.tracked_data().id[n];
+  //     },
+  //     datafile);
 
-  add_ptc_uint_output(
-      data, "id",
-      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().id[n];
-      },
-      datafile);
+  // add_ptc_float_output(
+  //     data, "p1",
+  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       v[n] = data.particles.tracked_data().p1[n];
+  //     },
+  //     datafile);
+  // add_ptc_float_output(
+  //     data, "p2",
+  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       v[n] = data.particles.tracked_data().p2[n];
+  //     },
+  //     datafile);
+  // add_ptc_float_output(
+  //     data, "p3",
+  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       v[n] = data.particles.tracked_data().p3[n];
+  //     },
+  //     datafile);
 
-  add_ptc_float_output(
-      data, "p1",
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().p1[n];
-      },
-      datafile);
-  add_ptc_float_output(
-      data, "p2",
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().p2[n];
-      },
-      datafile);
-  add_ptc_float_output(
-      data, "p3",
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().p3[n];
-      },
-      datafile);
-
-  auto& mesh = m_env.local_grid().mesh();
-  add_ptc_float_output(
-      data, "x1",
-      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-        auto cell = data.particles.tracked_data().cell[n];
-        auto x = data.particles.tracked_data().x1[n];
-        v[n] = mesh.pos(0, mesh.get_c1(cell), x);
-      },
-      datafile);
-  add_ptc_float_output(
-      data, "x2",
-      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-        auto cell = data.particles.tracked_data().cell[n];
-        auto x = data.particles.tracked_data().x2[n];
-        v[n] = mesh.pos(1, mesh.get_c2(cell), x);
-      },
-      datafile);
-  add_ptc_float_output(
-      data, "x3",
-      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-        auto cell = data.particles.tracked_data().cell[n];
-        auto x = data.particles.tracked_data().x3[n];
-        v[n] = mesh.pos(2, mesh.get_c3(cell), x);
-      },
-      datafile);
+  // auto& mesh = m_env.local_grid().mesh();
+  // add_ptc_float_output(
+  //     data, "x1",
+  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       auto cell = data.particles.tracked_data().cell[n];
+  //       auto x = data.particles.tracked_data().x1[n];
+  //       v[n] = mesh.pos(0, mesh.get_c1(cell), x);
+  //     },
+  //     datafile);
+  // add_ptc_float_output(
+  //     data, "x2",
+  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       auto cell = data.particles.tracked_data().cell[n];
+  //       auto x = data.particles.tracked_data().x2[n];
+  //       v[n] = mesh.pos(1, mesh.get_c2(cell), x);
+  //     },
+  //     datafile);
+  // add_ptc_float_output(
+  //     data, "x3",
+  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+  //       auto cell = data.particles.tracked_data().cell[n];
+  //       auto x = data.particles.tracked_data().x3[n];
+  //       v[n] = mesh.pos(2, mesh.get_c3(cell), x);
+  //     },
+  //     datafile);
   // datafile.close();
 }
 
@@ -230,6 +232,8 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                     .c_str(),
                 File::ReadWrite | File::Create | File::Truncate,
                 MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
+
+  user_write_field_output(data, *this, timestep, time, datafile);
   // add_grid_output(
   //     data, "E1",
   //     [](sim_data& data, multi_array<Scalar>& p, Index idx,
@@ -237,84 +241,84 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
   //       p(idx_out) = data.E(0, idx) + data.Ebg(0, idx);
   //     },
   //     datafile);
-  ADD_GRID_OUTPUT(
-      data, "E1",
-      {
-        p(idx_out) = 0.25 * (data.E(0, idx) +
-                             data.E(0, idx.x, idx.y + 1, idx.z) +
-                             data.E(0, idx.x, idx.y, idx.z + 1) +
-                             data.E(0, idx.x, idx.y + 1, idx.z + 1));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "E2",
-      {
-        p(idx_out) = 0.25 * (data.E(1, idx) +
-                             data.E(1, idx.x + 1, idx.y, idx.z) +
-                             data.E(1, idx.x, idx.y, idx.z + 1) +
-                             data.E(1, idx.x + 1, idx.y, idx.z + 1));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "E3",
-      {
-        p(idx_out) = 0.25 * (data.E(2, idx) +
-                             data.E(2, idx.x + 1, idx.y, idx.z) +
-                             data.E(2, idx.x, idx.y + 1, idx.z) +
-                             data.E(2, idx.x + 1, idx.y + 1, idx.z));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "B1",
-      {
-        p(idx_out) =
-            0.5 * (data.B(0, idx) + data.B(0, idx.x - 1, idx.y, idx.z));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "B2",
-      {
-        p(idx_out) =
-            0.5 * (data.B(1, idx) + data.B(1, idx.x, idx.y - 1, idx.z));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "B3",
-      {
-        p(idx_out) =
-            0.5 * (data.B(2, idx) + data.B(2, idx.x, idx.y, idx.z - 1));
-      },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "J1", { p(idx_out) = data.J(0, idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "J2", { p(idx_out) = data.J(1, idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "J3", { p(idx_out) = data.J(2, idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "Rho_e", { p(idx_out) = data.Rho[0](0, idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "Rho_p", { p(idx_out) = data.Rho[1](0, idx); }, datafile);
-  if (data.env.params().num_species > 2) {
-    ADD_GRID_OUTPUT(
-        data, "Rho_i", { p(idx_out) = data.Rho[2](0, idx); }, datafile);
-  }
-  ADD_GRID_OUTPUT(
-      data, "photon_produced",
-      { p(idx_out) = data.photon_produced(idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "pair_produced", { p(idx_out) = data.pair_produced(idx); },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "photon_num", { p(idx_out) = data.photon_num(idx); },
-      datafile);
-  ADD_GRID_OUTPUT(
-      data, "divE", { p(idx_out) = data.divE(idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "divB", { p(idx_out) = data.divB(idx); }, datafile);
-  ADD_GRID_OUTPUT(
-      data, "EdotB_avg", { p(idx_out) = data.EdotB(idx); }, datafile);
-  add_array_output(data.ph_flux, "ph_flux", datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "E1",
+  //     {
+  //       p(idx_out) = 0.25 * (data.E(0, idx) +
+  //                            data.E(0, idx.x, idx.y + 1, idx.z) +
+  //                            data.E(0, idx.x, idx.y, idx.z + 1) +
+  //                            data.E(0, idx.x, idx.y + 1, idx.z + 1));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "E2",
+  //     {
+  //       p(idx_out) = 0.25 * (data.E(1, idx) +
+  //                            data.E(1, idx.x + 1, idx.y, idx.z) +
+  //                            data.E(1, idx.x, idx.y, idx.z + 1) +
+  //                            data.E(1, idx.x + 1, idx.y, idx.z + 1));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "E3",
+  //     {
+  //       p(idx_out) = 0.25 * (data.E(2, idx) +
+  //                            data.E(2, idx.x + 1, idx.y, idx.z) +
+  //                            data.E(2, idx.x, idx.y + 1, idx.z) +
+  //                            data.E(2, idx.x + 1, idx.y + 1, idx.z));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "B1",
+  //     {
+  //       p(idx_out) =
+  //           0.5 * (data.B(0, idx) + data.B(0, idx.x - 1, idx.y, idx.z));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "B2",
+  //     {
+  //       p(idx_out) =
+  //           0.5 * (data.B(1, idx) + data.B(1, idx.x, idx.y - 1, idx.z));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "B3",
+  //     {
+  //       p(idx_out) =
+  //           0.5 * (data.B(2, idx) + data.B(2, idx.x, idx.y, idx.z - 1));
+  //     },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "J1", { p(idx_out) = data.J(0, idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "J2", { p(idx_out) = data.J(1, idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "J3", { p(idx_out) = data.J(2, idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "Rho_e", { p(idx_out) = data.Rho[0](0, idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "Rho_p", { p(idx_out) = data.Rho[1](0, idx); }, datafile);
+  // if (data.env.params().num_species > 2) {
+  //   ADD_GRID_OUTPUT(
+  //       data, "Rho_i", { p(idx_out) = data.Rho[2](0, idx); }, datafile);
+  // }
+  // ADD_GRID_OUTPUT(
+  //     data, "photon_produced",
+  //     { p(idx_out) = data.photon_produced(idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "pair_produced", { p(idx_out) = data.pair_produced(idx); },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "photon_num", { p(idx_out) = data.photon_num(idx); },
+  //     datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "divE", { p(idx_out) = data.divE(idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "divB", { p(idx_out) = data.divB(idx); }, datafile);
+  // ADD_GRID_OUTPUT(
+  //     data, "EdotB_avg", { p(idx_out) = data.EdotB(idx); }, datafile);
+  // add_array_output(data.ph_flux, "ph_flux", datafile);
 
   // datafile.close();
 }
@@ -396,30 +400,31 @@ data_exporter::add_array_output(multi_array<float>& array,
 template <typename Func>
 void
 data_exporter::add_ptc_float_output(sim_data& data,
-                                    const std::string& name, Func f,
+                                    const std::string& name, size_t num, Func f,
                                     File& file) {
-  for (uint32_t n = 0; n < data.particles.tracked_number(); n++) {
+  Logger::print_info("writing the {} of {} tracked particles", name, num);
+  for (uint32_t n = 0; n < num; n++) {
     f(data, tmp_ptc_float_data, n);
   }
 
   // TODO: Consider MPI!!!
   DataSet dataset =
-      file.createDataSet<float>(name, DataSpace::From(tmp_ptc_float_data));
+      file.createDataSet<float>(name, DataSpace({num}));
   dataset.write(tmp_ptc_float_data);
 }
 
 template <typename Func>
 void
 data_exporter::add_ptc_uint_output(sim_data& data,
-                                   const std::string& name, Func f,
+                                   const std::string& name, size_t num, Func f,
                                    File& file) {
-  for (uint32_t n = 0; n < data.particles.tracked_number(); n++) {
+  for (uint32_t n = 0; n < num; n++) {
     f(data, tmp_ptc_uint_data, n);
   }
 
   // TODO: Consider MPI!!!
   DataSet dataset =
-      file.createDataSet<uint32_t>(name, DataSpace::From(tmp_ptc_uint_data));
+      file.createDataSet<uint32_t>(name, DataSpace({num}));
   dataset.write(tmp_ptc_uint_data);
 }
 

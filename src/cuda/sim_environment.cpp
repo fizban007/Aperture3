@@ -119,22 +119,16 @@ sim_environment::setup_env_extra() {
     exit(1);
   }
   m_dev_id = m_domain_info.rank % n_devices;
+  cudaSetDevice(m_dev_id);
 
   // m_dev_map.resize(n_devices);
-  Logger::print_info("Found {} Cuda devices, using dev {}", n_devices,
-                     m_dev_id);
-  cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, m_dev_id);
-  Logger::print_info("    Device Number: {}", m_dev_id);
-  Logger::print_info("    Device Name: {}", prop.name);
-  Logger::print_info("    Device Total Memory: {}MiB",
-                     prop.totalGlobalMem / (1024 * 1024));
-
   init_dev_params(m_params);
   init_dev_mesh(m_grid->mesh());
 
   init_dev_charges(m_charges.data());
   init_dev_masses(m_masses.data());
+
+  init_dev_rank(m_domain_info.rank);
 }
 
 
