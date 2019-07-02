@@ -30,7 +30,6 @@ class data_exporter {
                           double time);
   void write_ptc_output(sim_data& data, uint32_t timestep, double time);
 
- protected:
   void add_array_output(multi_array<float>& array,
                         const std::string& name, HighFive::File& file);
 
@@ -39,13 +38,14 @@ class data_exporter {
                        HighFive::File& file);
 
   template <typename Func>
-  void add_ptc_float_output(sim_data& data, const std::string& name,
+  void add_ptc_float_output(sim_data& data, const std::string& name, size_t num,
                             Func f, HighFive::File& file);
 
   template <typename Func>
-  void add_ptc_uint_output(sim_data& data, const std::string& name,
+  void add_ptc_uint_output(sim_data& data, const std::string& name, size_t num,
                            Func f, HighFive::File& file);
 
+ protected:
   // std::unique_ptr<Grid> grid;
   sim_environment& m_env;
   std::string

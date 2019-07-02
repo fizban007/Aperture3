@@ -100,6 +100,8 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   float u = rng();
   photons.flag[offset] =
       (u < dev_params.track_percent ? bit_or(PhotonFlag::tracked) : 0);
+  if (u < dev_params.track_percent)
+    photons.id[offset] = (dev_rank << 32) + atomicAdd(&dev_ph_id, 1);
 }
 
 __device__ bool
@@ -165,10 +167,20 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
 
   ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
   ptc.cell[offset_e] = ptc.cell[offset_p] = c;
-  ptc.flag[offset_e] = set_ptc_type_flag(
-      bit_or(ParticleFlag::secondary), ParticleType::electron);
-  ptc.flag[offset_p] = set_ptc_type_flag(
-      bit_or(ParticleFlag::secondary), ParticleType::positron);
+  float u = rng();
+  if (u < dev_params.track_percent) {
+    ptc.id[offset_e] = (dev_rank << 32) + atomicAdd(&dev_ptc_id, 1);
+    ptc.id[offset_p] = (dev_rank << 32) + atomicAdd(&dev_ptc_id, 1);
+    ptc.flag[offset_e] = set_ptc_type_flag(
+        bit_or(ParticleFlag::secondary, ParticleFlag::tracked), ParticleType::electron);
+    ptc.flag[offset_p] = set_ptc_type_flag(
+        bit_or(ParticleFlag::secondary, ParticleFlag::tracked), ParticleType::positron);
+  } else {
+    ptc.flag[offset_e] = set_ptc_type_flag(
+        bit_or(ParticleFlag::secondary), ParticleType::electron);
+    ptc.flag[offset_p] = set_ptc_type_flag(
+        bit_or(ParticleFlag::secondary), ParticleType::positron);
+  }
 
   // Set this photon to be empty
   photons.cell[tid] = MAX_CELL;
