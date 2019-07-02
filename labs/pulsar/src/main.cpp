@@ -1,13 +1,12 @@
 #include "cuda/constant_mem_func.h"
-#include "cuda/core/additional_diagnostics.h"
-#include "cuda/core/cu_sim_data.h"
-#include "cuda/core/cu_sim_environment.h"
-#include "cuda/core/field_solver_log_sph.h"
-#include "cuda/core/ptc_updater_logsph.h"
+// #include "cuda/core/additional_diagnostics.h"
+#include "sim_data.h"
+#include "sim_environment.h"
+#include "algorithms/field_solver_logsph.h"
+#include "algorithms/ptc_updater_logsph.h"
 #include "cuda/cudarng.h"
-#include "cuda/radiation/rt_pulsar.h"
-#include "cuda/utils/cu_data_exporter.h"
-#include "cuda/utils/iterate_devices.h"
+#include "radiation/radiative_transfer.h"
+#include "utils/data_exporter.h"
 #include "cuda_runtime.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
@@ -23,18 +22,18 @@ int main(int argc, char *argv[]) {
   float time = start_time;
 
   // Construct the simulation environment
-  cu_sim_environment env(&argc, &argv);
+  sim_environment env(&argc, &argv);
 
   // Allocate simulation data
-  cu_sim_data data(env);
+  sim_data data(env);
 
   // Initialize data exporter
-  cu_data_exporter exporter(env.params(), start_step);
+  data_exporter exporter(env, start_step);
 
   if (env.params().is_restart) {
     Logger::print_info("This is a restart");
-    exporter.load_from_snapshot(env, data, start_step, start_time);
-    exporter.prepareXMFrestart(step, env.params().data_interval, start_time);
+    exporter.load_from_snapshot(data, start_step, start_time);
+    exporter.prepare_xmf_restart(step, env.params().data_interval, start_time);
     step = start_step + 1;
     time = start_time + env.params().delta_t;
     // data.fill_multiplicity(1.0, 1);
@@ -60,9 +59,8 @@ int main(int argc, char *argv[]) {
     //       200 + 1540 * j, ParticleType::positron, std::sin(th));
     // }
   } else {
-    exporter.copyConfigFile();
-    exporter.copySrc();
-    exporter.WriteGrid();
+    exporter.copy_config_file();
+    exporter.write_grid();
 
     // Setup initial conditions
     Scalar B0 = env.params().B0;
@@ -116,17 +114,17 @@ int main(int argc, char *argv[]) {
     data.fill_multiplicity(1.0, 6);
   }
   // Initialize the field solver
-  FieldSolver_LogSph field_solver;
+  field_solver_logsph field_solver(env);
 
   // Initialize particle updater
-  PtcUpdaterLogSph ptc_updater(env);
+  ptc_updater_logsph ptc_updater(env);
 
   // Initialize radiation module
-  RadiationTransferPulsar rad(env);
+  radiative_transfer rad(env);
 
   // Setup data export and diagnostics
-  AdditionalDiagnostics diag(env);
-  exporter.prepare_output(data);
+  // AdditionalDiagnostics diag(env);
+  // exporter.prepare_output(data);
 
   // Main simulation loop
   for (; step <= env.params().max_steps; step++) {
@@ -146,18 +144,16 @@ int main(int argc, char *argv[]) {
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
-      diag.collect_diagnostics(data);
+      // diag.collect_diagnostics(data);
       // dynamic_cast<const Grid_LogSph_dev*>(&env.local_grid())
       //     ->compute_flux(data.flux, data.B, data.Bbg);
       // Logger::print_info("Finished computing flux");
 
       exporter.write_output(data, step, time);
-      exporter.writeXMF(step, time);
-      for_each_device(env.dev_map(), [&data](int n) {
-        data.photon_produced[n].initialize();
-        data.pair_produced[n].initialize();
-        data.EdotB[n].initialize();
-      });
+      // exporter.writeXMF(step, time);
+      data.photon_produced.initialize();
+      data.pair_produced.initialize();
+      data.EdotB.initialize();
 
       Logger::print_info("Finished output!");
     }
@@ -174,7 +170,7 @@ int main(int argc, char *argv[]) {
     // Update field values and handle field boundary conditions
     if (env.params().update_fields) {
       field_solver.update_fields(data, dt, time);
-      field_solver.boundary_conditions(data, omega);
+      field_solver.apply_boundary(data, omega);
     }
 
     // Create photons and pairs
@@ -187,12 +183,12 @@ int main(int argc, char *argv[]) {
       data.sort_particles();
     }
 
-    if (step % env.params().snapshot_interval == 0 && step > 0) {
-      timer::stamp();
-      exporter.write_snapshot(env, data, step, time);
-      auto t_snapshot = timer::get_duration_since_stamp("ms");
-      Logger::print_info("Snapshot took {}ms", t_snapshot);
-    }
+    // if (step % env.params().snapshot_interval == 0 && step > 0) {
+    //   timer::stamp();
+    //   exporter.write_snapshot(env, data, step, time);
+    //   auto t_snapshot = timer::get_duration_since_stamp("ms");
+    //   Logger::print_info("Snapshot took {}ms", t_snapshot);
+    // }
 
     // time += dt;
   }
