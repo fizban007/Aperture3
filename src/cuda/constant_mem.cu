@@ -10,8 +10,9 @@ __constant__ Quadmesh dev_mesh;
 __constant__ float dev_charges[8];
 __constant__ float dev_masses[8];
 __constant__ FieldData dev_bg_fields;
-__device__ uint32_t dev_rank;
+__device__ uint64_t dev_rank;
 __device__ uint32_t dev_ptc_id = 0;
+__device__ uint32_t dev_ph_id = 0;
 
 void
 init_dev_params(const SimParams& params) {
@@ -40,8 +41,8 @@ init_dev_masses(const float masses[8]) {
 
 void
 init_dev_rank(int rank) {
-  uint32_t r = rank;
-  CudaSafeCall(cudaMemcpyToSymbol(dev_rank, (void*)&r, sizeof(uint32_t)));
+  uint64_t r = rank;
+  CudaSafeCall(cudaMemcpyToSymbol(dev_rank, (void*)&r, sizeof(uint64_t)));
 }
 
 void

@@ -56,6 +56,8 @@ prepare_initial_condition(particle_data ptc,
       ptc.flag[idx + 1] = set_ptc_type_flag(
           (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
           ParticleType::positron);
+      ptc.id[idx] = atomicAdd(&dev_ptc_id, 1);
+      ptc.id[idx + 1] = atomicAdd(&dev_ptc_id, 1);
     }
   }
 }
@@ -399,7 +401,7 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
 
   if (data.photons.number() > 0) {
     Logger::print_info("Updating {} photons", data.photons.number());
-    Kernels::update_photon_1dgr<<<256, 512>>>(
+    Kernels::update_photon_1dgr<<<2048, 512>>>(
         data.photons.data(), data.photons.number(), mesh_ptrs, dt);
     CudaCheckError();
   }
