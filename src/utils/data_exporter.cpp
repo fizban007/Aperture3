@@ -108,22 +108,49 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   boost::system::error_code returnedError;
   boost::filesystem::create_directories(outPath, returnedError);
 
-  std::string path = outputDirectory + "config.toml";
-  boost::filesystem::copy_file(
-      env.params().conf_file, path,
-      boost::filesystem::copy_option::overwrite_if_exists);
+  copy_config_file();
 }
 
 data_exporter::~data_exporter() {}
 
 void
-data_exporter::write_grid() {}
+data_exporter::write_grid() {
+  auto& mesh = m_env.local_grid().mesh();
+  if (m_env.local_grid().dim() == 1) {
+    std::vector<float> x_array(mesh.reduced_dim(0));
+
+    for (int i = 0; i < mesh.reduced_dim(0); i++) {
+      x_array[i] = mesh.pos(0, i + mesh.guard[0], false);
+    }
+
+    std::string meshfilename = outputDirectory + "mesh.h5";
+    Logger::print_info("{}", meshfilename);
+    File meshfile(meshfilename.c_str(),
+                  File::ReadWrite | File::Create | File::Truncate);
+    DataSet mesh_x1 =
+        meshfile.createDataSet<float>("x1", DataSpace::From(x_array));
+    mesh_x1.write(x_array);
+  }
+}
 
 void
-data_exporter::copy_config_file() {}
+data_exporter::copy_config_file() {
+  std::string path = outputDirectory + "config.toml";
+  boost::filesystem::copy_file(
+      m_env.params().conf_file, path,
+      boost::filesystem::copy_option::overwrite_if_exists);
+}
 
 void
-data_exporter::write_xmf_head(std::ofstream &fs) {}
+data_exporter::write_xmf_head(std::ofstream &fs) {
+  fs << "<?xml version=\"1.0\" ?>" << std::endl;
+  fs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
+  fs << "<Xdmf>" << std::endl;
+  fs << "<Domain>" << std::endl;
+  fs << "<Grid Name=\"Aperture\" GridType=\"Collection\" "
+        "CollectionType=\"Temporal\" >"
+     << std::endl;
+}
 
 void
 data_exporter::write_xmf_step(std::ofstream &fs) {}
