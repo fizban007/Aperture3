@@ -396,6 +396,22 @@ update_photon_1dgr(photon_data photons, size_t num,
   }
 }
 
+__global__ void filter_current1d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+                                 const Scalar *k1, bool boundary_lower,
+                                 bool boundary_upper) {
+  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < dev_mesh.dims[0];
+       i += blockDim.x * gridDim.x) {
+    size_t dx_plus =
+        (boundary_upper && i == dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? 1
+                                                                         : 0);
+    size_t dx_minus = (boundary_lower && i == dev_mesh.guard[0] ? 1 : 0);
+    j_tmp(i, 0) = 0.5f * j(i, 0) * k1[i];
+    j_tmp(i, 0) += 0.25f * j(i + dx_plus, 0) * k1[i + dx_plus];
+    j_tmp(i, 0) += 0.25f * j(i - dx_minus, 0) * k1[i - dx_minus];
+    j_tmp(i, 0) /= k1[i];
+  }
+}
+
 }  // namespace Kernels
 
 ptc_updater_1dgr::ptc_updater_1dgr(sim_environment& env) : m_env(env) {}
@@ -420,6 +436,20 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
     Kernels::update_ptc_1dgr<<<2048, 512>>>(
         data_p, data.particles.number(), mesh_ptrs, dt, step);
     CudaCheckError();
+
+    for (int i = 0; i < m_env.params().current_smoothing; i++) {
+      Kernels::filter_current1d<<<256, 256>>>(
+          data.J.ptr(0), m_tmp_j.data_d(), mesh_ptrs.K1_j, m_env.is_boundary(0),
+          m_env.is_boundary(1));
+      data.J.data(0).copy_from(m_tmp_j);
+
+      for (int sp = 0; sp < m_env.params().num_species; sp++) {
+        Kernels::filter_current1d<<<256, 256>>>(
+            data.Rho[sp].ptr(), m_tmp_j.data_d(), mesh_ptrs.K1,
+            m_env.is_boundary(0), m_env.is_boundary(1));
+        data.Rho[sp].data().copy_from(m_tmp_j);
+      }
+    }
   }
 
   if (data.photons.number() > 0) {
