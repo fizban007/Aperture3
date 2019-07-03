@@ -2,6 +2,7 @@
 #define _PTC_UPDATER_1DGR_H_
 
 #include "grids/grid_1dgr.h"
+#include "core/multi_array.h"
 
 namespace Aperture {
 
@@ -19,6 +20,8 @@ class ptc_updater_1dgr {
 
  protected:
   sim_environment& m_env;
+
+  multi_array<Scalar> m_tmp_j;
 };
 
 }  // namespace Aperture

@@ -4,6 +4,7 @@
 #include "cuda/data_ptrs.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/interpolation.cuh"
+#include "cuda/utils/pitchptr.cuh"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include <curand_kernel.h>
@@ -414,7 +415,9 @@ __global__ void filter_current1d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
 
 }  // namespace Kernels
 
-ptc_updater_1dgr::ptc_updater_1dgr(sim_environment& env) : m_env(env) {}
+ptc_updater_1dgr::ptc_updater_1dgr(sim_environment& env) : m_env(env) {
+  m_tmp_j = multi_array<Scalar>(m_env.local_grid().extent());
+}
 
 ptc_updater_1dgr::~ptc_updater_1dgr() {}
 
@@ -439,13 +442,13 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
 
     for (int i = 0; i < m_env.params().current_smoothing; i++) {
       Kernels::filter_current1d<<<256, 256>>>(
-          data.J.ptr(0), m_tmp_j.data_d(), mesh_ptrs.K1_j, m_env.is_boundary(0),
+          get_pitchptr(data.J.data(0)), get_pitchptr(m_tmp_j), mesh_ptrs.K1_j, m_env.is_boundary(0),
           m_env.is_boundary(1));
       data.J.data(0).copy_from(m_tmp_j);
 
       for (int sp = 0; sp < m_env.params().num_species; sp++) {
         Kernels::filter_current1d<<<256, 256>>>(
-            data.Rho[sp].ptr(), m_tmp_j.data_d(), mesh_ptrs.K1,
+            get_pitchptr(data.Rho[sp].data()), get_pitchptr(m_tmp_j), mesh_ptrs.K1,
             m_env.is_boundary(0), m_env.is_boundary(1));
         data.Rho[sp].data().copy_from(m_tmp_j);
       }
