@@ -39,7 +39,7 @@ main(int argc, char* argv[]) {
   Logger::print_debug("Finished initializing radiation module");
 
   // Initialize particle distribution in the beginning
-  pusher.prepare_initial_condition(data, 20);
+  pusher.prepare_initial_condition(data, 8);
   // data.prepare_initial_photons(1);
   Logger::print_debug("Finished initializing initial condition");
 
@@ -63,14 +63,6 @@ main(int argc, char* argv[]) {
     double time = step * dt;
     Logger::print_info("=== At timestep {}, time = {} ===", step, time);
 
-    // Output data
-    if (step % env.params().data_interval == 0) {
-      Logger::print_info("Writing output");
-      exporter.write_output(data, step, time);
-      // exporter.write_particles(data, step, time);
-      // exporter.writeXMF(step, time);
-    }
-
     timer::stamp();
     pusher.update_particles(data, dt, step);
     data.particles.clear_guard_cells(env.grid());
@@ -81,8 +73,17 @@ main(int argc, char* argv[]) {
 
     solver.update_fields(data, dt);
 
-    rad.emit_photons(data);
-    rad.produce_pairs(data);
+    // rad.emit_photons(data);
+    // rad.produce_pairs(data);
+
+    // Output data
+    if (step % env.params().data_interval == 0) {
+      Logger::print_info("Writing output");
+      exporter.write_output(data, step, time);
+      // exporter.write_particles(data, step, time);
+      // exporter.writeXMF(step, time);
+    }
+
 
     // Sort the particles every once in a while
     if (step % env.params().sort_interval == 0 && step != 0) {
