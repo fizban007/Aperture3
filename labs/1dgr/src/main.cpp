@@ -72,7 +72,7 @@ main(int argc, char* argv[]) {
     }
 
     timer::stamp();
-    pusher.update_particles(data, dt);
+    pusher.update_particles(data, dt, step);
     data.particles.clear_guard_cells(env.grid());
     data.photons.clear_guard_cells(env.grid());
     auto t_ptc = timer::get_duration_since_stamp("us");
