@@ -29,9 +29,9 @@ void
 sample_grid_quantity1d(sim_data& data, const Grid& g, int downsample,
                        multi_array<float>& result,
                        std::vector<float>& out, Func f) {
-  const auto& ext = g.extent();
+  // const auto& ext = g.extent();
   auto& mesh = g.mesh();
-  for (int i = 0; i < ext.width(); i++) {
+  for (unsigned int i = 0; i < out.size(); i++) {
     Index idx_out(i, 0, 0);
     Index idx_data(i * downsample + mesh.guard[0], 0, 0);
     f(data, result, idx_data, idx_out);
@@ -45,7 +45,7 @@ void
 sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
                        multi_array<float>& result,
                        boost::multi_array<float, 2>& out, Func f) {
-  const auto& ext = g.extent();
+  const auto& ext = result.extent();
   auto& mesh = g.mesh();
   for (int j = 0; j < ext.height(); j++) {
     for (int i = 0; i < ext.width(); i++) {
@@ -64,7 +64,7 @@ void
 sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
                        multi_array<float>& result,
                        boost::multi_array<float, 3>& out, Func f) {
-  const auto& ext = g.extent();
+  const auto& ext = result.extent();
   auto& mesh = g.mesh();
   for (int k = 0; k < ext.depth(); k++) {
     for (int j = 0; j < ext.height(); j++) {
@@ -103,6 +103,8 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   tmp_ptc_float_data.resize(MAX_TRACKED);
 
   outputDirectory = env.params().data_dir;
+  // make sure output directory is a directory
+  if (outputDirectory.back() != '/') outputDirectory.push_back('/');
   boost::filesystem::path outPath(outputDirectory);
 
   boost::system::error_code returnedError;

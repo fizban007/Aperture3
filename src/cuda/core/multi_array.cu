@@ -113,13 +113,6 @@ multi_array<T>::sync_to_host() {
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
 
-  Logger::print_info("myParms.ext is {}x{}x{}", myParms.extent.width,
-                     myParms.extent.height, myParms.extent.depth);
-  Logger::print_info("srcPtr has pitch = {}, xsize = {}, ysize = {}",
-                     myParms.srcPtr.pitch, myParms.srcPtr.xsize, myParms.srcPtr.ysize);
-  Logger::print_info("dstPtr has pitch = {}, xsize = {}, ysize = {}",
-                     myParms.dstPtr.pitch, myParms.dstPtr.xsize, myParms.dstPtr.ysize);
-
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
 
