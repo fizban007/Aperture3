@@ -85,7 +85,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
   // if (std::abs(Eph) < dev_params.E_ph_min) return;
-  if (std::abs(Eph) < 1.0e4 / dev_params.e_min) return;
+  if (std::abs(Eph) < 1.0e-3 / dev_params.e_min) return;
 
   // Add the new photon
   // Scalar path = rad_model.draw_photon_freepath(Eph);
