@@ -44,6 +44,12 @@ user_write_ptc_output(sim_data& data, data_exporter& exporter,
         v[n] = data.particles.tracked_data().p1[n];
       },
       file);
+  exporter.add_ptc_float_output(
+      data, "ptc_u0", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n) {
+        v[n] = data.particles.tracked_data().p2[n];
+      },
+      file);
   auto& mesh = data.env.local_grid().mesh();
   exporter.add_ptc_float_output(
       data, "ptc_x1", data.particles.tracked_number(),
@@ -64,6 +70,12 @@ user_write_ptc_output(sim_data& data, data_exporter& exporter,
       data, "ph_p1", data.photons.tracked_number(),
       [](sim_data& data, std::vector<float>& v, uint32_t n) {
         v[n] = data.photons.tracked_data().p1[n];
+      },
+      file);
+  exporter.add_ptc_float_output(
+      data, "ph_u0", data.photons.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n) {
+        v[n] = data.photons.tracked_data().p2[n];
       },
       file);
   exporter.add_ptc_float_output(
