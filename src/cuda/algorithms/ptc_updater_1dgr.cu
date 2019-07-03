@@ -213,13 +213,14 @@ update_ptc_1dgr(data_ptrs data, size_t num,
 
     vr = (p1 / u0 - D1) / D2;
 
-    if ((step + 1) % dev_params.data_interval == 0) {
+    if ((step + 1) % dev_params.data_interval == 0 &&
+        check_bit(flag, ParticleFlag::tracked)) {
       // Use p2 to store lower u_0
       Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
       Scalar Sigma = (r*r + a*a*square(std::cos(theta)));
       Scalar Delta = (r*r - 2.0f * r + a*a);
       Scalar g_00 = -(1.0f - 2.0f * r / Sigma);
-      Scalar g_03 = -4.0 * r * dev_params.a * square(std::sin(theta)) / Sigma;
+      Scalar g_03 = -4.0 * r * a * square(std::sin(theta)) / Sigma;
       Scalar B31 = mesh_ptrs.B3B1[c] * x1 + mesh_ptrs.B3B1[c - 1] * nx1;
 
       Scalar u0inf = (g_00 + g_03 * dev_params.omega) * u0 + g_03 * B31 * Delta * u0 * vr;
@@ -252,7 +253,6 @@ update_ptc_1dgr(data_ptrs data, size_t num,
     u0 = sqrt((D2 + p1 * p1) / (D2 * (alpha * alpha - D3) + D1 * D1));
     ptc.E[idx] = u0;
 
-    //
     // printf("u0 is %f, p1 is %f, vr is %f\n", u0, p1, vr);
 
     // TODO: deposit current
@@ -309,8 +309,6 @@ update_photon_1dgr(photon_data photons, size_t num,
     auto x1 = photons.x1[idx];
     auto u0 = std::abs(photons.E[idx]);
     auto nx1 = 1.0f - x1;
-    auto flag = photons.flag[idx];
-    int sp = get_ptc_type(flag);
     Scalar xi = dev_mesh.pos(0, c, x1);
 
     // Compute the physical r of the photon
@@ -360,9 +358,6 @@ update_photon_1dgr(photon_data photons, size_t num,
          gamma11 * p1 * p1 * dDelta_dr / (Delta_sqr * u0)) *
         dt;
     p1 += gr_term;
-    // if (idx == 10)
-    //   printf("gr_term %f, Er %f, q %f, m %f\n", gr_term, Er,
-    //   dev_charges[sp], dev_masses[sp]);
 
     u0 = std::sqrt(gamma11 * p1 * p1 / Delta_sqr + gamma33 * p3 * p3) /
          alpha;
@@ -374,7 +369,8 @@ update_photon_1dgr(photon_data photons, size_t num,
 
     Scalar vr = gamma11 * p1 / (Delta_sqr * u0);
 
-    if ((step + 1) % dev_params.data_interval == 0) {
+    if ((step + 1) % dev_params.data_interval == 0 &&
+        check_bit(photons.flag[idx], PhotonFlag::tracked)) {
       // Use p2 to store lower u_0
       Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
       Scalar Sigma = (r*r + a*a*square(std::cos(theta)));
