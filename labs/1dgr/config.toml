@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 2.5e-5
+delta_t = 1e-4
 
 # Charge of an electron
 q_e = 1.0
@@ -41,7 +41,7 @@ ic_path = 0.01
 spectral_alpha = 1.2
 
 # Minimum energy for the above power law soft photon
-e_min = 1.0e-8
+e_min = 1.0e-5
 
 # Separation between two energy regimes for inverse Compton scattering
 e_s = 0.2
@@ -56,7 +56,7 @@ track_percent = 0.1
 data_dir = "/home/alex/storage/Data/1DGR/1d_experiment"
 
 # Dipole B0
-B0 = 1.0e11
+B0 = 1.0e8
 
 # Damping coefficient
 damping_coef = 0.003
@@ -83,7 +83,7 @@ star_kT = 1e-4
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [98304, 1, 1]
+N = [16384, 1, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
