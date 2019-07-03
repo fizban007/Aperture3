@@ -25,6 +25,7 @@ Grid_1dGR::compute_coef(const SimParams& params) {
   m_D2.resize(n_size);
   m_D3.resize(n_size);
   m_alpha.resize(n_size);
+  m_theta.resize(n_size);
   m_K1.resize(n_size);
   m_K1_j.resize(n_size);
   m_j0.resize(n_size);
@@ -90,6 +91,7 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     Scalar theta =
         v_theta[n_data] * (1.0 - x) + v_theta[n_data + 1] * x;
     Scalar b31 = B3 / B1;
+    m_theta[n] = theta;
     m_B3B1[n] = b31;
     m_rho0[n] =
         params.B0 * (v_rho[n_data] * (1.0 - x) + v_rho[n_data + 1] * x);
@@ -165,6 +167,7 @@ Grid_1dGR::compute_coef(const SimParams& params) {
   m_D2.sync_to_device();
   m_D3.sync_to_device();
   m_alpha.sync_to_device();
+  m_theta.sync_to_device();
   m_K1.sync_to_device();
   m_K1_j.sync_to_device();
   m_j0.sync_to_device();
@@ -191,6 +194,7 @@ Grid_1dGR::get_mesh_ptrs() const {
   ptrs.D2 = m_D2.dev_ptr();
   ptrs.D3 = m_D3.dev_ptr();
   ptrs.alpha = m_alpha.dev_ptr();
+  ptrs.theta = m_theta.dev_ptr();
   ptrs.K1 = m_K1.dev_ptr();
   ptrs.K1_j = m_K1_j.dev_ptr();
   ptrs.j0 = m_j0.dev_ptr();

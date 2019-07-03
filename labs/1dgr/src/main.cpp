@@ -55,7 +55,7 @@ main(int argc, char* argv[]) {
   // exporter.add_ptc_output_1d("photons", "photon", &data.photons);
 
   // exporter.copyConfigFile();
-  // exporter.WriteGrid();
+  exporter.write_grid();
 
   // Main simulation loop
   for (; step <= env.params().max_steps; step++) {

@@ -127,7 +127,7 @@ interp_deriv(Scalar x, int c, const Scalar* array) {
 
 __global__ void
 update_ptc_1dgr(data_ptrs data, size_t num,
-                Grid_1dGR::mesh_ptrs mesh_ptrs, Scalar dt) {
+                Grid_1dGR::mesh_ptrs mesh_ptrs, Scalar dt, uint32_t step = 0) {
   auto& ptc = data.particles;
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -213,6 +213,19 @@ update_ptc_1dgr(data_ptrs data, size_t num,
 
     vr = (p1 / u0 - D1) / D2;
 
+    if ((step + 1) % dev_params.data_interval == 0) {
+      // Use p2 to store lower u_0
+      Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
+      Scalar Sigma = (r*r + a*a*square(std::cos(theta)));
+      Scalar Delta = (r*r - 2.0f * r + a*a);
+      Scalar g_00 = -(1.0f - 2.0f * r / Sigma);
+      Scalar g_03 = -4.0 * r * dev_params.a * square(std::sin(theta)) / Sigma;
+      Scalar B31 = mesh_ptrs.B3B1[c] * x1 + mesh_ptrs.B3B1[c - 1] * nx1;
+
+      Scalar u0inf = (g_00 + g_03 * dev_params.omega) * u0 + g_03 * B31 * Delta * u0 * vr;
+      ptc.p2[idx] = sgn(vr) * std::abs(u0inf);
+    }
+
     // compute movement
     Pos_t new_x1 = x1 + vr * dt * dev_mesh.inv_delta[0];
     // if (c > 160 && c < 190) {
@@ -238,6 +251,8 @@ update_ptc_1dgr(data_ptrs data, size_t num,
     // compute energy at the new position
     u0 = sqrt((D2 + p1 * p1) / (D2 * (alpha * alpha - D3) + D1 * D1));
     ptc.E[idx] = u0;
+
+    //
     // printf("u0 is %f, p1 is %f, vr is %f\n", u0, p1, vr);
 
     // TODO: deposit current
@@ -278,7 +293,7 @@ update_ptc_1dgr(data_ptrs data, size_t num,
 
 __global__ void
 update_photon_1dgr(photon_data photons, size_t num,
-                   Grid_1dGR::mesh_ptrs mesh_ptrs, Scalar dt) {
+                   Grid_1dGR::mesh_ptrs mesh_ptrs, Scalar dt, uint32_t step = 0) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
@@ -359,6 +374,18 @@ update_photon_1dgr(photon_data photons, size_t num,
 
     Scalar vr = gamma11 * p1 / (Delta_sqr * u0);
 
+    if ((step + 1) % dev_params.data_interval == 0) {
+      // Use p2 to store lower u_0
+      Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
+      Scalar Sigma = (r*r + a*a*square(std::cos(theta)));
+      Scalar Delta = (r*r - 2.0f * r + a*a);
+      Scalar g_00 = -(1.0f + 2.0f * r * (r*r + a*a) / Sigma / Delta);
+      Scalar g_03 = -2.0f * r * a / Sigma / Delta;
+
+      Scalar u0inf = (u0 - g_03 * photons.p3[idx]) / g_00;
+      photons.p2[idx] = sgn(vr) * std::abs(u0inf);
+    }
+
     // compute movement
     Pos_t new_x1 = x1 + vr * dt * dev_mesh.inv_delta[0];
     // if (c > 160 && c < 190) {
@@ -395,14 +422,14 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
     Logger::print_info("Updating {} particles",
                        data.particles.number());
     Kernels::update_ptc_1dgr<<<2048, 512>>>(
-        data_p, data.particles.number(), mesh_ptrs, dt);
+        data_p, data.particles.number(), mesh_ptrs, dt, step);
     CudaCheckError();
   }
 
   if (data.photons.number() > 0) {
     Logger::print_info("Updating {} photons", data.photons.number());
     Kernels::update_photon_1dgr<<<2048, 512>>>(
-        data.photons.data(), data.photons.number(), mesh_ptrs, dt);
+        data.photons.data(), data.photons.number(), mesh_ptrs, dt, step);
     CudaCheckError();
   }
 }
