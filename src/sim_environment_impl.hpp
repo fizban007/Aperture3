@@ -29,6 +29,9 @@ sim_environment::sim_environment(int* argc, char*** argv)
   m_world = MPI_COMM_WORLD;
   MPI_Comm_rank(m_world, &m_domain_info.rank);
   MPI_Comm_size(m_world, &m_domain_info.size);
+  // Initialize logger for future use
+  Logger::init(m_domain_info.rank, m_params.log_lvl, m_params.log_file);
+
   Logger::print_info("Num of ranks is {}", m_domain_info.size);
   Logger::print_info("Current rank is {}", m_domain_info.rank);
 
@@ -110,9 +113,6 @@ sim_environment::setup_env() {
 
   // Setup the local grid and the local data output grid
   setup_local_grid();
-
-  // Initialize logger for future use
-  Logger::init(0, m_params.log_lvl, m_params.log_file);
 
   Logger::print_info("Setup environment completed.");
   Logger::print_info("Each particle is worth {} bytes",

@@ -214,7 +214,8 @@ update_ptc_1dgr(data_ptrs data, size_t num,
 
     vr = (p1 / u0 - D1) / D2;
 
-    if ((step + 1) % dev_params.data_interval == 0 &&
+    // if ((step + 1) % dev_params.data_interval == 0 &&
+    if (step % dev_params.data_interval == 0 &&
         check_bit(flag, ParticleFlag::tracked)) {
       // Use p2 to store lower u_0
       Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
@@ -370,7 +371,8 @@ update_photon_1dgr(photon_data photons, size_t num,
 
     Scalar vr = gamma11 * p1 / (Delta_sqr * u0);
 
-    if ((step + 1) % dev_params.data_interval == 0 &&
+    // if ((step + 1) % dev_params.data_interval == 0 &&
+    if (step % dev_params.data_interval == 0 &&
         check_bit(photons.flag[idx], PhotonFlag::tracked)) {
       // Use p2 to store lower u_0
       Scalar theta = mesh_ptrs.theta[c] * x1 + mesh_ptrs.theta[c - 1] * nx1;
