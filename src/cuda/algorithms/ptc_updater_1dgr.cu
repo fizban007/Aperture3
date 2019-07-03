@@ -52,10 +52,10 @@ prepare_initial_condition(particle_data ptc,
       // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
       // u0, ptc.weight[idx]);
       ptc.flag[idx] = set_ptc_type_flag(
-          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          (u < dev_params.track_percent ? bit_or(ParticleFlag::tracked) : 0),
           ParticleType::electron);
       ptc.flag[idx + 1] = set_ptc_type_flag(
-          (u < 0.1 ? bit_or(ParticleFlag::tracked) : 0),
+          (u < dev_params.track_percent ? bit_or(ParticleFlag::tracked) : 0),
           ParticleType::positron);
       ptc.id[idx] = atomicAdd(&dev_ptc_id, 1);
       ptc.id[idx + 1] = atomicAdd(&dev_ptc_id, 1);
