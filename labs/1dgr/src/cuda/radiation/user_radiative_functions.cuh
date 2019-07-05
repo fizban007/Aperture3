@@ -25,7 +25,6 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
                  dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
   Scalar gamma = alpha * ptc.E[tid];
   float u = rng();
-  // Scalar gamma = data.particles.E[tid];
   return (u < find_ic_rate(gamma) * alpha * dev_params.delta_t);
 }
 
@@ -41,6 +40,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar xi = dev_mesh.pos(0, c, x1);
 
   const Scalar a = dev_params.a;
+  // const Scalar a = 0.0;
   const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
   const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
   Scalar exp_xi = std::exp(xi * (rp - rm));
@@ -68,10 +68,11 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
 
   Scalar gamma = alpha * ptc.E[tid];
-  Scalar Eph = gen_photon_e(gamma, &rng.m_local_state);
+  Scalar Eph = gen_photon_e(gamma, &(rng.m_local_state));
+  // Scalar Eph = bb * dev_ic_dep * gamma;
   // Limit energy loss so that remaining particle momentum still
   // makes sense
-  if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
+  // if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
 
   ptc.E[tid] = (gamma - Eph) / alpha;
    
@@ -85,13 +86,13 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
   // if (std::abs(Eph) < dev_params.E_ph_min) return;
-  if (std::abs(Eph) < 1.0e-2 / dev_params.e_min) return;
+  if (std::abs(Eph) < 0.01f / dev_params.e_min) return;
 
   // Add the new photon
   // Scalar path = rad_model.draw_photon_freepath(Eph);
   // printf("Eph is %f, path is %f\n", Eph, path);
   photons.x1[offset] = ptc.x1[tid];
-  photons.p1[offset] = (Eph / gamma) * ur_ptc / g11;
+  photons.p1[offset] = Delta * (Eph / gamma) * ur_ptc / g11;
   photons.p3[offset] =
       (Eph / gamma) *
       (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
@@ -193,6 +194,7 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
 void
 user_rt_init(sim_environment& env) {
   static inverse_compton rt_ic(env.params());
+  Logger::print_debug("in rt_init, emin is {}", env.params().e_min);
   static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
                                          1.0e-10, 0.1);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),

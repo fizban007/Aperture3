@@ -100,10 +100,10 @@ sim_environment::setup_env() {
     m_charges[i] = m_params.q_e;
     m_masses[i] = m_params.q_e;
   }
-  Logger::print_debug("Electron particle type is {}, charge_e is {}",
-                      (int)ParticleType::electron, m_charges[0]);
   m_charges[(int)ParticleType::electron] *= -1.0;
   m_masses[(int)ParticleType::ion] *= m_params.ion_mass;
+  Logger::print_debug("Electron particle type is {}, charge_e is {}",
+                      (int)ParticleType::electron, m_charges[0]);
   for (int i = 0; i < 8; i++) {
     m_q_over_m[i] = m_charges[i] / m_masses[i];
   }
