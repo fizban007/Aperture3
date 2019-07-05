@@ -137,16 +137,16 @@ gen_photon_e(Scalar gamma, curandState* state) {
   // } else {
   Scalar l, h;
   int b = binary_search(u, gn, dev_ic_dNde, l, h);
-  if (b < 2) {
-    b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
-    bb = (l == h ? b : (u - l) / (h - l) + b);
-    result = exp(dev_ic_dlep * bb + log(MIN_EP));
-  } else {
-    bb = (l == h ? b : (u - l) / (h - l) + b);
-    result = dev_ic_dep * bb;
-  }
+  // if (b < 2) {
+  //   b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+  //   bb = (l == h ? b : (u - l) / (h - l) + b);
+  //   result = exp(dev_ic_dlep * bb + log(MIN_EP));
+  // } else {
+  bb = (l == h ? b : (u - l) / (h - l) + b);
+  result = dev_ic_dep * bb;
+  // }
 
-  return min(result * gamma, gamma - 1.01);
+  return std::max(std::min(result * gamma, gamma - 1.01), 0.0);
 }
 
 __device__ Scalar
@@ -238,7 +238,7 @@ inverse_compton::inverse_compton(const SimParams& params)
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_ep[n] = m_dep * n;
   }
-  m_dlep = (-log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
+  m_dlep = (-log(MIN_EP)) / ((Scalar)m_log_ep.size() - 1.0);
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_log_ep[n] = exp(m_dlep * n + log(MIN_EP));
     // Logger::print_info("log ep is {}", m_log_ep[n]);
@@ -260,22 +260,22 @@ inverse_compton::inverse_compton(const SimParams& params)
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
                                   sizeof(Scalar)));
   cudaPitchedPtr p_dNde = get_cudaPitchedPtr(m_dNde);
-  cudaPitchedPtr p_dNde_t = get_cudaPitchedPtr(m_dNde_thompson);
+  cudaPitchedPtr p_dNde_th = get_cudaPitchedPtr(m_dNde_thompson);
 
   CudaSafeCall(cudaMemcpyToSymbol(
       Kernels::dev_ic_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
-                                  &p_dNde_t,
+                                  &p_dNde_th,
                                   sizeof(cudaPitchedPtr)));
-  Scalar* dev_ic_rates = m_ic_rate.dev_ptr();
-  Scalar* dev_gg_rates = m_gg_rate.dev_ptr();
-  Scalar* dev_g = m_gammas.dev_ptr();
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rates,
+  Scalar* dev_ic_rate_ptr = m_ic_rate.dev_ptr();
+  Scalar* dev_gg_rate_ptr = m_gg_rate.dev_ptr();
+  Scalar* dev_g_ptr = m_gammas.dev_ptr();
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rate_ptr,
                                   sizeof(Scalar*)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rates,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rate_ptr,
                                   sizeof(Scalar*)));
   CudaSafeCall(
-      cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g, sizeof(Scalar*)));
+      cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g_ptr, sizeof(Scalar*)));
 
   CudaSafeCall(cudaMalloc(&m_states,
                           m_threads * m_blocks * sizeof(curandState)));

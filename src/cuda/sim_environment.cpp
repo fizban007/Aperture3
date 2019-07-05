@@ -17,7 +17,7 @@ sim_environment::send_array_x(multi_array<Scalar>& array, int dir) {
   cudaExtent ext = make_cudaExtent(mesh.guard[0] * sizeof(Scalar),
                                    mesh.dims[1], mesh.dims[2]);
 
-  cudaMemcpy3DParms copy_parms = {0};
+  cudaMemcpy3DParms copy_parms = {};
   copy_parms.srcPtr = make_cudaPitchedPtr(
       array.dev_ptr(), mesh.dims[0] * sizeof(Scalar), mesh.dims[0],
       mesh.dims[1]);
@@ -71,7 +71,7 @@ sim_environment::send_array_y(multi_array<Scalar>& array, int dir) {
   cudaExtent ext =
       make_cudaExtent(mesh.dims[0] * sizeof(Scalar), mesh.guard[1], mesh.dims[2]);
 
-  cudaMemcpy3DParms copy_parms = {0};
+  cudaMemcpy3DParms copy_parms = {};
   copy_parms.srcPtr = make_cudaPitchedPtr(
       array.dev_ptr(), mesh.dims[0] * sizeof(Scalar), mesh.dims[0],
       mesh.dims[1]);
@@ -125,6 +125,8 @@ sim_environment::setup_env_extra() {
   init_dev_params(m_params);
   init_dev_mesh(m_grid->mesh());
 
+  Logger::print_debug("Charges are {}, {}", m_charges[0], m_charges[1]);
+  Logger::print_debug("Masses are {}, {}", m_masses[0], m_masses[1]);
   init_dev_charges(m_charges.data());
   init_dev_masses(m_masses.data());
 

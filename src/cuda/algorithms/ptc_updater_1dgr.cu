@@ -278,14 +278,13 @@ update_ptc_1dgr(data_ptrs data, size_t num,
         // printf("djx%d is %f, ", i, sx1 - sx0);
 
         atomicAdd(&data.J1[offset + sizeof(Scalar)],
-                  weight * djx / mesh_ptrs.K1_j[i + c + 1] *
-                      dev_mesh.delta[0] / dt);
+                  weight * djx / mesh_ptrs.K1_j[i + c + 1] * dev_mesh.delta[0] /
+                      dt);
         // if (sp == 0)
         //   printf("j1 is %f, ",
-        //          fields.J1[offset + sizeof(Scalar)]);
+        //          data.J1[offset + sizeof(Scalar)]);
 
-        atomicAdd(&data.Rho[sp][offset],
-                  -weight * sx1 / mesh_ptrs.K1[i + c]);
+        atomicAdd(&data.Rho[sp][offset], -weight * sx1 / mesh_ptrs.K1[i + c]);
         // if (sp == 0)
         //   printf("sx1 is %f\n", sx1);
       }
@@ -410,8 +409,10 @@ __global__ void
 filter_current1d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
                  const Scalar* k1, bool boundary_lower,
                  bool boundary_upper) {
-  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
-       i < dev_mesh.dims[0] - dev_mesh.guard[0]; i += blockDim.x * gridDim.x) {
+  // for (size_t i = blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
+  //      i < dev_mesh.dims[0] - dev_mesh.guard[0]; i += blockDim.x * gridDim.x) {
+  for (size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+       i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     size_t dx_plus =
         (boundary_upper && i == dev_mesh.dims[0] - dev_mesh.guard[0] - 1
              ? 0

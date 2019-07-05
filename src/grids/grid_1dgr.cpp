@@ -19,8 +19,8 @@ Grid_1dGR::~Grid_1dGR() {}
 
 void
 Grid_1dGR::compute_coef(const SimParams& params) {
-  Logger::print_info("Resizing arrays");
   uint32_t n_size = m_mesh.dims[0];
+  Logger::print_info("Resizing arrays to {}", n_size);
   m_D1 = array<Scalar>(n_size);
   m_D2 = array<Scalar>(n_size);
   m_D3 = array<Scalar>(n_size);
@@ -70,7 +70,8 @@ Grid_1dGR::compute_coef(const SimParams& params) {
   // data_omega.read(omega);
   omega = params.omega;
   HF::DataSet data_a = coef_file.getDataSet("a");
-  data_a.read(a);
+  // data_a.read(a);
+  a = params.a;
   Logger::print_info("------- omega is {}, a is {}", omega, a);
 
   // TODO: extrapolate the coefficients to the device arrays

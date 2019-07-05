@@ -24,7 +24,7 @@ namespace Aperture {
 
 namespace Kernels {
 
-template <typename PtcData>
+// template <typename PtcData>
 __global__ void
 count_photon_produced(data_ptrs data, size_t number, int *ph_count,
                       int *phPos, curandState *states) {
@@ -66,7 +66,7 @@ count_photon_produced(data_ptrs data, size_t number, int *ph_count,
   }
 }
 
-template <typename PtcData, typename PhotonData>
+// template <typename PtcData, typename PhotonData>
 __global__ void
 produce_photons(data_ptrs data, size_t ptc_num, size_t ph_num,
                 int *phPos, int *ph_count, int *ph_cum,
@@ -80,16 +80,16 @@ produce_photons(data_ptrs data, size_t ptc_num, size_t ph_num,
     uint32_t cell = data.particles.cell[tid];
     if (pos_in_block > -1 && cell != MAX_CELL) {
       if (!dev_mesh.is_in_bulk(cell)) continue;
-      int start_pos = ph_cum[blockIdx.x];
+      size_t start_pos = ph_cum[blockIdx.x];
 
-      int offset = ph_num + start_pos + pos_in_block;
+      size_t offset = ph_num + start_pos + pos_in_block;
 
       emit_photon(data, tid, offset, rng);
     }
   }
 }
 
-template <typename PhotonData>
+// template <typename PhotonData>
 __global__ void
 count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
                      int *pair_pos, curandState *states) {
@@ -139,7 +139,7 @@ count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
   }
 }
 
-template <typename PtcData, typename PhotonData>
+// template <typename PtcData, typename PhotonData>
 __global__ void
 produce_pairs(data_ptrs data, size_t ph_num, size_t ptc_num,
               int *pair_pos, int *pair_count, int *pair_cum,
@@ -188,7 +188,9 @@ radiative_transfer::emit_photons(sim_data &data) {
   m_cumNumPerBlock.assign_dev(0);
   auto data_p = get_data_ptrs(data);
 
-  Kernels::count_photon_produced<particle_data>
+  cudaDeviceSynchronize();
+
+  Kernels::count_photon_produced
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           data_p, ptc.number(), m_numPerBlock.dev_ptr(),
           m_posInBlock.dev_ptr(), (curandState *)data.d_rand_states);
@@ -209,7 +211,7 @@ radiative_transfer::emit_photons(sim_data &data) {
                     m_numPerBlock[m_blocksPerGrid - 1];
   Logger::print_info("{} photons are produced!", new_photons);
 
-  Kernels::produce_photons<particle_data, photon_data>
+  Kernels::produce_photons
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           data_p, ptc.number(), photons.number(),
           m_posInBlock.dev_ptr(), m_numPerBlock.dev_ptr(),
@@ -217,7 +219,7 @@ radiative_transfer::emit_photons(sim_data &data) {
           (curandState *)data.d_rand_states);
   CudaCheckError();
 
-  int padding = 100;
+  int padding = 1;
   photons.set_num(photons.number() + new_photons + padding);
 
   CudaSafeCall(cudaDeviceSynchronize());
@@ -240,7 +242,9 @@ radiative_transfer::produce_pairs(sim_data &data) {
   m_cumNumPerBlock.assign_dev(0);
   auto data_p = get_data_ptrs(data);
 
-  Kernels::count_pairs_produced<photon_data>
+  cudaDeviceSynchronize();
+
+  Kernels::count_pairs_produced
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           data_p, photons.number(), m_numPerBlock.dev_ptr(),
           m_posInBlock.dev_ptr(), (curandState *)data.d_rand_states);
@@ -254,6 +258,7 @@ radiative_transfer::produce_pairs(sim_data &data) {
   // be the total
   thrust::exclusive_scan(ptrNumPerBlock,
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
+  CudaCheckError();
   m_cumNumPerBlock.sync_to_host();
   m_numPerBlock.sync_to_host();
   int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
@@ -261,7 +266,7 @@ radiative_transfer::produce_pairs(sim_data &data) {
   Logger::print_info("{} electron-positron pairs are produced!",
                      new_pairs);
 
-  Kernels::produce_pairs<particle_data, photon_data>
+  Kernels::produce_pairs
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           data_p, photons.number(), ptc.number(),
           m_posInBlock.dev_ptr(), m_numPerBlock.dev_ptr(),
@@ -269,7 +274,7 @@ radiative_transfer::produce_pairs(sim_data &data) {
           (curandState *)data.d_rand_states);
   CudaCheckError();
 
-  int padding = 100;
+  int padding = 10;
   ptc.set_num(ptc.number() + new_pairs * 2 + padding);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());

@@ -1,13 +1,11 @@
 #include "core/detail/multi_array_utils.hpp"
 #include "cuda/constant_mem.h"
-#include "cuda/core/cu_sim_data1d.h"
-#include "cuda/core/cu_sim_environment.h"
+#include "sim_data.h"
+#include "sim_environment.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/cuda_control.h"
 #include "cuda/cudarng.h"
-#include "cuda/data/particles_dev.h"
-#include "cuda/data/photons_dev.h"
-#include "cuda/grids/grid_1dgr_dev.h"
+#include "grids/grid_1dgr.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/radiation/rt_ic_dev.h"
@@ -27,7 +25,7 @@ namespace Kernels {
 
 template <typename PtcData>
 __global__ void count_photon_produced(PtcData ptc, size_t number,
-                                      Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                                      Grid_1dGR::mesh_ptrs mesh_ptrs,
                                       int *ph_count, int *phPos,
                                       curandState *states, Scalar dt) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -73,7 +71,7 @@ __global__ void count_photon_produced(PtcData ptc, size_t number,
 template <typename PtcData, typename PhotonData>
 __global__ void
 produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_num,
-                Grid_1dGR_dev::mesh_ptrs mesh_ptrs, int *phPos, int *ph_count,
+                Grid_1dGR::mesh_ptrs mesh_ptrs, int *phPos, int *ph_count,
                 int *ph_cum, curandState *states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState local_state = states[id];
@@ -141,7 +139,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_num,
       int offset = ph_num + start_pos + pos_in_block;
       photons.x1[offset] = ptc.x1[tid];
       photons.p1[offset] = (Eph / gamma) * ur_ptc / g11;
-      photons.pf[offset] =
+      photons.p3[offset] =
           (Eph / gamma) * (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) /
           g33;
       // photons.E[offset] = sgn(photons.p1[offset]) * Eph / alpha;
@@ -152,7 +150,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_num,
       photons.flag[offset] =
           (u < dev_params.track_percent ? bit_or(PhotonFlag::tracked) : 0);
       if (id == 0) {
-        printf("p1 %f, pf %f, E %f\n", photons.p1[offset], photons.pf[offset], photons.E[offset]);
+        printf("p1 %f, p3 %f, E %f\n", photons.p1[offset], photons.p3[offset], photons.E[offset]);
       }
     }
   }
@@ -161,7 +159,7 @@ produce_photons(PtcData ptc, size_t ptc_num, PhotonData photons, size_t ph_num,
 
 template <typename PhotonData>
 __global__ void count_pairs_produced(PhotonData photons, size_t number,
-                                     Grid_1dGR_dev::mesh_ptrs mesh_ptrs,
+                                     Grid_1dGR::mesh_ptrs mesh_ptrs,
                                      int *pair_count, int *pair_pos,
                                      curandState *states, Scalar dt) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -214,7 +212,7 @@ __global__ void count_pairs_produced(PhotonData photons, size_t number,
 template <typename PtcData, typename PhotonData>
 __global__ void
 produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc, size_t ptc_num,
-              Grid_1dGR_dev::mesh_ptrs mesh_ptrs, int *pair_pos,
+              Grid_1dGR::mesh_ptrs mesh_ptrs, int *pair_pos,
               int *pair_count, int *pair_cum, curandState *states) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   CudaRng rng(&states[id]);
@@ -289,7 +287,7 @@ produce_pairs(PhotonData photons, size_t ph_num, PtcData ptc, size_t ptc_num,
 
 } // namespace Kernels
 
-RadiationTransfer1DGR::RadiationTransfer1DGR(const cu_sim_environment &env)
+RadiationTransfer1DGR::RadiationTransfer1DGR(sim_environment &env)
     : m_env(env), d_rand_states(nullptr), m_threadsPerBlock(256),
       m_blocksPerGrid(512), m_numPerBlock(m_blocksPerGrid),
       m_cumNumPerBlock(m_blocksPerGrid),
@@ -314,7 +312,7 @@ RadiationTransfer1DGR::~RadiationTransfer1DGR() {
   CudaSafeCall(cudaFree((curandState *)d_rand_states));
 }
 
-void RadiationTransfer1DGR::emit_photons(cu_sim_data1d &data, Scalar dt) {
+void RadiationTransfer1DGR::emit_photons(sim_data &data, Scalar dt) {
   auto &ptc = data.particles;
   auto &photons = data.photons;
   m_posInBlock.assign_dev(0, ptc.number());
@@ -322,19 +320,18 @@ void RadiationTransfer1DGR::emit_photons(cu_sim_data1d &data, Scalar dt) {
   m_cumNumPerBlock.assign_dev(0);
 
   cudaDeviceSynchronize();
-  const Grid_1dGR_dev &grid =
-      *dynamic_cast<const Grid_1dGR_dev *>(data.grid.get());
-  auto mesh_ptrs = grid.get_mesh_ptrs();
+  Grid_1dGR* grid = dynamic_cast<Grid_1dGR*>(&m_env.local_grid());
+  auto mesh_ptrs = grid->get_mesh_ptrs();
 
   // Count the number of photons produced
-  Kernels::count_photon_produced<particle1d_data>
+  Kernels::count_photon_produced<particle_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          ptc.data(), ptc.number(), mesh_ptrs, m_numPerBlock.data_d(),
-          m_posInBlock.data_d(), (curandState *)d_rand_states, dt);
+          ptc.data(), ptc.number(), mesh_ptrs, m_numPerBlock.dev_ptr(),
+          m_posInBlock.dev_ptr(), (curandState *)d_rand_states, dt);
   CudaCheckError();
 
-  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
-  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
+  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.dev_ptr());
+  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.dev_ptr());
   // Scan the number of photons produced per block. The result gives the
   // offset for each block
   thrust::exclusive_scan(ptrNumPerBlock, ptrNumPerBlock + m_blocksPerGrid,
@@ -347,22 +344,22 @@ void RadiationTransfer1DGR::emit_photons(cu_sim_data1d &data, Scalar dt) {
   Logger::print_info("{} photons are produced!", new_photons);
 
   // Actually produce the photons
-  Kernels::produce_photons<particle1d_data, photon1d_data>
+  Kernels::produce_photons<particle_data, photon_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           ptc.data(), ptc.number(), photons.data(), photons.number(), mesh_ptrs,
-          m_posInBlock.data_d(), m_numPerBlock.data_d(),
-          m_cumNumPerBlock.data_d(), (curandState *)d_rand_states);
+          m_posInBlock.dev_ptr(), m_numPerBlock.dev_ptr(),
+          m_cumNumPerBlock.dev_ptr(), (curandState *)d_rand_states);
   CudaCheckError();
 
   int padding = 1;
   photons.set_num(photons.number() + new_photons + padding);
 }
 
-void RadiationTransfer1DGR::produce_pairs(cu_sim_data1d &data, Scalar dt) {
+void RadiationTransfer1DGR::produce_pairs(sim_data &data, Scalar dt) {
   auto &ptc = data.particles;
   auto &photons = data.photons;
-  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.data_d());
-  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.data_d());
+  thrust::device_ptr<int> ptrNumPerBlock(m_numPerBlock.dev_ptr());
+  thrust::device_ptr<int> ptrCumNum(m_cumNumPerBlock.dev_ptr());
   int new_pairs;
 
   m_posInBlock.assign_dev(0, photons.number());
@@ -370,15 +367,14 @@ void RadiationTransfer1DGR::produce_pairs(cu_sim_data1d &data, Scalar dt) {
   m_cumNumPerBlock.assign_dev(0);
 
   cudaDeviceSynchronize();
-  const Grid_1dGR_dev &grid =
-      *dynamic_cast<const Grid_1dGR_dev *>(data.grid.get());
-  auto mesh_ptrs = grid.get_mesh_ptrs();
+  Grid_1dGR* grid = dynamic_cast<Grid_1dGR*>(&m_env.local_grid());
+  auto mesh_ptrs = grid->get_mesh_ptrs();
 
   // Count the number of photons produced
-  Kernels::count_pairs_produced<photon1d_data>
+  Kernels::count_pairs_produced<photon_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          photons.data(), photons.number(), mesh_ptrs, m_numPerBlock.data_d(),
-          m_posInBlock.data_d(), (curandState *)d_rand_states, dt);
+          photons.data(), photons.number(), mesh_ptrs, m_numPerBlock.dev_ptr(),
+          m_posInBlock.dev_ptr(), (curandState *)d_rand_states, dt);
   CudaCheckError();
 
   // Scan the number of photons produced per block. The result gives the
@@ -393,11 +389,11 @@ void RadiationTransfer1DGR::produce_pairs(cu_sim_data1d &data, Scalar dt) {
   Logger::print_info("{} electron-positron pairs are produced!", new_pairs);
 
   // Actually produce the photons
-  Kernels::produce_pairs<particle1d_data, photon1d_data>
+  Kernels::produce_pairs<particle_data, photon_data>
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
           photons.data(), photons.number(), ptc.data(), ptc.number(), mesh_ptrs,
-          m_posInBlock.data_d(), m_numPerBlock.data_d(),
-          m_cumNumPerBlock.data_d(), (curandState *)d_rand_states);
+          m_posInBlock.dev_ptr(), m_numPerBlock.dev_ptr(),
+          m_cumNumPerBlock.dev_ptr(), (curandState *)d_rand_states);
   CudaCheckError();
 
   int padding = 10;
