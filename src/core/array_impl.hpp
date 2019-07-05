@@ -11,8 +11,8 @@ template <typename T>
 array<T>::array() {}
 
 template <typename T>
-array<T>::array(size_t length) {
-  alloc_mem(length);
+array<T>::array(size_t size) {
+  alloc_mem(size);
 }
 
 template <typename T>

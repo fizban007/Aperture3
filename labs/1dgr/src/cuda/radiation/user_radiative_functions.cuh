@@ -57,7 +57,6 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
               dev_mesh_ptrs_1dgr.D3[c - 1] * (1.0f - x1);
   Scalar B3B1 = dev_mesh_ptrs_1dgr.B3B1[c] * x1 +
                 dev_mesh_ptrs_1dgr.B3B1[c - 1] * (1.0f - x1);
-  Scalar gamma = alpha * ptc.E[tid];
   Scalar g11 = dev_mesh_ptrs_1dgr.gamma_rr[c] * x1 +
                dev_mesh_ptrs_1dgr.gamma_rr[c - 1] * (1.0f - x1);
   Scalar g33 = dev_mesh_ptrs_1dgr.gamma_ff[c] * x1 +
@@ -68,6 +67,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar ur_ptc = u0_ptc * Delta * (p1 / u0_ptc - D1) / D2;
   // Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
 
+  Scalar gamma = alpha * ptc.E[tid];
   Scalar Eph = gen_photon_e(gamma, &rng.m_local_state);
   // Limit energy loss so that remaining particle momentum still
   // makes sense
@@ -85,7 +85,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
   // if (std::abs(Eph) < dev_params.E_ph_min) return;
-  if (std::abs(Eph) < 1.0e-3 / dev_params.e_min) return;
+  if (std::abs(Eph) < 1.0e-2 / dev_params.e_min) return;
 
   // Add the new photon
   // Scalar path = rad_model.draw_photon_freepath(Eph);
@@ -136,6 +136,9 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   uint32_t c = photons.cell[tid];
   Pos_t x1 = photons.x1[tid];
 
+  // Set this photon to be empty
+  photons.cell[tid] = MAX_CELL;
+
   Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
                  dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
   Scalar D1 = dev_mesh_ptrs_1dgr.D1[c] * x1 +
@@ -183,8 +186,6 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
         bit_or(ParticleFlag::secondary), ParticleType::positron);
   }
 
-  // Set this photon to be empty
-  photons.cell[tid] = MAX_CELL;
 }
 
 }  // namespace Kernels

@@ -4,6 +4,7 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/data_exporter.h"
+#include "utils/util_functions.h"
 #include <highfive/H5File.hpp>
 
 using namespace HighFive;
@@ -27,69 +28,126 @@ void
 user_write_ptc_output(sim_data& data, data_exporter& exporter,
                       uint32_t timestep, double time, File& file) {
   exporter.add_ptc_uint_output(
-      data, "ptc_id", data.particles.tracked_number(),
-      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().id[n];
-      },
-      file);
-  exporter.add_ptc_uint_output(
-      data, "ptc_flag", data.particles.tracked_number(),
-      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().flag[n];
-      },
-      file);
-  exporter.add_ptc_float_output(
-      data, "ptc_p1", data.particles.tracked_number(),
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().p1[n];
+      data, "electron_id", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::electron) {
+          v[nsb] = data.particles.tracked_data().id[n];
+          nsb += 1;
+        }
       },
       file);
   exporter.add_ptc_float_output(
-      data, "ptc_u0", data.particles.tracked_number(),
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.particles.tracked_data().p2[n];
+      data, "electron_p", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::electron) {
+          v[nsb] = data.particles.tracked_data().p1[n];
+          nsb += 1;
+        }
+      },
+      file);
+  exporter.add_ptc_float_output(
+      data, "electron_u0", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::electron) {
+          v[nsb] = data.particles.tracked_data().p2[n];
+          nsb += 1;
+        }
       },
       file);
   auto& mesh = data.env.local_grid().mesh();
   exporter.add_ptc_float_output(
-      data, "ptc_x1", data.particles.tracked_number(),
-      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-        auto cell = data.particles.tracked_data().cell[n];
-        auto x = data.particles.tracked_data().x1[n];
-        v[n] = mesh.pos(0, mesh.get_c1(cell), x);
+      data, "electron_x", data.particles.tracked_number(),
+      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::electron) {
+          auto cell = data.particles.tracked_data().cell[n];
+          auto x = data.particles.tracked_data().x1[n];
+          v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
+          nsb += 1;
+        }
+      },
+      file);
+  exporter.add_ptc_uint_output(
+      data, "positron_id", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::positron) {
+          v[nsb] = data.particles.tracked_data().id[n];
+          nsb += 1;
+        }
+      },
+      file);
+  exporter.add_ptc_float_output(
+      data, "positron_p", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::positron) {
+          v[nsb] = data.particles.tracked_data().p1[n];
+          nsb += 1;
+        }
+      },
+      file);
+  exporter.add_ptc_float_output(
+      data, "positron_u0", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::positron) {
+          v[nsb] = data.particles.tracked_data().p2[n];
+          nsb += 1;
+        }
+      },
+      file);
+  exporter.add_ptc_float_output(
+      data, "positron_x", data.particles.tracked_number(),
+      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n])
+            == (int)ParticleType::positron) {
+          auto cell = data.particles.tracked_data().cell[n];
+          auto x = data.particles.tracked_data().x1[n];
+          v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
+          nsb += 1;
+        }
       },
       file);
   exporter.add_ptc_uint_output(
       data, "ph_id", data.photons.tracked_number(),
-      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
-        v[n] = data.photons.tracked_data().id[n];
+      [](sim_data& data, std::vector<uint32_t>& v, uint32_t n, uint32_t& nsb) {
+        v[nsb] = data.photons.tracked_data().id[n];
+        nsb += 1;
       },
       file);
 
   exporter.add_ptc_float_output(
       data, "ph_p1", data.photons.tracked_number(),
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.photons.tracked_data().p1[n];
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        v[nsb] = data.photons.tracked_data().p1[n];
+        nsb += 1;
       },
       file);
   exporter.add_ptc_float_output(
       data, "ph_u0", data.photons.tracked_number(),
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.photons.tracked_data().p2[n];
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        v[nsb] = data.photons.tracked_data().p2[n];
+        nsb += 1;
       },
       file);
   exporter.add_ptc_float_output(
       data, "ph_p3", data.photons.tracked_number(),
-      [](sim_data& data, std::vector<float>& v, uint32_t n) {
-        v[n] = data.photons.tracked_data().p3[n];
+      [](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
+        v[nsb] = data.photons.tracked_data().p3[n];
+        nsb += 1;
       },
       file);
   exporter.add_ptc_float_output(
       data, "ph_x1", data.photons.tracked_number(),
-      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
+      [&mesh](sim_data& data, std::vector<float>& v, uint32_t n, uint32_t& nsb) {
         auto cell = data.photons.tracked_data().cell[n];
         auto x = data.photons.tracked_data().x1[n];
-        v[n] = mesh.pos(0, mesh.get_c1(cell), x);
+        v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
+        nsb += 1;
       },
       file);
 }

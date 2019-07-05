@@ -12,6 +12,7 @@ array<T>::alloc_mem(size_t N) {
   m_data_h = new T[N];
   CudaSafeCall(cudaMalloc(&m_data_d, N * sizeof(T)));
   m_size = N;
+
 }
 
 template <typename T>
@@ -58,7 +59,7 @@ array<T>::copy_from(const self_type& other) {
   size_t n = std::min(m_size, other.m_size);
   // std::copy(other.m_data_h, other.m_data_h + n, m_data_h);
   CudaSafeCall(cudaMemcpy(m_data_d, other.m_data_d, n * sizeof(T), cudaMemcpyDeviceToDevice));
-  sync_to_host();
+  // sync_to_host();
 }
 
 template class array<long long>;

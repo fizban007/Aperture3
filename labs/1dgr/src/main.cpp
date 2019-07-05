@@ -73,8 +73,10 @@ main(int argc, char* argv[]) {
 
     solver.update_fields(data, dt);
 
-    // rad.emit_photons(data);
-    // rad.produce_pairs(data);
+    if (env.params().create_pairs) {
+      rad.emit_photons(data);
+      rad.produce_pairs(data);
+    }
 
     // Output data
     if (step % env.params().data_interval == 0) {
