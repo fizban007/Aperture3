@@ -35,27 +35,13 @@ namespace Aperture {
 
 namespace Kernels {
 
-struct assign_helper {
-  size_t _nt, _n;
-
-  HOST_DEVICE assign_helper(size_t nt, size_t n) : _nt(nt), _n(n) {}
-
-  template <typename T>
-  HD_INLINE void operator()(const char* name, const T& x1, T& x2) {
-    x2[_nt] = x1[_n];
-  }
-};
-
 template <typename T>
 __global__ void
-get_tracked_ptc_attr(T* ptr, uint32_t* flags, size_t num,
-                     T* tracked_ptr, uint32_t* num_tracked) {
+get_tracked_ptc_attr(T* ptr, uint32_t* tracked_map, size_t num,
+                     T* tracked_ptr) {
   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
-    if (check_bit(flags[n], ParticleFlag::tracked)) {
-      size_t nt = atomicAdd(num_tracked, 1u);
-      tracked_ptr[nt] = ptr[n];
-    }
+    tracked_ptr[n] = ptr[tracked_map[n]];
   }
 }
 
@@ -223,6 +209,7 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
                                         std::size_t alignment) {
   alloc_struct_of_arrays(m_data, max_num);
   alloc_struct_of_arrays_managed(m_tracked, MAX_TRACKED);
+  CudaSafeCall(cudaMalloc(&m_tracked_ptc_map, MAX_TRACKED * sizeof(uint32_t)));
 }
 
 template <typename ParticleClass>
@@ -230,6 +217,7 @@ void
 particle_base<ParticleClass>::free_mem() {
   free_struct_of_arrays(m_data);
   free_struct_of_arrays(m_tracked);
+  CudaSafeCall(cudaFree(m_tracked_ptc_map));
 }
 
 template <typename ParticleClass>
@@ -314,10 +302,10 @@ particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
     auto ptr_cell = thrust::device_pointer_cast(m_data.cell);
     auto ptr_idx = thrust::device_pointer_cast(m_index);
     thrust::counting_iterator<Index_t> iter(0);
-    thrust::copy_n(iter, this->m_number, ptr_idx);
+    thrust::copy_n(iter, m_number, ptr_idx);
 
     // Sort the index array by key
-    thrust::sort_by_key(ptr_cell, ptr_cell + this->m_number, ptr_idx);
+    thrust::sort_by_key(ptr_cell, ptr_cell + m_number, ptr_idx);
     // cudaDeviceSynchronize();
     Logger::print_debug("Finished sorting");
 
@@ -345,8 +333,17 @@ particle_base<ParticleClass>::rearrange_arrays(
   auto ptc = ParticleClass();
   for_each_arg_with_name(
       m_data, ptc,
-      rearrange_array{m_index, std::min(m_size, m_number + padding),
-                      m_tmp_data_ptr, skip});
+      [this, &padding, &skip] (const char* name, auto& x, auto& u) {
+        typedef typename std::remove_reference<decltype(x)>::type x_type;
+        auto ptr_index = thrust::device_pointer_cast(m_index);
+        if (std::strcmp(name, skip.c_str()) == 0) return;
+
+        auto x_ptr = thrust::device_pointer_cast(x);
+        auto tmp_ptr = thrust::device_pointer_cast(reinterpret_cast<x_type>(m_tmp_data_ptr));
+        thrust::gather(ptr_index, ptr_index + m_number, x_ptr, tmp_ptr);
+        thrust::copy_n(tmp_ptr, m_number, x_ptr);
+        CudaCheckError();
+      });
 }
 
 template <typename ParticleClass>
@@ -358,23 +355,26 @@ particle_base<ParticleClass>::clear_guard_cells(const Grid& grid) {
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::get_tracked_ptc() {
-  uint32_t* num_tracked;
-  CudaSafeCall(cudaMalloc(&num_tracked, sizeof(uint32_t)));
-  CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
+  if (m_number > 0) {
+    uint32_t* num_tracked;
+    CudaSafeCall(cudaMalloc(&num_tracked, sizeof(uint32_t)));
+    CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
 
-  visit_struct::for_each(
-      m_data, m_tracked,
-      [this, &num_tracked](const char* name, auto& u, auto& v) {
-        CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
-        Kernels::get_tracked_ptc_attr<<<2048, 512>>>(
-            u, m_data.flag, m_number, v, num_tracked);
-        CudaCheckError();
-        CudaSafeCall(cudaDeviceSynchronize());
-      });
-  CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
-                          cudaMemcpyDeviceToHost));
-  CudaSafeCall(cudaFree(num_tracked));
-  Logger::print_info("Got {} tracked particles", m_num_tracked);
+    map_tracked_ptc(m_data.flag, m_data.cell, m_number, m_tracked_ptc_map, num_tracked);
+    CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
+                            cudaMemcpyDeviceToHost));
+    CudaSafeCall(cudaFree(num_tracked));
+
+    visit_struct::for_each(
+        m_data, m_tracked,
+        [this](const char* name, auto& u, auto& v) {
+            Kernels::get_tracked_ptc_attr<<<256, 512>>>
+                (u, m_tracked_ptc_map, m_num_tracked, v);
+            CudaCheckError();
+        });
+    CudaSafeCall(cudaDeviceSynchronize());
+    Logger::print_info("Got {} tracked particles", m_num_tracked);
+  }
 }
 
 // template <typename ParticleClass>

@@ -432,13 +432,14 @@ data_exporter::add_ptc_float_output(sim_data& data,
                                     const std::string& name, size_t num, Func f,
                                     File& file) {
   Logger::print_info("writing the {} of {} tracked particles", name, num);
+  uint32_t num_subset = 0;
   for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_float_data, n);
+    f(data, tmp_ptc_float_data, n, num_subset);
   }
 
   // TODO: Consider MPI!!!
   DataSet dataset =
-      file.createDataSet<float>(name, DataSpace({num}));
+      file.createDataSet<float>(name, DataSpace({num_subset}));
   dataset.write(tmp_ptc_float_data);
 }
 
@@ -447,13 +448,14 @@ void
 data_exporter::add_ptc_uint_output(sim_data& data,
                                    const std::string& name, size_t num, Func f,
                                    File& file) {
+  uint32_t num_subset = 0;
   for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_uint_data, n);
+    f(data, tmp_ptc_uint_data, n, num_subset);
   }
 
   // TODO: Consider MPI!!!
   DataSet dataset =
-      file.createDataSet<uint32_t>(name, DataSpace({num}));
+      file.createDataSet<uint32_t>(name, DataSpace({num_subset}));
   dataset.write(tmp_ptc_uint_data);
 }
 

@@ -214,7 +214,7 @@ sim_environment::setup_local_grid() {
   m_grid->init(m_params);
   auto& mesh = m_grid->mesh();
   for (int d = 0; d < 3; d++) {
-    if (m_domain_info.cart_dims[d] > 0) {
+    if (m_domain_info.cart_dims[d] > 1) {
       // We adjust local params, and use these params to init the grid
       // m_params.N[d] /= m_domain_info.cart_dims[d];
       // m_params.size[d] /= m_domain_info.cart_dims[d];
@@ -225,7 +225,7 @@ sim_environment::setup_local_grid() {
       mesh.sizes[d] /= m_domain_info.cart_dims[d];
       mesh.lower[d] += m_domain_info.cart_coord[d] * mesh.sizes[d];
       mesh.offset[d] = m_domain_info.cart_coord[d] * mesh.reduced_dim(d);
-      Logger::print_info("offset[d] is {}", mesh.offset[d]);
+      Logger::print_info("offset[{}] is {}", d, mesh.offset[d]);
     }
   }
   m_grid->compute_coef(m_params);

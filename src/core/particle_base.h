@@ -15,6 +15,7 @@ class particle_base {
 
   array_type m_data;
   array_type m_tracked;
+  uint32_t* m_tracked_ptc_map;
   size_t* m_index = nullptr;
   void* m_tmp_data_ptr = nullptr;
   std::vector<size_t> m_partition;

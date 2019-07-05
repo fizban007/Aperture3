@@ -21,21 +21,21 @@ void
 Grid_1dGR::compute_coef(const SimParams& params) {
   Logger::print_info("Resizing arrays");
   uint32_t n_size = m_mesh.dims[0];
-  m_D1.resize(n_size);
-  m_D2.resize(n_size);
-  m_D3.resize(n_size);
-  m_alpha.resize(n_size);
-  m_theta.resize(n_size);
-  m_K1.resize(n_size);
-  m_K1_j.resize(n_size);
-  m_j0.resize(n_size);
-  m_agrr.resize(n_size);
-  m_agrf.resize(n_size);
-  m_rho0.resize(n_size);
-  m_gamma_rr.resize(n_size);
-  m_gamma_ff.resize(n_size);
-  m_beta_phi.resize(n_size);
-  m_B3B1.resize(n_size);
+  m_D1 = array<Scalar>(n_size);
+  m_D2 = array<Scalar>(n_size);
+  m_D3 = array<Scalar>(n_size);
+  m_alpha = array<Scalar>(n_size);
+  m_theta = array<Scalar>(n_size);
+  m_K1 = array<Scalar>(n_size);
+  m_K1_j = array<Scalar>(n_size);
+  m_j0 = array<Scalar>(n_size);
+  m_agrr = array<Scalar>(n_size);
+  m_agrf = array<Scalar>(n_size);
+  m_rho0 = array<Scalar>(n_size);
+  m_gamma_rr = array<Scalar>(n_size);
+  m_gamma_ff = array<Scalar>(n_size);
+  m_beta_phi = array<Scalar>(n_size);
+  m_B3B1 = array<Scalar>(n_size);
 
   Logger::print_info("Reading h5");
   HF::File coef_file("coef.h5", HF::File::ReadOnly);
@@ -76,11 +76,12 @@ Grid_1dGR::compute_coef(const SimParams& params) {
   // TODO: extrapolate the coefficients to the device arrays
   uint32_t n_data = 0;
   uint32_t n_mid = 0;
+
   for (uint32_t n = 0; n < n_size; n++) {
     double xi = m_mesh.lower[0] +
                 ((int)n - m_mesh.guard[0] + 1) * m_mesh.delta[0];
-    double rp = 1.0 + std::sqrt(1.0 - a * a);
-    double rm = 1.0 - std::sqrt(1.0 - a * a);
+    double rp = 1.0 + std::sqrt(1.0 - a*a);
+    double rm = 1.0 - std::sqrt(1.0 - a*a);
     double exp_xi = std::exp(xi * (rp - rm));
     double r = (rp - rm * exp_xi) / (1.0 - exp_xi);
     while (v_r[n_data + 1] < r) n_data += 1;
@@ -89,16 +90,15 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     double x = (r - v_r[n_data]) / (v_r[n_data + 1] - v_r[n_data]);
     Scalar B1 = v_B1[n_data] * (1.0 - x) + v_B1[n_data + 1] * x;
     Scalar B3 = v_B3[n_data] * (1.0 - x) + v_B3[n_data + 1] * x;
+    // Scalar B3 = 0.0;
     Scalar theta =
         v_theta[n_data] * (1.0 - x) + v_theta[n_data + 1] * x;
     Scalar b31 = B3 / B1;
-    m_theta[n] = theta;
     m_B3B1[n] = b31;
     m_rho0[n] =
         params.B0 * (v_rho[n_data] * (1.0 - x) + v_rho[n_data + 1] * x);
 
-    // Logger::print_debug("xi is {}, r is {}, x is {}, theta is {}",
-    // xi, r, x, theta);
+    // Logger::print_debug("xi is {}, r is {}, x is {}, theta is {}", xi, r, x, theta);
     Scalar Sigma = r * r + a * a * square(std::cos(theta));
     Scalar Delta = r * r - 2.0 * r + a * a;
     Scalar A =
@@ -108,8 +108,7 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     Scalar g22 = Sigma;
     Scalar g33 = A * square(std::sin(theta)) / Sigma;
     Scalar sqrt_gamma = std::sqrt(g11 * g22 * g33);
-    // Logger::print_debug("Sigma {}, Delta {}, A {}, sqrt_gamma {}",
-    // Sigma, Delta, A, sqrt_gamma);
+    // Logger::print_debug("Sigma {}, Delta {}, A {}, sqrt_gamma {}", Sigma, Delta, A, sqrt_gamma);
 
     m_K1[n] =
         Delta * sqrt_gamma /
@@ -130,13 +129,13 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     m_beta_phi[n] = -2.0 * a * r / A;
 
     double xi_mid = m_mesh.lower[0] +
-                    ((int)n - m_mesh.guard[0] + 0.5) * m_mesh.delta[0];
+                   ((int)n - m_mesh.guard[0] + 0.5) * m_mesh.delta[0];
     double exp_xi_mid = std::exp(xi_mid * (rp - rm));
     double r_mid = (rp - rm * exp_xi_mid) / (1.0 - exp_xi_mid);
     while (v_r[n_mid + 1] < r_mid) n_mid += 1;
     double y = (r - v_r[n_mid]) / (v_r[n_mid + 1] - v_r[n_mid]);
-    m_j0[n] = params.B0 *
-              (v_jr[n_mid] * (1.0 - y) + v_jr[n_mid + 1] * y) / Delta;
+    m_j0[n] =
+        params.B0 * (v_jr[n_mid] * (1.0 - y) + v_jr[n_mid + 1] * y) / Delta;
     Scalar theta_mid =
         v_theta[n_mid] * (1.0 - y) + v_theta[n_mid + 1] * y;
     Sigma = r_mid * r_mid + a * a * square(std::cos(theta_mid));
@@ -156,14 +155,16 @@ Grid_1dGR::compute_coef(const SimParams& params) {
     m_agrr[n] = Delta * Delta * std::sqrt(Delta * Sigma / A) * g11;
     // Scalar denom = (m_alpha2[n] - m_D3[n]) * m_D2[n] +
     // square(m_D1[n]);
-    // if (n % 10 == 0) {
-    //   Logger::print_info(
-    //       "rho0 is {}, rho0*K1 is {}, sqrt_gamma is {}, j0 is "
-    //       "{}, K1 is "
-    //       "{}",
-    //       m_rho0[n], m_rho0[n] * m_K1[n], sqrt_gamma, m_j0[n], m_K1[n]);
-    // }
+    if (n % 10 == 0) {
+      Logger::print_info(
+          "rho0 is {}, rho0*K1 is {}, sqrt_gamma is {}, j0 is "
+          "{}, K1 is "
+          "{}",
+          m_rho0[n], m_rho0[n] * m_K1[n], sqrt_gamma,
+          m_j0[n], m_K1[n]);
+    }
   }
+
   m_D1.sync_to_device();
   m_D2.sync_to_device();
   m_D3.sync_to_device();
