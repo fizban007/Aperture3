@@ -233,7 +233,7 @@ update_ptc_1dgr(data_ptrs data, size_t num,
 
       Scalar u0inf = (g_00 + g_03 * dev_params.omega) * u0 +
                      g_03 * B31 * Delta * u0 * vr;
-      ptc.p2[idx] = sgn(vr) * std::abs(u0inf);
+      ptc.p2[idx] = u0inf;
     }
 
     // compute movement
@@ -388,7 +388,7 @@ update_photon_1dgr(photon_data photons, size_t num,
       Scalar g_03 = -2.0f * r * a / Sigma / Delta;
 
       Scalar u0inf = (u0 - g_03 * photons.p3[idx]) / g_00;
-      photons.p2[idx] = sgn(vr) * std::abs(u0inf);
+      photons.p2[idx] = u0inf;
     }
 
     // compute movement
