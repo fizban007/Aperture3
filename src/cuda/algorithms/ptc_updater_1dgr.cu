@@ -174,10 +174,10 @@ update_ptc_1dgr(data_ptrs data, size_t num,
     Scalar D1 = mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * nx1;
     Scalar D2 = mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * nx1;
     Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
-    Scalar Dr = (x1 < 0.5f ? data.E1(c, 0) * (0.5f + x1) +
-                                 data.E1(c - 1, 0) * (0.5f - x1)
-                           : data.E1(c, 0) * (1.5f - x1) +
-                                 data.E1(c + 1, 0) * (x1 - 0.5f));
+    Scalar Dr = (x1 < 0.5f ? data.E3(c, 0) * (0.5f + x1) +
+                                 data.E3(c - 1, 0) * (0.5f - x1)
+                           : data.E3(c, 0) * (1.5f - x1) +
+                                 data.E3(c + 1, 0) * (x1 - 0.5f));
     // Scalar Dphi = fields.E3[c] * x1 + fields.E3[c - 1] * nx1;
     // Scalar Dphi = *ptrAddr(fields.E3, c, 0) * x1 +
     //               *ptrAddr(fields.E3, c - 1, 0) * nx1;
@@ -450,6 +450,16 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
     for (auto& rho : data.Rho) {
       rho.initialize();
     }
+
+    // Filter E field before particle push
+    data.E.data(2).copy_from(data.E.data(0));
+    // for (int i = 0; i < m_env.params().current_smoothing; i++) {
+    //   Kernels::filter_current1d<<<256, 256>>>(
+    //       get_pitchptr(data.E.data(2)), get_pitchptr(data.E.data(1)),
+    //       mesh_ptrs.K1_j, m_env.is_boundary(0), m_env.is_boundary(1));
+    //   CudaCheckError();
+    //   data.E.data(2).copy_from(data.E.data(1));
+    // }
 
     Logger::print_info("Updating {} particles",
                        data.particles.number());
