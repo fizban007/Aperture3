@@ -365,6 +365,7 @@ particle_base<ParticleClass>::get_tracked_ptc() {
                             cudaMemcpyDeviceToHost));
     CudaSafeCall(cudaFree(num_tracked));
 
+    if (m_num_tracked >= MAX_TRACKED) m_num_tracked = MAX_TRACKED - 1;
     visit_struct::for_each(
         m_data, m_tracked,
         [this](const char* name, auto& u, auto& v) {

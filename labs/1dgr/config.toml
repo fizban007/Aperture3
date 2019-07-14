@@ -1,5 +1,5 @@
 # Time step size
-delta_t = 1e-4
+delta_t = 2.5e-5
 
 # Charge of an electron
 q_e = 1.0
@@ -8,10 +8,10 @@ q_e = 1.0
 num_species = 2
 
 # Maximum number of particles per node
-max_ptc_number = 100000000
+max_ptc_number = 140000000
 
 # Maximum number of photons per node
-max_photon_number = 100000000
+max_photon_number = 140000000
 
 # Create pairs or not
 create_pairs = true
@@ -22,26 +22,20 @@ trace_photons = true
 # Threshold for creating a photon / pair
 gamma_thr = 30.0
 
-# Free path for energetic photons
-photon_path = 0.5
-
 # Secondary particle energy
 E_secondary = 6.0
 
 # Minimum photon enery
 E_ph_min = 10.0
 
-# Radius cutoff for pair creation
-r_cutoff = 3.0
-
 # Free path for inverse Compton once a particle reaches threshold
-ic_path = 0.01
+ic_path = 0.1
 
 # Spectral index alpha for the background soft photon
 spectral_alpha = 1.2
 
 # Minimum energy for the above power law soft photon
-e_min = 1.0e-5
+e_min = 1.0e-4
 
 # Separation between two energy regimes for inverse Compton scattering
 e_s = 0.2
@@ -50,7 +44,7 @@ e_s = 0.2
 periodic_boundary = [false, false]
 
 # Fraction of total particles to track
-track_percent = 0.1
+track_percent = 0.02
 
 # Data output directory
 data_dir = "/home/alex/storage/Data/1DGR/1d_experiment"
@@ -65,7 +59,7 @@ damping_coef = 0.003
 damping_length = 32
 
 # Star rotating omega
-omega = 0.2117
+omega = 0.211765
 # omega = 0.0
 
 # Resolution for gamma grid used in IC scattering table
@@ -77,6 +71,7 @@ n_ep = 300
 # Temperature of the background soft photon
 star_kT = 1e-4
 
+# Black hole spin parameter
 a = 0.99
 
 # This section describes the grid parameters. Every parameter is an array with 3
@@ -85,11 +80,13 @@ a = 0.99
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [16384, 1, 1]
+# N = [16384, 1, 1]
+# N = [65536, 1, 1]
+N = [98304, 1, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
-guard = [2, 0, 0]
+guard = [3, 0, 0]
 
 # Lower limit of the coordinate
 lower = [-6.273, 0.0, 0.0]
@@ -107,8 +104,8 @@ downsample = 1
 
 max_steps = 4000000
 
-data_interval = 4000
+data_interval = 2000
 
 sort_interval = 20
 
-current_smoothing = 8
+current_smoothing = 10
