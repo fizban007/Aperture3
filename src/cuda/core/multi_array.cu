@@ -1,7 +1,7 @@
 #include "core/multi_array_impl.hpp"
+#include "cuda/cudaUtility.h"
 #include "cuda/data/multi_array_utils.cuh"
 #include "cuda/utils/pitchptr.cuh"
-#include "cuda/cudaUtility.h"
 #include "utils/logger.h"
 #include <algorithm>
 #include <cstring>
@@ -53,7 +53,8 @@ multi_array<T>::alloc_mem(const Extent& ext) {
   CudaSafeCall(cudaMalloc3D(&ptr, extent));
   m_data_d = ptr.ptr;
   m_pitch = ptr.pitch;
-  Logger::print_info("pitch is {}, x is {}, y is {}", m_pitch, ptr.xsize, ptr.ysize);
+  Logger::print_info("pitch is {}, x is {}, y is {}", m_pitch,
+                     ptr.xsize, ptr.ysize);
 }
 
 template <typename T>
@@ -77,7 +78,8 @@ multi_array<T>::assign_dev(const T& value) {
     // Logger::print_info("assign_dev 3d version");
     dim3 blockSize(8, 8, 8);
     // dim3 gridSize(8, 8, 8);
-    dim3 gridSize((this->m_extent.x + 7) / 8, (this->m_extent.y + 7) / 8,
+    dim3 gridSize((this->m_extent.x + 7) / 8,
+                  (this->m_extent.y + 7) / 8,
                   (this->m_extent.z + 7) / 8);
     Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
         p, this->m_extent, detail::Op_AssignConst<T>(value));
@@ -95,24 +97,24 @@ multi_array<T>::assign_dev(const T& value) {
         p, this->m_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
   }
-
 }
 
 template <typename T>
 void
 multi_array<T>::sync_to_host() {
   cudaMemcpy3DParms myParms = {};
-  myParms.srcPtr = make_cudaPitchedPtr(m_data_d, m_pitch,
-                                       m_extent.width(),
-                                       m_extent.height());
+  myParms.srcPtr = make_cudaPitchedPtr(
+      m_data_d, m_pitch, m_extent.width(), m_extent.height());
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  myParms.dstPtr = make_cudaPitchedPtr(m_data_h, sizeof(T)*m_extent.width(),
-                                       m_extent.width(),
-                                       m_extent.height());
+  myParms.dstPtr =
+      make_cudaPitchedPtr(m_data_h, sizeof(T) * m_extent.width(),
+                          m_extent.width(), m_extent.height());
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
 
+  Logger::print_info("dev pitch {}, host pitch {}", m_pitch,
+                     sizeof(T) * m_extent.width());
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
 
@@ -120,13 +122,12 @@ template <typename T>
 void
 multi_array<T>::sync_to_device() {
   cudaMemcpy3DParms myParms = {};
-  myParms.srcPtr = make_cudaPitchedPtr(m_data_h, sizeof(T)*m_extent.width(),
-                                       m_extent.width(),
-                                       m_extent.height());
+  myParms.srcPtr =
+      make_cudaPitchedPtr(m_data_h, sizeof(T) * m_extent.width(),
+                          m_extent.width(), m_extent.height());
   myParms.srcPos = make_cudaPos(0, 0, 0);
-  myParms.dstPtr = make_cudaPitchedPtr(m_data_d, m_pitch,
-                                       m_extent.width(),
-                                       m_extent.height());
+  myParms.dstPtr = make_cudaPitchedPtr(
+      m_data_d, m_pitch, m_extent.width(), m_extent.height());
   myParms.dstPos = make_cudaPos(0, 0, 0);
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyHostToDevice;
