@@ -12,11 +12,11 @@
 #include <highfive/H5DataSpace.hpp>
 #include <highfive/H5File.hpp>
 
-#define ADD_GRID_OUTPUT(exporter, input, name, func, file)              \
-  exporter.add_grid_output(input, name,                                 \
-                           [](sim_data & data, multi_array<float> & p,  \
-                              Index idx, Index idx_out) func,           \
-                           file)
+#define ADD_GRID_OUTPUT(exporter, input, name, func, file, step)       \
+  exporter.add_grid_output(input, name,                                \
+                           [](sim_data & data, multi_array<float> & p, \
+                              Index idx, Index idx_out) func,          \
+                           file, step)
 
 #include "utils/user_data_output.hpp"
 
@@ -46,6 +46,8 @@ sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
                        multi_array<float>& result,
                        boost::multi_array<float, 2>& out, Func f) {
   const auto& ext = result.extent();
+  // Logger::print_info("output ext is {}x{}", ext.width(),
+  // ext.height());
   auto& mesh = g.mesh();
   for (int j = 0; j < ext.height(); j++) {
     for (int i = 0; i < ext.width(); i++) {
@@ -86,8 +88,15 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   auto& mesh = m_env.local_grid().mesh();
   auto ext = mesh.extent_less();
   auto d = m_env.params().downsample;
-  tmp_grid_data = multi_array<float>(ext.width() / d, ext.height() / d,
-                                     ext.depth() / d);
+  for (int i = 0; i < 3; i++) {
+    if (i < m_env.local_grid().dim()) {
+      ext[i] /= d;
+    }
+  }
+  tmp_grid_data = multi_array<float>(ext);
+  Logger::print_info("tmp_grid_data initialized with size {}x{}x{}",
+                     tmp_grid_data.width(), tmp_grid_data.height(),
+                     tmp_grid_data.depth());
   if (mesh.dim() == 3) {
     m_output_3d.resize(
         boost::extents[tmp_grid_data.depth()][tmp_grid_data.height()]
@@ -118,20 +127,56 @@ data_exporter::~data_exporter() {}
 void
 data_exporter::write_grid() {
   auto& mesh = m_env.local_grid().mesh();
+  auto ext = tmp_grid_data.extent();
+  auto downsample = m_env.params().downsample;
   if (m_env.local_grid().dim() == 1) {
-    std::vector<float> x_array(mesh.reduced_dim(0));
+    std::vector<float> x_array(ext.x);
 
-    for (int i = 0; i < mesh.reduced_dim(0); i++) {
-      x_array[i] = mesh.pos(0, i + mesh.guard[0], false);
+    for (int i = 0; i < ext.x; i++) {
+      x_array[i] = mesh.pos(0, i * downsample + mesh.guard[0], false);
     }
 
     std::string meshfilename = outputDirectory + "mesh.h5";
     Logger::print_info("{}", meshfilename);
-    File meshfile(meshfilename.c_str(),
+    File meshfile(meshfilename,
                   File::ReadWrite | File::Create | File::Truncate);
     DataSet mesh_x1 =
         meshfile.createDataSet<float>("x1", DataSpace::From(x_array));
     mesh_x1.write(x_array);
+  } else if (m_env.local_grid().dim() == 2) {
+    boost::multi_array<float, 2> x1_array(
+        boost::extents[ext.height()][ext.width()]);
+    boost::multi_array<float, 2> x2_array(
+        boost::extents[ext.height()][ext.width()]);
+
+    for (int j = 0; j < ext.height(); j++) {
+      for (int i = 0; i < ext.width(); i++) {
+        if (m_env.params().coord_system == "LogSpherical") {
+          float r = std::exp(
+              mesh.pos(0, i * downsample + mesh.guard[0], false));
+          float theta =
+              mesh.pos(1, j * downsample + mesh.guard[1], false);
+          x1_array[j][i] = r * std::sin(theta);
+          x2_array[j][i] = r * std::cos(theta);
+        } else {
+          x1_array[j][i] =
+              mesh.pos(0, i * downsample + mesh.guard[0], false);
+          x2_array[j][i] =
+              mesh.pos(1, j * downsample + mesh.guard[1], false);
+        }
+      }
+    }
+
+    std::string meshfilename = outputDirectory + "mesh.h5";
+    Logger::print_info("{}", meshfilename);
+    File meshfile(meshfilename,
+                  File::ReadWrite | File::Create | File::Truncate);
+    DataSet mesh_x1 =
+        meshfile.createDataSet<float>("x1", DataSpace::From(x1_array));
+    mesh_x1.write(x1_array);
+    DataSet mesh_x2 =
+        meshfile.createDataSet<float>("x2", DataSpace::From(x2_array));
+    mesh_x2.write(x2_array);
   }
 }
 
@@ -144,7 +189,7 @@ data_exporter::copy_config_file() {
 }
 
 void
-data_exporter::write_xmf_head(std::ofstream &fs) {
+data_exporter::write_xmf_head(std::ofstream& fs) {
   fs << "<?xml version=\"1.0\" ?>" << std::endl;
   fs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
   fs << "<Xdmf>" << std::endl;
@@ -155,30 +200,140 @@ data_exporter::write_xmf_head(std::ofstream &fs) {
 }
 
 void
-data_exporter::write_xmf_step(std::ofstream &fs) {}
+data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
+  // std::string dim_str;
+  auto& grid = m_env.local_grid();
+  // auto &mesh = grid.mesh();
+  if (grid.dim() == 3) {
+    m_dim_str =
+        fmt::format("{} {} {}", tmp_grid_data.depth(),
+                    tmp_grid_data.height(), tmp_grid_data.width());
+  } else if (grid.dim() == 2) {
+    m_dim_str = fmt::format("{} {}", tmp_grid_data.height(),
+                            tmp_grid_data.width());
+  } else if (grid.dim() == 1) {
+    m_dim_str = fmt::format("{} 1", tmp_grid_data.width());
+  }
+
+  fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
+  fs << "  <Time Type=\"Single\" Value=\"" << time << "\"/>"
+     << std::endl;
+  if (grid.dim() == 3) {
+    fs << "  <Topology Type=\"3DSMesh\" NumberOfElements=\""
+       << m_dim_str << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y_Z\">" << std::endl;
+  } else if (grid.dim() == 2) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\""
+       << m_dim_str << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  } else if (grid.dim() == 1) {
+    fs << "  <Topology Type=\"2DSMesh\" NumberOfElements=\""
+       << m_dim_str << "\"/>" << std::endl;
+    fs << "  <Geometry GeometryType=\"X_Y\">" << std::endl;
+  }
+  fs << "    <DataItem Dimensions=\"" << m_dim_str
+     << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+     << std::endl;
+  fs << "      mesh.h5:x1" << std::endl;
+  fs << "    </DataItem>" << std::endl;
+  if (grid.dim() >= 2) {
+    fs << "    <DataItem Dimensions=\"" << m_dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x2" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+  if (grid.dim() >= 3) {
+    fs << "    <DataItem Dimensions=\"" << m_dim_str
+       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+       << std::endl;
+    fs << "      mesh.h5:x3" << std::endl;
+    fs << "    </DataItem>" << std::endl;
+  }
+
+  fs << "  </Geometry>" << std::endl;
+}
 
 void
-data_exporter::write_xmf_tail(std::ofstream &fs) {}
+data_exporter::write_xmf_step_close(std::ofstream& fs) {
+  fs << "</Grid>" << std::endl;
+}
 
 void
-data_exporter::prepare_xmf_restart(uint32_t restart_step, int data_interval, float time) {}
+data_exporter::write_xmf_tail(std::ofstream& fs) {
+  fs << "</Grid>" << std::endl;
+  fs << "</Domain>" << std::endl;
+  fs << "</Xdmf>" << std::endl;
+}
+
+void
+data_exporter::prepare_xmf_restart(uint32_t restart_step,
+                                   int data_interval, float time) {
+  boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
+  boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
+  boost::filesystem::remove(xmf_bak);
+  boost::filesystem::rename(xmf_file, xmf_bak);
+
+  std::ifstream xmf_in;
+  xmf_in.open(xmf_bak.c_str());
+
+  m_xmf.open(xmf_file.c_str());
+
+  // int n = -1;
+  // int num_outputs = restart_step / data_interval;
+  std::string line;
+  bool in_step = false, found = false;
+  std::string t_line = "  <Time Type=\"Single\" Value=\"";
+  while (std::getline(xmf_in, line)) {
+    if (line == "<Grid Name=\"quadmesh\" Type=\"Uniform\">") {
+      // n += 1;
+      in_step = true;
+    }
+    if (in_step && line.compare(0, t_line.length(), t_line) == 0) {
+      std::string sub = line.substr(line.find_first_of("0123456789"));
+      sub = sub.substr(0, sub.find_first_of("\""));
+      float t = std::stof(sub);
+      if (std::abs(t - time) < 1.0e-4) found = true;
+    }
+    m_xmf << line << std::endl;
+    if (line == "</Grid>") in_step = false;
+    if (found && !in_step) break;
+    // if (n >= num_outputs && !in_step) break;
+  }
+  write_xmf_tail(m_xmf);
+
+  xmf_in.close();
+}
 
 void
 data_exporter::write_snapshot(sim_data& data, uint32_t step) {}
 
 void
-data_exporter::load_from_snapshot(sim_data& data, uint32_t step, double time) {}
+data_exporter::load_from_snapshot(sim_data& data, uint32_t step,
+                                  double time) {}
 
 void
 data_exporter::write_output(sim_data& data, uint32_t timestep,
                             double time) {
   data.sync_to_host();
 
+  if (!m_xmf.is_open()) {
+    m_xmf.open(outputDirectory + "data.xmf");
+  }
+  if (timestep == 0) {
+    write_xmf_head(m_xmf);
+  } else {
+    m_xmf.seekp(-26, std::ios_base::end);
+  }
+  write_xmf_step_header(m_xmf, time);
   // Launch a new thread to handle the field output
   // m_fld_thread.reset(
   //     new std::thread(&Aperture::data_exporter::write_field_output,
   //                     this, std::ref(data), timestep, time));
   write_field_output(data, timestep, time);
+
+  write_xmf_step_close(m_xmf);
+  write_xmf_tail(m_xmf);
 
   data.particles.get_tracked_ptc();
   data.photons.get_tracked_ptc();
@@ -197,165 +352,25 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
   File datafile(fmt::format("{}ptc.{:05d}.h5", outputDirectory,
                             timestep / m_env.params().data_interval),
                 File::ReadWrite | File::Create | File::Truncate);
-                // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
+  // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
   user_write_ptc_output(data, *this, timestep, time, datafile);
-  // add_ptc_uint_output(
-  //     data, "id",
-  //     [](sim_data& data, std::vector<uint32_t>& v, uint32_t n) {
-  //       v[n] = data.particles.tracked_data().id[n];
-  //     },
-  //     datafile);
-
-  // add_ptc_float_output(
-  //     data, "p1",
-  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       v[n] = data.particles.tracked_data().p1[n];
-  //     },
-  //     datafile);
-  // add_ptc_float_output(
-  //     data, "p2",
-  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       v[n] = data.particles.tracked_data().p2[n];
-  //     },
-  //     datafile);
-  // add_ptc_float_output(
-  //     data, "p3",
-  //     [](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       v[n] = data.particles.tracked_data().p3[n];
-  //     },
-  //     datafile);
-
-  // auto& mesh = m_env.local_grid().mesh();
-  // add_ptc_float_output(
-  //     data, "x1",
-  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       auto cell = data.particles.tracked_data().cell[n];
-  //       auto x = data.particles.tracked_data().x1[n];
-  //       v[n] = mesh.pos(0, mesh.get_c1(cell), x);
-  //     },
-  //     datafile);
-  // add_ptc_float_output(
-  //     data, "x2",
-  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       auto cell = data.particles.tracked_data().cell[n];
-  //       auto x = data.particles.tracked_data().x2[n];
-  //       v[n] = mesh.pos(1, mesh.get_c2(cell), x);
-  //     },
-  //     datafile);
-  // add_ptc_float_output(
-  //     data, "x3",
-  //     [&mesh](sim_data& data, std::vector<float>& v, uint32_t n) {
-  //       auto cell = data.particles.tracked_data().cell[n];
-  //       auto x = data.particles.tracked_data().x3[n];
-  //       v[n] = mesh.pos(2, mesh.get_c3(cell), x);
-  //     },
-  //     datafile);
-  // datafile.close();
 }
 
 void
 data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                                   double time) {
   File datafile(fmt::format("{}fld.{:05d}.h5", outputDirectory,
-                            timestep / m_env.params().data_interval)
-                    .c_str(),
-                File::ReadWrite | File::Create | File::Truncate,
-                MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
+                            timestep / m_env.params().data_interval),
+                File::ReadWrite | File::Create | File::Truncate);
+  // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
 
   user_write_field_output(data, *this, timestep, time, datafile);
-  // add_grid_output(
-  //     data, "E1",
-  //     [](sim_data& data, multi_array<Scalar>& p, Index idx,
-  //        Index idx_out) {
-  //       p(idx_out) = data.E(0, idx) + data.Ebg(0, idx);
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "E1",
-  //     {
-  //       p(idx_out) = 0.25 * (data.E(0, idx) +
-  //                            data.E(0, idx.x, idx.y + 1, idx.z) +
-  //                            data.E(0, idx.x, idx.y, idx.z + 1) +
-  //                            data.E(0, idx.x, idx.y + 1, idx.z + 1));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "E2",
-  //     {
-  //       p(idx_out) = 0.25 * (data.E(1, idx) +
-  //                            data.E(1, idx.x + 1, idx.y, idx.z) +
-  //                            data.E(1, idx.x, idx.y, idx.z + 1) +
-  //                            data.E(1, idx.x + 1, idx.y, idx.z + 1));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "E3",
-  //     {
-  //       p(idx_out) = 0.25 * (data.E(2, idx) +
-  //                            data.E(2, idx.x + 1, idx.y, idx.z) +
-  //                            data.E(2, idx.x, idx.y + 1, idx.z) +
-  //                            data.E(2, idx.x + 1, idx.y + 1, idx.z));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "B1",
-  //     {
-  //       p(idx_out) =
-  //           0.5 * (data.B(0, idx) + data.B(0, idx.x - 1, idx.y, idx.z));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "B2",
-  //     {
-  //       p(idx_out) =
-  //           0.5 * (data.B(1, idx) + data.B(1, idx.x, idx.y - 1, idx.z));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "B3",
-  //     {
-  //       p(idx_out) =
-  //           0.5 * (data.B(2, idx) + data.B(2, idx.x, idx.y, idx.z - 1));
-  //     },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "J1", { p(idx_out) = data.J(0, idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "J2", { p(idx_out) = data.J(1, idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "J3", { p(idx_out) = data.J(2, idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "Rho_e", { p(idx_out) = data.Rho[0](0, idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "Rho_p", { p(idx_out) = data.Rho[1](0, idx); }, datafile);
-  // if (data.env.params().num_species > 2) {
-  //   ADD_GRID_OUTPUT(
-  //       data, "Rho_i", { p(idx_out) = data.Rho[2](0, idx); }, datafile);
-  // }
-  // ADD_GRID_OUTPUT(
-  //     data, "photon_produced",
-  //     { p(idx_out) = data.photon_produced(idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "pair_produced", { p(idx_out) = data.pair_produced(idx); },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "photon_num", { p(idx_out) = data.photon_num(idx); },
-  //     datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "divE", { p(idx_out) = data.divE(idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "divB", { p(idx_out) = data.divB(idx); }, datafile);
-  // ADD_GRID_OUTPUT(
-  //     data, "EdotB_avg", { p(idx_out) = data.EdotB(idx); }, datafile);
-  // add_array_output(data.ph_flux, "ph_flux", datafile);
-
-  // datafile.close();
 }
 
 template <typename Func>
 void
 data_exporter::add_grid_output(sim_data& data, const std::string& name,
-                               Func f, File& file) {
+                               Func f, File& file, uint32_t timestep) {
   int downsample = m_env.params().downsample;
   if (data.env.grid().dim() == 3) {
     sample_grid_quantity3d(data, m_env.local_grid(),
@@ -385,8 +400,9 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> dims(2);
     dims[0] = m_env.params().N[1] / downsample;
     dims[1] = m_env.params().N[0] / downsample;
+    Logger::print_info("data space size {}x{}", dims[0], dims[1]);
     // Actually write the temp array to hdf
-    DataSet dataset = file.createDataSet<float>(name, DataSpace(dims));
+    auto dataset = file.createDataSet<float>(name, DataSpace(dims));
 
     std::vector<size_t> out_dim(2);
     std::vector<size_t> offsets(2);
@@ -394,6 +410,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     out_dim[0] = tmp_grid_data.extent()[1];
     offsets[1] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[1] = tmp_grid_data.extent()[0];
+    Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
+    Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
     dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
@@ -409,16 +427,28 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> offsets(1);
     offsets[0] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[0] = tmp_grid_data.extent()[0];
-    Logger::print_info("offset is {}, dim is {}", offsets[0], out_dim[0]);
+    Logger::print_info("offset is {}, dim is {}", offsets[0],
+                       out_dim[0]);
     dataset.select(offsets, out_dim).write(m_output_1d);
   }
+  m_xmf << "  <Attribute Name=\"" << name
+        << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  m_xmf << "    <DataItem Dimensions=\"" << m_dim_str
+        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+        << std::endl;
+  m_xmf << fmt::format("      fld.{:05d}.h5:{}",
+                       timestep / m_env.params().data_interval, name)
+        << std::endl;
+  m_xmf << "    </DataItem>" << std::endl;
+  m_xmf << "  </Attribute>" << std::endl;
 }
 
 void
 data_exporter::add_array_output(multi_array<float>& array,
                                 const std::string& name, File& file) {
   // Actually write the temp array to hdf
-  // hsize_t dims[3] = {(uint32_t)array.width(), (uint32_t)array.height(),
+  // hsize_t dims[3] = {(uint32_t)array.width(),
+  // (uint32_t)array.height(),
   //                    (uint32_t)array.depth()};
   // DataSpace dataspace(3, dims);
   // DataSet dataset =
@@ -429,9 +459,11 @@ data_exporter::add_array_output(multi_array<float>& array,
 template <typename Func>
 void
 data_exporter::add_ptc_float_output(sim_data& data,
-                                    const std::string& name, size_t num, Func f,
-                                    File& file) {
-  Logger::print_info("writing the {} of {} tracked particles", name, num);
+                                    const std::string& name, size_t num,
+                                    Func f, File& file,
+                                    uint32_t timestep) {
+  Logger::print_info("writing the {} of {} tracked particles", name,
+                     num);
   uint32_t num_subset = 0;
   for (uint32_t n = 0; n < num; n++) {
     f(data, tmp_ptc_float_data, n, num_subset);
@@ -446,8 +478,9 @@ data_exporter::add_ptc_float_output(sim_data& data,
 template <typename Func>
 void
 data_exporter::add_ptc_uint_output(sim_data& data,
-                                   const std::string& name, size_t num, Func f,
-                                   File& file) {
+                                   const std::string& name, size_t num,
+                                   Func f, File& file,
+                                   uint32_t timestep) {
   uint32_t num_subset = 0;
   for (uint32_t n = 0; n < num; n++) {
     f(data, tmp_ptc_uint_data, n, num_subset);

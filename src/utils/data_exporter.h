@@ -27,7 +27,8 @@ class data_exporter {
   void write_grid();
   void copy_config_file();
   void write_xmf_head(std::ofstream& fs);
-  void write_xmf_step(std::ofstream& fs);
+  void write_xmf_step_header(std::ofstream& fs, double time);
+  void write_xmf_step_close(std::ofstream& fs);
   void write_xmf_tail(std::ofstream& fs);
   void write_xmf(uint32_t step, double time);
   void prepare_xmf_restart(uint32_t restart_step, int data_interval, float time);
@@ -45,15 +46,15 @@ class data_exporter {
 
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
-                       HighFive::File& file);
+                       HighFive::File& file, uint32_t timestep);
 
   template <typename Func>
   void add_ptc_float_output(sim_data& data, const std::string& name, size_t num,
-                            Func f, HighFive::File& file);
+                            Func f, HighFive::File& file, uint32_t timestep);
 
   template <typename Func>
   void add_ptc_uint_output(sim_data& data, const std::string& name, size_t num,
-                           Func f, HighFive::File& file);
+                           Func f, HighFive::File& file, uint32_t timestep);
 
  protected:
   // std::unique_ptr<Grid> grid;
@@ -61,8 +62,9 @@ class data_exporter {
   std::string
       outputDirectory;  //!< Sets the directory of all the data files
 
-  std::ofstream xmf;  //!< This is the accompanying xmf file describing
-                      //!< the hdf structure
+  std::ofstream m_xmf;  //!< This is the accompanying xmf file describing
+                        //!< the hdf structure
+  std::string m_dim_str;
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output

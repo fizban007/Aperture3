@@ -38,6 +38,8 @@ template <typename T>
 multi_array<T>::multi_array(self_type&& other) {
   m_extent = other.m_extent;
   m_size = other.m_size;
+  m_pitch = other.m_pitch;
+
   m_data_h = other.m_data_h;
   m_data_d = other.m_data_d;
 
@@ -56,6 +58,7 @@ multi_array<T>::operator=(const self_type& other) {
   free_mem();
   m_size = other.m_size;
   m_extent = other.m_extent;
+  m_pitch = other.m_pitch;
 
   alloc_mem(other.m_extent);
   copy_from(other);
@@ -73,6 +76,7 @@ multi_array<T>::operator=(self_type&& other) {
 
   m_extent = other.m_extent;
   m_size = other.m_size;
+  m_pitch = other.m_pitch;
 
   return *this;
 }
