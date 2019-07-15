@@ -1,13 +1,11 @@
 #include "cuda/constant_mem_func.h"
 // #include "cuda/core/additional_diagnostics.h"
-#include "sim_data.h"
-#include "sim_environment.h"
 #include "algorithms/field_solver_logsph.h"
 #include "algorithms/ptc_updater_logsph.h"
-#include "cuda/cudarng.h"
 #include "radiation/radiative_transfer.h"
+#include "sim_data.h"
+#include "sim_environment.h"
 #include "utils/data_exporter.h"
-#include "cuda_runtime.h"
 #include "utils/logger.h"
 #include "utils/timer.h"
 #include "utils/util_functions.h"
@@ -15,7 +13,8 @@
 
 using namespace Aperture;
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
   uint32_t start_step = 0;
   uint32_t step = start_step;
   float start_time = 0.0;
@@ -33,7 +32,8 @@ int main(int argc, char *argv[]) {
   if (env.params().is_restart) {
     Logger::print_info("This is a restart");
     exporter.load_from_snapshot(data, start_step, start_time);
-    exporter.prepare_xmf_restart(step, env.params().data_interval, start_time);
+    exporter.prepare_xmf_restart(step, env.params().data_interval,
+                                 start_time);
     step = start_step + 1;
     time = start_time + env.params().delta_t;
     // data.fill_multiplicity(1.0, 1);
@@ -76,8 +76,8 @@ int main(int argc, char *argv[]) {
       return B0 * sin(x2) / (r * r * r);
       // return 0.0;
     });
-    data.init_bg_B_field(2,
-                         [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
+    data.init_bg_B_field(
+        2, [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
     data.init_bg_fields();
 
     // data.E[0].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
     } else {
       omega = env.params().omega;
     }
-    Logger::print_info("=== At timestep {}, time = {}, omega = {} ===", step,
-                       time, omega);
+    Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
+                       step, time, omega);
 
     // Output data
     if ((step % env.params().data_interval) == 0) {
@@ -160,9 +160,10 @@ int main(int argc, char *argv[]) {
 
     // Inject particles
     if (env.params().inject_particles && step % 1 == 0)
-      ptc_updater.inject_ptc(data, 2, 0.1, 0.0, 0.0,
-                             // 1.0 * omega / env.params().omega, omega);
-                             1.0, omega);
+      ptc_updater.inject_ptc(
+          data, 2, 0.1, 0.0, 0.0,
+          // 1.0 * omega / env.params().omega, omega);
+          1.0, omega);
 
     // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);
