@@ -116,7 +116,8 @@ def make_plot(num):
     axes[0, 0].axvline(rl_outer, linestyle="--", color="r")
     axes[0, 0].axvline(r_null, linestyle="--", color="magenta")
 
-    axes[0, 0].set_yscale("symlog", linthreshy=1000)
+    # axes[0, 0].set_yscale("symlog", linthreshy=1000)
+    axes[0, 0].set_yscale("symlog")
     # ax2.set_yscale('symlog')
     ax2.set_ylabel("$E$", fontsize=label_size)
     ax2.tick_params(axis="both", labelsize=tick_size)

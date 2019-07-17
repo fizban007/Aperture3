@@ -301,7 +301,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
   // int inject_i = dev_mesh.guard[0] + 3;
-  int inject_i = dev_mesh.guard[0] + 1;
+  int inject_i = dev_mesh.guard[0] + 2;
   ParticleType p_type =
       (dev_params.inject_ions ? ParticleType::ion
                               : ParticleType::positron);
@@ -322,20 +322,21 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
-    if (dev_params.q_e * dens > 0.4f *
-                                    square(1.0f / dev_mesh.delta[1]) *
-                                    std::sin(dev_mesh.pos(1, i, 0.5f)))
-      continue;
+    //if (dev_params.q_e * dens > 0.5f *
+    //                                square(1.0f / dev_mesh.delta[1]) *
+    //                                std::sin(dev_mesh.pos(1, i, 0.5f)))
+    //  continue;
     for (int n = 0; n < inj_per_cell; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
-      Scalar vphi = (omega - omega_LT) * r * sin(theta);
+      // Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
-      // Scalar vphi = 0.0f;
+      Scalar vphi = 0.0f;
       // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
       Scalar w_ptc = w * sin(theta);
       // Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       Scalar gamma = std::sqrt(1.0 + p1 * p1 + vphi * vphi);
+      float u = curand_uniform(&localState);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
@@ -349,7 +350,10 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.cell[offset + n * 2] = dev_mesh.get_idx(inject_i, i);
       ptc.weight[offset + n * 2] = w_ptc;
       ptc.flag[offset + n * 2] = set_ptc_type_flag(
-          bit_or(ParticleFlag::primary), ParticleType::electron);
+          (u < dev_params.track_percent
+               ? bit_or(ParticleFlag::primary, ParticleFlag::tracked)
+               : bit_or(ParticleFlag::primary)),
+          ParticleType::electron);
 
       ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
@@ -364,7 +368,15 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.cell[offset + n * 2 + 1] = dev_mesh.get_idx(inject_i, i);
       ptc.weight[offset + n * 2 + 1] = w_ptc;
       ptc.flag[offset + n * 2 + 1] =
-          set_ptc_type_flag(bit_or(ParticleFlag::primary), p_type);
+          set_ptc_type_flag(
+          (u < dev_params.track_percent
+               ? bit_or(ParticleFlag::primary, ParticleFlag::tracked)
+               : bit_or(ParticleFlag::primary)),
+          p_type);
+      if (u < dev_params.track_percent) {
+        ptc.flag[offset + n * 2] = atomicAdd(&dev_ptc_id, 1);
+        ptc.flag[offset + n * 2 + 1] = atomicAdd(&dev_ptc_id, 1);
+      }
     }
   }
   states[id] = localState;
@@ -427,7 +439,7 @@ measure_surface_density(particle_data ptc, size_t num,
     // Sum over 3 cells, hense the w / 3.0f in the atomicAdd
     int sum_cells = 3;
     // int inject_cell = dev_mesh.guard[0] + 3;
-    int inject_cell = dev_mesh.guard[0] + 1;
+    int inject_cell = dev_mesh.guard[0] + 2;
     if (c1 >= inject_cell - 1 && c1 <= inject_cell - 1 + sum_cells) {
       auto flag = ptc.flag[idx];
       int sp = get_ptc_type(flag);
@@ -447,7 +459,8 @@ measure_surface_density(particle_data ptc, size_t num,
                       c2 - dev_mesh.guard[1] + 2,
                       dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   1.0f * w / float(sum_cells) / 16.0f);
-      } else if (sp == (int)ParticleType::ion) {
+      //} else if (sp == (int)ParticleType::ion) {
+      } else if (sp == (int)ParticleType::positron) {
         atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 2, 0)],
                   1.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 1, 0)],
@@ -646,7 +659,7 @@ ptc_updater_logsph::ptc_updater_logsph(sim_environment &env)
     : m_env(env),
       m_surface_e(env.params().N[1]),
       m_surface_p(env.params().N[1]),
-        m_surface_tmp(env.params().N[1]) {
+      m_surface_tmp(env.params().N[1]) {
   m_tmp_j1 = multi_array<Scalar>(env.local_grid().extent());
   m_tmp_j2 = multi_array<Scalar>(env.local_grid().extent());
 }

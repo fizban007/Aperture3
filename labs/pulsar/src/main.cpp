@@ -111,7 +111,7 @@ main(int argc, char *argv[]) {
     //     // 200 + 516 * 100, ParticleType::electron, 1.0);
     //     120 + 516 * j, ParticleType::electron, 1.0);
     // }
-    data.fill_multiplicity(1.0, 6);
+    // data.fill_multiplicity(1.0, 6);
   }
   // Initialize the field solver
   field_solver_logsph field_solver(env);
@@ -159,11 +159,11 @@ main(int argc, char *argv[]) {
     }
 
     // Inject particles
-    if (env.params().inject_particles && step % 1 == 0)
+    if (env.params().inject_particles && step % 3 == 0)
       ptc_updater.inject_ptc(
-          data, 2, 0.1, 0.0, 0.0,
+          data, 1, 0.0, 0.0, 0.0,
           // 1.0 * omega / env.params().omega, omega);
-          1.0, omega);
+          1.2, omega);
 
     // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);
