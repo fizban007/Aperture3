@@ -22,9 +22,11 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   auto c2 = dev_mesh.get_c2(c);
   // Skip photon emission when outside given radius
   Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
-  Scalar theta = dev_mesh.pos(1, c2, ptc.x2[tid]);
+  // Scalar theta = dev_mesh.pos(1, c2, ptc.x2[tid]);
   Scalar gamma = ptc.E[tid];
 
+  // if (gamma > dev_params.gamma_thr)
+  //   printf("emitted a photon at cell %d, %d, gamma is %f\n", c1, c2, gamma);
   // Scalar gamma = data.particles.E[tid];
   return (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
           r > 1.02f);
