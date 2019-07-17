@@ -128,8 +128,8 @@ def make_plot(num):
 
     j, = ax22.plot(rxi(xs), J1 * Delta_r(rxi(xs)) * 30)
     rho, = ax22.plot(rxi(xs), (rho_e + rho_p))
-    ax22.plot(rs, j0 * conf["B0"] * 30, "g--")
-    ax22.plot(rs, rho0 * conf["B0"], "r--")
+    ax22.plot(rs, j0 * conf["B0"] * 30, "k--")
+    ax22.plot(rs, rho0 * conf["B0"], "g--")
 
     axes[0, 1].tick_params(axis="y", labelleft=False)
     axes[0, 1].tick_params(axis="x", labelsize=tick_size)
