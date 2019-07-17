@@ -88,7 +88,7 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   auto& mesh = m_env.local_grid().mesh();
   auto ext = mesh.extent_less();
   auto d = m_env.params().downsample;
-  for (int i = 0; i < 3; i++) {
+  for (uint32_t i = 0; i < 3; i++) {
     if (i < m_env.local_grid().dim()) {
       ext[i] /= d;
     }

@@ -43,9 +43,9 @@ prepare_initial_condition(particle_data ptc,
       ptc.E[idx] = ptc.E[idx + 1] = u0;
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
       // ptc.cell[idx] = MAX_CELL;
-      ptc.weight[idx] = 0.05 * dev_params.B0 * K1 +
+      ptc.weight[idx] = 0.55 * dev_params.B0 * K1 / multiplicity +
                         std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
-      ptc.weight[idx + 1] = 0.05 * dev_params.B0 * K1 +
+      ptc.weight[idx + 1] = 0.55 * dev_params.B0 * K1 / multiplicity +
                             max(rho0 * K1, 0.0f) / multiplicity;
       // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
       // u0, ptc.weight[idx]);

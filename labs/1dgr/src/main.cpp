@@ -74,8 +74,10 @@ main(int argc, char* argv[]) {
     solver.update_fields(data, dt);
 
     if (env.params().create_pairs) {
+      timer::stamp();
       rad.emit_photons(data);
       rad.produce_pairs(data);
+      timer::show_duration_since_stamp("radiation", "us");
     }
 
     // Output data
