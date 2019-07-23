@@ -151,7 +151,10 @@ produce_pairs(data_ptrs data, size_t ph_num, size_t ptc_num,
     int pos_in_block = pair_pos[tid] - 1;
     uint32_t cell = data.photons.cell[tid];
     if (pos_in_block > -1 && cell != MAX_CELL) {
-      if (!dev_mesh.is_in_bulk(cell)) continue;
+      if (!dev_mesh.is_in_bulk(cell)) {
+        data.photons.cell[tid] = MAX_CELL;
+        continue;
+      }
       int start_pos = pair_cum[blockIdx.x] * 2;
 
       uint32_t offset = ptc_num + start_pos + pos_in_block * 2;
@@ -268,13 +271,13 @@ radiative_transfer::produce_pairs(sim_data &data) {
 
   Kernels::produce_pairs
       <<<m_blocksPerGrid, m_threadsPerBlock>>>(
-          data_p, photons.number(), ptc.number(),
+          data_p, photons.number(), ptc.number() + 20,
           m_posInBlock.dev_ptr(), m_numPerBlock.dev_ptr(),
           m_cumNumPerBlock.dev_ptr(),
           (curandState *)data.d_rand_states);
   CudaCheckError();
 
-  int padding = 10;
+  int padding = 50;
   ptc.set_num(ptc.number() + new_pairs * 2 + padding);
   // Logger::print_info("There are {} particles in the pool",
   //                    ptc.number());

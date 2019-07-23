@@ -43,9 +43,9 @@ prepare_initial_condition(particle_data ptc,
       ptc.E[idx] = ptc.E[idx + 1] = u0;
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
       // ptc.cell[idx] = MAX_CELL;
-      ptc.weight[idx] = 2.0 * dev_params.B0 / multiplicity +
+      ptc.weight[idx] = 1.0 * dev_params.B0 / multiplicity +
                         std::abs(min(rho0 * K1, 0.0f)) / multiplicity;
-      ptc.weight[idx + 1] = 2.0 * dev_params.B0 / multiplicity +
+      ptc.weight[idx + 1] = 1.0 * dev_params.B0 / multiplicity +
                             max(rho0 * K1, 0.0f) / multiplicity;
       // printf("p1 %f, x1 %f, u0 %f, w %f\n", ptc.p1[idx], ptc.x1[idx],
       // u0, ptc.weight[idx]);
@@ -453,13 +453,13 @@ ptc_updater_1dgr::update_particles(sim_data& data, double dt,
 
     // Filter E field before particle push
     data.E.data(2).copy_from(data.E.data(0));
-    // for (int i = 0; i < m_env.params().current_smoothing; i++) {
-    //   Kernels::filter_current1d<<<256, 256>>>(
-    //       get_pitchptr(data.E.data(2)), get_pitchptr(data.E.data(1)),
-    //       mesh_ptrs.K1_j, m_env.is_boundary(0), m_env.is_boundary(1));
-    //   CudaCheckError();
-    //   data.E.data(2).copy_from(data.E.data(1));
-    // }
+    for (int i = 0; i < m_env.params().current_smoothing; i++) {
+      Kernels::filter_current1d<<<256, 256>>>(
+          get_pitchptr(data.E.data(2)), get_pitchptr(data.E.data(1)),
+          mesh_ptrs.K1_j, m_env.is_boundary(0), m_env.is_boundary(1));
+      CudaCheckError();
+      data.E.data(2).copy_from(data.E.data(1));
+    }
 
     Logger::print_info("Updating {} particles",
                        data.particles.number());

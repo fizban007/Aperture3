@@ -55,6 +55,17 @@ user_write_ptc_output(sim_data& data, data_exporter& exporter,
       },
       file, timestep);
   exporter.add_ptc_float_output(
+      data, "electron_w", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n,
+         uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+            (int)ParticleType::electron) {
+          v[nsb] = data.particles.tracked_data().weight[n];
+          nsb += 1;
+        }
+      },
+      file, timestep);
+  exporter.add_ptc_float_output(
       data, "electron_u0", data.particles.tracked_number(),
       [](sim_data& data, std::vector<float>& v, uint32_t n,
          uint32_t& nsb) {
@@ -123,6 +134,17 @@ user_write_ptc_output(sim_data& data, data_exporter& exporter,
         if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
             (int)ParticleType::positron) {
           v[nsb] = data.particles.tracked_data().p2[n];
+          nsb += 1;
+        }
+      },
+      file, timestep);
+  exporter.add_ptc_float_output(
+      data, "positron_w", data.particles.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n,
+         uint32_t& nsb) {
+        if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+            (int)ParticleType::positron) {
+          v[nsb] = data.particles.tracked_data().weight[n];
           nsb += 1;
         }
       },
