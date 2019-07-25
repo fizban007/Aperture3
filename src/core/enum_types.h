@@ -67,7 +67,6 @@ enum class ParticleFlag : uint32_t {
   ignore_radiation,
   primary,
   secondary,
-  existed,
   annihilate,
   emit_photon
 };
