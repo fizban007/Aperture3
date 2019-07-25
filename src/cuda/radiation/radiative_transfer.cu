@@ -158,6 +158,10 @@ produce_pairs(data_ptrs data, size_t ph_num, size_t ptc_num,
       int start_pos = pair_cum[blockIdx.x] * 2;
 
       uint32_t offset = ptc_num + start_pos + pos_in_block * 2;
+      if (offset >= dev_params.max_ptc_number) {
+        data.photons.cell[tid] = MAX_CELL;
+        continue;
+      }
 
       produce_pair(data, tid, offset, rng);
     }

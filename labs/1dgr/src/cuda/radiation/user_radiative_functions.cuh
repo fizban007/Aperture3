@@ -140,8 +140,6 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   // Set this photon to be empty
   photons.cell[tid] = MAX_CELL;
 
-  if (offset >= dev_params.max_ptc_number) return;
-
   Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
                  dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
   Scalar D1 = dev_mesh_ptrs_1dgr.D1[c] * x1 +
