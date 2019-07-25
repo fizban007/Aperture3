@@ -400,7 +400,7 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> dims(2);
     dims[0] = m_env.params().N[1] / downsample;
     dims[1] = m_env.params().N[0] / downsample;
-    Logger::print_info("data space size {}x{}", dims[0], dims[1]);
+    // Logger::print_info("data space size {}x{}", dims[0], dims[1]);
     // Actually write the temp array to hdf
     auto dataset = file.createDataSet<float>(name, DataSpace(dims));
 
@@ -410,8 +410,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     out_dim[0] = tmp_grid_data.extent()[1];
     offsets[1] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[1] = tmp_grid_data.extent()[0];
-    Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
-    Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
+    // Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
+    // Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
     dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
@@ -427,8 +427,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> offsets(1);
     offsets[0] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[0] = tmp_grid_data.extent()[0];
-    Logger::print_info("offset is {}, dim is {}", offsets[0],
-                       out_dim[0]);
+    // Logger::print_info("offset is {}, dim is {}", offsets[0],
+    //                    out_dim[0]);
     dataset.select(offsets, out_dim).write(m_output_1d);
   }
   m_xmf << "  <Attribute Name=\"" << name
