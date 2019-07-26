@@ -28,8 +28,11 @@ class data_exporter {
   void copy_config_file();
   void write_xmf_head(std::ofstream& fs);
   void write_xmf_step_header(std::ofstream& fs, double time);
+  void write_xmf_step_header(std::string& buffer, double time);
   void write_xmf_step_close(std::ofstream& fs);
+  void write_xmf_step_close(std::string& buffer);
   void write_xmf_tail(std::ofstream& fs);
+  void write_xmf_tail(std::string& buffer);
   void write_xmf(uint32_t step, double time);
   void prepare_xmf_restart(uint32_t restart_step, int data_interval, float time);
   void write_snapshot(sim_data& data, uint32_t step);
@@ -65,6 +68,7 @@ class data_exporter {
   std::ofstream m_xmf;  //!< This is the accompanying xmf file describing
                         //!< the hdf structure
   std::string m_dim_str;
+  std::string m_xmf_buffer;
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output
