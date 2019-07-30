@@ -367,15 +367,14 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       // ptc.p3[offset + n * 2 + 1] = p3;
       ptc.cell[offset + n * 2 + 1] = dev_mesh.get_idx(inject_i, i);
       ptc.weight[offset + n * 2 + 1] = w_ptc;
-      ptc.flag[offset + n * 2 + 1] =
-          set_ptc_type_flag(
+      ptc.flag[offset + n * 2 + 1] = set_ptc_type_flag(
           (u < dev_params.track_percent
                ? bit_or(ParticleFlag::primary, ParticleFlag::tracked)
                : bit_or(ParticleFlag::primary)),
           p_type);
       if (u < dev_params.track_percent) {
-        ptc.flag[offset + n * 2] = atomicAdd(&dev_ptc_id, 1);
-        ptc.flag[offset + n * 2 + 1] = atomicAdd(&dev_ptc_id, 1);
+        ptc.id[offset + n * 2] = atomicAdd(&dev_ptc_id, 1);
+        ptc.id[offset + n * 2 + 1] = atomicAdd(&dev_ptc_id, 1);
       }
     }
   }
@@ -459,8 +458,8 @@ measure_surface_density(particle_data ptc, size_t num,
                       c2 - dev_mesh.guard[1] + 2,
                       dev_mesh.dims[1] - 2 * dev_mesh.guard[1] - 1)],
                   1.0f * w / float(sum_cells) / 16.0f);
-      //} else if (sp == (int)ParticleType::ion) {
-      } else if (sp == (int)ParticleType::positron) {
+      } else if (sp == (int)ParticleType::ion) {
+        // } else if (sp == (int)ParticleType::positron) {
         atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 2, 0)],
                   1.0f * w / float(sum_cells) / 16.0f);
         atomicAdd(&surface_p[max(c2 - dev_mesh.guard[1] - 1, 0)],

@@ -255,8 +255,74 @@ data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
 }
 
 void
+data_exporter::write_xmf_step_header(std::string& buffer, double time) {
+  // std::string dim_str;
+  auto& grid = m_env.local_grid();
+  // auto &mesh = grid.mesh();
+  if (grid.dim() == 3) {
+    m_dim_str =
+        fmt::format("{} {} {}", tmp_grid_data.depth(),
+                    tmp_grid_data.height(), tmp_grid_data.width());
+  } else if (grid.dim() == 2) {
+    m_dim_str = fmt::format("{} {}", tmp_grid_data.height(),
+                            tmp_grid_data.width());
+  } else if (grid.dim() == 1) {
+    m_dim_str = fmt::format("{} 1", tmp_grid_data.width());
+  }
+
+  buffer += "<Grid Name=\"quadmesh\" Type=\"Uniform\">\n";
+  buffer +=
+      fmt::format("  <Time Type=\"Single\" Value=\"{}\"/>\n", time);
+  if (grid.dim() == 3) {
+    buffer += fmt::format(
+        "  <Topology Type=\"3DSMesh\" NumberOfElements=\"{}\"/>\n",
+        m_dim_str);
+    buffer += "  <Geometry GeometryType=\"X_Y_Z\">\n";
+  } else if (grid.dim() == 2) {
+    buffer += fmt::format(
+        "  <Topology Type=\"2DSMesh\" NumberOfElements=\"{}\"/>\n",
+        m_dim_str);
+    buffer += "  <Geometry GeometryType=\"X_Y\">\n";
+  } else if (grid.dim() == 1) {
+    buffer += fmt::format(
+        "  <Topology Type=\"2DSMesh\" NumberOfElements=\"{}\"/>\n",
+        m_dim_str);
+    buffer += "  <Geometry GeometryType=\"X_Y\">\n";
+  }
+  buffer += fmt::format(
+      "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+      "Precision=\"4\" Format=\"HDF\">\n",
+      m_dim_str);
+  buffer += "      mesh.h5:x1\n";
+  buffer += "    </DataItem>\n";
+  if (grid.dim() >= 2) {
+    buffer += fmt::format(
+        "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+        "Precision=\"4\" Format=\"HDF\">\n",
+        m_dim_str);
+    buffer += "      mesh.h5:x2\n";
+    buffer += "    </DataItem>\n";
+  }
+  if (grid.dim() >= 3) {
+    buffer += fmt::format(
+        "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+        "Precision=\"4\" Format=\"HDF\">\n",
+        m_dim_str);
+    buffer += "      mesh.h5:x3\n";
+    buffer += "    </DataItem>\n";
+  }
+
+  buffer += "  </Geometry>\n";
+}
+
+void
 data_exporter::write_xmf_step_close(std::ofstream& fs) {
   fs << "</Grid>" << std::endl;
+}
+
+void
+data_exporter::write_xmf_step_close(std::string& buffer) {
+  buffer += "</Grid>\n";
 }
 
 void
@@ -264,6 +330,13 @@ data_exporter::write_xmf_tail(std::ofstream& fs) {
   fs << "</Grid>" << std::endl;
   fs << "</Domain>" << std::endl;
   fs << "</Xdmf>" << std::endl;
+}
+
+void
+data_exporter::write_xmf_tail(std::string& buffer) {
+  buffer += "</Grid>\n";
+  buffer += "</Domain>\n";
+  buffer += "</Xdmf>\n";
 }
 
 void
@@ -320,20 +393,24 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   if (!m_xmf.is_open()) {
     m_xmf.open(outputDirectory + "data.xmf");
   }
-  if (timestep == 0) {
-    write_xmf_head(m_xmf);
-  } else {
-    m_xmf.seekp(-26, std::ios_base::end);
-  }
-  write_xmf_step_header(m_xmf, time);
+  // write_xmf_step_header(m_xmf, time);
+  write_xmf_step_header(m_xmf_buffer, time);
   // Launch a new thread to handle the field output
   // m_fld_thread.reset(
   //     new std::thread(&Aperture::data_exporter::write_field_output,
   //                     this, std::ref(data), timestep, time));
   write_field_output(data, timestep, time);
 
-  write_xmf_step_close(m_xmf);
-  write_xmf_tail(m_xmf);
+  write_xmf_step_close(m_xmf_buffer);
+  write_xmf_tail(m_xmf_buffer);
+
+  if (timestep == 0) {
+    write_xmf_head(m_xmf);
+  } else {
+    m_xmf.seekp(-26, std::ios_base::end);
+  }
+  m_xmf << m_xmf_buffer;
+  m_xmf_buffer = "";
 
   data.particles.get_tracked_ptc();
   data.photons.get_tracked_ptc();
@@ -400,7 +477,7 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> dims(2);
     dims[0] = m_env.params().N[1] / downsample;
     dims[1] = m_env.params().N[0] / downsample;
-    Logger::print_info("data space size {}x{}", dims[0], dims[1]);
+    // Logger::print_info("data space size {}x{}", dims[0], dims[1]);
     // Actually write the temp array to hdf
     auto dataset = file.createDataSet<float>(name, DataSpace(dims));
 
@@ -410,8 +487,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     out_dim[0] = tmp_grid_data.extent()[1];
     offsets[1] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[1] = tmp_grid_data.extent()[0];
-    Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
-    Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
+    // Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
+    // Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
     dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
@@ -427,20 +504,28 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     std::vector<size_t> offsets(1);
     offsets[0] = m_env.grid().mesh().offset[0] / downsample;
     out_dim[0] = tmp_grid_data.extent()[0];
-    Logger::print_info("offset is {}, dim is {}", offsets[0],
-                       out_dim[0]);
+    // Logger::print_info("offset is {}, dim is {}", offsets[0],
+    //                    out_dim[0]);
     dataset.select(offsets, out_dim).write(m_output_1d);
   }
-  m_xmf << "  <Attribute Name=\"" << name
-        << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
-  m_xmf << "    <DataItem Dimensions=\"" << m_dim_str
-        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
-        << std::endl;
-  m_xmf << fmt::format("      fld.{:05d}.h5:{}",
-                       timestep / m_env.params().data_interval, name)
-        << std::endl;
-  m_xmf << "    </DataItem>" << std::endl;
-  m_xmf << "  </Attribute>" << std::endl;
+  // m_xmf << "  <Attribute Name=\"" << name
+  //       << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  // m_xmf << "    <DataItem Dimensions=\"" << m_dim_str
+  //       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
+  //       << std::endl;
+  // m_xmf << fmt::format("      fld.{:05d}.h5:{}",
+  //                      timestep / m_env.params().data_interval, name)
+  //       << std::endl;
+  // m_xmf << "    </DataItem>" << std::endl;
+  // m_xmf << "  </Attribute>" << std::endl;
+  m_xmf_buffer += fmt::format(
+      "  <Attribute Name=\"{}\" Center=\"Node\" "
+      "AttributeType=\"Scalar\">\n", name);
+  m_xmf_buffer += fmt::format("    <DataItem Dimensions=\"{}\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">\n", m_dim_str);
+  m_xmf_buffer += fmt::format("      fld.{:05d}.h5:{}\n",
+                       timestep / m_env.params().data_interval, name);
+  m_xmf_buffer += "    </DataItem>\n";
+  m_xmf_buffer += "  </Attribute>\n";
 }
 
 void
