@@ -26,7 +26,8 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   Scalar gamma = ptc.E[tid];
 
   // if (gamma > dev_params.gamma_thr)
-  //   printf("emitted a photon at cell %d, %d, gamma is %f\n", c1, c2, gamma);
+  //   printf("emitted a photon at cell %d, %d, gamma is %f\n", c1, c2,
+  //   gamma);
   // Scalar gamma = data.particles.E[tid];
   return (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
           r > 1.02f);
@@ -90,10 +91,20 @@ __device__ bool
 check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   auto& photons = data.photons;
   uint32_t cell = photons.cell[tid];
+  int c1 = dev_mesh.get_c1(cell);
   int c2 = dev_mesh.get_c2(cell);
   Scalar theta = dev_mesh.pos(1, c2, photons.x2[tid]);
   if (theta < dev_mesh.delta[1] ||
       theta > CONST_PI - dev_mesh.delta[1]) {
+    photons.cell[tid] = MAX_CELL;
+    return false;
+  }
+  Scalar rho = max(
+      std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
+      0.0001f);
+  Scalar N = data.Rho[0](c1, c2) - data.Rho[1](c1, c2);
+  Scalar multiplicity = N / rho;
+  if (multiplicity > 20.0f) {
     photons.cell[tid] = MAX_CELL;
     return false;
   }
