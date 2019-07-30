@@ -32,13 +32,6 @@ skip_line_or_word(const std::string& str) {
     return false;
 }
 
-// template <typename T>
-// void add_param (json& data, const std::string& name, const T& value)
-// {
-//   if (data.find(name) != data.end()) return;
-//   data[name] = value;
-// }
-
 ConfigFile::ConfigFile() {
   Logger::print_info("Size of params is {}", sizeof(SimParams));
   // m_grid_conf.resize(3);
