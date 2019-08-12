@@ -47,6 +47,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     # "test_domain.cpp"
     "test_pitchptr.cu"
     # "test_config.cpp"
+    "test_ic.cu"
     )
   # set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda

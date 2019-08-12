@@ -67,7 +67,7 @@ __constant__ Scalar dev_ic_dep;
 __constant__ Scalar dev_ic_dg;
 __constant__ Scalar dev_ic_dlep;
 __constant__ cudaPitchedPtr dev_ic_dNde;
-__constant__ cudaPitchedPtr dev_ic_dNde_thompson;
+__constant__ cudaPitchedPtr dev_ic_dNde_thomson;
 __constant__ Scalar* dev_ic_rate;
 __constant__ Scalar* dev_gg_rate;
 __constant__ Scalar* dev_gammas;
@@ -102,6 +102,7 @@ binary_search(float u, Scalar* array, int size, Scalar& l, Scalar& h) {
       l = h = v;
       return b;
     }
+    // printf("u: %f, a: %d, b: %d, v: %f\n", u, a, b, v);
   }
   if (v < u) {
     l = v;
@@ -117,7 +118,8 @@ binary_search(float u, Scalar* array, int size, Scalar& l, Scalar& h) {
 __device__ int
 binary_search(float u, int n, cudaPitchedPtr array, Scalar& l,
               Scalar& h) {
-  int size = array.xsize / sizeof(Scalar);
+  // int size = array.xsize / sizeof(Scalar);
+  int size = array.xsize;
   Scalar* ptr = (Scalar*)((char*)array.ptr + n * array.pitch);
   return binary_search(u, ptr, size, l, h);
 }
@@ -129,22 +131,24 @@ gen_photon_e(Scalar gamma, curandState* state) {
   double result;
   int gn = find_n_gamma(gamma);
   // if (gamma < LOW_GAMMA_THR) {
-  //   // Thompson regime
+  //   // Thomson regime
   //   Scalar l, h;
-  //   int b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+  //   int b = binary_search(u, gn, dev_ic_dNde_thomson, l, h);
   //   bb = (l == h ? b : (u - l) / (h - l) + b);
   //   result = exp(dev_ic_dlep * bb + log(MIN_EP));
   // } else {
   Scalar l, h;
   int b = binary_search(u, gn, dev_ic_dNde, l, h);
-  // if (b < 2) {
-  //   b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
-  //   bb = (l == h ? b : (u - l) / (h - l) + b);
-  //   result = exp(dev_ic_dlep * bb + log(MIN_EP));
-  // } else {
-  bb = (l == h ? b : (u - l) / (h - l) + b);
-  result = dev_ic_dep * bb;
-  // }
+  if (b < 2) {
+    b = binary_search(u, gn, dev_ic_dNde_thomson, l, h);
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = exp(dev_ic_dlep * bb + log(MIN_EP));
+    //return std::max(std::min(result, gamma - 1.01), 0.0);
+  } else {
+    bb = (l == h ? b : (u - l) / (h - l) + b);
+    result = dev_ic_dep * bb;
+  }
+  // printf("b: %d, u: %f, l: %f, h: %f, bb: %f, result: %f\n", b, u, l, h, bb, result);
 
   return std::max(std::min(result * gamma, gamma - 1.01), 0.0);
 }
@@ -224,7 +228,7 @@ gen_rand_gammas(Scalar* gammas, uint32_t num, curandState* states) {
 
 inverse_compton::inverse_compton(const SimParams& params)
     : m_dNde(Extent(params.n_ep, params.n_gamma)),
-      m_dNde_thompson(Extent(params.n_ep, params.n_gamma)),
+      m_dNde_thomson(Extent(params.n_ep, params.n_gamma)),
       m_ic_rate(params.n_gamma),
       m_gg_rate(params.n_gamma),
       m_gammas(params.n_gamma),
@@ -260,11 +264,11 @@ inverse_compton::inverse_compton(const SimParams& params)
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
                                   sizeof(Scalar)));
   cudaPitchedPtr p_dNde = get_cudaPitchedPtr(m_dNde);
-  cudaPitchedPtr p_dNde_th = get_cudaPitchedPtr(m_dNde_thompson);
+  cudaPitchedPtr p_dNde_th = get_cudaPitchedPtr(m_dNde_thomson);
 
   CudaSafeCall(cudaMemcpyToSymbol(
       Kernels::dev_ic_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thomson,
                                   &p_dNde_th,
                                   sizeof(cudaPitchedPtr)));
   Scalar* dev_ic_rate_ptr = m_ic_rate.dev_ptr();
@@ -407,18 +411,18 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
           result += ne * sigma_lab(q, ge) / gamma;
       }
-      m_dNde_thompson(i, n) = result * de * e1;
+      m_dNde_thomson(i, n) = result * de * e1;
     }
-    for (uint32_t i = 1; i < m_ep.size(); i++) {
-      m_dNde_thompson(i, n) += m_dNde_thompson(i - 1, n);
+    for (uint32_t i = 1; i < m_log_ep.size(); i++) {
+      m_dNde_thomson(i, n) += m_dNde_thomson(i - 1, n);
     }
-    for (uint32_t i = 0; i < m_ep.size(); i++) {
-      m_dNde_thompson(i, n) /= m_dNde_thompson(m_ep.size() - 1, n);
+    for (uint32_t i = 0; i < m_log_ep.size(); i++) {
+      m_dNde_thomson(i, n) /= m_dNde_thomson(m_ep.size() - 1, n);
     }
   }
 
-  m_dNde_thompson.sync_to_device();
-  Logger::print_info("Finished copying m_dNde_thompson to device");
+  m_dNde_thomson.sync_to_device();
+  Logger::print_info("Finished copying m_dNde_thomson to device");
   // m_npep.sync_to_device();
   // m_dnde1p.sync_to_device();
 }
@@ -488,14 +492,14 @@ inverse_compton::gen_photon_e(Scalar gamma) {
   int gn = find_n_gamma(gamma);
   // if (gamma < LOW_GAMMA_THR) {
   //   Scalar l, h;
-  //   int b = binary_search(u, gn, m_dNde_thompson, l, h);
+  //   int b = binary_search(u, gn, m_dNde_thomson, l, h);
   //   bb = (l == h ? b : (u - l) / (h - l) + b);
   //   result = exp(m_dlep * bb + log(MIN_EP));
   // } else {
   Scalar l, h;
   int b = binary_search(u, gn, m_dNde, l, h);
   if (b < 2) {
-    b = binary_search(u, gn, m_dNde_thompson, l, h);
+    b = binary_search(u, gn, m_dNde_thomson, l, h);
     bb = (l == h ? b : (u - l) / (h - l) + b);
     result = exp(m_dlep * bb + log(MIN_EP));
   } else {

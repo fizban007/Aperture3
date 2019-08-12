@@ -33,9 +33,12 @@ class inverse_compton {
   void generate_photon_energies(array<Scalar>& e_ph, array<Scalar>& gammas);
   void generate_random_gamma(array<Scalar>& gammas);
 
+  multi_array<Scalar>& dNde_thomson() { return m_dNde_thomson; }
+  array<Scalar>& log_ep() { return m_log_ep; }
+
  private:
   multi_array<Scalar> m_dNde;
-  multi_array<Scalar> m_dNde_thompson;
+  multi_array<Scalar> m_dNde_thomson;
   array<Scalar> m_ic_rate, m_gg_rate, m_gammas, m_log_ep, m_ep;
   Scalar m_dep, m_dg, m_dlep;
   int m_threads, m_blocks;
