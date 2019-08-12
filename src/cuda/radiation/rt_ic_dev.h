@@ -1,4 +1,5 @@
 #include "core/typedefs.h"
+#include <curand_kernel.h>
 
 namespace Aperture {
 
@@ -8,7 +9,7 @@ extern __constant__ Scalar dev_ic_dep;
 extern __constant__ Scalar dev_ic_dg;
 extern __constant__ Scalar dev_ic_dlep;
 extern __constant__ cudaPitchedPtr dev_ic_dNde;
-extern __constant__ cudaPitchedPtr dev_ic_dNde_thompson;
+extern __constant__ cudaPitchedPtr dev_ic_dNde_thomson;
 extern __constant__ Scalar* dev_ic_rate;
 extern __constant__ Scalar* dev_gg_rate;
 extern __constant__ Scalar* dev_gammas;

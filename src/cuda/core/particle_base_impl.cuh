@@ -357,8 +357,11 @@ void
 particle_base<ParticleClass>::get_tracked_ptc() {
   if (m_number > 0) {
     uint32_t* num_tracked;
+    uint32_t init_num_tracked = 0;
     CudaSafeCall(cudaMalloc(&num_tracked, sizeof(uint32_t)));
-    CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
+    // CudaSafeCall(cudaMemset(num_tracked, 0, sizeof(uint32_t)));
+    CudaSafeCall(cudaMemcpy(num_tracked, &init_num_tracked, sizeof(uint32_t),
+                            cudaMemcpyHostToDevice));
 
     map_tracked_ptc(m_data.flag, m_data.cell, m_number, m_tracked_ptc_map, num_tracked);
     CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked, sizeof(uint32_t),
