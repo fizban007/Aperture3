@@ -37,12 +37,12 @@ rl_outer = coeffile["rL_outer"][()]
 rs = coeffile["r"][()]
 rho0 = coeffile["rho"][()]
 j0 = coeffile["ju1"][()]
+th = coeffile["th"][()]
 r_null = rs[np.argmin(abs(rho0))]
 
 coeffile.close()
 
 conf = data.conf
-
 
 def xi(r):
     return np.log((r - rp) / (r - rm)) / (rp - rm)
@@ -60,14 +60,26 @@ def Sigma_r(r):
 def A_r(r):
     return np.sqrt(r * r + a * a) - Delta_r(r) * a * a * sin_th * sin_th
 
-def alpha(r):
-    return np.sqrt(Delta_r(r) * Sigma_r(r) / A_r(r))
+def Sigma(r, theta):
+    cos_th = np.cos(theta)
+    return r * r + a * a * cos_th * cos_th
+
+def A(r, theta):
+    sin_th = np.sin(theta)
+    return (r * r + a * a)**2 - Delta_r(r) * a * a * sin_th * sin_th
+
+def alpha(r, theta):
+    return np.sqrt(Delta_r(r) * Sigma(r, theta) / A(r, theta))
+
+def grr(r, theta):
+    return Sigma(r, theta) / Delta_r(r)
 
 
 label_size = 30
 tick_size = 20
 
 js = abs(np.interp(rxi(xs), rs, j0 * conf["B0"]))
+thetas = np.interp(rxi(xs), rs, th)
 
 def make_plot(num):
     print("Working on", num)
@@ -163,11 +175,13 @@ def make_plot(num):
     axes[1, 0].tick_params(axis="both", labelsize=tick_size)
     axes[1, 0].set_xlim([0, np.log10(2000/conf["e_min"])])
 
-    axes[1, 1].plot(rxi(xs), (rho_p - rho_e)/js)
+    # axes[1, 1].plot(rxi(xs), (rho_p - rho_e)/js)
+    axes[1, 1].plot(rxi(xs),(rho_p - rho_e) * alpha(rxi(xs), thetas) / js / np.sqrt(grr(rxi(xs), thetas)))
+    axes[1, 1].plot(rxi(xs),np.ones(len(xs)))
     axes[1, 1].set_ylabel("M", fontsize=label_size)
     axes[1, 1].set_xlabel("$r/r_g$", fontsize=label_size)
     axes[1, 1].tick_params(axis="both", labelsize=tick_size)
-    axes[1, 1].set_ylim([0, 100])
+    axes[1, 1].set_ylim([0, 20])
 
     fig.savefig("plots/%05d.png" % num)
     plt.close(fig)
