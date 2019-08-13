@@ -215,6 +215,14 @@ user_write_ptc_output(sim_data& data, data_exporter& exporter,
       },
       file, timestep);
   exporter.add_ptc_float_output(
+      data, "ph_w", data.photons.tracked_number(),
+      [](sim_data& data, std::vector<float>& v, uint32_t n,
+         uint32_t& nsb) {
+        v[nsb] = data.photons.tracked_data().weight[n];
+        nsb += 1;
+      },
+      file, timestep);
+  exporter.add_ptc_float_output(
       data, "ph_p3", data.photons.tracked_number(),
       [](sim_data& data, std::vector<float>& v, uint32_t n,
          uint32_t& nsb) {

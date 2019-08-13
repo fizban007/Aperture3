@@ -86,7 +86,8 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
   // if (std::abs(Eph) < dev_params.E_ph_min) return;
-  if (std::abs(Eph) < 0.01f / dev_params.e_min) return;
+  // if (std::abs(Eph) < 0.01f / dev_params.e_min) return;
+  if (std::abs(Eph) < 50.0f) return;
 
   // Add the new photon
   // Scalar path = rad_model.draw_photon_freepath(Eph);
@@ -116,10 +117,10 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
                  dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
   Scalar u0_hat = alpha * std::abs(photons.E[tid]);
-  if (u0_hat < dev_params.E_ph_min) {
-    photons.cell[tid] = MAX_CELL;
-    return false;
-  }
+  // if (u0_hat < dev_params.E_ph_min) {
+  //   photons.cell[tid] = MAX_CELL;
+  //   return false;
+  // }
 
   Scalar prob = find_gg_rate(u0_hat) * alpha * dev_params.delta_t;
   float u = rng();

@@ -174,7 +174,7 @@ update_ptc_1dgr(data_ptrs data, size_t num,
     Scalar D1 = mesh_ptrs.D1[c] * x1 + mesh_ptrs.D1[c - 1] * nx1;
     Scalar D2 = mesh_ptrs.D2[c] * x1 + mesh_ptrs.D2[c - 1] * nx1;
     Scalar D3 = mesh_ptrs.D3[c] * x1 + mesh_ptrs.D3[c - 1] * nx1;
-    Scalar Dr = (x1 < 0.5f ? data.E3(c, 0) * (0.5f + x1) +
+    Scalar Dxi = (x1 < 0.5f ? data.E3(c, 0) * (0.5f + x1) +
                                  data.E3(c - 1, 0) * (0.5f - x1)
                            : data.E3(c, 0) * (1.5f - x1) +
                                  data.E3(c + 1, 0) * (x1 - 0.5f));
@@ -183,8 +183,8 @@ update_ptc_1dgr(data_ptrs data, size_t num,
     //               *ptrAddr(fields.E3, c - 1, 0) * nx1;
     Scalar agrr = mesh_ptrs.agrr[c] * x1 + mesh_ptrs.agrr[c - 1] * nx1;
     // Scalar agrf = mesh_ptrs.agrf[c] * x1 + mesh_ptrs.agrf[c - 1] *
-    // nx1; Scalar Er = agrr * Dr + agrf * Dphi;
-    Scalar Er = agrr * Dr;
+    // nx1; Scalar Er = agrr * Dxi + agrf * Dphi;
+    Scalar Er = agrr * Dxi;
 
     Scalar vr = (p1 / u0 - D1) / D2;
     // int c_0 = (x1 < 0.5f ? c - 1 : c);

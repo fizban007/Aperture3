@@ -174,7 +174,9 @@ radiative_transfer::radiative_transfer(sim_environment &env)
     : m_env(env), m_threadsPerBlock(256), m_blocksPerGrid(512) {
   m_numPerBlock = array<int>(m_blocksPerGrid);
   m_cumNumPerBlock = array<int>(m_blocksPerGrid);
-  m_posInBlock = array<int>(m_env.params().max_ptc_number);
+  m_posInBlock = array<int>(
+      std::max(m_env.params().max_ptc_number,
+               m_env.params().max_photon_number));
   initialize();
 }
 
