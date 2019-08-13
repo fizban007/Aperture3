@@ -209,7 +209,8 @@ RadiationTransfer<PtcClass, PhotonClass, RadModel>::RadiationTransfer(
       m_blocksPerGrid(512),
       m_numPerBlock(m_blocksPerGrid),
       m_cumNumPerBlock(m_blocksPerGrid),
-      m_posInBlock(env.params().max_ptc_number),
+      m_posInBlock(std::max(env.params().max_ptc_number,
+                            env.params().max_photon_number)),
       m_pair_events(env.local_grid()),
       m_ph_events(env.local_grid()) {
   int seed = m_env.params().random_seed;
