@@ -45,19 +45,19 @@ sync_kill_perp(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
   B2 /= q_over_m;
   B3 /= q_over_m;
   Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-  Scalar B_sqrt = std::sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  Scalar B_sqr = B1 * B1 + B2 * B2 + B3 * B3;
   Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
 
   Scalar delta_p1 = -dev_params.rad_cooling_coef *
-                    (p1 - B1 * pdotB / (B_sqrt * B_sqrt));
+                    (p1 - B1 * pdotB / B_sqr);
   Scalar delta_p2 = -dev_params.rad_cooling_coef *
-                    (p2 - B2 * pdotB / (B_sqrt * B_sqrt));
+                    (p2 - B2 * pdotB / B_sqr);
   Scalar delta_p3 = -dev_params.rad_cooling_coef *
-                    (p3 - B3 * pdotB / (B_sqrt * B_sqrt));
-  Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
-                   delta_p3 * delta_p3);
-  // Scalar f = std::sqrt(B_sqrt / dev_params.B0);
-  Scalar f = B_sqrt / dev_params.B0;
+                    (p3 - B3 * pdotB / B_sqr);
+  // Scalar dp = sqrt(delta_p1 * delta_p1 + delta_p2 * delta_p2 +
+  //                  delta_p3 * delta_p3);
+  Scalar f = std::sqrt(B_sqr) / dev_params.B0;
+  // Scalar f = B_sqr / square(dev_params.B0);
   // if (sp == (int)ParticleType::ion) f *= 0.1f;
   p1 += delta_p1 * f;
   p2 += delta_p2 * f;
