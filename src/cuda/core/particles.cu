@@ -19,9 +19,9 @@ compute_ptc_energies(const Scalar* p1, const Scalar* p2,
   }
 }
 
-template <typename PtcData>
+// template <typename PtcData>
 __global__ void
-append_ptc(PtcData data, size_t num, Vec3<Pos_t> x,
+append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
            Vec3<Scalar> p, int cell, ParticleType type, Scalar w,
            uint32_t flag) {
   data.x1[num] = x[0];
@@ -60,13 +60,15 @@ void
 particles_t::append(const Vec3<Pos_t>& x, const Vec3<Scalar>& p,
                     int cell, ParticleType type, Scalar weight,
                     uint32_t flag) {
-  if (m_number >= m_size)
+  if (m_number >= m_size) {
+    Logger::print_info("number is {}, size is {}", m_number, m_size);
     throw std::runtime_error("Particle array full!");
+  }
   Kernels::append_ptc<<<1, 1>>>(m_data, m_number, x, p, cell, type,
                                 weight, flag);
+  cudaDeviceSynchronize();
   CudaCheckError();
   m_number += 1;
-  cudaDeviceSynchronize();
 }
 
 }  // namespace Aperture

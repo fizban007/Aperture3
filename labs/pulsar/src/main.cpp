@@ -132,11 +132,16 @@ main(int argc, char *argv[]) {
     time = start_time + (step - start_step) * dt;
 
     Scalar omega = 0.0;
-    if (time <= 10.0) {
+    Scalar atm_time = 0.0;
+    Scalar sp_time = 10.0;
+    if (time <= atm_time) {
+      omega = 0.0;
+    } else if (time <= atm_time + sp_time) {
       // omega = env.params().omega *
       //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
-      omega = env.params().omega * (time / 10.0);
-    } else {
+      omega = env.params().omega * ((time - atm_time) / sp_time);
+    }
+    else {
       omega = env.params().omega;
     }
     Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
@@ -159,11 +164,11 @@ main(int argc, char *argv[]) {
     }
 
     // Inject particles
-    if (env.params().inject_particles && step % 3 == 0)
+    if (env.params().inject_particles && step % 2 == 0)
       ptc_updater.inject_ptc(
-          data, 1, 0.0, 0.0, 0.0,
-          // 1.0 * omega / env.params().omega, omega);
-          1.2, omega);
+          data, 3, 0.0, 0.0, 0.0,
+          // 1.1 * omega / env.params().omega, omega);
+          1.0, omega);
 
     // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);

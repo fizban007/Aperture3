@@ -293,6 +293,7 @@ sim_data::initialize(const sim_environment& env) {
   g_ptrs.photon_produced = get_pitchptr(photon_produced.data());
   g_ptrs.pair_produced = get_pitchptr(pair_produced.data());
   g_ptrs.photon_num = get_pitchptr(photon_num.data());
+  g_ptrs.ph_flux = get_pitchptr(ph_flux);
 
   CudaSafeCall(cudaMallocManaged(
       &g_ptrs.Rho, num_species * sizeof(pitchptr<Scalar>)));

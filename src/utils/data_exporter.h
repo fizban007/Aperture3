@@ -45,7 +45,7 @@ class data_exporter {
   void write_ptc_output(sim_data& data, uint32_t timestep, double time);
 
   void add_array_output(multi_array<float>& array,
-                        const std::string& name, HighFive::File& file);
+                        const std::string& name, HighFive::File& file, uint32_t timestep);
 
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,

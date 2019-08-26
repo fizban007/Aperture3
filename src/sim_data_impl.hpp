@@ -14,6 +14,7 @@ sim_data::sim_data(const sim_environment& e)
       particles(env.params().max_ptc_number),
       photons(env.params().max_photon_number) {
   num_species = env.params().num_species;
+  // Logger::print_info("Particle array size is {}", particles.size());
 
   E.resize(env.local_grid());
   E.set_field_type(FieldType::E);
@@ -36,6 +37,10 @@ sim_data::sim_data(const sim_environment& e)
   J.resize(env.local_grid());
   J.set_field_type(FieldType::E);
   J.initialize();
+
+  ph_flux = multi_array<Scalar>(Extent(200, 256));
+  ph_flux.assign_dev(0.0f);
+  ph_flux.sync_to_host();
 
   Rho.resize(num_species);
   gamma.resize(num_species);
@@ -104,6 +109,8 @@ sim_data::sync_to_host() {
   pair_produced.sync_to_host();
   Logger::print_info("Sync photon_num");
   photon_num.sync_to_host();
+  Logger::print_info("Sync ph_flux");
+  ph_flux.sync_to_host();
 }
 
 }

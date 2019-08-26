@@ -530,15 +530,14 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
 
 void
 data_exporter::add_array_output(multi_array<float>& array,
-                                const std::string& name, File& file) {
+                                const std::string& name, File& file,
+                                uint32_t timestep) {
   // Actually write the temp array to hdf
-  // hsize_t dims[3] = {(uint32_t)array.width(),
-  // (uint32_t)array.height(),
-  //                    (uint32_t)array.depth()};
-  // DataSpace dataspace(3, dims);
-  // DataSet dataset =
-  //     file.createDataSet(name, PredType::NATIVE_FLOAT, dataspace);
-  // dataset.write(array.host_ptr(), PredType::NATIVE_FLOAT);
+  std::vector<size_t> dims(1);
+  dims[0] = (uint32_t)array.size();
+  DataSet dataset =
+      file.createDataSet<float>(name, DataSpace(dims));
+  dataset.write(array.host_ptr());
 }
 
 template <typename Func>

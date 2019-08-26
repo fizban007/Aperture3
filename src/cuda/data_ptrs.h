@@ -22,7 +22,7 @@ struct data_ptrs {
   pitchptr<Scalar> photon_produced;
   pitchptr<Scalar> pair_produced;
   pitchptr<Scalar> photon_num;
-  pitchptr<Scalar> ph_flux;
+  pitchptr<float> ph_flux;
 
   particle_data particles;
   photon_data photons;
