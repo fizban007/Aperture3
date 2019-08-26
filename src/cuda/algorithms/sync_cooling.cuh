@@ -9,8 +9,8 @@ namespace Kernels {
 
 __device__ __forceinline__ void
 sync_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
-             Scalar& B1, Scalar& B2, Scalar& B3, Scalar& E1, Scalar& E2,
-             Scalar& E3, Scalar& q_over_m) {
+             Scalar B1, Scalar B2, Scalar B3, Scalar E1, Scalar E2,
+             Scalar E3, Scalar q_over_m) {
   Scalar tmp1 = (E1 + (p2 * B3 - p3 * B2) / gamma) / q_over_m;
   Scalar tmp2 = (E2 + (p3 * B1 - p1 * B3) / gamma) / q_over_m;
   Scalar tmp3 = (E3 + (p1 * B2 - p2 * B1) / gamma) / q_over_m;
@@ -39,8 +39,8 @@ sync_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
 
 __device__ __forceinline__ void
 sync_kill_perp(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
-               Scalar B1, Scalar B2, Scalar B3, Scalar& E1,
-               Scalar& E2, Scalar& E3, Scalar& q_over_m) {
+               Scalar B1, Scalar B2, Scalar B3, Scalar E1,
+               Scalar E2, Scalar E3, Scalar q_over_m) {
   B1 /= q_over_m;
   B2 /= q_over_m;
   B3 /= q_over_m;

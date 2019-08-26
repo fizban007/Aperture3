@@ -12,7 +12,7 @@ namespace Aperture {
 namespace Kernels {
 
 __device__ __forceinline__ void
-user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt) {
+user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) {
   auto& ptc = data.particles;
 
   auto c = ptc.cell[idx];

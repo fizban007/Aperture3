@@ -140,6 +140,7 @@ particle_base<ParticleClass>::particle_base()
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(std::size_t max_num) {
+  m_size = max_num;
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num);
   // auto alloc = alloc_cuda_managed(max_num);
@@ -155,20 +156,19 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num) {
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(
     const particle_base<ParticleClass>& other) {
-  std::size_t n = other.m_size;
-  m_size = n;
+  m_size = other.m_size;
   m_number = other.m_number;
 
-  alloc_mem(n);
+  alloc_mem(m_size);
   // auto alloc = alloc_cuda_managed(n);
   // auto alloc = alloc_cuda_device(n);
   // alloc(m_index);
-  cudaMalloc(&m_index, n * sizeof(Index_t));
-  cudaMalloc(&m_tmp_data_ptr, n * sizeof(double));
+  cudaMalloc(&m_index, m_size * sizeof(Index_t));
+  cudaMalloc(&m_tmp_data_ptr, m_size * sizeof(double));
   // alloc((double*)m_tmp_data_ptr);
   // m_index.resize(n);
   // m_index_bak.resize(n);
-  copy_from(other, n);
+  copy_from(other, m_size);
 }
 
 template <typename ParticleClass>

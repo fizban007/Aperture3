@@ -2,25 +2,25 @@
 #define _RESONANT_COOLING_CUH_
 
 #include "cuda/constant_mem.h"
+#include "utils/util_functions.h"
 
 namespace Aperture {
 
 namespace Kernels {
 
-__device__ __forceinline__ void
+__device__ __forceinline__ Scalar
 resonant_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
-                 Scalar r, Scalar B1, Scalar B2, Scalar B3, Scalar E1,
-                 Scalar E2, Scalar E3, Scalar q_over_m) {
-  Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
-  Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3) / std::abs(q_over_m);
+                 uint32_t& flag, Scalar r, Scalar pdotB, Scalar B,
+                 Scalar B1, Scalar B2, Scalar B3, Scalar E1, Scalar E2,
+                 Scalar E3, Scalar q_over_m, Scalar dt) {
+  // Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3) / std::abs(q_over_m);
   Scalar gamma_thr_B = dev_params.gamma_thr * B / dev_params.BQ;
 
   if (gamma_thr_B > 3.0f && gamma > gamma_thr_B) {
-    ptc.flag[idx] = flag |= bit_or(ParticleFlag::emit_photon);
+    flag = flag |= bit_or(ParticleFlag::emit_photon);
   } else if (dev_params.rad_cooling_on) {
     // Process resonant drag
-    Scalar p_mag_signed = sgn(pdotB) * sgn(B1) *
-                          std::abs(pdotB) / B;
+    Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
     // printf("p_mag_signed is %f\n", p_mag_signed);
     Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
     Scalar mu = std::abs(B1 / B);
@@ -42,7 +42,8 @@ resonant_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
       // printf("drag on p1 is %f\n", dt * B1 * D / B);
       gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
 
-      // Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
+      Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
+      return Ndot;
       // Scalar angle =
       //     acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) / B);
       // // Scalar theta_p =
@@ -83,6 +84,11 @@ resonant_cooling(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
       // }
     }
   }
+  return 0.0f;
 }
+
+}  // namespace Kernels
+
+}  // namespace Aperture
 
 #endif  // _RESONANT_COOLING_CUH_

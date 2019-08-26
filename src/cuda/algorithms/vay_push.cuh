@@ -3,6 +3,8 @@
 
 namespace Aperture {
 
+namespace Kernels {
+
 __device__ __forceinline__ void
 vay_push(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
          const Scalar& E1, const Scalar& E2, const Scalar& E3,
@@ -26,6 +28,8 @@ vay_push(Scalar& p1, Scalar& p2, Scalar& p3, Scalar& gamma,
   p2 = (up2 + B2 * ut * inv_gamma2 + (up3 * B1 - up1 * B3) / gamma) * s;
   p3 = (up3 + B3 * ut * inv_gamma2 + (up1 * B2 - up2 * B1) / gamma) * s;
 }
+
+}  // namespace Kernels
 
 }  // namespace Aperture
 
