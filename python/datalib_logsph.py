@@ -42,7 +42,7 @@ class Data:
             "r",
             swmr=True,
         )
-        self._fld_keys = list(f_fld.keys())
+        self._fld_keys = list(f_fld.keys()) + ["B", "EdotB", "flux", "J", "JdotB"]
         f_fld.close()
         f_ptc = h5py.File(
             os.path.join(self._path, f"ptc.{self._current_ptc_step:05d}.h5"),
@@ -120,6 +120,12 @@ class Data:
             )
         elif key == "B":
             self._B = np.sqrt(self.B1 * self.B1 + self.B2 * self.B2 + self.B3 * self.B3)
+        elif key == "J":
+            self._J = np.sqrt(self.J1 * self.J1 + self.J2 * self.J2 + self.J3 * self.J3)
+        elif key == "EdotB":
+            self._EdotB = self.E1 * self.B1 + self.E2 * self.B2 + self.E3 * self.B3
+        elif key == "JdotB":
+            self._JdotB = self.J1 * self.B1 + self.J2 * self.B2 + self.J3 * self.B3
         # elif key == "EdotB":
         #     setattr(self, "_" + key, data["EdotBavg"][()])
         else:
@@ -139,29 +145,42 @@ class Data:
 
         self._x1 = meshfile["x1"][()]
         self._x2 = meshfile["x2"][()]
-        self._r = np.pad(
-            np.exp(
+        # self._r = np.pad(
+        #     np.exp(
+        #         np.linspace(
+        #             0,
+        #             self._conf["Grid"]["size"][0],
+        #             self._conf["Grid"]["N"][0]
+        #             // self._conf["Simulation"]["downsample"],
+        #         )
+        #         + self._conf["Grid"]["lower"][0]
+        #     ),
+        #     self._conf["Grid"]["guard"][0],
+        #     "constant",
+        # )
+        # self._theta = np.pad(
+        #     np.linspace(
+        #         0,
+        #         self._conf["Grid"]["size"][1],
+        #         self._conf["Grid"]["N"][1] // self._conf["Simulation"]["downsample"],
+        #     )
+        #     + self._conf["Grid"]["lower"][1],
+        #     self._conf["Grid"]["guard"][1],
+        #     "constant",
+        # )
+        self._r = np.exp(
                 np.linspace(
                     0,
                     self._conf["Grid"]["size"][0],
                     self._conf["Grid"]["N"][0]
                     // self._conf["Simulation"]["downsample"],
-                )
-                + self._conf["Grid"]["lower"][0]
-            ),
-            self._conf["Grid"]["guard"][0],
-            "constant",
-        )
-        self._theta = np.pad(
-            np.linspace(
+                ) + self._conf["Grid"]["lower"][0]
+            )
+        self._theta = np.linspace(
                 0,
                 self._conf["Grid"]["size"][1],
                 self._conf["Grid"]["N"][1] // self._conf["Simulation"]["downsample"],
-            )
-            + self._conf["Grid"]["lower"][1],
-            self._conf["Grid"]["guard"][1],
-            "constant",
-        )
+            ) + self._conf["Grid"]["lower"][1]
 
         meshfile.close()
         self._rv, self._thetav = np.meshgrid(self._r, self._theta)

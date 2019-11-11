@@ -90,7 +90,7 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) 
     // printf("p is (%f, %f, %f), gamma is %f\n", p1, p2, p3, gamma);
     vay_push(p1, p2, p3, gamma, E1, E2, E3, B1, B2, B3, q_over_m, dt);
 
-    gravity(p1, p2, p3, gamma, r, dt);
+    gravity(p1, p2, p3, gamma, r, sp, dt);
     // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
     // %d\n", p1, p2, p3,
     //        gamma, inv_gamma2, dev_params.gravity_on);
