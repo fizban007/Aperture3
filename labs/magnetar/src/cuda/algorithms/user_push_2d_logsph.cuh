@@ -3,6 +3,7 @@
 
 #include "cuda/algorithms/gravity.cuh"
 #include "cuda/algorithms/resonant_cooling.cuh"
+#include "cuda/algorithms/sync_cooling.cuh"
 #include "cuda/algorithms/vay_push.cuh"
 #include "cuda/constant_mem.h"
 #include "cuda/data_ptrs.h"
@@ -86,7 +87,9 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
     vay_push(p1, p2, p3, gamma, E1, E2, E3, B1, B2, B3, q_over_m, dt);
   }
 
-  gravity(p1, p2, p3, gamma, r, dt);
+  if (dev_params.gravity_on) {
+    gravity(p1, p2, p3, gamma, r, sp, dt);
+  }
   // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
   // %d\n", p1, p2, p3,
   //        gamma, inv_gamma2, dev_params.gravity_on);
@@ -95,10 +98,13 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
   // Scalar B_sqrt = std::sqrt(tt) / std::abs(q_over_m);
   // Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3) / q_over_m;
   // Scalar pitch_angle = pdotB / (p * B_sqrt);
-
-  if (sp != (int)ParticleType::ion) {
+  if (dev_params.rad_cooling_on) {
     // sync_kill_perp(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3,
     //                q_over_m);
+    sync_cooling(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3, q_over_m);
+  }
+
+  if (sp != (int)ParticleType::ion) {
     B1 /= q_over_m;
     B2 /= q_over_m;
     B3 /= q_over_m;
@@ -106,13 +112,19 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
     Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
     Scalar theta = dev_mesh.pos(1, c2, old_x2);
     Scalar gamma_thr_B = dev_params.gamma_thr * B / dev_params.BQ;
+    Scalar Eph =
+        gamma *
+        (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ));
 
     // printf("gamma_thr_B is %f, gamma is %f\n",
     //        gamma_thr_B, gamma);
     // if (gamma_thr_B > 3.0f && gamma > gamma_thr_B) {
-    //   flag = flag |= bit_or(ParticleFlag::emit_photon);
-    // } else if (dev_params.rad_cooling_on) {
-    if (dev_params.rad_cooling_on) {
+    if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B &&
+        B > 0.5f * dev_params.BQ) {
+      // if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B) {
+      // flag = flag |= bit_or(ParticleFlag::emit_photon);
+      ptc.flag[idx] = (flag | bit_or(ParticleFlag::emit_photon));
+    } else if (dev_params.rad_cooling_on) {
       // Process resonant drag
       Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
       // printf("p_mag_signed is %f\n", p_mag_signed);
@@ -161,32 +173,31 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
         Scalar Eph =
             (g - std::abs(p_mag_signed) * u) *
             (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
-        if (p1 > 0.0f && (Eph < 2.0f || B < 0.1 * dev_params.BQ)) {
-          Eph = std::log(Eph) / std::log(10.0f);
+        // if (p1 > 0.0f && (Eph < 2.0f || B < 0.1 * dev_params.BQ)) {
+        if (p1 > 0.0f && Eph < 2.0f) {
+          Eph = std::log(std::abs(Eph)) / std::log(10.0f);
           if (Eph > 2.0f) Eph = 2.0f;
           if (Eph < -6.0f) Eph = -6.0f;
-          int n0 = ((Eph + 6.0f) / 8.01f *
-                    (ph_flux.p.xsize - 1));
+          int n0 = ((Eph + 6.0f) / 8.02f * (ph_flux.p.xsize - 1));
           if (n0 < 0) n0 = 0;
-          if (n0 >= ph_flux.p.xsize)
-            n0 = ph_flux.p.xsize - 1;
+          if (n0 >= ph_flux.p.xsize) n0 = ph_flux.p.xsize - 1;
           int n1 = (std::abs(angle) / (CONST_PI + 1.0e-5)) *
                    (ph_flux.p.ysize - 1);
           if (n1 < 0) n1 = 0;
           if (n1 >= ph_flux.p.ysize) n1 = ph_flux.p.ysize - 1;
           auto w = ptc.weight[idx];
           atomicAdd(&ph_flux(n0, n1), Ndot * dt * w);
-          // printf("n0 is %d, n1 is %d, Ndot is %f, ph_flux is %f\n", n0,
+          // printf("n0 is %d, n1 is %d, Ndot is %f, ph_flux is %f\n",
+          // n0,
           //        n1, Ndot, ph_flux(n0, n1));
         }
       }
-      ptc.p1[idx] = p1;
-      ptc.p2[idx] = p2;
-      ptc.p3[idx] = p3;
-      ptc.flag[idx] = flag;
-      ptc.E[idx] = gamma;
     }
   }
+  ptc.p1[idx] = p1;
+  ptc.p2[idx] = p2;
+  ptc.p3[idx] = p3;
+  ptc.E[idx] = gamma;
 }
 
 }  // namespace Kernels

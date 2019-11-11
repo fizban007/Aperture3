@@ -48,12 +48,12 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 __global__ void
 vay_push_logsph_2d(data_ptrs data, size_t num, Scalar dt,
                    curandState *states) {
-  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = states[idx];
-  for (; idx < num; idx += blockDim.x * gridDim.x) {
+  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState localState = states[tid];
+  for (size_t idx = tid; idx < num; idx += blockDim.x * gridDim.x) {
     user_push_2d_logsph(data, idx, dt, localState);
   }
-  states[idx] = localState;
+  states[tid] = localState;
 }
 
 __global__ void
@@ -325,7 +325,7 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
-    if (dev_params.q_e * dens > 0.6f *
+    if (dev_params.q_e * dens > 1.0f *
                                     square(1.0f / dev_mesh.delta[1]) *
                                     std::sin(dev_mesh.pos(1, i, 0.5f)))
       continue;
@@ -335,18 +335,18 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       // Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       Scalar vphi = 0.0f;
-      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      Scalar w_ptc = w * sin(theta);
+      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      // Scalar w_ptc = w * sin(theta);
       // Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       Scalar gamma = std::sqrt(1.0 + p1 * p1 + vphi * vphi);
       float u = curand_uniform(&localState);
       ptc.x1[offset + n * 2] = 0.5f;
       ptc.x2[offset + n * 2] = x2;
       ptc.x3[offset + n * 2] = 0.0f;
-      // ptc.p1[offset + n * 2] = p1 * 2.0f * std::abs(cos(theta));
-      // ptc.p2[offset + n * 2] = p1 * sin(theta) * sgn(cos(theta));
-      ptc.p1[offset + n * 2] = p1;
-      ptc.p2[offset + n * 2] = p2;
+      ptc.p1[offset + n * 2] = p1 * 2.0f * std::abs(cos(theta));
+      ptc.p2[offset + n * 2] = p1 * sin(theta) * sgn(cos(theta));
+      // ptc.p1[offset + n * 2] = p1;
+      // ptc.p2[offset + n * 2] = p2;
       ptc.p3[offset + n * 2] = vphi;
       ptc.E[offset + n * 2] = gamma;
       // sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
@@ -363,10 +363,10 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
       ptc.x1[offset + n * 2 + 1] = 0.5f;
       ptc.x2[offset + n * 2 + 1] = x2;
       ptc.x3[offset + n * 2 + 1] = 0.0f;
-      // ptc.p1[offset + n * 2 + 1] = p1 * 2.0f * std::abs(cos(theta));
-      // ptc.p2[offset + n * 2 + 1] = p1 * sin(theta) * sgn(cos(theta));
-      ptc.p1[offset + n * 2 + 1] = p1;
-      ptc.p2[offset + n * 2 + 1] = p2;
+      ptc.p1[offset + n * 2 + 1] = p1 * 2.0f * std::abs(cos(theta));
+      ptc.p2[offset + n * 2 + 1] = p1 * sin(theta) * sgn(cos(theta));
+      // ptc.p1[offset + n * 2 + 1] = p1;
+      // ptc.p2[offset + n * 2 + 1] = p2;
       ptc.p3[offset + n * 2 + 1] = vphi;
       ptc.E[offset + n * 2 + 1] = gamma;
       // sqrt(1.0f + p1 * p1 + p2 * p2 + vphi * vphi);
