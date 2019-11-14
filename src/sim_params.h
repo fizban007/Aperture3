@@ -77,6 +77,11 @@ struct SimParamsBase {
   float E_secondary = 4.0;
   float r_cutoff = 4.0;
 
+  // Curvature radiation parameters
+  float l_curv = 6.0;
+  float e_curv = 6.4e-9;
+  float l_ph = 0.05;
+
   // Inverse compton parameters
   int n_gamma = 600;
   int n_ep = 600;
