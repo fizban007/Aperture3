@@ -117,7 +117,12 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.a =
       config->get_as<double>("a").value_or(defaults.a);
   params.damping_length = config->get_as<uint64_t>("damping_length")
-                              .value_or(defaults.damping_length);
+      .value_or(defaults.damping_length);
+
+  params.l_curv = config->get_as<double>("l_curv").value_or(defaults.l_curv);
+  params.e_curv = config->get_as<double>("e_curv").value_or(defaults.e_curv);
+  params.l_ph = config->get_as<double>("l_ph").value_or(defaults.l_ph);
+
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
