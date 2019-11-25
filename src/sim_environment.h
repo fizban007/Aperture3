@@ -7,11 +7,11 @@
 
 #include "core/domain_info.h"
 #include "core/grid.h"
+#include "core/array.h"
 #include <array>
 #include <memory>
 #include <random>
 #include <string>
-// #include "utils/hdf_exporter.h"
 #include "utils/mpi_comm.h"
 
 namespace Aperture {
@@ -42,10 +42,10 @@ class sim_environment {
   const CommandArgs& args() const { return m_args; }
   SimParams& params() { return m_params; }
   const SimParams& params() const { return m_params; }
-  // const ConfigFile& conf_file() const { return m_conf_file; }
   const Grid& grid() const { return *m_grid; }
   const Grid& super_grid() const { return *m_super_grid; }
   const Grid& local_grid() const { return *m_grid; }
+  Grid& local_grid() { return *m_grid; }
   const Quadmesh& mesh() const { return m_grid->mesh(); }
 
   const float* charges() const { return m_charges.data(); }
@@ -55,17 +55,10 @@ class sim_environment {
   float mass(int sp) const { return m_masses[sp]; }
   float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
-  // MetricType metric_type() const { return m_metric_type; }
-
-  // DataExporter& exporter() { return *m_exporter; }
   // const MPICommWorld& world() const { return m_comm->world(); }
   // const MPICommCartesian& cartesian() const { return
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
   // return m_domain_info; }
-  // // const BoundaryConditions& boundary_conditions() const { return
-  // m_bc; }
-  // // const InitialCondition& initial_condition() const { return
-  // *m_ic; }
 
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);
@@ -80,6 +73,10 @@ class sim_environment {
  protected:
   // sim_environment() {}
   void setup_env();
+  void setup_env_extra();
+
+  void send_array_x(multi_array<Scalar>& array, int dir);
+  void send_array_y(multi_array<Scalar>& array, int dir);
 
   CommandArgs m_args;
   SimParams m_params;
@@ -87,15 +84,13 @@ class sim_environment {
 
   std::unique_ptr<Grid> m_grid;
   std::unique_ptr<Grid> m_super_grid;
-  // Grid m_local_grid, m_local_grid_dual;
-  // Grid m_super_grid;
-  // Grid m_data_grid, m_data_super_grid;
-  // MetricType m_metric_type;
 
+  MPI_Comm m_world;
+  MPI_Comm m_cart;
+  MPI_Datatype m_scalar_type;
   domain_info m_domain_info;
-  // BoundaryConditions m_bc;
 
-  std::unique_ptr<MPIComm> m_comm;
+  // std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;
   // std::unique_ptr<InitialCondition> m_ic;
   std::default_random_engine m_generator;
@@ -104,6 +99,11 @@ class sim_environment {
   std::array<float, 8> m_masses;
   std::array<float, 8> m_q_over_m;
 
+  std::vector<multi_array<Scalar>> m_send_buffers;
+  std::vector<multi_array<Scalar>> m_recv_buffers;
+  std::vector<array<char>> m_ptc_send_buffers;
+  std::vector<array<char>> m_ptc_recv_buffers;
+  int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 
 }  // namespace Aperture

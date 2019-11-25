@@ -1,8 +1,18 @@
 #include "core/typedefs.h"
+#include <curand_kernel.h>
 
 namespace Aperture {
 
 namespace Kernels {
+
+extern __constant__ Scalar dev_ic_dep;
+extern __constant__ Scalar dev_ic_dg;
+extern __constant__ Scalar dev_ic_dlep;
+extern __constant__ cudaPitchedPtr dev_ic_dNde;
+extern __constant__ cudaPitchedPtr dev_ic_dNde_thomson;
+extern __constant__ Scalar* dev_ic_rate;
+extern __constant__ Scalar* dev_gg_rate;
+extern __constant__ Scalar* dev_gammas;
 
 __device__ int find_n_gamma(Scalar gamma);
 

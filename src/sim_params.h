@@ -77,6 +77,11 @@ struct SimParamsBase {
   float E_secondary = 4.0;
   float r_cutoff = 4.0;
 
+  // Curvature radiation parameters
+  float l_curv = 6.0;
+  float e_curv = 6.4e-9;
+  float l_ph = 0.05;
+
   // Inverse compton parameters
   int n_gamma = 600;
   int n_ep = 600;
@@ -87,12 +92,13 @@ struct SimParamsBase {
   int dim_z = 1;
 
   // Mesh parameters
-  int N[3] = {1};
-  int guard[3] = {0};
-  float lower[3] = {0.0};
-  float size[3] = {0.0};
-  int tile_size[3] = {1};
+  int N[3] = {1, 1, 1};
+  int guard[3] = {0, 0, 0};
+  float lower[3] = {0.0, 0.0, 0.0};
+  float size[3] = {1.0, 1.0, 1.0};
+  int tile_size[3] = {1, 1, 1};
   int grid_dim = 1;
+  int nodes[3] = {1, 1, 1};
 };
 
 struct SimParams : public SimParamsBase {
@@ -119,6 +125,8 @@ struct SimParams : public SimParamsBase {
   int sort_interval = 20;
   int snapshot_interval = 1000;
   bool is_restart = false;
+  bool update_fields = true;
+  bool inject_particles = true;
 };
 
 }  // namespace Aperture

@@ -1,7 +1,7 @@
 #ifndef _CONSTANT_MEM_FUNC_H_
 #define _CONSTANT_MEM_FUNC_H_
 
-#include "data/fields_dev.h"
+#include "core/fields.h"
 #include "core/quadmesh.h"
 #include "sim_params.h"
 
@@ -11,8 +11,9 @@ void init_dev_params(const SimParams& params);
 void init_dev_mesh(const Quadmesh& mesh);
 void init_dev_charges(const float charges[8]);
 void init_dev_masses(const float masses[8]);
-void init_dev_bg_fields(const cu_vector_field<Scalar>& E,
-                        const cu_vector_field<Scalar>& B);
+void init_dev_bg_fields(vector_field<Scalar>& E,
+                        vector_field<Scalar>& B);
+void init_dev_rank(int rank);
 
 void get_dev_params(SimParams& params);
 void get_dev_mesh(Quadmesh& mesh);

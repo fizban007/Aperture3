@@ -3,25 +3,20 @@
 
 #include "core/stagger.h"
 #include "core/vec3.h"
-#include <algorithm>
-#include <cassert>
-#include <type_traits>
 
 namespace Aperture {
 
 /// The multi_array class is a unified interface for 1D, 2D and 3D
 /// arrays with proper index access and memory management. The most
 /// benefit is indexing convenience. One-liners are just implemented
-/// in the definition. Other functions are implemented in the followed
+/// in the definition. Other functions are implemented in the implementation
 /// header file.
 template <typename T>
 class multi_array {
  public:
-  typedef T data_type;
-  typedef T* ptr_type;
   typedef multi_array<T> self_type;
 
-  /// Default constructor, initializes `_size` to zero and `_data` to
+  /// Default constructor, initializes `m_size` to zero and data pointers to
   /// `nullptr`.
   multi_array();
 
@@ -36,11 +31,12 @@ class multi_array {
   /// Standard copy constructor.
   multi_array(const self_type& other);
 
-  /// Standard move constructor.
+  /// Standard move constructor. The object `other` will become empty after the
+  /// move.
   multi_array(self_type&& other);
 
   /// Destructor. Delete the member data array.
-  virtual ~multi_array();
+  ~multi_array();
 
   /// Assignment operators for copying
   self_type& operator=(const self_type& other);
@@ -49,49 +45,32 @@ class multi_array {
   self_type& operator=(self_type&& other);
 
   /// Vector indexing operator, read only
-  const data_type& operator()(int x, int y = 0, int z = 0) const {
-    size_t offset = x * sizeof(T) + (y + z * _extent.height()) * _pitch;
-    return *((ptr_type)((char*)_data + offset));
-  }
+  const T& operator()(int x, int y = 0, int z = 0) const;
 
-  /// Vector indexing operator, read and write
-  data_type& operator()(int x, int y = 0, int z = 0) {
-    size_t offset = x * sizeof(T) + (y + z * _extent.height()) * _pitch;
-    return *((ptr_type)((char*)_data + offset));
-  }
+  /// Vector indexing operator, read/write
+  T& operator()(int x, int y = 0, int z = 0);
 
   /// Vector indexing operator using an @ref Index object, read only
-  const data_type& operator()(const Index& index) const {
-    size_t offset = index.x * sizeof(T) +
-                    (index.y + index.z * _extent.height()) * _pitch;
-    return *((ptr_type)((char*)_data + offset));
-  }
+  const T& operator()(const Index& index) const;
 
   /// Vector indexing operator using an @ref Index object, read and
   /// write
-  data_type& operator()(const Index& index) {
-    size_t offset = index.x * sizeof(T) +
-                    (index.y + index.z * _extent.height()) * _pitch;
-    return *((ptr_type)((char*)_data + offset));
-  }
+  T& operator()(const Index& index);
 
-  /// Linearized indexing operator, read only. @param offset gives the
-  /// offset in number of bytes
-  const data_type& operator[](size_t offset) const {
-    return *((ptr_type)((char*)_data + offset));
-  }
+  /// Linear indexing operator using directly the array index, read only
+  const T& operator[](size_t n) const;
 
-  /// Linearized indexing operator, read and write. @param offset gives
-  /// the offset in number of bytes
-  data_type& operator[](size_t offset) {
-    return *((ptr_type)((char*)_data + offset));
-  }
+  /// Linear indexing operator using directly the array index, read/write
+  T& operator[](size_t n);
 
   /// Copying the entire content from another vector
   void copy_from(const self_type& other);
 
-  /// Set the whole array to a single initial value
-  void assign(const data_type& value);
+  /// Set the whole array to a single initial value on host
+  void assign(const T& value);
+
+  /// Set the whole array to a single initial value on device
+  void assign_dev(const T& value);
 
   /// Resize the array.
   void resize(int width, int height = 1, int depth = 1);
@@ -99,44 +78,41 @@ class multi_array {
   /// Resize the array according to an \ref Extent object.
   void resize(Extent extent);
 
-  /// Allocate memory in an aligned fashion
-  void alloc_mem(const Extent& ext);
+  /// Copy the content from host to device
+  void sync_to_device();
 
-  /// Free aligned memory
-  void free_mem();
-
-  /// Get the dimensions of this array
-  /// @return Dimension of the multi-array
-  int dim() const { return _dim; }
-
-  size_t get_offset(uint32_t idx) const;
+  /// Copy the content from device to host
+  void sync_to_host();
 
   // Returns various sizes of the array
-  int width() const { return _extent.width(); }
-  int height() const { return _extent.height(); }
-  int depth() const { return _extent.depth(); }
-  size_t pitch() const { return _pitch; }
-  size_t size() const { return _size; }
-  const Extent& extent() const { return _extent; }
+  int width() const { return m_extent.width(); }
+  int height() const { return m_extent.height(); }
+  int depth() const { return m_extent.depth(); }
+  size_t size() const { return m_size; }
+  const Extent& extent() const { return m_extent; }
+  size_t pitch() const { return m_pitch; }
 
-  /// Direct access to the encapsulated pointer
-  void* data() { return _data; }
-  const void* data() const { return _data; }
+  // Direct access to the encapsulated pointers
+  T* host_ptr() { return m_data_h; }
+  const T* host_ptr() const { return m_data_h; }
+  void* dev_ptr() { return m_data_d; }
+  const void* dev_ptr() const { return m_data_d; }
 
-  data_type interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
+  T interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
                         Stagger stagger) const;
 
- protected:
-  void find_dim();
+ private:
+  void alloc_mem(const Extent& ext);
 
-  void* _data;  ///< Pointer to the data stored on the host
+  void free_mem();
 
-  Extent _extent;  ///< Extent of the array in all dimensions
-  size_t _size;    ///< Total size of the array
-  int _dim;        ///< Dimension of the array
-  size_t _pitch;   ///< Pitch of the first dimension, in # of bytes
+  T* m_data_h; ///< Host data pointer
+  void* m_data_d; ///< Device data pointer
 
-};  // ----- end of class multi_array -----
+  Extent m_extent;  ///< 3D extent of the array
+  size_t m_size;  ///< Total size of the array
+  size_t m_pitch; ///< Memory pitch for cuda pitched ptr
+};
 
 }  // namespace Aperture
 

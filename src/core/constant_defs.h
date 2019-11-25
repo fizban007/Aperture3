@@ -34,4 +34,6 @@
 
 #define RE_SQUARE 7.91402e-26
 
+#define DEPOSIT_EPS 1.0e-10f
+
 #endif  // _CONSTANTS_H_

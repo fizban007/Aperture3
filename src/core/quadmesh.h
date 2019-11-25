@@ -8,7 +8,7 @@
 #include "core/vec3.h"
 // #include "utils/simd.h"
 #include <algorithm>
-#include <immintrin.h>
+// #include <immintrin.h>
 #include <iomanip>
 
 namespace Aperture {
