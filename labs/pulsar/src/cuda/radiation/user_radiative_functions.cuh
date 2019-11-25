@@ -14,23 +14,42 @@ namespace Kernels {
 
 __device__ mesh_ptrs_log_sph dev_mesh_ptrs_log_sph;
 
+__device__ Scalar rho_c(Scalar r, Scalar theta) {
+  Scalar c = std::cos(theta);
+  Scalar c2 = c * c;
+  Scalar s = std::sin(theta);
+  if (std::abs(s) < 1.0e-5) return 1.0e10;
+  return r * std::pow(1.0f + 3.0f * c2, 1.5) / (3.0f * s * (1.0f + c2));
+}
+
 __device__ bool
 check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   auto& ptc = data.particles;
   auto c = ptc.cell[tid];
   auto c1 = dev_mesh.get_c1(c);
   auto c2 = dev_mesh.get_c2(c);
-  // Skip photon emission when outside given radius
   Scalar r = std::exp(dev_mesh.pos(0, c1, ptc.x1[tid]));
-  // Scalar theta = dev_mesh.pos(1, c2, ptc.x2[tid]);
+  // Skip photon emission when outside given radius (light cylinder)
+  if (r > 0.6f / dev_params.omega) return false;
+  if (r < 1.1) return false;
+  Scalar theta = dev_mesh.pos(1, c2, ptc.x2[tid]);
   Scalar gamma = ptc.E[tid];
 
   // if (gamma > dev_params.gamma_thr)
   //   printf("emitted a photon at cell %d, %d, gamma is %f\n", c1, c2,
   //   gamma);
   // Scalar gamma = data.particles.E[tid];
-  return (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
-          r > 1.02f);
+  // return (gamma > dev_params.gamma_thr && r < dev_params.r_cutoff &&
+  //         r > 1.02f);
+  float u = rng();
+  float rc = rho_c(r, theta);
+  if (rc < 1.0f) return false;
+  float rate = dev_params.delta_t * gamma / (dev_params.l_curv * rc);
+  float Eph = dev_params.e_curv * gamma * gamma * gamma / rc;
+  // if (u <= rate && Eph > 1.0f) {
+  //   printf("r is %f, theta is %f, gamma is %f, rho_c is %f, Eph is %f\n", r, theta, gamma, rc, Eph);
+  // }
+  return (u < rate && Eph > 1.0f);
 }
 
 __device__ void
@@ -44,11 +63,20 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar p3 = ptc.p3[tid];
   // Scalar gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
   Scalar gamma = ptc.E[tid];
-  Scalar pi = std::sqrt(gamma * gamma - 1.0f);
-  // Scalar Eph = rad_model.draw_photon_energy(gamma, p);
+  // Scalar pi = std::sqrt(gamma * gamma - 1.0f);
+  Scalar pi = std::sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+  Scalar r = std::exp(dev_mesh.pos(0, dev_mesh.get_c1(c), ptc.x1[tid]));
   Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(c), ptc.x2[tid]);
   Scalar u = rng();
-  Scalar Eph = 2.5f + u * (dev_params.E_secondary - 1.0f) * 2.0f;
+
+  // Energy of the photon emitted
+  // Scalar Eph = 2.5f + u * (dev_params.E_secondary - 1.0f) * 2.0f;
+  Scalar Eph = std::min(gamma - 1.0f, dev_params.e_curv * gamma * gamma * gamma / rho_c(r, theta));
+  // if (tid < 1000) {
+  //   printf("gamma is %f, Eph is %f\n", gamma, Eph);
+  // }
+  if (Eph < 2.1f) return;
+
   Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
   // gamma = (gamma - std::abs(Eph));
   ptc.p1[tid] = p1 * pf / pi;
@@ -56,8 +84,10 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   ptc.p3[tid] = p3 * pf / pi;
   ptc.E[tid] = gamma - Eph;
 
-  Scalar lph = min(
-      10.0f, (1.0f / std::sin(theta) - 1.0f) * dev_params.photon_path);
+  // Do not track photons that can't convert
+  // if (Eph < 2.1f) return;
+  // Scalar lph = min(
+  //     10.0f, (1.0f / std::sin(theta) - 1.0f) * dev_params.photon_path);
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
   // if (std::abs(Eph) < dev_params.E_ph_min) return;
@@ -65,14 +95,14 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // if (theta < 0.165f || theta > CONST_PI - 0.165f) return;
   if (theta < 0.005f || theta > CONST_PI - 0.005f) return;
 
-  u = rng();
+  // u = rng();
   // Add the new photon
   // Scalar path = rad_model.draw_photon_freepath(Eph);
   // Scalar path =
   //     dev_params.photon_path * std::sqrt(-2.0f * std::log(u));
   // Scalar path = lph * std::sqrt(-2.0f * std::log(u));
-  Scalar path = lph * (0.5f + 0.5f * u);
-  if (path > dev_params.r_cutoff) return;
+  // Scalar path = lph * (0.5f + 0.5f * u);
+  // if (path > dev_params.r_cutoff) return;
   // Scalar path = dev_params.photon_path;
   // if (path > dev_params.lph_cutoff) return;
   // printf("Eph is %f, path is %f\n", Eph, path);
@@ -82,8 +112,9 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   photons.p1[offset] = Eph * p1 / pi;
   photons.p2[offset] = Eph * p2 / pi;
   photons.p3[offset] = Eph * p3 / pi;
+  photons.E[offset] = Eph;
   photons.weight[offset] = ptc.weight[tid];
-  photons.path_left[offset] = path;
+  photons.path_left[offset] = 10.0f;
   photons.cell[offset] = ptc.cell[tid];
 }
 
@@ -94,21 +125,42 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   int c1 = dev_mesh.get_c1(cell);
   int c2 = dev_mesh.get_c2(cell);
   Scalar theta = dev_mesh.pos(1, c2, photons.x2[tid]);
+  // Do not care about photons in the first and last theta cell
   if (theta < dev_mesh.delta[1] ||
       theta > CONST_PI - dev_mesh.delta[1]) {
     photons.cell[tid] = MAX_CELL;
     return false;
   }
-  Scalar rho = max(
-      std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
-      0.0001f);
-  Scalar N = data.Rho[0](c1, c2) - data.Rho[1](c1, c2);
-  Scalar multiplicity = N / rho;
-  if (multiplicity > 20.0f) {
+
+  Scalar p1 = photons.p1[tid];
+  Scalar p2 = photons.p2[tid];
+  Scalar p3 = photons.p3[tid];
+  Scalar Eph = photons.E[tid];
+  Scalar B1 = data.B1(c1, c2);
+  Scalar B2 = data.B2(c1, c2);
+  Scalar B3 = data.B3(c1, c2);
+  Scalar B = std::sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  // If the photon can't create pair anymore, kill it
+  if (Eph * B / dev_params.BQ < 0.1 && p1 > 0.0f) {
     photons.cell[tid] = MAX_CELL;
     return false;
   }
-  return (photons.path_left[tid] <= 0.0f);
+  Scalar pdotB = p1 * B1 + p2 * B2 + p3 * B3;
+  pdotB /= Eph;
+  pdotB /= B;
+  Scalar sinpB = std::sqrt(1.0f - pdotB * pdotB);
+  Scalar chi = Eph * B * sinpB / dev_params.BQ;
+  // Scalar rho = max(
+  //     std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
+  //     0.0001f);
+  // Scalar N = data.Rho[0](c1, c2) - data.Rho[1](c1, c2);
+  // Scalar multiplicity = N / rho;
+  // if (multiplicity > 20.0f) {
+  //   photons.cell[tid] = MAX_CELL;
+  //   return false;
+  // }
+  // return (photons.path_left[tid] <= 0.0f);
+  return (chi >= 0.1f);
 }
 
 __device__ void

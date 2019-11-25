@@ -128,7 +128,7 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
     photons.x1[idx] = new_x1;
     photons.x2[idx] = new_x2;
     photons.x3[idx] = r3p;
-    photons.path_left[idx] -= dt;
+    // photons.path_left[idx] -= dt;
   }
 }
 
