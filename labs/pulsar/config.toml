@@ -1,8 +1,8 @@
 # Time step size
-delta_t = 0.001
+delta_t = 0.0005
 
 # Charge of an electron
-q_e = 4000.0
+q_e = 24000.0
 
 # Ion mass
 ion_mass = 1.0
@@ -11,10 +11,10 @@ ion_mass = 1.0
 num_species = 3
 
 # Maximum number of particles per node
-max_ptc_number = 310000000
+max_ptc_number = 180000000
 
 # Maximum number of photons per node
-max_photon_number = 10000000
+max_photon_number = 100000000
 
 # Create pairs or not
 create_pairs = true
@@ -26,10 +26,10 @@ trace_photons = true
 gamma_thr = 25.0
 
 # Free path for energetic photons
-photon_path = 0.005
+photon_path = 0.001
 
 # Secondary particle energy
-E_secondary = 6.5
+E_secondary = 2.0
 
 # Radius cutoff for pair creation
 r_cutoff = 3.0
@@ -38,7 +38,7 @@ r_cutoff = 3.0
 gravity_on = true
 
 # Gravity strength
-gravity = 1.0
+gravity = 0.001
 
 # Stellar compactness: r_g / R_*
 compactness = 0.5
@@ -47,7 +47,7 @@ compactness = 0.5
 rad_cooling_on = true
 
 # Radiation cooling strength
-rad_cooling_coef = 0.1
+rad_cooling_coef = 0.05
 
 # Whether to use periodic boundary condition in each direction
 periodic_boundary = [false, false]
@@ -58,7 +58,10 @@ data_dir = "/home/alex/storage/Data/Aperture3/2d_wp_experiment/"
 # data_dir = "/home/alex/storage/Data/Aperture3/gr_monopole/"
 
 # Dipole B0
-B0 = 80000.0
+B0 = 160000.0
+
+# Dipole B0
+BQ = 1600000.0
 
 # Damping coefficient
 damping_coef = 0.002
@@ -67,11 +70,24 @@ damping_coef = 0.002
 damping_length = 96
 
 # Star rotating omega
-omega = 0.125
+omega = 0.25
 # omega = 0.0
 
 # Whether to inject ions or positrons
 inject_ions = true
+
+# fraction of particles to track
+track_percent = 0.01
+
+# curvature emission free path
+l_curv = 6.0
+
+# curvature photon characteristic energy
+# e_curv = 6.4e-9
+e_curv = 1.5e-7
+
+# curvature photon characteristic free path
+l_ph = 0.02
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -79,7 +95,7 @@ inject_ions = true
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [1536, 1536, 1]
+N = [2048, 2048, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
@@ -89,7 +105,7 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [4.0, 3.1415926535898, 1.0]
+size = [3.1, 3.1415926535898, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]
@@ -102,11 +118,11 @@ random_seed = 3333
 
 # Downsample factor. 1 means no downsample at all, and n means output
 # resolution is divided by n. This should be a power of 2 as well
-downsample = 3
+downsample = 4
 
-max_steps = 300000
+max_steps = 400000
 
-data_interval = 200
+data_interval = 400
 
 snapshot_interval = 5000
 
@@ -116,4 +132,4 @@ current_smoothing = 5
 
 update_fields = true
 
-inject_particles = false
+inject_particles = true

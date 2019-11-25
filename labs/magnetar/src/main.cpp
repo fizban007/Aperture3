@@ -99,19 +99,19 @@ main(int argc, char *argv[]) {
     // auto& mesh = env.local_grid().mesh();
     // for (int j = 3; j < mesh.dims[1] - 2; j++) {
       // Scalar th = mesh.pos(1, j, 0.5f);
-    Scalar p = 100.0;
+    // Scalar p = 100.0;
     // // Scalar pp1 = 2.0 * p * cos(th);
     // // Scalar pp2 = p * sin(th);
     // // Scalar rot = 1.0;
     // // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
     // // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
-    int N = 10000;
-    for (int i = 0; i < N; i++) {
-      data.particles.append(
-          {0.5, 0.5, 0.0}, {p, 0.0, 0.0},
-          // 200 + 516 * 100, ParticleType::electron, 1.0);
-          120 + 516 * 100, ParticleType::electron, 1.0);
-    }
+    // int N = 10000;
+    // for (int i = 0; i < N; i++) {
+    //   data.particles.append(
+    //       {0.5, 0.5, 0.0}, {p, 0.0, 0.0},
+    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
+    //       120 + 516 * 100, ParticleType::electron, 1.0);
+    // }
   }
   // Initialize the field solver
   field_solver_logsph field_solver(env);
@@ -131,18 +131,31 @@ main(int argc, char *argv[]) {
     double dt = env.params().delta_t;
     time = start_time + (step - start_step) * dt;
 
+    // Scalar omega = 0.0;
+    // Scalar atm_time = 0.0;
+    // Scalar acc_time = 1.0;
+    // Scalar twist_time = 28.0;
+    // if (time <= atm_time) {
+    //   omega = 0.0;
+    // } else if (time <= atm_time + acc_time) {
+    //   omega = env.params().omega * ((time - atm_time) / twist_time);
+    // } else if (time <= atm_time + acc_time + twist_time) {
+    //   // omega = env.params().omega *
+    //   //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
+    //   omega = env.params().omega * ((time - atm_time - acc_time) / twist_time);
+    // } else if (time <= atm_time + acc_time) {
+    //   omega = env.params().omega * ((time - atm_time) / twist_time);
+    // } else {
+    //   omega = 0.0;
+    // }
     Scalar omega = 0.0;
-    Scalar atm_time = 0.0;
-    Scalar twist_time = 30.0;
-    if (time <= atm_time) {
+    Scalar sp_time = 20.0;
+    if (time <= sp_time) {
+      omega = env.params().omega * (time / sp_time);
+    } else if (time <= sp_time * 2.0) {
+      omega = env.params().omega * (1.0 - (time - sp_time) / sp_time);
+    } else {
       omega = 0.0;
-    } else if (time <= atm_time + twist_time) {
-      // omega = env.params().omega *
-      //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
-      omega = env.params().omega * ((time - atm_time) / twist_time);
-    }
-    else {
-      omega = env.params().omega;
     }
     Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
                        step, time, omega);
@@ -165,9 +178,9 @@ main(int argc, char *argv[]) {
     }
 
     // Inject particles
-    if (env.params().inject_particles && step % 2 == 0)
+    if (env.params().inject_particles && step % 5 == 0)
       ptc_updater.inject_ptc(
-          data, 3, 0.0, 0.0, 0.0,
+          data, 1, 0.1, 0.0, 0.0,
           // 1.1 * omega / env.params().omega, omega);
           1.0, omega);
 
@@ -181,10 +194,10 @@ main(int argc, char *argv[]) {
     }
 
     // Create photons and pairs
-    // if (env.params().create_pairs) {
-    //   rad.emit_photons(data);
-    //   rad.produce_pairs(data);
-    // }
+    if (env.params().create_pairs) {
+      rad.emit_photons(data);
+      rad.produce_pairs(data);
+    }
 
     if (step % env.params().sort_interval == 0 && step != 0) {
       data.sort_particles();
