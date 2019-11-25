@@ -2,6 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
+#include "cuda/utils/pitchptr.cuh"
 #include "cuda/radiation/rt_ic.h"
 #include "radiation/spectra.h"
 #include "sim_params.h"
@@ -66,7 +67,7 @@ __constant__ Scalar dev_ic_dep;
 __constant__ Scalar dev_ic_dg;
 __constant__ Scalar dev_ic_dlep;
 __constant__ cudaPitchedPtr dev_ic_dNde;
-__constant__ cudaPitchedPtr dev_ic_dNde_thompson;
+__constant__ cudaPitchedPtr dev_ic_dNde_thomson;
 __constant__ Scalar* dev_ic_rate;
 __constant__ Scalar* dev_gg_rate;
 __constant__ Scalar* dev_gammas;
@@ -101,6 +102,7 @@ binary_search(float u, Scalar* array, int size, Scalar& l, Scalar& h) {
       l = h = v;
       return b;
     }
+    // printf("u: %f, a: %d, b: %d, v: %f\n", u, a, b, v);
   }
   if (v < u) {
     l = v;
@@ -116,7 +118,8 @@ binary_search(float u, Scalar* array, int size, Scalar& l, Scalar& h) {
 __device__ int
 binary_search(float u, int n, cudaPitchedPtr array, Scalar& l,
               Scalar& h) {
-  int size = array.xsize / sizeof(Scalar);
+  // int size = array.xsize / sizeof(Scalar);
+  int size = array.xsize;
   Scalar* ptr = (Scalar*)((char*)array.ptr + n * array.pitch);
   return binary_search(u, ptr, size, l, h);
 }
@@ -128,24 +131,26 @@ gen_photon_e(Scalar gamma, curandState* state) {
   double result;
   int gn = find_n_gamma(gamma);
   // if (gamma < LOW_GAMMA_THR) {
-  //   // Thompson regime
+  //   // Thomson regime
   //   Scalar l, h;
-  //   int b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+  //   int b = binary_search(u, gn, dev_ic_dNde_thomson, l, h);
   //   bb = (l == h ? b : (u - l) / (h - l) + b);
   //   result = exp(dev_ic_dlep * bb + log(MIN_EP));
   // } else {
   Scalar l, h;
   int b = binary_search(u, gn, dev_ic_dNde, l, h);
   if (b < 2) {
-    b = binary_search(u, gn, dev_ic_dNde_thompson, l, h);
+    b = binary_search(u, gn, dev_ic_dNde_thomson, l, h);
     bb = (l == h ? b : (u - l) / (h - l) + b);
     result = exp(dev_ic_dlep * bb + log(MIN_EP));
+    //return std::max(std::min(result, gamma - 1.01), 0.0);
   } else {
     bb = (l == h ? b : (u - l) / (h - l) + b);
     result = dev_ic_dep * bb;
   }
+  // printf("b: %d, u: %f, l: %f, h: %f, bb: %f, result: %f\n", b, u, l, h, bb, result);
 
-  return min(result * gamma, gamma - 1.01);
+  return std::max(std::min(result * gamma, gamma - 1.01), 0.0);
 }
 
 __device__ Scalar
@@ -223,7 +228,7 @@ gen_rand_gammas(Scalar* gammas, uint32_t num, curandState* states) {
 
 inverse_compton::inverse_compton(const SimParams& params)
     : m_dNde(Extent(params.n_ep, params.n_gamma)),
-      m_dNde_thompson(Extent(params.n_ep, params.n_gamma)),
+      m_dNde_thomson(Extent(params.n_ep, params.n_gamma)),
       m_ic_rate(params.n_gamma),
       m_gg_rate(params.n_gamma),
       m_gammas(params.n_gamma),
@@ -237,7 +242,7 @@ inverse_compton::inverse_compton(const SimParams& params)
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_ep[n] = m_dep * n;
   }
-  m_dlep = (-log(MIN_EP)) / ((Scalar)m_ep.size() - 1.0);
+  m_dlep = (-log(MIN_EP)) / ((Scalar)m_log_ep.size() - 1.0);
   for (uint32_t n = 0; n < m_ep.size(); n++) {
     m_log_ep[n] = exp(m_dlep * n + log(MIN_EP));
     // Logger::print_info("log ep is {}", m_log_ep[n]);
@@ -258,28 +263,30 @@ inverse_compton::inverse_compton(const SimParams& params)
       cudaMemcpyToSymbol(Kernels::dev_ic_dg, &m_dg, sizeof(Scalar)));
   CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dlep, &m_dlep,
                                   sizeof(Scalar)));
-  cudaPitchedPtr p_dNde =m_dNde.data_d().p;
-  cudaPitchedPtr p_dNde_t =m_dNde_thompson.data_d().p;
+  cudaPitchedPtr p_dNde = get_cudaPitchedPtr(m_dNde);
+  cudaPitchedPtr p_dNde_th = get_cudaPitchedPtr(m_dNde_thomson);
 
   CudaSafeCall(cudaMemcpyToSymbol(
       Kernels::dev_ic_dNde, &p_dNde, sizeof(cudaPitchedPtr)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thompson,
-                                  &p_dNde_t,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_dNde_thomson,
+                                  &p_dNde_th,
                                   sizeof(cudaPitchedPtr)));
-  Scalar* dev_ic_rates = m_ic_rate.data_d();
-  Scalar* dev_gg_rates = m_gg_rate.data_d();
-  Scalar* dev_g = m_gammas.data_d();
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rates,
+  Scalar* dev_ic_rate_ptr = m_ic_rate.dev_ptr();
+  Scalar* dev_gg_rate_ptr = m_gg_rate.dev_ptr();
+  Scalar* dev_g_ptr = m_gammas.dev_ptr();
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_ic_rate, &dev_ic_rate_ptr,
                                   sizeof(Scalar*)));
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rates,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_gg_rate, &dev_gg_rate_ptr,
                                   sizeof(Scalar*)));
   CudaSafeCall(
-      cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g, sizeof(Scalar*)));
+      cudaMemcpyToSymbol(Kernels::dev_gammas, &dev_g_ptr, sizeof(Scalar*)));
 
   CudaSafeCall(cudaMalloc(&m_states,
                           m_threads * m_blocks * sizeof(curandState)));
   init_rand_states((curandState*)m_states, params.random_seed,
                    m_threads, m_blocks);
+
+  Logger::print_info("After init, m_dNde has pitch {}", m_dNde.pitch());
 }
 
 inverse_compton::~inverse_compton() {}
@@ -388,6 +395,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   }
 
   m_dNde.sync_to_device();
+  Logger::print_info("Finished copying m_dNde to device");
 
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     double gamma = m_gammas[n];
@@ -403,17 +411,18 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
         if (e1 < ge / (1.0 + ge) && e1 > e / gamma)
           result += ne * sigma_lab(q, ge) / gamma;
       }
-      m_dNde_thompson(i, n) = result * de * e1;
+      m_dNde_thomson(i, n) = result * de * e1;
     }
-    for (uint32_t i = 1; i < m_ep.size(); i++) {
-      m_dNde_thompson(i, n) += m_dNde_thompson(i - 1, n);
+    for (uint32_t i = 1; i < m_log_ep.size(); i++) {
+      m_dNde_thomson(i, n) += m_dNde_thomson(i - 1, n);
     }
-    for (uint32_t i = 0; i < m_ep.size(); i++) {
-      m_dNde_thompson(i, n) /= m_dNde_thompson(m_ep.size() - 1, n);
+    for (uint32_t i = 0; i < m_log_ep.size(); i++) {
+      m_dNde_thomson(i, n) /= m_dNde_thomson(m_ep.size() - 1, n);
     }
   }
 
-  m_dNde_thompson.sync_to_device();
+  m_dNde_thomson.sync_to_device();
+  Logger::print_info("Finished copying m_dNde_thomson to device");
   // m_npep.sync_to_device();
   // m_dnde1p.sync_to_device();
 }
@@ -434,7 +443,7 @@ inverse_compton::find_n_gamma(Scalar gamma) const {
 
 int
 inverse_compton::binary_search(float u, int n,
-                               const cu_multi_array<Scalar>& array,
+                               const multi_array<Scalar>& array,
                                Scalar& v1, Scalar& v2) const {
   int a = 0, b = m_ep.size() - 1, tmp = 0;
   Scalar v = 0.0f;
@@ -483,14 +492,14 @@ inverse_compton::gen_photon_e(Scalar gamma) {
   int gn = find_n_gamma(gamma);
   // if (gamma < LOW_GAMMA_THR) {
   //   Scalar l, h;
-  //   int b = binary_search(u, gn, m_dNde_thompson, l, h);
+  //   int b = binary_search(u, gn, m_dNde_thomson, l, h);
   //   bb = (l == h ? b : (u - l) / (h - l) + b);
   //   result = exp(m_dlep * bb + log(MIN_EP));
   // } else {
   Scalar l, h;
   int b = binary_search(u, gn, m_dNde, l, h);
   if (b < 2) {
-    b = binary_search(u, gn, m_dNde_thompson, l, h);
+    b = binary_search(u, gn, m_dNde_thomson, l, h);
     bb = (l == h ? b : (u - l) / (h - l) + b);
     result = exp(m_dlep * bb + log(MIN_EP));
   } else {
@@ -504,18 +513,18 @@ inverse_compton::gen_photon_e(Scalar gamma) {
 }
 
 void
-inverse_compton::generate_photon_energies(cu_array<Scalar>& e_ph,
-                                          cu_array<Scalar>& gammas) {
+inverse_compton::generate_photon_energies(array<Scalar>& e_ph,
+                                          array<Scalar>& gammas) {
   Kernels::gen_photon_energies<<<m_blocks, m_threads>>>(
-      e_ph.data_d(), gammas.data_d(), gammas.size(),
+      e_ph.dev_ptr(), gammas.dev_ptr(), gammas.size(),
       (curandState*)m_states);
   CudaCheckError();
 }
 
 void
-inverse_compton::generate_random_gamma(cu_array<Scalar>& gammas) {
+inverse_compton::generate_random_gamma(array<Scalar>& gammas) {
   Kernels::gen_rand_gammas<<<m_blocks, m_threads>>>(
-      gammas.data_d(), gammas.size(), (curandState*)m_states);
+      gammas.dev_ptr(), gammas.size(), (curandState*)m_states);
   CudaCheckError();
 }
 

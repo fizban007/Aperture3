@@ -1,6 +1,8 @@
 #ifndef _PITCHPTR_CUH_
 #define _PITCHPTR_CUH_
 
+#include "core/vec3.h"
+#include "core/multi_array.h"
 #include "cuda/cuda_control.h"
 #include <cuda_runtime.h>
 
@@ -46,6 +48,14 @@ struct pitchptr {
     return *((T*)((char*)p.ptr + (j + k * p.ysize) * p.pitch) + i);
   }
 
+  HD_INLINE T& operator()(const Index& idx) {
+    return operator()(idx.x, idx.y, idx.z);
+  }
+
+  HD_INLINE const T& operator()(const Index& idx) const {
+    return operator()(idx.x, idx.y, idx.z);
+  }
+
   HD_INLINE size_t compute_offset(int i, int j = 0) const {
     return j * p.pitch + i * sizeof(T);
   }
@@ -54,6 +64,18 @@ struct pitchptr {
     return (j + k * p.ysize) * p.pitch + i * sizeof(T);
   }
 };
+
+template <typename T>
+pitchptr<T> get_pitchptr(multi_array<T>& array) {
+  return pitchptr<T>(get_cudaPitchedPtr(array));
+}
+
+template <typename T>
+cudaPitchedPtr get_cudaPitchedPtr(multi_array<T>& array) {
+  return make_cudaPitchedPtr(array.dev_ptr(), array.pitch(),
+                             array.extent().width(),
+                             array.extent().height());
+}
 
 }  // namespace Aperture
 

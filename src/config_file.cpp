@@ -32,13 +32,6 @@ skip_line_or_word(const std::string& str) {
     return false;
 }
 
-// template <typename T>
-// void add_param (json& data, const std::string& name, const T& value)
-// {
-//   if (data.find(name) != data.end()) return;
-//   data[name] = value;
-// }
-
 ConfigFile::ConfigFile() {
   Logger::print_info("Size of params is {}", sizeof(SimParams));
   // m_grid_conf.resize(3);
@@ -124,7 +117,12 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.a =
       config->get_as<double>("a").value_or(defaults.a);
   params.damping_length = config->get_as<uint64_t>("damping_length")
-                              .value_or(defaults.damping_length);
+      .value_or(defaults.damping_length);
+
+  params.l_curv = config->get_as<double>("l_curv").value_or(defaults.l_curv);
+  params.e_curv = config->get_as<double>("e_curv").value_or(defaults.e_curv);
+  params.l_ph = config->get_as<double>("l_ph").value_or(defaults.l_ph);
+
   auto periodic_boundary =
       config->get_array_of<bool>("periodic_boundary");
   if (periodic_boundary) {
@@ -161,6 +159,11 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
     if (tile_size) {
       for (int i = 0; i < 3; i++) params.tile_size[i] = (*tile_size)[i];
     }
+
+    auto nodes = mesh_table->get_array_of<int64_t>("nodes");
+    if (nodes) {
+      for (int i = 0; i < 3; i++) params.nodes[i] = (*nodes)[i];
+    }
   }
 
   // Simulation configuration
@@ -186,7 +189,13 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
                                .value_or(defaults.sort_interval);
     params.current_smoothing =
         sim_table->get_as<int>("current_smoothing")
-            .value_or(defaults.current_smoothing);
+        .value_or(defaults.current_smoothing);
+    params.update_fields =
+        sim_table->get_as<bool>("update_fields")
+        .value_or(defaults.update_fields);
+    params.inject_particles =
+        sim_table->get_as<bool>("inject_particles")
+        .value_or(defaults.inject_particles);
   }
 
   // Radiation transfer parameters

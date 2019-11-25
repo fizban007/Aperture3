@@ -19,12 +19,12 @@ map_multi_array(multi_array<T>& array, const Index& start,
   for (int k = start.z; k < range.depth(); ++k) {
     size_t k_offset = k * array.height();
     for (int j = start.y; j < range.height(); ++j) {
-      size_t offset = (j + k_offset) * array.pitch();
+      size_t offset = (j + k_offset) * array.width();
 #pragma omp simd
       for (int i = start.x; i < range.width(); ++i) {
         // TODO: Add optimization to these routines to exploit
         // parallelization
-        op(array[i * sizeof(T) + offset]);
+        op(array[i + offset]);
       }
     }
   }
@@ -35,13 +35,13 @@ void
 map_multi_array_slow(multi_array<T>& array, const Index& start,
                      const Extent& range, UnaryOp op) {
   for (int k = start.z; k < range.depth(); ++k) {
-    size_t k_offset = k * array.pitch() * array.height();
+    size_t k_offset = k * array.width() * array.height();
     for (int j = start.y; j < range.height(); ++j) {
-      size_t j_offset = j * array.pitch();
+      size_t j_offset = j * array.width();
       for (int i = start.x; i < range.width(); ++i) {
         // TODO: Add optimization to these routines to exploit
         // parallelization
-        op(array[i * sizeof(T) + j_offset + k_offset]);
+        op(array[i + j_offset + k_offset]);
       }
     }
   }
@@ -59,15 +59,15 @@ map_multi_array(multi_array<T>& output, const Index& output_start,
     size_t k_offset_in = (k + input_start.z) * input.height();
     for (int j = 0; j < range.height(); ++j) {
       size_t offset_out =
-          (j + output_start.y + k_offset_out) * output.pitch();
+          (j + output_start.y + k_offset_out) * output.width();
       size_t offset_in =
-          (j + input_start.y + k_offset_in) * input.pitch();
+          (j + input_start.y + k_offset_in) * input.width();
 #pragma omp simd
       for (int i = 0; i < range.width(); ++i) {
         // TODO: Add optimization to these routines to exploit
         // parallelization
-        op(output[(i + output_start.x) * sizeof(T) + offset_out],
-           input[(i + input_start.x) * sizeof(T) + offset_in]);
+        op(output[(i + output_start.x) + offset_out],
+           input[(i + input_start.x) + offset_in]);
       }
     }
   }
@@ -84,14 +84,12 @@ map_multi_array(multi_array<T>& output, const multi_array<T>& input,
   for (int k = 0; k < range.depth(); ++k) {
     size_t k_offset = k * output.height();
     for (int j = 0; j < range.height(); ++j) {
-      size_t offset =
-          (j + k_offset) * output.pitch();
+      size_t offset = (j + k_offset) * output.width();
 #pragma omp simd
       for (int i = 0; i < range.width(); ++i) {
         // TODO: Add optimization to these routines to exploit
         // parallelization
-        op(output[i * sizeof(T) + offset],
-           input[i * sizeof(T) + offset]);
+        op(output[i + offset], input[i + offset]);
       }
     }
   }
@@ -105,19 +103,17 @@ map_multi_array_slow(multi_array<T>& output, const Index& output_start,
                      BinaryOp op) {
   for (int k = 0; k < range.depth(); ++k) {
     size_t k_offset_out =
-        (k + output_start.z) * output.pitch() * output.height();
+        (k + output_start.z) * output.width() * output.height();
     size_t k_offset_in =
-        (k + input_start.z) * input.pitch() * input.height();
+        (k + input_start.z) * input.width() * input.height();
     for (int j = 0; j < range.height(); ++j) {
-      size_t j_offset_out = (j + output_start.y) * output.pitch();
-      size_t j_offset_in = (j + input_start.y) * input.pitch();
+      size_t j_offset_out = (j + output_start.y) * output.width();
+      size_t j_offset_in = (j + input_start.y) * input.width();
       for (int i = 0; i < range.width(); ++i) {
         // TODO: Add optimization to these routines to exploit
         // parallelization
-        op(output[(i + output_start.x) * sizeof(T) + j_offset_out +
-                  k_offset_out],
-           input[(i + input_start.x) * sizeof(T) + j_offset_in +
-                 k_offset_in]);
+        op(output[(i + output_start.x) + j_offset_out + k_offset_out],
+           input[(i + input_start.x) + j_offset_in + k_offset_in]);
       }
     }
   }

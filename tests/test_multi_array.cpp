@@ -6,14 +6,13 @@ using namespace Aperture;
 TEST_CASE("Initialize and Using MultiArray", "[MultiArray]") {
   int X = 260, Y = 310;
   Extent ext(X, Y);
-  
+
   multi_array<float> a(ext);
 
   REQUIRE(a.width() == X);
   REQUIRE(a.height() == Y);
   REQUIRE(a.depth() == 1);
-  REQUIRE(a.pitch() == 1088);
-  REQUIRE(a.size() == 1088 * 310);
+  REQUIRE(a.size() == 260 * 310);
 
   a.assign(2.0f);
 
@@ -33,5 +32,5 @@ TEST_CASE("Using offset directly", "[MultiArray]") {
 
   a(100, 200) = 3.0f;
 
-  REQUIRE(a[100 * sizeof(float) + 200 * a.pitch()] == 3.0f);
+  REQUIRE(a[100 + 200 * N1] == 3.0f);
 }

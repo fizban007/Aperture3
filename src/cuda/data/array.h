@@ -77,10 +77,10 @@ class cu_array {
 
   size_t length() const { return m_length; }
   size_t size() const { return m_length; }
-  ptr_type data() { return m_data_h; }
-  const T* data() const { return m_data_h; }
-  ptr_type data_d() { return m_data_d; }
-  const T* data_d() const { return m_data_d; }
+  ptr_type host_ptr() { return m_data_h; }
+  const T* host_ptr() const { return m_data_h; }
+  ptr_type dev_ptr() { return m_data_d; }
+  const T* dev_ptr() const { return m_data_d; }
   int devId() const { return m_devId; }
 
  private:

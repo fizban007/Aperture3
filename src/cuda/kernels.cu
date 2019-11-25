@@ -17,7 +17,6 @@ __global__ void
 compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
-    // tile[i] = cell[i] / dev_mesh.tileSize[0];
     if (i < num) tile[i] = dev_mesh.tile_id(cell[i]);
   }
 }
@@ -26,17 +25,9 @@ __global__ void
 erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num;
        i += blockDim.x * gridDim.x) {
-    // if (i == 0) printf("num is %d\n", num);
     if (i < num) {
       auto c = cell[i];
-      if (!dev_mesh.is_in_bulk(c))
-      // int c1 = dev_mesh.get_c1(c);
-      // int c2 = dev_mesh.get_c2(c);
-      // if (c1 < dev_mesh.guard[0] ||
-      //     c1 >= dev_mesh.dims[0] - dev_mesh.guard[0] ||
-      //     c2 < dev_mesh.guard[1] ||
-      //     c2 >= dev_mesh.dims[1] - dev_mesh.guard[1])
-        cell[i] = MAX_CELL;
+      if (!dev_mesh.is_in_bulk(c)) cell[i] = MAX_CELL;
     }
   }
 }
@@ -72,6 +63,21 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
       if (idx >= num_bins) idx = num_bins - 1;
 
       atomicAdd(&hist[idx], 1);
+    }
+  }
+}
+
+__global__ void
+map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
+                uint32_t* tracked_map, uint32_t* num_tracked) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    if (check_bit(flags[n], ParticleFlag::tracked) &&
+        cells[n] != MAX_CELL) {
+      uint32_t nt = atomicAdd(num_tracked, 1u);
+      if (nt < MAX_TRACKED) {
+        tracked_map[nt] = n;
+      }
     }
   }
 }
@@ -116,11 +122,21 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
 }
 
 void
-init_rand_states(curandState* states, int seed, int threadPerBlock,
-                 int blockPerGrid) {
+init_rand_states(curandState* states, int seed, int blockPerGrid,
+                 int threadPerBlock) {
   Kernels::init_rand_states<<<blockPerGrid, threadPerBlock>>>(states,
                                                               seed);
   CudaCheckError();
+}
+
+void
+map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
+                uint32_t* tracked_map, uint32_t* num_tracked) {
+  int block_num = std::min(1024ul, (num + 511) / 512);
+  Kernels::map_tracked_ptc<<<block_num, 512>>>(flags, cells, num, tracked_map,
+                                               num_tracked);
+  CudaCheckError();
+  CudaSafeCall(cudaDeviceSynchronize());
 }
 
 }  // namespace Aperture

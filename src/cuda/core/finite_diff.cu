@@ -4,6 +4,7 @@
 #include "cuda/cudaUtility.h"
 #include "core/stagger.h"
 #include "utils/util_functions.h"
+#include "cuda/utils/pitchptr.cuh"
 
 namespace Aperture {
 
@@ -484,7 +485,7 @@ compute_grad(cudaPitchedPtr v1, cudaPitchedPtr v2, cudaPitchedPtr v3,
 }  // namespace Kernels
 
 void
-curl(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
+curl(vector_field<Scalar>& result, vector_field<Scalar>& u,
      Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -493,13 +494,18 @@ curl(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
                 mesh.reduced_dim(2) / 4);
   Kernels::compute_curl<order, 32, 8, 4><<<gridSize, blockSize>>>(
-      result.ptr(0), result.ptr(1), result.ptr(2), u.ptr(0), u.ptr(1),
-      u.ptr(2), u.stagger(0), u.stagger(1), u.stagger(2), q);
+      get_cudaPitchedPtr(result.data(0)),
+      get_cudaPitchedPtr(result.data(1)),
+      get_cudaPitchedPtr(result.data(2)),
+      get_cudaPitchedPtr(u.data(0)),
+      get_cudaPitchedPtr(u.data(1)),
+      get_cudaPitchedPtr(u.data(2)),
+      u.stagger(0), u.stagger(1), u.stagger(2), q);
   CudaCheckError();
 }
 
 void
-curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
+curl_add(vector_field<Scalar>& result, vector_field<Scalar>& u,
          Scalar q) {
   auto& grid = u.grid();
   auto& mesh = grid.mesh();
@@ -508,12 +514,17 @@ curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
                 mesh.reduced_dim(2) / 4);
   Kernels::compute_curl_add<order, 32, 8, 4><<<gridSize, blockSize>>>(
-      result.ptr(0), result.ptr(1), result.ptr(2), u.ptr(0), u.ptr(1),
-      u.ptr(2), u.stagger(0), u.stagger(1), u.stagger(2), q);
+      get_cudaPitchedPtr(result.data(0)),
+      get_cudaPitchedPtr(result.data(1)),
+      get_cudaPitchedPtr(result.data(2)),
+      get_cudaPitchedPtr(u.data(0)),
+      get_cudaPitchedPtr(u.data(1)),
+      get_cudaPitchedPtr(u.data(2)),
+      u.stagger(0), u.stagger(1), u.stagger(2), q);
   CudaCheckError();
 }
 
-// void curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>&
+// void curl_add(vector_field<Scalar>& result, const vector_field<Scalar>&
 // u, Scalar q) {
 //   auto& grid = u.grid();
 //   auto& mesh = grid.mesh();
@@ -569,118 +580,121 @@ curl_add(cu_vector_field<Scalar>& result, const cu_vector_field<Scalar>& u,
 //   }
 // }
 
-void
-div(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
-    Scalar q) {
-  auto& grid = u.grid();
-  auto& mesh = grid.mesh();
+// void
+// div(scalar_field<Scalar>& result, const vector_field<Scalar>& u,
+//     Scalar q) {
+//   auto& grid = u.grid();
+//   auto& mesh = grid.mesh();
 
-  // TODO: reset the result first?
+//   // TODO: reset the result first?
 
-  // TODO: The kernel launch parameters might need some tuning for
-  // different architectures
+//   // TODO: The kernel launch parameters might need some tuning for
+//   // different architectures
 
-  dim3 blockSize(32, 8, 4);
-  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 4);
-  Kernels::compute_div<order, 32, 8, 4><<<gridSize, blockSize>>>(
-      result.ptr(), u.ptr(0), u.ptr(1), u.ptr(2), u.stagger(0),
-      u.stagger(1), u.stagger(2), q);
-  CudaCheckError();
-}
+//   dim3 blockSize(32, 8, 4);
+//   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 8,
+//                 mesh.reduced_dim(2) / 4);
+//   Kernels::compute_div<order, 32, 8, 4><<<gridSize, blockSize>>>(
+//       get_cudaPitchedPtr(result.data()),
+//       get_cudaPitchedPtr(u.data(0)),
+//       get_cudaPitchedPtr(u.data(1)),
+//       get_cudaPitchedPtr(u.data(2)),
+//       u.stagger(0), u.stagger(1), u.stagger(2), q);
+//   CudaCheckError();
+// }
 
-void
-div_add(cu_scalar_field<Scalar>& result, const cu_vector_field<Scalar>& u,
-        Scalar q) {
-  auto& grid = u.grid();
-  auto& mesh = grid.mesh();
+// void
+// div_add(scalar_field<Scalar>& result, const vector_field<Scalar>& u,
+//         Scalar q) {
+//   auto& grid = u.grid();
+//   auto& mesh = grid.mesh();
 
-  // TODO: reset the result first?
+//   // TODO: reset the result first?
 
-  // TODO: The kernel launch parameters might need some tuning for
-  // different architectures
-  dim3 blockSizeX(64, 8, 1);
-  dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeY(32, 16, 1);
-  dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeZ(32, 16, 1);
-  dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
-                 mesh.reduced_dim(1));
+//   // TODO: The kernel launch parameters might need some tuning for
+//   // different architectures
+//   dim3 blockSizeX(64, 8, 1);
+//   dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeY(32, 16, 1);
+//   dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeZ(32, 16, 1);
+//   dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
+//                  mesh.reduced_dim(1));
 
-  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>(
-      result.ptr(), u.ptr(0), flip(u.stagger(0)[0]), 1.0f);
-  CudaCheckError();
+//   Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>(
+//       result.ptr(), u.ptr(0), flip(u.stagger(0)[0]), 1.0f);
+//   CudaCheckError();
 
-  if (grid.dim() > 1) {
-    Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>(
-        result.ptr(), u.ptr(1), flip(u.stagger(1)[1]), 1.0f);
-    CudaCheckError();
-  }
+//   if (grid.dim() > 1) {
+//     Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>(
+//         result.ptr(), u.ptr(1), flip(u.stagger(1)[1]), 1.0f);
+//     CudaCheckError();
+//   }
 
-  if (grid.dim() > 2) {
-    Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>(
-        result.ptr(), u.ptr(2), flip(u.stagger(2)[2]), 1.0f);
-    CudaCheckError();
-  }
-}
+//   if (grid.dim() > 2) {
+//     Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>(
+//         result.ptr(), u.ptr(2), flip(u.stagger(2)[2]), 1.0f);
+//     CudaCheckError();
+//   }
+// }
 
-void
-grad(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& u,
-     Scalar q) {
-  auto& grid = u.grid();
-  auto& mesh = grid.mesh();
+// void
+// grad(vector_field<Scalar>& result, const scalar_field<Scalar>& u,
+//      Scalar q) {
+//   auto& grid = u.grid();
+//   auto& mesh = grid.mesh();
 
-  // TODO: reset the result first?
+//   // TODO: reset the result first?
 
-  // TODO: The kernel launch parameters might need some tuning for
-  // different architectures
+//   // TODO: The kernel launch parameters might need some tuning for
+//   // different architectures
 
-  dim3 blockSize(16, 8, 8);
-  dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
-                mesh.reduced_dim(2) / 8);
-  Kernels::compute_grad<order, 16, 8, 8>
-      <<<gridSize, blockSize>>>(result.ptr(0), result.ptr(1),
-                                result.ptr(2), u.ptr(), u.stagger(), q);
-  CudaCheckError();
-}
+//   dim3 blockSize(16, 8, 8);
+//   dim3 gridSize(mesh.reduced_dim(0) / 16, mesh.reduced_dim(1) / 8,
+//                 mesh.reduced_dim(2) / 8);
+//   Kernels::compute_grad<order, 16, 8, 8>
+//       <<<gridSize, blockSize>>>(result.ptr(0), result.ptr(1),
+//                                 result.ptr(2), u.ptr(), u.stagger(), q);
+//   CudaCheckError();
+// }
 
-void
-grad_add(cu_vector_field<Scalar>& result, const cu_scalar_field<Scalar>& u,
-         Scalar q) {
-  auto& grid = u.grid();
-  auto& mesh = grid.mesh();
+// void
+// grad_add(vector_field<Scalar>& result, const scalar_field<Scalar>& u,
+//          Scalar q) {
+//   auto& grid = u.grid();
+//   auto& mesh = grid.mesh();
 
-  // TODO: reset the result first?
+//   // TODO: reset the result first?
 
-  // TODO: The kernel launch parameters might need some tuning for
-  // different architectures
-  dim3 blockSizeX(64, 8, 1);
-  dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeY(32, 16, 1);
-  dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
-                 mesh.reduced_dim(2));
-  dim3 blockSizeZ(32, 16, 1);
-  dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
-                 mesh.reduced_dim(1));
+//   // TODO: The kernel launch parameters might need some tuning for
+//   // different architectures
+//   dim3 blockSizeX(64, 8, 1);
+//   dim3 gridSizeX(mesh.reduced_dim(0) / 64, mesh.reduced_dim(1) / 8,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeY(32, 16, 1);
+//   dim3 gridSizeY(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 64,
+//                  mesh.reduced_dim(2));
+//   dim3 blockSizeZ(32, 16, 1);
+//   dim3 gridSizeZ(mesh.reduced_dim(0) / 32, mesh.reduced_dim(2) / 64,
+//                  mesh.reduced_dim(1));
 
-  Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>(
-      result.ptr(0), u.ptr(), flip(u.stagger()[0]), 1.0f);
-  CudaCheckError();
+//   Kernels::deriv_x<order, 64, 8><<<gridSizeX, blockSizeX>>>(
+//       result.ptr(0), u.ptr(), flip(u.stagger()[0]), 1.0f);
+//   CudaCheckError();
 
-  if (grid.dim() > 1) {
-    Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>(
-        result.ptr(1), u.ptr(), flip(u.stagger()[1]), 1.0f);
-    CudaCheckError();
-  }
+//   if (grid.dim() > 1) {
+//     Kernels::deriv_y<order, 32, 64><<<gridSizeY, blockSizeY>>>(
+//         result.ptr(1), u.ptr(), flip(u.stagger()[1]), 1.0f);
+//     CudaCheckError();
+//   }
 
-  if (grid.dim() > 2) {
-    Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>(
-        result.ptr(2), u.ptr(), flip(u.stagger()[2]), 1.0f);
-    CudaCheckError();
-  }
-}
+//   if (grid.dim() > 2) {
+//     Kernels::deriv_z<order, 32, 64><<<gridSizeZ, blockSizeZ>>>(
+//         result.ptr(2), u.ptr(), flip(u.stagger()[2]), 1.0f);
+//     CudaCheckError();
+//   }
+// }
 
 }  // namespace Aperture

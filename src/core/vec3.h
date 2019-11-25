@@ -184,7 +184,7 @@ struct Extent : public Vec3<int> {
   // Default initialize to 0 in the first size and 1 in the rest for
   // safety reasons
   HOST_DEVICE Extent() : Vec3(0, 1, 1) {}
-  HOST_DEVICE Extent(int w, int h = 1, int d = 1) : Vec3(w, h, d) {}
+  HOST_DEVICE explicit Extent(int w, int h = 1, int d = 1) : Vec3(w, h, d) {}
   HOST_DEVICE Extent(const Vec3<int>& vec) : Vec3(vec) {}
 
   HD_INLINE int& width() { return x; }
@@ -194,7 +194,7 @@ struct Extent : public Vec3<int> {
   HD_INLINE int& depth() { return z; }
   HD_INLINE const int& depth() const { return z; }
 
-  HD_INLINE int size() const { return x * y * z; }
+  HD_INLINE size_t size() const { return x * y * z; }
 
   // template <typename T>
   // cudaExtent cuda_ext(const T& t) const {

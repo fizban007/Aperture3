@@ -53,4 +53,7 @@ Grid::init(const SimParams& params) {
   }
 }
 
+void
+Grid::compute_coef(const SimParams& params) {}
+
 }  // namespace Aperture

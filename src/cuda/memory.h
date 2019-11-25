@@ -15,7 +15,6 @@ struct alloc_cuda_managed {
   template <typename T>
   void operator()(const char* name, T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
     void* p;
     cudaMallocManaged(&p, N_ * sizeof(x_type));
     cudaMemAdvise(p, N_ * sizeof(x_type),
@@ -67,15 +66,20 @@ struct free_cuda {
 template <typename StructOfArrays>
 void
 alloc_struct_of_arrays(StructOfArrays& data, std::size_t max_num) {
-  // boost::fusion::for_each(data, alloc_cuda_managed(max_num));
   // visit_struct::for_each(data, alloc_cuda_managed(max_num));
   visit_struct::for_each(data, alloc_cuda_device(max_num));
 }
 
 template <typename StructOfArrays>
 void
+alloc_struct_of_arrays_managed(StructOfArrays& data, std::size_t max_num) {
+  visit_struct::for_each(data, alloc_cuda_managed(max_num));
+  // visit_struct::for_each(data, alloc_cuda_device(max_num));
+}
+
+template <typename StructOfArrays>
+void
 free_struct_of_arrays(StructOfArrays& data) {
-  // boost::fusion::for_each(data, free_cuda());
   visit_struct::for_each(data, free_cuda());
 }
 
