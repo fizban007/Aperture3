@@ -6,8 +6,8 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cuda_control.h"
 // #include "cuda/ptr_util.h"
-#include "utils/util_functions.h"
 #include "cuda/utils/pitchptr.cuh"
+#include "utils/util_functions.h"
 
 namespace Aperture {
 
@@ -81,9 +81,9 @@ struct Interpolator3D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1, FloatT x2,
-                                FloatT x3, int c1, int c2, int c3,
-                                Stagger stagger) const {
+  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1,
+                                FloatT x2, FloatT x3, int c1, int c2,
+                                int c3, Stagger stagger) const {
     Scalar result = 0.0f;
     // for (int k = c3 - Interp::radius;
     //      k <= c3 + Interp::support - Interp::radius; k++) {
@@ -136,8 +136,9 @@ struct Interpolator2D {
   Interp interp;
 
   template <typename FloatT>
-  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1, FloatT x2,
-                                int c1, int c2, Stagger stagger) const {
+  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1,
+                                FloatT x2, int c1, int c2,
+                                Stagger stagger) const {
     Scalar result = 0.0f;
     for (int j = 0; j <= Interp::support; j++) {
       int jj = j + c2 - Interp::radius;

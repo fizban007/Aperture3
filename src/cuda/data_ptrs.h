@@ -30,6 +30,6 @@ struct data_ptrs {
 
 data_ptrs get_data_ptrs(sim_data& data);
 
-}
+}  // namespace Aperture
 
 #endif  // _DATA_PTRS_H_
