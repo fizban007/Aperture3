@@ -4,7 +4,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/kernels.h"
-#include "cuda/ptr_util.h"
+// #include "cuda/ptr_util.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
