@@ -11,8 +11,9 @@ namespace Aperture {
 
 namespace Kernels {
 
-__device__ __forceinline__ void
-user_push_2d_cart(data_ptrs& data, size_t idx, Scalar dt, curandState& state) {
+__device__ void
+user_push_2d_cart(data_ptrs& data, size_t idx, Scalar dt,
+                  curandState& state) {
   auto& ptc = data.particles;
 
   auto c = ptc.cell[idx];
@@ -108,11 +109,11 @@ user_push_2d_cart(data_ptrs& data, size_t idx, Scalar dt, curandState& state) {
     ptc.p2[idx] = p2;
     ptc.p3[idx] = p3;
     ptc.E[idx] = gamma;
+  }
 }
 
-}
+}  // namespace Kernels
 
-}
-
+}  // namespace Aperture
 
 #endif

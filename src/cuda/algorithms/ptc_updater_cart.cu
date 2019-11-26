@@ -20,16 +20,19 @@ namespace Kernels {
 typedef Spline::cloud_in_cell spline_t;
 
 __global__ void
-vay_push_2d_cart(data_ptrs data, size_t num, Scalar dt) {
-  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
-       idx += blockDim.x * gridDim.x) {
-    user_push_2d_cart(data, idx, dt);
+vay_push_2d_cart(data_ptrs data, size_t num, Scalar dt,
+                 curandState *states) {
+  size_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+  curandState localState = states[idx];
+  for (; idx < num; idx += blockDim.x * gridDim.x) {
+    user_push_2d_cart(data, idx, dt, localState);
   }
+  states[idx] = localState;
 }
 
 __global__ void
-move_photons_cart(photon_data photons, size_t num, Scalar dt, bool axis0,
-             bool axis1) {
+move_photons_cart(photon_data photons, size_t num, Scalar dt,
+                  bool axis0, bool axis1) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
     auto c = photons.cell[idx];
@@ -49,36 +52,14 @@ move_photons_cart(photon_data photons, size_t num, Scalar dt, bool axis0,
          old_x3 = photons.x3[idx];
 
     // Compute the actual movement
-    Scalar r1 = dev_mesh.pos(0, c1, old_x1);
-    Scalar exp_r1 = std::exp(r1);
+    // Scalar x = dev_mesh.pos(0, c1, old_x1);
+    // Scalar y = dev_mesh.pos(1, c2, old_x2);
+    Scalar z = old_x3;
 
-    // Censor photons already outside the conversion radius
-    if (exp_r1 > dev_params.r_cutoff || exp_r1 < 1.02) {
-      photons.cell[idx] = MAX_CELL;
-      continue;
-    }
-
-    Scalar r2 = dev_mesh.pos(1, c2, old_x2);
-    Scalar x = exp_r1 * std::sin(r2) * std::cos(old_x3);
-    Scalar y = exp_r1 * std::sin(r2) * std::sin(old_x3);
-    Scalar z = exp_r1 * std::cos(r2);
-
-    logsph2cart(v1, v2, v3, r1, r2, old_x3);
-    x += v1 * dt;
-    y += v2 * dt;
     z += v3 * dt;
-    Scalar r1p = sqrt(x * x + y * y + z * z);
-    Scalar r2p = acos(z / r1p);
-    r1p = log(r1p);
-    Scalar r3p = atan2(y, x);
 
-    cart2logsph(v1, v2, v3, r1p, r2p, r3p);
-    photons.p1[idx] = v1 * E;
-    photons.p2[idx] = v2 * E;
-    photons.p3[idx] = v3 * E;
-
-    Pos_t new_x1 = old_x1 + (r1p - r1) / dev_mesh.delta[0];
-    Pos_t new_x2 = old_x2 + (r2p - r2) / dev_mesh.delta[1];
+    Pos_t new_x1 = old_x1 + (v1 * dt) / dev_mesh.delta[0];
+    Pos_t new_x2 = old_x2 + (v2 * dt) / dev_mesh.delta[1];
     // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
     // %f\n", new_x1, new_x2, old_x1, old_x2);
     int dc1 = floor(new_x1);
@@ -98,16 +79,15 @@ move_photons_cart(photon_data photons, size_t num, Scalar dt, bool axis0,
     // dc2);
     photons.x1[idx] = new_x1;
     photons.x2[idx] = new_x2;
-    photons.x3[idx] = r3p;
+    photons.x3[idx] = z;
     photons.path_left[idx] -= dt;
   }
 }
 
 __global__ void
 __launch_bounds__(512, 4)
-    deposit_current_2d_cart(data_ptrs data, size_t num,
-                               mesh_ptrs_log_sph mesh_ptrs, Scalar dt,
-                               uint32_t step, bool axis0, bool axis1) {
+    deposit_current_2d_cart(data_ptrs data, size_t num, Scalar dt,
+                            uint32_t step, bool axis0, bool axis1) {
   auto &ptc = data.particles;
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -137,9 +117,9 @@ __launch_bounds__(512, 4)
     // Scalar old_pos3 =
     Pos_t new_x1 = old_x1 + v1 * dt / dev_mesh.delta[0];
     Pos_t new_x2 = old_x2 + v2 * dt / dev_mesh.delta[1];
-    Pos_t new_x3 = old_x3 + v3 * dt
-    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
-    // %f\n", new_x1, new_x2, old_x1, old_x2);
+    Pos_t new_x3 = old_x3 + v3 * dt;
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f,
+    // old_x2 is %f\n", new_x1, new_x2, old_x1, old_x2);
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
 #ifndef NDEBUG
@@ -150,7 +130,8 @@ __launch_bounds__(512, 4)
     new_x2 -= (Pos_t)dc2;
 
     ptc.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
-    printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2, dc2);
+    printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+           dc2);
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
     ptc.x3[idx] = new_x3;
@@ -207,25 +188,26 @@ __launch_bounds__(512, 4)
   }
 }
 
-__global__ void
-process_j(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
-  for (int j = blockIdx.y * blockDim.y + threadIdx.y;
-       j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x;
-         i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-      size_t offset = data.J1.compute_offset(i, j);
-      Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
-      data.J1[offset] *= w / mesh_ptrs.A1_e[offset];
-      data.J2[offset] *= w / mesh_ptrs.A2_e[offset];
-      for (int n = 0; n < dev_params.num_species; n++) {
-        data.Rho[n][offset] /= mesh_ptrs.dV[offset];
-      }
-    }
-  }
-}
+// __global__ void
+// process_j(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
+//   for (int j = blockIdx.y * blockDim.y + threadIdx.y;
+//        j < dev_mesh.dims[1]; j += blockDim.y * gridDim.y) {
+//     for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+//          i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
+//       size_t offset = data.J1.compute_offset(i, j);
+//       Scalar w = dev_mesh.delta[0] * dev_mesh.delta[1] / dt;
+//       data.J1[offset] *= w / mesh_ptrs.A1_e[offset];
+//       data.J2[offset] *= w / mesh_ptrs.A2_e[offset];
+//       for (int n = 0; n < dev_params.num_species; n++) {
+//         data.Rho[n][offset] /= mesh_ptrs.dV[offset];
+//       }
+//     }
+//   }
+// }
 
 // __global__ void
-// inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
+// inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar
+// p1,
 //            Scalar p2, Scalar p3, Scalar w, Scalar *surface_e,
 //            Scalar *surface_p, curandState *states, Scalar omega) {
 //   int id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -253,8 +235,10 @@ process_j(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
 //     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
 //     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
 //     //if (dev_params.q_e * dens > 0.5f *
-//     //                                square(1.0f / dev_mesh.delta[1]) *
-//     //                                std::sin(dev_mesh.pos(1, i, 0.5f)))
+//     //                                square(1.0f /
+//     dev_mesh.delta[1]) *
+//     //                                std::sin(dev_mesh.pos(1, i,
+//     0.5f)))
 //     //  continue;
 //     for (int n = 0; n < inj_per_cell; n++) {
 //       Pos_t x2 = curand_uniform(&localState);
@@ -329,10 +313,9 @@ ptc_outflow(particle_data ptc, size_t num) {
 }
 
 __global__ void
-filter_current_logsph(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
-                      pitchptr<Scalar> A, bool boundary_lower0,
-                      bool boundary_upper0, bool boundary_lower1,
-                      bool boundary_upper1) {
+filter_current_cart(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+                    bool boundary_lower0, bool boundary_upper0,
+                    bool boundary_lower1, bool boundary_upper1) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -357,36 +340,22 @@ filter_current_logsph(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
   if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
   // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
   // Do the actual computation here
-  j_tmp[globalOffset] = 0.25f * j[globalOffset] * A[globalOffset];
+  j_tmp[globalOffset] = 0.25f * j[globalOffset];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset + dr_plus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset - dr_minus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset + dt_plus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset - dt_minus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus + dt_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset - dr_minus + dt_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus - dt_minus];
   j_tmp[globalOffset] +=
-      0.125f * j[globalOffset + dr_plus] * A[globalOffset + dr_plus];
-  j_tmp[globalOffset] +=
-      0.125f * j[globalOffset - dr_minus] * A[globalOffset - dr_minus];
-  j_tmp[globalOffset] +=
-      0.125f * j[globalOffset + dt_plus] * A[globalOffset + dt_plus];
-  j_tmp[globalOffset] +=
-      0.125f * j[globalOffset - dt_minus] * A[globalOffset - dt_minus];
-  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus + dt_plus] *
-                         A[globalOffset + dr_plus + dt_plus];
-  j_tmp[globalOffset] += 0.0625f *
-                         j[globalOffset - dr_minus + dt_plus] *
-                         A[globalOffset - dr_minus + dt_plus];
-  j_tmp[globalOffset] += 0.0625f *
-                         j[globalOffset + dr_plus - dt_minus] *
-                         A[globalOffset + dr_plus - dt_minus];
-  j_tmp[globalOffset] += 0.0625f *
-                         j[globalOffset - dr_minus - dt_minus] *
-                         A[globalOffset - dr_minus - dt_minus];
-  j_tmp[globalOffset] /= A[globalOffset];
+      0.0625f * j[globalOffset - dr_minus - dt_minus];
+  // j_tmp[globalOffset] /= A[globalOffset];
 }
 
 }  // namespace Kernels
 
-ptc_updater_cart::ptc_updater_cart(sim_environment &env)
-    : m_env(env),
-      m_surface_e(env.params().N[1]),
-      m_surface_p(env.params().N[1]),
-      m_surface_tmp(env.params().N[1]) {
+ptc_updater_cart::ptc_updater_cart(sim_environment &env) : m_env(env) {
   m_tmp_j1 = multi_array<Scalar>(env.local_grid().extent());
   m_tmp_j2 = multi_array<Scalar>(env.local_grid().extent());
 }
@@ -395,11 +364,12 @@ ptc_updater_cart::~ptc_updater_cart() {}
 
 void
 ptc_updater_cart::update_particles(sim_data &data, double dt,
-                                     uint32_t step) {
+                                   uint32_t step) {
   timer::stamp("ptc_update");
   auto data_p = get_data_ptrs(data);
+  auto &grid = m_env.grid();
 
-  if (m_env.grid().dim() == 2) {
+  if (grid.dim() == 2) {
     data.J.initialize();
     for (int i = 0; i < data.env.params().num_species; i++) {
       data.Rho[i].initialize();
@@ -411,7 +381,8 @@ ptc_updater_cart::update_particles(sim_data &data, double dt,
           "Updating {} particles in log spherical coordinates",
           data.particles.number());
       Kernels::vay_push_2d_cart<<<256, 512>>>(
-          data_p, data.particles.number(), dt);
+          data_p, data.particles.number(), dt,
+          (curandState *)data.d_rand_states);
       CudaCheckError();
     }
     CudaSafeCall(cudaDeviceSynchronize());
@@ -440,10 +411,6 @@ ptc_updater_cart::update_particles(sim_data &data, double dt,
     // for (int i = 0; i < data.env.params().num_species; i++) {
     //   m_env.send_sub_guard_cells(data.Rho[i]);
     // }
-    Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(data_p,
-                                                       mesh_ptrs, dt);
-    CudaCheckError();
-    CudaSafeCall(cudaDeviceSynchronize());
 
     Logger::print_debug("current smoothing {} times",
                         m_env.params().current_smoothing);
@@ -454,36 +421,36 @@ ptc_updater_cart::update_particles(sim_data &data, double dt,
       //     m_env.get_sub_guard_cells(data.Rho[i]);
       //   }
       // }
-      auto &mesh = grid->mesh();
+      auto &mesh = grid.mesh();
       dim3 blockSize(32, 16);
       dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
-      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
+      Kernels::filter_current_cart<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(0)), get_pitchptr(m_tmp_j1),
-          mesh_ptrs.A1_e, m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(0).copy_from(m_tmp_j1);
       CudaCheckError();
 
-      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
+      Kernels::filter_current_cart<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(1)), get_pitchptr(m_tmp_j2),
-          mesh_ptrs.A2_e, m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(1).copy_from(m_tmp_j2);
       CudaCheckError();
 
-      Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
+      Kernels::filter_current_cart<<<gridSize, blockSize>>>(
           get_pitchptr(data.J.data(2)), get_pitchptr(m_tmp_j2),
-          mesh_ptrs.A3_e, m_env.is_boundary(0), m_env.is_boundary(1),
+          m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(2).copy_from(m_tmp_j2);
       CudaCheckError();
 
       if ((step + 1) % data.env.params().data_interval == 0) {
         for (int i = 0; i < data.env.params().num_species; i++) {
-          Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
+          Kernels::filter_current_cart<<<gridSize, blockSize>>>(
               get_pitchptr(data.Rho[i].data()), get_pitchptr(m_tmp_j1),
-              mesh_ptrs.dV, m_env.is_boundary(0), m_env.is_boundary(1),
+              m_env.is_boundary(0), m_env.is_boundary(1),
               m_env.is_boundary(2), m_env.is_boundary(3));
           data.Rho[i].data().copy_from(m_tmp_j1);
           CudaCheckError();
@@ -497,7 +464,7 @@ ptc_updater_cart::update_particles(sim_data &data, double dt,
       Logger::print_info(
           "Updating {} photons in log spherical coordinates",
           data.photons.number());
-      Kernels::move_photons<<<256, 512>>>(
+      Kernels::move_photons_cart<<<256, 512>>>(
           data.photons.data(), data.photons.number(), dt,
           m_env.is_boundary(2), m_env.is_boundary(3));
       CudaCheckError();
@@ -514,7 +481,7 @@ ptc_updater_cart::update_particles(sim_data &data, double dt,
 }
 
 void
-ptc_updater_logsph::apply_boundary(sim_data &data, double dt,
+ptc_updater_cart::apply_boundary(sim_data &data, double dt,
                                    uint32_t step) {
   auto data_p = get_data_ptrs(data);
   if (data.env.is_boundary((int)BoundaryPos::lower0)) {
@@ -522,25 +489,7 @@ ptc_updater_logsph::apply_boundary(sim_data &data, double dt,
   data.particles.clear_guard_cells(m_env.local_grid());
   data.photons.clear_guard_cells(m_env.local_grid());
   CudaSafeCall(cudaDeviceSynchronize());
-  Grid_LogSph *grid = dynamic_cast<Grid_LogSph *>(&m_env.local_grid());
-  auto mesh_ptrs = get_mesh_ptrs(*grid);
 
-  if (data.env.is_boundary((int)BoundaryPos::lower1)) {
-    // CudaSafeCall(cudaSetDevice(n));
-    // Logger::print_debug("Processing boundary {} on device {}",
-    // (int)BoundaryPos::lower1, n);
-    Kernels::axis_rho_lower<<<1, 512>>>(data_p, mesh_ptrs);
-    CudaCheckError();
-    // cudaDeviceSynchronize();
-  }
-  if (data.env.is_boundary((int)BoundaryPos::upper1)) {
-    // CudaSafeCall(cudaSetDevice(n));
-    // Logger::print_debug("Processing boundary {} on device {}",
-    //                     (int)BoundaryPos::upper1, n);
-    Kernels::axis_rho_upper<<<1, 512>>>(data_p, mesh_ptrs);
-    CudaCheckError();
-    // cudaDeviceSynchronize();
-  }
   if (data.env.is_boundary((int)BoundaryPos::upper0)) {
     Kernels::ptc_outflow<<<256, 512>>>(data.particles.data(),
                                        data.particles.number());
@@ -549,29 +498,29 @@ ptc_updater_logsph::apply_boundary(sim_data &data, double dt,
   CudaSafeCall(cudaDeviceSynchronize());
 }
 
-void
-ptc_updater_logsph::inject_ptc(sim_data &data, int inj_per_cell,
-                               Scalar p1, Scalar p2, Scalar p3,
-                               Scalar w, Scalar omega) {
-  if (data.env.is_boundary((int)BoundaryPos::lower0)) {
-    m_surface_e.assign_dev(0.0);
-    m_surface_p.assign_dev(0.0);
-    m_surface_tmp.assign_dev(0.0);
-    Kernels::measure_surface_density<<<256, 512>>>(
-        data.particles.data(), data.particles.number(),
-        m_surface_e.dev_ptr(), m_surface_p.dev_ptr());
-    CudaCheckError();
-    Kernels::inject_ptc<<<128, 256>>>(
-        data.particles.data(), data.particles.number(), inj_per_cell,
-        p1, p2, p3, w, m_surface_e.dev_ptr(), m_surface_p.dev_ptr(),
-        (curandState *)data.d_rand_states, omega);
-    CudaCheckError();
+// void
+// ptc_updater_logsph::inject_ptc(sim_data &data, int inj_per_cell,
+//                                Scalar p1, Scalar p2, Scalar p3,
+//                                Scalar w, Scalar omega) {
+//   if (data.env.is_boundary((int)BoundaryPos::lower0)) {
+//     m_surface_e.assign_dev(0.0);
+//     m_surface_p.assign_dev(0.0);
+//     m_surface_tmp.assign_dev(0.0);
+//     Kernels::measure_surface_density<<<256, 512>>>(
+//         data.particles.data(), data.particles.number(),
+//         m_surface_e.dev_ptr(), m_surface_p.dev_ptr());
+//     CudaCheckError();
+//     Kernels::inject_ptc<<<128, 256>>>(
+//         data.particles.data(), data.particles.number(), inj_per_cell,
+//         p1, p2, p3, w, m_surface_e.dev_ptr(), m_surface_p.dev_ptr(),
+//         (curandState *)data.d_rand_states, omega);
+//     CudaCheckError();
 
-    data.particles.set_num(data.particles.number() +
-                           2 * inj_per_cell *
-                               data.E.grid().mesh().reduced_dim(1));
-  }
-}
+//     data.particles.set_num(data.particles.number() +
+//                            2 * inj_per_cell *
+//                                data.E.grid().mesh().reduced_dim(1));
+//   }
+// }
 
 // void
 // ptc_updater_logsph::annihilate_extra_pairs(sim_data &data) {
