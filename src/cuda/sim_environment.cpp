@@ -5,107 +5,105 @@
 namespace Aperture {
 
 void
-sim_environment::send_array_x(multi_array<Scalar>& array, int dir) {
+sim_environment::send_array_guard_cells_x(multi_array<Scalar> &array,
+                                          int dir) {
   int dest, origin;
   MPI_Status status;
+  auto &mesh = m_grid->mesh();
 
-  dest = (dir == -1 ? m_domain_info.neighbor_left[0] : m_domain_info.neighbor_right[0]);
-  origin = (dir == -1 ? m_domain_info.neighbor_right[0] : m_domain_info.neighbor_left[0]);
+  dest = (dir == -1 ? m_domain_info.neighbor_left[0]
+                    : m_domain_info.neighbor_right[0]);
+  origin = (dir == -1 ? m_domain_info.neighbor_right[0]
+                      : m_domain_info.neighbor_left[0]);
 
-  auto& mesh = m_grid->mesh();
+  m_send_buffers[0].copy_from(
+      array,
+      Index((dir == -1 ? mesh.guard[0]
+                       : mesh.dims[0] - 2 * mesh.guard[0]),
+            0, 0),
+      Index(0, 0, 0), m_send_buffers[0].extent(),
+      (int)cudaMemcpyDeviceToHost);
 
-  cudaExtent ext = make_cudaExtent(mesh.guard[0] * sizeof(Scalar),
-                                   mesh.dims[1], mesh.dims[2]);
-
-  cudaMemcpy3DParms copy_parms = {};
-  copy_parms.srcPtr = make_cudaPitchedPtr(
-      array.dev_ptr(), mesh.dims[0] * sizeof(Scalar), mesh.dims[0],
-      mesh.dims[1]);
-  copy_parms.srcPos =
-      make_cudaPos((dir == -1 ? mesh.guard[0]
-                              : mesh.dims[0] - 2 * mesh.guard[0]) *
-                       sizeof(Scalar),
-                   0, 0);
-  copy_parms.dstPtr = make_cudaPitchedPtr(
-      m_send_buffers[0].dev_ptr(), mesh.guard[0] * sizeof(Scalar),
-      mesh.guard[0], mesh.dims[1]);
-  copy_parms.dstPos = make_cudaPos(0, 0, 0);
-  copy_parms.extent = ext;
-  copy_parms.kind = cudaMemcpyDeviceToDevice;
-  cudaMemcpy3D(&copy_parms);
-
-  MPI_Sendrecv(m_send_buffers[0].dev_ptr(), m_send_buffers[0].size(),
-               m_scalar_type, dest, 0, m_recv_buffers[0].dev_ptr(),
+  MPI_Sendrecv(m_send_buffers[0].host_ptr(), m_send_buffers[0].size(),
+               m_scalar_type, dest, 0, m_recv_buffers[0].host_ptr(),
                m_recv_buffers[0].size(), m_scalar_type, origin, 0,
                m_cart, &status);
 
   if (status.MPI_SOURCE != MPI_PROC_NULL) {
-    copy_parms.srcPtr = make_cudaPitchedPtr(
-        m_recv_buffers[0].dev_ptr(), mesh.guard[0] * sizeof(Scalar),
-        mesh.guard[0], mesh.dims[1]);
-    copy_parms.srcPos = make_cudaPos(0, 0, 0);
-    copy_parms.dstPtr = make_cudaPitchedPtr(
-        array.dev_ptr(), mesh.dims[0] * sizeof(Scalar),
-        mesh.dims[0], mesh.dims[1]);
-    copy_parms.dstPos = make_cudaPos(
-        (dir == -1 ? mesh.dims[0] - mesh.guard[0] : 0) *
-            sizeof(Scalar),
-        0, 0);
-    copy_parms.extent = ext;
-    copy_parms.kind = cudaMemcpyDeviceToDevice;
-    cudaMemcpy3D(&copy_parms);
+    array.copy_from(
+        m_recv_buffers[0], Index(0, 0, 0),
+        Index((dir == -1 ? mesh.dims[0] - mesh.guard[0] : 0), 0, 0),
+        m_recv_buffers[0].extent(),
+        (int)cudaMemcpyHostToDevice);
   }
 }
 
 void
-sim_environment::send_array_y(multi_array<Scalar>& array, int dir) {
+sim_environment::send_array_guard_cells_y(multi_array<Scalar> &array,
+                                          int dir) {
   int dest, origin;
   MPI_Status status;
+  auto &mesh = m_grid->mesh();
 
-  dest = (dir == -1 ? m_domain_info.neighbor_left[1] : m_domain_info.neighbor_right[1]);
-  origin = (dir == -1 ? m_domain_info.neighbor_right[1] : m_domain_info.neighbor_left[1]);
+  dest = (dir == -1 ? m_domain_info.neighbor_left[1]
+                    : m_domain_info.neighbor_right[1]);
+  origin = (dir == -1 ? m_domain_info.neighbor_right[1]
+                      : m_domain_info.neighbor_left[1]);
 
-  auto& mesh = m_grid->mesh();
+  m_send_buffers[1].copy_from(
+      array,
+      Index(0,
+            (dir == -1 ? mesh.guard[1]
+                       : mesh.dims[1] - 2 * mesh.guard[1]),
+            0),
+      Index(0, 0, 0), m_send_buffers[1].extent(),
+      (int)cudaMemcpyDeviceToHost);
 
-  // array.copy_to_y_buffer(m_send_buffers[1], m_grid.guard[1], dir);
-  cudaExtent ext =
-      make_cudaExtent(mesh.dims[0] * sizeof(Scalar), mesh.guard[1], mesh.dims[2]);
-
-  cudaMemcpy3DParms copy_parms = {};
-  copy_parms.srcPtr = make_cudaPitchedPtr(
-      array.dev_ptr(), mesh.dims[0] * sizeof(Scalar), mesh.dims[0],
-      mesh.dims[1]);
-  copy_parms.srcPos =
-      make_cudaPos(0,
-                   (dir == -1 ? mesh.guard[1]
-                              : mesh.dims[1] - 2 * mesh.guard[1]),
-                   0);
-  copy_parms.dstPtr = make_cudaPitchedPtr(
-      m_send_buffers[1].dev_ptr(), mesh.dims[0] * sizeof(Scalar),
-      mesh.dims[0], mesh.guard[1]);
-  copy_parms.dstPos = make_cudaPos(0, 0, 0);
-  copy_parms.extent = ext;
-  copy_parms.kind = cudaMemcpyDeviceToDevice;
-  cudaMemcpy3D(&copy_parms);
-
-  MPI_Sendrecv(m_send_buffers[1].dev_ptr(), m_send_buffers[1].size(),
-               m_scalar_type, dest, 0, m_recv_buffers[1].dev_ptr(),
+  MPI_Sendrecv(m_send_buffers[1].host_ptr(), m_send_buffers[1].size(),
+               m_scalar_type, dest, 0, m_recv_buffers[1].host_ptr(),
                m_recv_buffers[1].size(), m_scalar_type, origin, 0,
                m_cart, &status);
 
   if (status.MPI_SOURCE != MPI_PROC_NULL) {
-    copy_parms.srcPtr = make_cudaPitchedPtr(
-        m_recv_buffers[1].dev_ptr(), mesh.dims[0] * sizeof(Scalar),
-        mesh.dims[0], mesh.guard[1]);
-    copy_parms.srcPos = make_cudaPos(0, 0, 0);
-    copy_parms.dstPtr = make_cudaPitchedPtr(
-        array.dev_ptr(), mesh.dims[0] * sizeof(Scalar),
-        mesh.dims[0], mesh.dims[1]);
-    copy_parms.dstPos = make_cudaPos(
-        0, (dir == -1 ? mesh.dims[1] - mesh.guard[1] : 0), 0);
-    copy_parms.extent = ext;
-    copy_parms.kind = cudaMemcpyDeviceToDevice;
-    cudaMemcpy3D(&copy_parms);
+    array.copy_from(
+        m_recv_buffers[1], Index(0, 0, 0),
+        Index(0, (dir == -1 ? mesh.dims[1] - mesh.guard[1] : 0), 0),
+        m_recv_buffers[1].extent(),
+        (int)cudaMemcpyHostToDevice);
+  }
+}
+
+void
+sim_environment::send_array_guard_cells_z(multi_array<Scalar> &array,
+                                          int dir) {
+  int dest, origin;
+  MPI_Status status;
+  auto &mesh = m_grid->mesh();
+
+  dest = (dir == -1 ? m_domain_info.neighbor_left[2]
+                    : m_domain_info.neighbor_right[2]);
+  origin = (dir == -1 ? m_domain_info.neighbor_right[2]
+                      : m_domain_info.neighbor_left[2]);
+
+  m_send_buffers[2].copy_from(
+      array,
+      Index(0, 0,
+            (dir == -1 ? mesh.guard[2]
+                       : mesh.dims[2] - 2 * mesh.guard[2])),
+      Index(0, 0, 0), m_send_buffers[2].extent(),
+      (int)cudaMemcpyDeviceToHost);
+
+  MPI_Sendrecv(m_send_buffers[2].host_ptr(), m_send_buffers[2].size(),
+               m_scalar_type, dest, 0, m_recv_buffers[2].host_ptr(),
+               m_recv_buffers[2].size(), m_scalar_type, origin, 0,
+               m_cart, &status);
+
+  if (status.MPI_SOURCE != MPI_PROC_NULL) {
+    array.copy_from(
+        m_recv_buffers[2], Index(0, 0, 0),
+        Index(0, 0, (dir == -1 ? mesh.dims[2] - mesh.guard[2] : 0)),
+        m_recv_buffers[2].extent(),
+        (int)cudaMemcpyHostToDevice);
   }
 }
 

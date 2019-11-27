@@ -94,7 +94,7 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
       make_cudaPos(idx_dst.x * sizeof(T), idx_dst.y, idx_dst.z);
   copy_parms.extent = cuda_ext;
   copy_parms.kind = (cudaMemcpyKind)type;
-  cudaMemcpy3D(&copy_parms);
+  CudaSafeCall(cudaMemcpy3D(&copy_parms));
 }
 
 template <typename T>

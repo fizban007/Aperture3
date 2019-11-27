@@ -35,14 +35,15 @@ class sim_environment {
   //                       const domain_info& info);
   void setup_local_grid();
 
-  template <typename T>
-  void send_array_guard_cells(multi_array<T>& array);
-  template <typename T>
-  void send_array_guard_cells_x(multi_array<T>& array, int dir);
-  template <typename T>
-  void send_array_guard_cells_y(multi_array<T>& array, int dir);
-  template <typename T>
-  void send_array_guard_cells_z(multi_array<T>& array, int dir);
+  void send_array_guard_cells(multi_array<Scalar>& array);
+  void send_array_guard_cells_x(multi_array<Scalar>& array, int dir);
+  void send_array_guard_cells_y(multi_array<Scalar>& array, int dir);
+  void send_array_guard_cells_z(multi_array<Scalar>& array, int dir);
+
+  void send_add_array_guard_cells(multi_array<Scalar>& array);
+  void send_add_array_guard_cells_x(multi_array<Scalar>& array, int dir);
+  void send_add_array_guard_cells_y(multi_array<Scalar>& array, int dir);
+  void send_add_array_guard_cells_z(multi_array<Scalar>& array, int dir);
 
   /// generate a random number between 0 and 1, useful for setting up
   /// things
@@ -84,9 +85,6 @@ class sim_environment {
   // sim_environment() {}
   void setup_env();
   void setup_env_extra();
-
-  void send_array_x(multi_array<Scalar>& array, int dir);
-  void send_array_y(multi_array<Scalar>& array, int dir);
 
   CommandArgs m_args;
   SimParams m_params;
