@@ -250,6 +250,34 @@ sim_environment::setup_local_grid() {
   }
 }
 
+void
+sim_environment::send_array_guard_cells(multi_array<Scalar> &array) {
+  send_array_guard_cells_x(array, -1);
+  send_array_guard_cells_x(array, 1);
+  if (m_grid->dim() >= 2) {
+    send_array_guard_cells_y(array, -1);
+    send_array_guard_cells_y(array, 1);
+  }
+  if (m_grid->dim() >= 3) {
+    send_array_guard_cells_z(array, -1);
+    send_array_guard_cells_z(array, 1);
+  }
+}
+
+void
+sim_environment::send_add_array_guard_cells(multi_array<Scalar> &array) {
+  send_add_array_guard_cells_x(array, -1);
+  send_add_array_guard_cells_x(array, 1);
+  if (m_grid->dim() >= 2) {
+    send_add_array_guard_cells_y(array, -1);
+    send_add_array_guard_cells_y(array, 1);
+  }
+  if (m_grid->dim() >= 3) {
+    send_add_array_guard_cells_z(array, -1);
+    send_add_array_guard_cells_z(array, 1);
+  }
+}
+
 }  // namespace Aperture
 
 #endif  // __SIM_ENVIRONMENT_IMPL_H_
