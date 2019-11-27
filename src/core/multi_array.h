@@ -9,15 +9,15 @@ namespace Aperture {
 /// The multi_array class is a unified interface for 1D, 2D and 3D
 /// arrays with proper index access and memory management. The most
 /// benefit is indexing convenience. One-liners are just implemented
-/// in the definition. Other functions are implemented in the implementation
-/// header file.
+/// in the definition. Other functions are implemented in the
+/// implementation header file.
 template <typename T>
 class multi_array {
  public:
   typedef multi_array<T> self_type;
 
-  /// Default constructor, initializes `m_size` to zero and data pointers to
-  /// `nullptr`.
+  /// Default constructor, initializes `m_size` to zero and data
+  /// pointers to `nullptr`.
   multi_array();
 
   /// Main constructor, initializes with given width, height, and
@@ -31,8 +31,8 @@ class multi_array {
   /// Standard copy constructor.
   multi_array(const self_type& other);
 
-  /// Standard move constructor. The object `other` will become empty after the
-  /// move.
+  /// Standard move constructor. The object `other` will become empty
+  /// after the move.
   multi_array(self_type&& other);
 
   /// Destructor. Delete the member data array.
@@ -60,11 +60,16 @@ class multi_array {
   /// Linear indexing operator using directly the array index, read only
   const T& operator[](size_t n) const;
 
-  /// Linear indexing operator using directly the array index, read/write
+  /// Linear indexing operator using directly the array index,
+  /// read/write
   T& operator[](size_t n);
 
   /// Copying the entire content from another vector
   void copy_from(const self_type& other);
+
+  /// Copy a subset from another array
+  void copy_from(self_type& other, const Index& idx_src,
+                 const Index& idx_dst, const Extent& ext, int type = 0);
 
   /// Set the whole array to a single initial value on host
   void assign(const T& value);
@@ -99,19 +104,19 @@ class multi_array {
   const void* dev_ptr() const { return m_data_d; }
 
   T interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
-                        Stagger stagger) const;
+                Stagger stagger) const;
 
  private:
   void alloc_mem(const Extent& ext);
 
   void free_mem();
 
-  T* m_data_h; ///< Host data pointer
-  void* m_data_d; ///< Device data pointer
+  T* m_data_h;     ///< Host data pointer
+  void* m_data_d;  ///< Device data pointer
 
   Extent m_extent;  ///< 3D extent of the array
-  size_t m_size;  ///< Total size of the array
-  size_t m_pitch; ///< Memory pitch for cuda pitched ptr
+  size_t m_size;    ///< Total size of the array
+  size_t m_pitch;   ///< Memory pitch for cuda pitched ptr
 };
 
 }  // namespace Aperture
