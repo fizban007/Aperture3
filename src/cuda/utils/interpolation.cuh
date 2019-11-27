@@ -13,7 +13,11 @@ namespace Aperture {
 
 namespace Spline {
 
-struct nearest_grid_point {
+template <int N>
+struct spline_t;
+
+template<>
+struct spline_t<0> {
   enum { radius = 1, support = 1 };
 
   HD_INLINE Scalar operator()(Scalar dx) const {
@@ -21,7 +25,8 @@ struct nearest_grid_point {
   }
 };
 
-struct cloud_in_cell {
+template<>
+struct spline_t<1> {
   enum { radius = 1, support = 2 };
 
   HD_INLINE Scalar operator()(Scalar dx) const {
@@ -31,8 +36,9 @@ struct cloud_in_cell {
   }
 };
 
-struct triangular_shaped_cloud {
-  enum { radius = 2, support = 3 };
+template<>
+struct spline_t<2> {
+  enum { radius = 2, support = 4 };
 
   HD_INLINE Scalar operator()(Scalar dx) const {
     Scalar abs_dx = std::abs(dx);
@@ -47,7 +53,8 @@ struct triangular_shaped_cloud {
   }
 };
 
-struct piecewise_cubic {
+template<>
+struct spline_t<3> {
   enum { radius = 2, support = 4 };
 
   HD_INLINE Scalar operator()(Scalar dx) const {
@@ -63,6 +70,11 @@ struct piecewise_cubic {
     }
   }
 };
+
+using nearest_grid_point = spline_t<0>;
+using cloud_in_cell = spline_t<1>;
+using triangular_shaped_cloud = spline_t<2>;
+using piecewise_cubic = spline_t<3>;
 
 template <typename Interp, typename FloatT>
 Scalar HD_INLINE

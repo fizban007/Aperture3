@@ -51,7 +51,7 @@ vay_push_logsph_2d(data_ptrs data, size_t num, Scalar dt,
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = states[tid];
   for (size_t idx = tid; idx < num; idx += blockDim.x * gridDim.x) {
-    user_push_2d_logsph(data, idx, dt, localState);
+    user_push_2d_logsph<3>(data, idx, dt, localState);
   }
   states[tid] = localState;
 }
@@ -132,11 +132,13 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
   }
 }
 
+template <int N>
 __global__ void
 __launch_bounds__(512, 4)
-    deposit_current_2d_log_sph(data_ptrs data, size_t num,
-                               mesh_ptrs_log_sph mesh_ptrs, Scalar dt,
-                               uint32_t step, bool axis0, bool axis1) {
+    deposit_and_move_2d_log_sph(data_ptrs data, size_t num,
+                                mesh_ptrs_log_sph mesh_ptrs, Scalar dt,
+                                uint32_t step, bool axis0, bool axis1) {
+  using spline = Spline::spline_t<N>;
   auto &ptc = data.particles;
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -145,7 +147,7 @@ __launch_bounds__(512, 4)
     if (c == MAX_CELL || idx >= num) continue;
 
     // Load particle quantities
-    Interpolator2D<spline_t> interp;
+    Interpolator2D<spline> interp;
     int c1 = dev_mesh.get_c1(c);
     int c2 = dev_mesh.get_c2(c);
     auto v1 = ptc.p1[idx], v2 = ptc.p2[idx], v3 = ptc.p3[idx];
@@ -236,11 +238,11 @@ __launch_bounds__(512, 4)
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
     Scalar weight = -dev_charges[sp] * w;
 
-    int j_0 = (dc2 == -1 ? -2 : -1);
-    int j_1 = (dc2 == 1 ? 1 : 0);
-    int i_0 = (dc1 == -1 ? -2 : -1);
-    int i_1 = (dc1 == 1 ? 1 : 0);
-    Scalar djy[3] = {0.0f};
+    int j_0 = (dc2 == -1 ? -spline::radius - 1 : -spline::radius);
+    int j_1 = (dc2 == 1 ? spline::radius : spline::radius - 1);
+    int i_0 = (dc1 == -1 ? -spline::radius - 1 : -spline::radius);
+    int i_1 = (dc1 == 1 ? spline::radius : spline::radius - 1);
+    Scalar djy[spline::support + 1] = {0.0f};
     for (int j = j_0; j <= j_1; j++) {
       Scalar sy0 = interp.interpolate(-old_x2 + j + 1);
       Scalar sy1 = interp.interpolate(-new_x2 + (j + 1 - dc2));
@@ -298,11 +300,12 @@ process_j(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
 }
 
 __global__ void
-inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
+inject_ptc(data_ptrs data, size_t num, int inj_per_cell, Scalar p1,
            Scalar p2, Scalar p3, Scalar w, Scalar *surface_e,
            Scalar *surface_p, curandState *states, Scalar omega) {
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   curandState localState = states[id];
+  auto &ptc = data.particles;
   // int inject_i = dev_mesh.guard[0] + 3;
   int inject_i = dev_mesh.guard[0] + 2;
   ParticleType p_type =
@@ -325,18 +328,22 @@ inject_ptc(particle_data ptc, size_t num, int inj_per_cell, Scalar p1,
     //          dev_params.q_e * surface_p[i - dev_mesh.guard[1]],
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
-    if (dev_params.q_e * dens > 1.0f *
-                                    square(1.0f / dev_mesh.delta[1]) *
-                                    std::sin(dev_mesh.pos(1, i, 0.5f)))
+    Scalar sin_theta = std::sin(dev_mesh.pos(1, i, 0.5f));
+    if (dev_params.q_e * dens >
+        1.0f * square(1.0f / dev_mesh.delta[1]) * sin_theta)
       continue;
+    // Scalar Er = data.E1(inject_i, i);
+    // Scalar n_inj =
+    //     0.2 * std::abs(Er) / (dev_mesh.delta[0] * dev_params.q_e);
     for (int n = 0; n < inj_per_cell; n++) {
+    // for (int n = 0; n < n_inj; n++) {
       Pos_t x2 = curand_uniform(&localState);
       Scalar theta = dev_mesh.pos(1, i, x2);
       // Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       Scalar vphi = 0.0f;
-      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      // Scalar w_ptc = w * sin(theta);
+      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      Scalar w_ptc = w * sin(theta);
       // Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       Scalar gamma = std::sqrt(1.0 + p1 * p1 + vphi * vphi);
       float u = curand_uniform(&localState);
@@ -706,7 +713,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     if (data.particles.number() > 0) {
       // m_J1.initialize();
       // m_J2.initialize();
-      Kernels::deposit_current_2d_log_sph<<<256, 512>>>(
+      Kernels::deposit_and_move_2d_log_sph<3><<<256, 512>>>(
           data_p, data.particles.number(), mesh_ptrs, dt, step,
           m_env.is_boundary(2), m_env.is_boundary(3));
       CudaCheckError();
@@ -845,8 +852,8 @@ ptc_updater_logsph::inject_ptc(sim_data &data, int inj_per_cell,
         m_surface_e.dev_ptr(), m_surface_p.dev_ptr());
     CudaCheckError();
     Kernels::inject_ptc<<<128, 256>>>(
-        data.particles.data(), data.particles.number(), inj_per_cell,
-        p1, p2, p3, w, m_surface_e.dev_ptr(), m_surface_p.dev_ptr(),
+        get_data_ptrs(data), data.particles.number(), inj_per_cell, p1,
+        p2, p3, w, m_surface_e.dev_ptr(), m_surface_p.dev_ptr(),
         (curandState *)data.d_rand_states, omega);
     CudaCheckError();
 
