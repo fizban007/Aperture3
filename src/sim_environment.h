@@ -12,7 +12,8 @@
 #include <memory>
 #include <random>
 #include <string>
-#include "utils/mpi_comm.h"
+// #include "utils/mpi_comm.h"
+#include <mpi.h>
 
 namespace Aperture {
 
@@ -33,6 +34,15 @@ class sim_environment {
   // void setup_local_grid(Grid& local_grid, const Grid& super_grid,
   //                       const domain_info& info);
   void setup_local_grid();
+
+  template <typename T>
+  void send_array_guard_cells(multi_array<T>& array);
+  template <typename T>
+  void send_array_guard_cells_x(multi_array<T>& array, int dir);
+  template <typename T>
+  void send_array_guard_cells_y(multi_array<T>& array, int dir);
+  template <typename T>
+  void send_array_guard_cells_z(multi_array<T>& array, int dir);
 
   /// generate a random number between 0 and 1, useful for setting up
   /// things
