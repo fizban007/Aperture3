@@ -62,14 +62,14 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
     throw std::range_error("Destination extent is too large!");
   }
 
+  cudaExtent cuda_ext =
+      make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
+
   // Here we use the convention of:
   // cudaMemcpyHostToHost = 0
   // cudaMemcpyHostToDevice = 1
   // cudaMemcpyDeviceToHost = 2
   // cudaMemcpyDeviceToDevice = 3
-
-  cudaExtent cuda_ext =
-      make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 
   cudaMemcpy3DParms copy_parms = {0};
   if (type < 2) { // Copying from host
