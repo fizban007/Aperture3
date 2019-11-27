@@ -11,6 +11,7 @@ namespace Aperture {
 
 namespace Kernels {
 
+template <int N>
 __device__ __forceinline__ void
 user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
                     curandState& state) {
@@ -27,7 +28,8 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
   }
 
   // Load particle quantities
-  Interpolator2D<spline_t> interp;
+  // Interpolator2D<spline_t> interp;
+  Interpolator2D<Spline::spline_t<N>> interp;
   auto flag = ptc.flag[idx];
   int sp = get_ptc_type(flag);
   auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];

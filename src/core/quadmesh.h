@@ -28,9 +28,10 @@ struct Quadmesh {
   int offset[3];
   int dimension;
 
-  HOST_DEVICE Quadmesh() {  //!< Default constructor
-// Only define an empty constructor when compiling with Cuda enabled.
-// This allows declaring a quadmesh in __constant__ memory.
+  /// Default constructor
+  /// Only define an empty constructor when compiling with Cuda enabled.
+  /// This allows declaring a quadmesh in __constant__ memory.
+  HOST_DEVICE Quadmesh() {
 #ifndef __CUDACC__
     // Initialize all quantities to zero, and dimensions to 1
     for (int i = 0; i < 3; i++) {
