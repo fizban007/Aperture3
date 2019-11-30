@@ -50,13 +50,13 @@ class cu_array {
   void free_mem();
 
   /// Sync the content between host and device
-  void sync_to_device(int devId);
+  void copy_to_device(int devId);
 
   /// Sync the content between host and device
-  void sync_to_device();
+  void copy_to_device();
 
   /// Sync the content between host and device
-  void sync_to_host();
+  void copy_to_host();
 
   /// Set the whole array to a single initial value on the host
   void assign(const data_type& value);

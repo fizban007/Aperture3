@@ -40,7 +40,7 @@ sim_data::sim_data(const sim_environment& e)
 
   ph_flux = multi_array<Scalar>(Extent(200, 256));
   ph_flux.assign_dev(0.0f);
-  ph_flux.sync_to_host();
+  ph_flux.copy_to_host();
 
   Rho.resize(num_species);
   gamma.resize(num_species);
@@ -81,36 +81,36 @@ sim_data::sort_particles() {
 }
 
 void
-sim_data::sync_to_host() {
+sim_data::copy_to_host() {
   Logger::print_info("Sync E");
-  E.sync_to_host();
+  E.copy_to_host();
   Logger::print_info("Sync B");
-  B.sync_to_host();
+  B.copy_to_host();
   Logger::print_info("Sync J");
-  J.sync_to_host();
+  J.copy_to_host();
   Logger::print_info("Sync rho");
   for (int n = 0; n < num_species; n++)
-    Rho[n].sync_to_host();
+    Rho[n].copy_to_host();
   Logger::print_info("Sync gamma");
   for (int n = 0; n < num_species; n++)
-    gamma[n].sync_to_host();
+    gamma[n].copy_to_host();
   Logger::print_info("Sync ptc_num");
   for (int n = 0; n < num_species; n++)
-    ptc_num[n].sync_to_host();
+    ptc_num[n].copy_to_host();
   Logger::print_info("Sync divE");
-  divE.sync_to_host();
+  divE.copy_to_host();
   Logger::print_info("Sync divB");
-  divB.sync_to_host();
+  divB.copy_to_host();
   Logger::print_info("Sync EdotB");
-  EdotB.sync_to_host();
+  EdotB.copy_to_host();
   Logger::print_info("Sync photon_produced");
-  photon_produced.sync_to_host();
+  photon_produced.copy_to_host();
   Logger::print_info("Sync pair_produced");
-  pair_produced.sync_to_host();
+  pair_produced.copy_to_host();
   Logger::print_info("Sync photon_num");
-  photon_num.sync_to_host();
+  photon_num.copy_to_host();
   Logger::print_info("Sync ph_flux");
-  ph_flux.sync_to_host();
+  ph_flux.copy_to_host();
 }
 
 }

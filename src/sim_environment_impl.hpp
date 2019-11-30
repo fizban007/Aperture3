@@ -1,8 +1,8 @@
 #ifndef __SIM_ENVIRONMENT_IMPL_H_
 #define __SIM_ENVIRONMENT_IMPL_H_
 
-#include "grids/grid_log_sph.h"
 #include "grids/grid_1dgr.h"
+#include "grids/grid_log_sph.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
@@ -11,7 +11,6 @@
 // #include "domain_communicator.h"
 
 namespace Aperture {
-
 
 sim_environment::sim_environment(int* argc, char*** argv)
     : m_generator(), m_dist(0.0, 1.0) {
@@ -128,8 +127,9 @@ sim_environment::setup_domain(int num_nodes) {
   int ndims = m_super_grid->dim();
 
   // Split the whole world into number of cartesian dimensions
-  Logger::print_info("nodes from params file is {}x{}x{}", m_params.nodes[0],
-                     m_params.nodes[1], m_params.nodes[2]);
+  Logger::print_info("nodes from params file is {}x{}x{}",
+                     m_params.nodes[0], m_params.nodes[1],
+                     m_params.nodes[2]);
   int dims[3] = {1, 1, 1};
   int total_dim = 1;
   for (int i = 0; i < 3; i++) {
@@ -161,16 +161,19 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
   for (int i = 0; i < 3; i++) m_domain_info.cart_dims[i] = dims[i];
 
   // Create a cartesian MPI group for communication
-  MPI_Cart_create(m_world, 3, dims, m_domain_info.is_periodic, true, &m_cart);
+  MPI_Cart_create(m_world, 3, dims, m_domain_info.is_periodic, true,
+                  &m_cart);
 
   // Obtain the mpi coordinate of the current rank
-  MPI_Cart_coords(m_cart, m_domain_info.rank, 3, m_domain_info.cart_coord);
+  MPI_Cart_coords(m_cart, m_domain_info.rank, 3,
+                  m_domain_info.cart_coord);
 
   Logger::print_info("Domain created with dimensions {} x {} x {}",
-                      dimx, dimy, dimz);
+                     dimx, dimy, dimz);
   Logger::print_info("Rank {} has coords {}, {}, {}",
-                      m_domain_info.rank, m_domain_info.cart_coord[0],
-                      m_domain_info.cart_coord[1], m_domain_info.cart_coord[2]);
+                     m_domain_info.rank, m_domain_info.cart_coord[0],
+                     m_domain_info.cart_coord[1],
+                     m_domain_info.cart_coord[2]);
 
   // Initialize domain_info
   // m_domain_info.rank_map.resize(dimz);
@@ -199,14 +202,14 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
   m_domain_info.neighbor_right[2] = zright;
   if (zleft < 0) m_domain_info.is_boundary[4] = true;
   if (zright < 0) m_domain_info.is_boundary[5] = true;
-
 }
 
 void
 sim_environment::setup_local_grid() {
   if (m_params.coord_system == "LogSpherical") {
     m_grid.reset(new Grid_LogSph());
-  } else if (m_params.coord_system == "1DGR" && m_super_grid->dim() == 1) {
+  } else if (m_params.coord_system == "1DGR" &&
+             m_super_grid->dim() == 1) {
     m_grid.reset(new Grid_1dGR());
   } else {
     m_grid.reset(new Grid());
@@ -221,10 +224,11 @@ sim_environment::setup_local_grid() {
       // m_params.lower[d] += m_domain_info.cart_pos[d] *
       // m_params.size[d];
       mesh.dims[d] = mesh.reduced_dim(d) / m_domain_info.cart_dims[d] +
-          2 * mesh.guard[d];
+                     2 * mesh.guard[d];
       mesh.sizes[d] /= m_domain_info.cart_dims[d];
       mesh.lower[d] += m_domain_info.cart_coord[d] * mesh.sizes[d];
-      mesh.offset[d] = m_domain_info.cart_coord[d] * mesh.reduced_dim(d);
+      mesh.offset[d] =
+          m_domain_info.cart_coord[d] * mesh.reduced_dim(d);
       Logger::print_info("offset[{}] is {}", d, mesh.offset[d]);
     }
   }
@@ -232,10 +236,10 @@ sim_environment::setup_local_grid() {
 
   m_send_buffers.resize(3);
   m_recv_buffers.resize(3);
-  m_send_buffers[0] = multi_array<Scalar>(
-      mesh.guard[0], mesh.dims[1], mesh.dims[2]);
-  m_recv_buffers[0] = multi_array<Scalar>(
-      mesh.guard[0], mesh.dims[1], mesh.dims[2]);
+  m_send_buffers[0] =
+      multi_array<Scalar>(mesh.guard[0], mesh.dims[1], mesh.dims[2]);
+  m_recv_buffers[0] =
+      multi_array<Scalar>(mesh.guard[0], mesh.dims[1], mesh.dims[2]);
   if (mesh.dim() > 1) {
     m_send_buffers[1] =
         multi_array<Scalar>(mesh.dims[0], mesh.guard[1], mesh.dims[2]);
@@ -251,31 +255,32 @@ sim_environment::setup_local_grid() {
 }
 
 void
-sim_environment::send_array_guard_cells(multi_array<Scalar> &array) {
-  send_array_guard_cells_x(array, -1);
-  send_array_guard_cells_x(array, 1);
-  if (m_grid->dim() >= 2) {
-    send_array_guard_cells_y(array, -1);
-    send_array_guard_cells_y(array, 1);
-  }
-  if (m_grid->dim() >= 3) {
-    send_array_guard_cells_z(array, -1);
-    send_array_guard_cells_z(array, 1);
-  }
+sim_environment::send_array_guard_cells(multi_array<Scalar>& array) {
+  send_array_guard_cells_single_dir(array, 0, -1);
+  send_array_guard_cells_single_dir(array, 0, 1);
+  send_array_guard_cells_single_dir(array, 1, -1);
+  send_array_guard_cells_single_dir(array, 1, 1);
+  send_array_guard_cells_single_dir(array, 2, -1);
+  send_array_guard_cells_single_dir(array, 2, 1);
 }
 
 void
-sim_environment::send_add_array_guard_cells(multi_array<Scalar> &array) {
-  send_add_array_guard_cells_x(array, -1);
-  send_add_array_guard_cells_x(array, 1);
-  if (m_grid->dim() >= 2) {
-    send_add_array_guard_cells_y(array, -1);
-    send_add_array_guard_cells_y(array, 1);
-  }
-  if (m_grid->dim() >= 3) {
-    send_add_array_guard_cells_z(array, -1);
-    send_add_array_guard_cells_z(array, 1);
-  }
+sim_environment::send_add_array_guard_cells(
+    multi_array<Scalar>& array) {
+  send_add_array_guard_cells_single_dir(array, 0, -1);
+  send_add_array_guard_cells_single_dir(array, 0, 1);
+  send_add_array_guard_cells_single_dir(array, 1, -1);
+  send_add_array_guard_cells_single_dir(array, 1, 1);
+  send_add_array_guard_cells_single_dir(array, 2, -1);
+  send_add_array_guard_cells_single_dir(array, 2, 1);
+  // if (m_grid->dim() >= 2) {
+  //   send_add_array_guard_cells_y(array, -1);
+  //   send_add_array_guard_cells_y(array, 1);
+  // }
+  // if (m_grid->dim() >= 3) {
+  //   send_add_array_guard_cells_z(array, -1);
+  //   send_add_array_guard_cells_z(array, 1);
+  // }
 }
 
 }  // namespace Aperture

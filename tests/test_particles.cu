@@ -62,7 +62,7 @@ TEST_CASE("Sorting particles, trivial", "[Particles]") {
     ptc.data().cell[i] = i / 64 + dist(gen);
   }
   ptc.set_num(N);
-  ptc.sync_to_device(0);
+  ptc.copy_to_device(0);
 
   timer::stamp();
   auto ptr_cell = thrust::device_pointer_cast(ptc.data().cell);
@@ -91,7 +91,7 @@ TEST_CASE("Sorting particles, using cub", "[Particles]") {
   int deviceId;
   cudaGetDevice(&deviceId);
   cudaGetDeviceProperties(&p, deviceId);
-  ptc.sync_to_device(deviceId);
+  ptc.copy_to_device(deviceId);
 
   uint32_t* cell_alt;
   float* x1_alt;

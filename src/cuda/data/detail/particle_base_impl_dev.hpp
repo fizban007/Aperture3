@@ -394,7 +394,7 @@ particle_base_dev<ParticleClass>::rearrange_arrays(
 
 // template <typename ParticleClass>
 // void
-// particle_base_dev<ParticleClass>::sync_to_device(int deviceId) {
+// particle_base_dev<ParticleClass>::copy_to_device(int deviceId) {
 //   // boost::fusion::for_each(m_data, sync_dev(deviceId, m_number));
 //   visit_struct::for_each(m_data, sync_dev(deviceId, m_number));
 //   cudaDeviceSynchronize();
@@ -402,7 +402,7 @@ particle_base_dev<ParticleClass>::rearrange_arrays(
 
 // template <typename ParticleClass>
 // void
-// particle_base_dev<ParticleClass>::sync_to_host() {
+// particle_base_dev<ParticleClass>::copy_to_host() {
 //   // boost::fusion::for_each(m_data, sync_dev(cudaCpuDeviceId,
 //   // m_number));
 //   visit_struct::for_each(m_data, sync_dev(cudaCpuDeviceId,

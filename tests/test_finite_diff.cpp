@@ -29,10 +29,10 @@ class FiniteDiffTests {
     v.initialize();
     f.initialize();
     u_comp.initialize();
-    u.sync_to_host();
-    v.sync_to_host();
-    f.sync_to_host();
-    u_comp.sync_to_host();
+    u.copy_to_host();
+    v.copy_to_host();
+    f.copy_to_host();
+    u_comp.copy_to_host();
     init_u();
   }
 
@@ -47,7 +47,7 @@ class FiniteDiffTests {
     u.initialize(2, [](Scalar x1, Scalar x2, Scalar x3) {
                       return 1.0 * x1 * x2 * x3;
                     });
-    u.sync_to_device();
+    u.copy_to_device();
   }
 
   void init_comp() {
@@ -83,7 +83,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like E", "[FiniteDiff]") {
   Logger::print_info("Curl took {}ms, overall bandwidth is {}GB/s", time,
                      mesh.size()*sizeof(Scalar)*6.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
-  v.sync_to_host();
+  v.copy_to_host();
   for (int k = 0; k < mesh.dims[2]; k+=4) {
     for (int j = 0; j < mesh.dims[1]; j+=4) {
       for (int i = 0; i < mesh.dims[0]; i+=4) {
@@ -115,8 +115,8 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like B", "[FiniteDiff]") {
   u.set_stagger(1, 0b101);
   u.set_stagger(2, 0b011);
   init_u();
-  // u.sync_to_host();
-  // v.sync_to_host();
+  // u.copy_to_host();
+  // v.copy_to_host();
   CHECK(v(0, half, half, half) == 0.0f);
   u_comp.set_stagger(0, 0b001);
   u_comp.set_stagger(1, 0b010);
@@ -136,7 +136,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, stagger like B", "[FiniteDiff]") {
   Logger::print_info("Curl took {}ms, overall bandwidth is {}GB/s", time,
                      mesh.size()*sizeof(Scalar)*6.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
-  v.sync_to_host();
+  v.copy_to_host();
   for (int k = 0; k < mesh.dims[2]; k+=4) {
     for (int j = 0; j < mesh.dims[1]; j+=4) {
       for (int i = 0; i < mesh.dims[0]; i+=4) {
@@ -182,7 +182,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
   Logger::print_info("Curl old method took {}ms, overall bandwidth is {}GB/s", time,
                      mesh.size()*sizeof(Scalar)*6.0*1.0e-6/time);
   // timer::show_duration_since_stamp("Taking curl", "ms");
-  v.sync_to_host();
+  v.copy_to_host();
   for (int k = 0; k < mesh.dims[2]; k+=4) {
     for (int j = 0; j < mesh.dims[1]; j+=4) {
       for (int i = 0; i < mesh.dims[0]; i+=4) {
@@ -220,7 +220,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
 //   u.initialize(2, [](Scalar x1, Scalar x2, Scalar x3) {
 //                     return 0.0;
 //                   });
-//   u.sync_to_device();
+//   u.copy_to_device();
 
 //   timer::stamp();
 //   // Compute the curl and add the result to v
@@ -232,7 +232,7 @@ TEST_CASE_METHOD(FiniteDiffTests, "Curl, old method", "[FiniteDiff]") {
 //   auto time = timer::get_duration_since_stamp("ms") / (float)N;
 //   Logger::print_info("Div took {}ms, overall bandwidth is {}GB/s", time,
 //                      mesh.size()*sizeof(Scalar)*4.0*1.0e-6/time);
-//   f.sync_to_host();
+//   f.copy_to_host();
 
 //   for (int k = 0; k < mesh.dims[2]; k+=4) {
 //     for (int j = 0; j < mesh.dims[1]; j+=4) {

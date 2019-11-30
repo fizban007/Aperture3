@@ -38,7 +38,7 @@ multi_array<T>::copy_from(const self_type& other) {
   myParms.kind = cudaMemcpyDeviceToDevice;
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
-  // sync_to_host();
+  // copy_to_host();
 }
 
 template <typename T>
@@ -50,18 +50,7 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
   if (type == (int)cudaMemcpyDefault)
     type = (int)cudaMemcpyDeviceToDevice;
 
-  // Check dimensions
-  if (idx_src.x + ext.x > other.m_extent.x ||
-      idx_src.y + ext.y > other.m_extent.y ||
-      idx_src.z + ext.z > other.m_extent.z) {
-    throw std::range_error("Source extent is too large!");
-  }
-  if (idx_dst.x + ext.x > m_extent.x ||
-      idx_dst.y + ext.y > m_extent.y ||
-      idx_dst.z + ext.z > m_extent.z) {
-    throw std::range_error("Destination extent is too large!");
-  }
-
+  check_dimensions(other, idx_src, idx_dst, ext);
   cudaExtent cuda_ext =
       make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 
@@ -70,31 +59,61 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
   // cudaMemcpyHostToDevice = 1
   // cudaMemcpyDeviceToHost = 2
   // cudaMemcpyDeviceToDevice = 3
-
   cudaMemcpy3DParms copy_parms = {0};
-  if (type < 2) { // Copying from host
+  if (type < 2) {  // Copying from host
     copy_parms.srcPtr = make_cudaPitchedPtr(
-        other.host_ptr(), other.m_extent.x * sizeof(T), other.m_extent.x,
-        other.m_extent.y);
-  } else { // Copying from dev
-    copy_parms.srcPtr = make_cudaPitchedPtr(
-        other.dev_ptr(), other.m_pitch, other.m_extent.x,
-        other.m_extent.y);
+        other.host_ptr(), other.m_extent.x * sizeof(T),
+        other.m_extent.x, other.m_extent.y);
+  } else {  // Copying from dev
+    copy_parms.srcPtr =
+        make_cudaPitchedPtr(other.dev_ptr(), other.m_pitch,
+                            other.m_extent.x, other.m_extent.y);
   }
   copy_parms.srcPos =
       make_cudaPos(idx_src.x * sizeof(T), idx_src.y, idx_src.z);
-  if (type % 2 == 0) { // Copying to host
+  if (type % 2 == 0) {  // Copying to host
     copy_parms.dstPtr = make_cudaPitchedPtr(
         m_data_h, m_extent.x * sizeof(T), m_extent.x, m_extent.y);
-  } else { // Copying to device
-    copy_parms.dstPtr = make_cudaPitchedPtr(
-        m_data_d, m_pitch, m_extent.x, m_extent.y);
+  } else {  // Copying to device
+    copy_parms.dstPtr =
+        make_cudaPitchedPtr(m_data_d, m_pitch, m_extent.x, m_extent.y);
   }
   copy_parms.dstPos =
       make_cudaPos(idx_dst.x * sizeof(T), idx_dst.y, idx_dst.z);
   copy_parms.extent = cuda_ext;
   copy_parms.kind = (cudaMemcpyKind)type;
   CudaSafeCall(cudaMemcpy3D(&copy_parms));
+}
+
+template <typename T>
+void
+multi_array<T>::add_from(self_type& other, const Index& idx_src,
+                         const Index& idx_dst, const Extent& ext) {
+  check_dimensions(other, idx_src, idx_dst, ext);
+
+  // By default, this only carries out the addition on device, so we
+  // first need to copy to device
+  other.copy_to_device();
+
+  if (dim() == 3) {
+    dim3 gridSize(8, 16, 16);
+    dim3 blockSize(32, 8, 4);
+    Kernels::map_array_binary_op<T><<<gridSize, blockSize>>>(
+        get_cudaPitchedPtr(other), get_cudaPitchedPtr(*this), idx_src,
+        idx_dst, ext, detail::Op_PlusAssign<T>{});
+  } else if (dim() == 2) {
+    dim3 gridSize(16, 32);
+    dim3 blockSize(32, 8);
+    Kernels::map_array_binary_op_2d<T><<<gridSize, blockSize>>>(
+        get_cudaPitchedPtr(other), get_cudaPitchedPtr(*this), idx_src,
+        idx_dst, ext, detail::Op_PlusAssign<T>{});
+  } else {
+    Kernels::map_array_binary_op_1d<T><<<128, 512>>>(
+        get_cudaPitchedPtr(other), get_cudaPitchedPtr(*this), idx_src,
+        idx_dst, ext, detail::Op_PlusAssign<T>{});
+  }
+  CudaSafeCall(cudaDeviceSynchronize());
+  CudaCheckError();
 }
 
 template <typename T>
@@ -157,7 +176,7 @@ multi_array<T>::assign_dev(const T& value) {
 
 template <typename T>
 void
-multi_array<T>::sync_to_host() {
+multi_array<T>::copy_to_host() {
   cudaMemcpy3DParms myParms = {};
   myParms.srcPtr = make_cudaPitchedPtr(
       m_data_d, m_pitch, m_extent.width(), m_extent.height());
@@ -176,7 +195,7 @@ multi_array<T>::sync_to_host() {
 
 template <typename T>
 void
-multi_array<T>::sync_to_device() {
+multi_array<T>::copy_to_device() {
   cudaMemcpy3DParms myParms = {};
   myParms.srcPtr =
       make_cudaPitchedPtr(m_data_h, sizeof(T) * m_extent.width(),

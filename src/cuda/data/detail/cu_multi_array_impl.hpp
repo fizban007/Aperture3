@@ -109,7 +109,7 @@ cu_multi_array<T>::copy_from(const self_type& other) {
   myParms.kind = cudaMemcpyDeviceToDevice;
 
   CudaSafeCall(cudaMemcpy3D(&myParms));
-  // sync_to_host();
+  // copy_to_host();
   // auto ptr = thrust::device_pointer_cast(_data_d);
   // auto ptr_other = thrust::device_pointer_cast(other._data_d);
   // thrust::copy_n(ptr_other, _size, ptr);
@@ -202,14 +202,14 @@ cu_multi_array<T>::resize(Extent extent) {
 
 // template <typename T>
 // void
-// cu_multi_array<T>::sync_to_device(int devId) {
+// cu_multi_array<T>::copy_to_device(int devId) {
 //   // CudaSafeCall(cudaMemPrefetchAsync(_data, _size * sizeof(T),
 //   // devId));
 // }
 
 template <typename T>
 void
-cu_multi_array<T>::sync_to_device() {
+cu_multi_array<T>::copy_to_device() {
   // CudaSafeCall(cudaSetDevice(_devId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = make_cudaPitchedPtr(this->_data, this->_pitch,
@@ -229,7 +229,7 @@ cu_multi_array<T>::sync_to_device() {
 
 template <typename T>
 void
-cu_multi_array<T>::sync_to_host() {
+cu_multi_array<T>::copy_to_host() {
   // CudaSafeCall(cudaSetDevice(_devId));
   cudaMemcpy3DParms myParms = {0};
   myParms.srcPtr = _data_d;

@@ -71,6 +71,10 @@ class multi_array {
   void copy_from(self_type& other, const Index& idx_src,
                  const Index& idx_dst, const Extent& ext, int type = 0);
 
+  /// Copy a subset from another array
+  void add_from(self_type& other, const Index& idx_src,
+                const Index& idx_dst, const Extent& ext);
+
   /// Set the whole array to a single initial value on host
   void assign(const T& value);
 
@@ -84,10 +88,14 @@ class multi_array {
   void resize(Extent extent);
 
   /// Copy the content from host to device
-  void sync_to_device();
+  void copy_to_device();
 
   /// Copy the content from device to host
-  void sync_to_host();
+  void copy_to_host();
+
+  /// Check dimensions for a subarray to fit
+  void check_dimensions(self_type& other, const Index& idx_src,
+                        const Index& idx_dst, const Extent& ext) const;
 
   // Returns various sizes of the array
   int width() const { return m_extent.width(); }
@@ -96,6 +104,7 @@ class multi_array {
   size_t size() const { return m_size; }
   const Extent& extent() const { return m_extent; }
   size_t pitch() const { return m_pitch; }
+  int dim() const;
 
   // Direct access to the encapsulated pointers
   T* host_ptr() { return m_data_h; }

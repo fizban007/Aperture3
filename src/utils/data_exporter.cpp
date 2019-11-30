@@ -388,7 +388,7 @@ data_exporter::load_from_snapshot(sim_data& data, uint32_t step,
 void
 data_exporter::write_output(sim_data& data, uint32_t timestep,
                             double time) {
-  data.sync_to_host();
+  data.copy_to_host();
 
   if (!m_xmf.is_open()) {
     m_xmf.open(outputDirectory + "data.xmf");

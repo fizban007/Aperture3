@@ -253,9 +253,9 @@ inverse_compton::inverse_compton(const SimParams& params)
     m_gammas[n] = exp(log(MIN_GAMMA) + m_dg * (Scalar)n);
   }
 
-  m_ep.sync_to_device();
-  m_gammas.sync_to_device();
-  m_log_ep.sync_to_device();
+  m_ep.copy_to_device();
+  m_gammas.copy_to_device();
+  m_log_ep.copy_to_device();
 
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_ic_dep, &m_dep, sizeof(Scalar)));
@@ -307,7 +307,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
   //     emin, m_gammas.size());
   // cudaDeviceSynchronize();
   // CudaCheckError();
-  // m_ic_rate.sync_to_host();
+  // m_ic_rate.copy_to_host();
   for (uint32_t n = 0; n < m_ic_rate.size(); n++) {
     double gamma = m_gammas[n];
     // Logger::print_info("gamma is {}", gamma);
@@ -332,7 +332,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
     // Logger::print_info("IC rate is {}", m_ic_rate[n]);
   }
   // m_ic_rate[0] = 1.0;
-  m_ic_rate.sync_to_device();
+  m_ic_rate.copy_to_device();
 
   // TODO: Precalculate gamma-gamma rate
   Logger::print_info(
@@ -366,7 +366,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
     }
   }
   // m_gg_rate[0] = 1.0;
-  m_gg_rate.sync_to_device();
+  m_gg_rate.copy_to_device();
 
   Logger::print_info("Pre-calculating the lab-frame spectrum");
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
@@ -394,7 +394,7 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
     }
   }
 
-  m_dNde.sync_to_device();
+  m_dNde.copy_to_device();
   Logger::print_info("Finished copying m_dNde to device");
 
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
@@ -421,10 +421,10 @@ inverse_compton::init(const F& n_e, Scalar emin, Scalar emax,
     }
   }
 
-  m_dNde_thomson.sync_to_device();
+  m_dNde_thomson.copy_to_device();
   Logger::print_info("Finished copying m_dNde_thomson to device");
-  // m_npep.sync_to_device();
-  // m_dnde1p.sync_to_device();
+  // m_npep.copy_to_device();
+  // m_dnde1p.copy_to_device();
 }
 
 int

@@ -156,15 +156,15 @@ main(int argc, char* argv[]) {
   DataSet data_energies = datafile.createDataSet<Scalar>(
       "e_Maxwellian", DataSpace(g_M.size()));
   data_energies.write(g_M.data());
-  g_M.sync_to_device();
+  g_M.copy_to_device();
   DataSet data_PL1 =
       datafile.createDataSet<Scalar>("e_PL1", DataSpace(g_PL1.size()));
   data_PL1.write(g_PL1.data());
-  g_PL1.sync_to_device();
+  g_PL1.copy_to_device();
   DataSet data_PL2 =
       datafile.createDataSet<Scalar>("e_PL2", DataSpace(g_PL2.size()));
   data_PL2.write(g_PL2.data());
-  g_PL2.sync_to_device();
+  g_PL2.copy_to_device();
   cudaDeviceSynchronize();
   // timer::stamp();
   ic.generate_photon_energies(eph_M, g_M);
@@ -177,9 +177,9 @@ main(int argc, char* argv[]) {
     eph_M[i] = ic.gen_photon_e(g_M[i]);
   }
   // timer::show_duration_since_stamp("gen photon energies on cpu",
-  // "ms"); eph_M.sync_to_host();
-  eph_PL1.sync_to_host();
-  eph_PL2.sync_to_host();
+  // "ms"); eph_M.copy_to_host();
+  eph_PL1.copy_to_host();
+  eph_PL2.copy_to_host();
   std::vector<Scalar> test_e_M(N_samples);
   std::vector<Scalar> test_e_PL1(N_samples);
   std::vector<Scalar> test_e_PL2(N_samples);
@@ -222,7 +222,7 @@ main(int argc, char* argv[]) {
     g_mono.assign_dev(pow(10.0, n));
     ic.generate_photon_energies(eph_mono, g_mono);
     cudaDeviceSynchronize();
-    eph_mono.sync_to_host();
+    eph_mono.copy_to_host();
     for (uint32_t i = 0; i < N_samples; i++) {
       test_mono[i] = eph_mono[i];
     }

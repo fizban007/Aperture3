@@ -158,7 +158,7 @@ triplet_pairs::triplet_pairs(const SimParams &params)
   for (uint32_t n = 0; n < m_gammas.size(); n++) {
     m_gammas[n] = exp(log(MIN_GAMMA) + m_dg * (Scalar)n);
   }
-  m_gammas.sync_to_device();
+  m_gammas.copy_to_device();
 
   CudaSafeCall(
       cudaMemcpyToSymbol(Kernels::dev_tpp_dg, &m_dg, sizeof(Scalar)));
@@ -227,8 +227,8 @@ triplet_pairs::init(const F &n_e, Scalar emin, Scalar emax, double n0) {
       Logger::print_info("TPP Em at gamma {} is {}", gamma, m_Em[n]);
     }
   }
-  m_rate.sync_to_device();
-  m_Em.sync_to_device();
+  m_rate.copy_to_device();
+  m_Em.copy_to_device();
 
   Logger::print_info(
       "Pre-calculating the triplet pair spectrum");
@@ -272,7 +272,7 @@ triplet_pairs::init(const F &n_e, Scalar emin, Scalar emax, double n0) {
       m_dNde(i, n) /= m_dNde(m_gammas.size() - 1, n);
     }
   }
-  m_dNde.sync_to_device();
+  m_dNde.copy_to_device();
 }
 
 template void triplet_pairs::init<Spectra::power_law_hard>(

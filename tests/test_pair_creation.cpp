@@ -28,11 +28,11 @@ TEST_CASE("Producing photons", "[Photons]") {
   for (uint32_t j = 0; j < ptc.number(); j++) {
     Logger::print_info("p = {}", ptc.data().p1[j]);
   }
-  ptc.sync_to_device();
+  ptc.copy_to_device();
   for (int i = 0; i < 3; i++) {
     rad.emit_photons(photons, ptc);
-    ptc.sync_to_host();
-    photons.sync_to_host();
+    ptc.copy_to_host();
+    photons.copy_to_host();
     Logger::print_info("Current Particle momenta:");
     for (uint32_t j = 0; j < ptc.number(); j++) {
       Logger::print_info("p = {}", ptc.data().p1[j]);
@@ -65,12 +65,12 @@ TEST_CASE("ICPL", "[Photons]") {
   // for (uint32_t j = 0; j < ptc.number(); j++) {
   //   Logger::print_info("p = {}", ptc.data().p1[j]);
   // }
-  ptc.sync_to_device();
+  ptc.copy_to_device();
   for (int i = 0; i < 3; i++) {
     rad.emit_photons(photons, ptc);
     rad.produce_pairs(ptc, photons);
-    // ptc.sync_to_host();
-    // photons.sync_to_host();
+    // ptc.copy_to_host();
+    // photons.copy_to_host();
     // Logger::print_info("Current Particle momenta:");
     // for (uint32_t j = 0; j < ptc.number(); j++) {
     //   Logger::print_info("p = {}", ptc.data().p1[j]);
@@ -78,7 +78,7 @@ TEST_CASE("ICPL", "[Photons]") {
     // Logger::print_info("-------");
   }
   photons.sort_by_cell();
-  photons.sync_to_host();
+  photons.copy_to_host();
   Logger::print_info("There are {} photons at the end",
                      photons.number());
   for (uint32_t j = 0; j < photons.number(); j++) {

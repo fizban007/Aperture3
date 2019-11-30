@@ -140,6 +140,34 @@ multi_array<T>::resize(Extent extent) {
   resize(extent.width(), extent.height(), extent.depth());
 }
 
+template <typename T>
+int
+multi_array<T>::dim() const {
+  if (m_extent.depth() > 1)
+    return 3;
+  else if (m_extent.height() > 1)
+    return 2;
+  else
+    return 1;
+}
+
+template <typename T>
+void
+multi_array<T>::check_dimensions(self_type& other, const Index& idx_src,
+                                 const Index& idx_dst, const Extent& ext) const {
+    // Check dimensions
+  if (idx_src.x + ext.x > other.m_extent.x ||
+      idx_src.y + ext.y > other.m_extent.y ||
+      idx_src.z + ext.z > other.m_extent.z) {
+    throw std::range_error("Source extent is too large!");
+  }
+  if (idx_dst.x + ext.x > m_extent.x ||
+      idx_dst.y + ext.y > m_extent.y ||
+      idx_dst.z + ext.z > m_extent.z) {
+    throw std::range_error("Destination extent is too large!");
+  }
+}
+
 }  // namespace Aperture
 
 #endif  // __MULTI_ARRAY_IMPL_H_

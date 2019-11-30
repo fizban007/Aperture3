@@ -166,7 +166,7 @@ main(int argc, char *argv[]) {
     // Inject particles
     if (env.params().inject_particles && step % 2 == 0)
       ptc_updater.inject_ptc(
-          data, 2, 0.0, 0.0, 0.0,
+          data, 3, 0.05, 0.0, 0.0,
           // 1.1 * omega / env.params().omega, omega);
           1.0, omega);
 

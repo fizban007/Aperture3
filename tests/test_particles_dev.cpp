@@ -25,7 +25,7 @@ using namespace Aperture;
 
 //   // ptc.compute_tile_num();
 
-//   ptc.sync_to_device(0);
+//   ptc.copy_to_device(0);
 
 //   timer::stamp();
 //   ptc.sort_by_cell();
