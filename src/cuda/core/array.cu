@@ -43,7 +43,7 @@ array<T>::copy_to_host() {
                           cudaMemcpyDeviceToHost));
 }
 
-/// Set part of the array to a single initial value on the host
+/// Set part of the array to a single initial value on the device
 template <typename T>
 void
 array<T>::assign_dev(const data_type& value, size_t num) {

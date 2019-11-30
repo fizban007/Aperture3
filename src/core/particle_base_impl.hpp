@@ -1,13 +1,13 @@
 #ifndef __PARTICLE_BASE_IMPL_H_
 #define __PARTICLE_BASE_IMPL_H_
 
-#include "particle_base.h"
 #include "core/constant_defs.h"
+#include "particle_base.h"
 #include "utils/for_each_arg.hpp"
-#include "utils/util_functions.h"
 #include "utils/logger.h"
 #include "utils/memory.h"
 #include "utils/timer.h"
+#include "utils/util_functions.h"
 
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
@@ -77,7 +77,7 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
         typename std::remove_reference<decltype(x)>::type>(p);
   });
   visit_struct::for_each(m_tracked, [alignment](const char* name,
-                                                      auto& x) {
+                                                auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     void* p = aligned_malloc(MAX_TRACKED * sizeof(x_type), alignment);
     x = reinterpret_cast<
@@ -85,7 +85,8 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
   });
 
   // Allocate the index array
-  m_index = (size_t*)aligned_malloc(max_num * sizeof(size_t), alignment);
+  m_index =
+      (size_t*)aligned_malloc(max_num * sizeof(size_t), alignment);
   // m_tmp_data_ptr = aligned_malloc(max_num * sizeof(double),
   // alignment);
 }
@@ -192,8 +193,30 @@ particle_base<ParticleClass>::copy_from(
 
 template <typename ParticleClass>
 void
-particle_base<ParticleClass>::copy_to_comm_buffers(std::vector<self_type> &buffers) {
+particle_base<ParticleClass>::copy_to_comm_buffers(
+    std::vector<self_type>& buffers, const Grid& grid) {
+  int num_buffers = buffers.size();
+  auto& mesh = grid.mesh();
+  std::vector<int> num_ptc(num_buffers, 0);
 
+  for (size_t n = 0; n < m_number; n++) {
+    int zone = mesh.find_zone(m_data.cell[n]);
+    if (zone == num_buffers / 2) continue;
+    if (zone > num_buffers / 2) zone -= 1;
+
+    int num = num_ptc[zone];
+    visit_struct::for_each(m_data, buffers[zone].m_data, [n, num](
+        const char* name, auto& x, auto& y) {
+      y[num] = x[n];
+      // Mark the original slot to be empty
+      if (strcmp(name, "cell") == 0)
+        x[n] = MAX_CELL;
+    });
+    num_ptc[zone] = num + 1;
+  }
+  for (int i = 0; i < num_buffers; i++) {
+    buffers[i].m_number = num_ptc[i];
+  }
 }
 
 template <typename ParticleClass>
@@ -255,7 +278,8 @@ particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
 
 template <typename ParticleClass>
 void
-particle_base<ParticleClass>::rearrange_arrays(const std::string& skip) {
+particle_base<ParticleClass>::rearrange_arrays(
+    const std::string& skip) {
   // const uint32_t padding = 100;
   ParticleClass p_tmp;
   for (Index_t i = 0; i < m_number; i++) {

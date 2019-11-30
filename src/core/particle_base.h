@@ -55,7 +55,7 @@ class particle_base {
   // 0); void copy_to_buffer(std::vector<ParticleClass>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0);
-  void copy_to_comm_buffers(std::vector<self_type>& buffers);
+  void copy_to_comm_buffers(std::vector<self_type>& buffers, const Grid& grid);
 
   void put(size_t pos, const ParticleClass& part);
   void append(const ParticleClass& part);
