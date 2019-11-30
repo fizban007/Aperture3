@@ -12,6 +12,7 @@ template <typename ParticleClass>
 class particle_base {
  protected:
   typedef typename particle_array_type<ParticleClass>::type array_type;
+  typedef particle_base<ParticleClass> self_type;
 
   array_type m_data;
   array_type m_tracked;
@@ -35,10 +36,10 @@ class particle_base {
   explicit particle_base(std::size_t max_num);
 
   /// Copy constructor
-  particle_base(const particle_base<ParticleClass>& other);
+  particle_base(const self_type& other);
 
   /// Move Constructor
-  particle_base(particle_base<ParticleClass>&& other);
+  particle_base(self_type&& other);
 
   /// Virtual destructor because we need to derive from this class.
   virtual ~particle_base();
@@ -46,7 +47,7 @@ class particle_base {
   void resize(std::size_t max_num);
   void initialize();
   void erase(std::size_t pos, std::size_t amount = 1);
-  void copy_from(const particle_base<ParticleClass>& other,
+  void copy_from(const self_type& other,
                  std::size_t num, std::size_t src_pos = 0,
                  std::size_t dest_pos = 0);
   // void copy_from(const std::vector<ParticleClass>& buffer,
@@ -54,6 +55,7 @@ class particle_base {
   // 0); void copy_to_buffer(std::vector<ParticleClass>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0);
+  void copy_to_comm_buffers(std::vector<self_type>& buffers);
 
   void put(size_t pos, const ParticleClass& part);
   void append(const ParticleClass& part);

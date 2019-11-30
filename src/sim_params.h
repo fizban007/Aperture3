@@ -21,7 +21,7 @@ struct SimParamsBase {
   int ptc_per_cell = 1;
   uint64_t max_ptc_number = 100000;
   uint64_t max_photon_number = 100000;
-  uint64_t ptc_buffer_size = 2000000;
+  uint64_t ptc_buffer_size = 100000;
   uint64_t ph_buffer_size = 100000;
   Scalar ion_mass = 1.0;
   int num_species = 3;
