@@ -338,13 +338,13 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
       Rho[i].emplace_back(*grid[n]);
       // Logger::print_debug("initialize Rho[{}]", i);
       Rho[i][n].initialize();
-      Rho[i][n].sync_to_host();
+      Rho[i][n].copy_to_host();
       gamma[i].emplace_back(*grid[n]);
       gamma[i][n].initialize();
-      gamma[i][n].sync_to_host();
+      gamma[i][n].copy_to_host();
       ptc_num[i].emplace_back(*grid[n]);
       ptc_num[i][n].initialize();
-      ptc_num[i][n].sync_to_host();
+      ptc_num[i][n].copy_to_host();
     }
 
     // init_dev_bg_fields(Ebg[n], Bbg[n]);
@@ -362,7 +362,7 @@ cu_sim_data::initialize(const cu_sim_environment &env) {
 
     photon_flux.emplace_back(Extent(200, 256));
     photon_flux[n].assign_dev(0.0);
-    photon_flux[n].sync_to_host();
+    photon_flux[n].copy_to_host();
 
   }
 

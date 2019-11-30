@@ -22,12 +22,12 @@ array<T>::free_mem() {
 /// Sync the content between host and device
 template <typename T>
 void
-array<T>::sync_to_device() {}
+array<T>::copy_to_device() {}
 
 /// Sync the content between host and device
 template <typename T>
 void
-array<T>::sync_to_host() {}
+array<T>::copy_to_host() {}
 
 template <typename T>
 void

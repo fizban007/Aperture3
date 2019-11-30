@@ -36,14 +36,10 @@ class sim_environment {
   void setup_local_grid();
 
   void send_array_guard_cells(multi_array<Scalar>& array);
-  void send_array_guard_cells_x(multi_array<Scalar>& array, int dir);
-  void send_array_guard_cells_y(multi_array<Scalar>& array, int dir);
-  void send_array_guard_cells_z(multi_array<Scalar>& array, int dir);
+  void send_array_guard_cells_single_dir(multi_array<Scalar>& array, int dim, int dir);
 
   void send_add_array_guard_cells(multi_array<Scalar>& array);
-  void send_add_array_guard_cells_x(multi_array<Scalar>& array, int dir);
-  void send_add_array_guard_cells_y(multi_array<Scalar>& array, int dir);
-  void send_add_array_guard_cells_z(multi_array<Scalar>& array, int dir);
+  void send_add_array_guard_cells_single_dir(multi_array<Scalar>& array, int dim, int dir);
 
   /// generate a random number between 0 and 1, useful for setting up
   /// things

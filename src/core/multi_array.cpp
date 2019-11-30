@@ -20,17 +20,7 @@ void
 multi_array<T>::copy_from(self_type& other, const Index& idx_src,
                           const Index& idx_dst, const Extent& ext,
                           int type) {
-  // Check dimensions
-  if (idx_src.x + ext.x > other.m_extent.x ||
-      idx_src.y + ext.y > other.m_extent.y ||
-      idx_src.z + ext.z > other.m_extent.z) {
-    throw std::range_error("Source extent is too large!");
-  }
-  if (idx_dst.x + ext.x > m_extent.x ||
-      idx_dst.y + ext.y > m_extent.y ||
-      idx_dst.z + ext.z > m_extent.z) {
-    throw std::range_error("Destination extent is too large!");
-  }
+  check_dimensions(other, idx_src, idx_dst, ext);
   for (int k = 0; k < ext.z; k++) {
     for (int j = 0; j < ext.y; j++) {
       size_t jk_src =
@@ -41,6 +31,28 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
           m_extent.width();
       for (int i = 0; i < ext.x; i++) {
         m_data_h[idx_dst.x + jk_dst + i] =
+            other.m_data_h[idx_src.x + jk_src + i];
+        // m_data_h
+      }
+    }
+  }
+}
+
+template <typename T>
+void
+multi_array<T>::add_from(self_type& other, const Index& idx_src,
+                         const Index& idx_dst, const Extent& ext) {
+  check_dimensions(other, idx_src, idx_dst, ext);
+  for (int k = 0; k < ext.z; k++) {
+    for (int j = 0; j < ext.y; j++) {
+      size_t jk_src =
+          (idx_src.y + j + (idx_src.z + k) * other.m_extent.height()) *
+          other.m_extent.width();
+      size_t jk_dst =
+          (idx_dst.y + j + (idx_dst.z + k) * m_extent.height()) *
+          m_extent.width();
+      for (int i = 0; i < ext.x; i++) {
+        m_data_h[idx_dst.x + jk_dst + i] +=
             other.m_data_h[idx_src.x + jk_src + i];
         // m_data_h
       }
@@ -72,11 +84,11 @@ multi_array<T>::assign_dev(const T& value) {}
 
 template <typename T>
 void
-multi_array<T>::sync_to_host() {}
+multi_array<T>::copy_to_host() {}
 
 template <typename T>
 void
-multi_array<T>::sync_to_device() {}
+multi_array<T>::copy_to_device() {}
 
 /////////////////////////////////////////////////////////////////
 // Explicitly instantiate the classes we will use

@@ -34,7 +34,7 @@ struct sim_data {
   void init_bg_fields();
   void check_dev_mesh();
   void compute_edotb();
-  void sync_to_host();
+  void copy_to_host();
 
   const sim_environment& env;
   vector_field<Scalar> E;

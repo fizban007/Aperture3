@@ -73,7 +73,7 @@ TEST_CASE("Copying a subset, over device", "[MultiArray]") {
 
   a.copy_from(b, Index(0, 0), Index(20, 50), Extent(n1, n2),
               (int)cudaMemcpyDeviceToDevice);
-  a.sync_to_host();
+  a.copy_to_host();
 
   for (int j = 0; j < N2; j++) {
     for (int i = 0; i < N1; i++) {

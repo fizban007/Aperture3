@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
       Logger::print_info(
           "==== On timestep {}, pushing {} particles, {} photons ====", step,
           sim.ptc_num, sim.ph_num);
-      // sim.ptc_E.sync_to_host();
+      // sim.ptc_E.copy_to_host();
       // Logger::print_info("0th particle has energy {}", sim.ptc_E[0]);
       sim.push_particles(Eacc, dt);
       sim.produce_pairs(dt);
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
           step % env.params().data_interval == 0) {
         File output_file(fmt::format("spec{:06d}.h5", step).c_str(),
                          File::ReadWrite | File::Create | File::Truncate);
-        sim.ptc_spec.sync_to_host();
-        sim.ph_spec.sync_to_host();
+        sim.ptc_spec.copy_to_host();
+        sim.ph_spec.copy_to_host();
         for (unsigned int i = 0; i < ptc_spec.size(); i++) {
           ptc_spec[i] = sim.ptc_spec[i];
           ph_spec[i] = sim.ph_spec[i];

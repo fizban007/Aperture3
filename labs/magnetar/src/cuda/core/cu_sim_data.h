@@ -29,7 +29,7 @@ struct cu_sim_data {
       cudaSetDevice(dev_map[n]);
       Bbg[n].initialize(component, f);
       Logger::print_debug("on host, B0 is {}", Bbg[n](0, 5, 4));
-      // B[n].sync_to_device();
+      // B[n].copy_to_device();
     }
   }
   template <class Func>
@@ -37,7 +37,7 @@ struct cu_sim_data {
     for (unsigned int n = 0; n < dev_map.size(); n++) {
       cudaSetDevice(dev_map[n]);
       Ebg[n].initialize(component, f);
-      // E[n].sync_to_device();
+      // E[n].copy_to_device();
     }
   }
 

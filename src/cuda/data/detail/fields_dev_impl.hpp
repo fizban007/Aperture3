@@ -21,7 +21,7 @@ cu_scalar_field<T>::initialize(const Func& f) {
       }
     }
   }
-  m_array.sync_to_device();
+  m_array.copy_to_device();
 }
 
 template <typename T>
@@ -41,7 +41,7 @@ cu_vector_field<T>::initialize(int component, const Func& f) {
       }
     }
   }
-  m_array[component].sync_to_device();
+  m_array[component].copy_to_device();
 }
 
 template <typename T>

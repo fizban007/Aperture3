@@ -353,8 +353,8 @@ RadiationTransferPulsar::emit_photons(cu_sim_data &data) {
                            ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
     CudaCheckError();
     // Logger::print_debug("Scan finished");
-    m_cumNumPerBlock[n].sync_to_host();
-    m_numPerBlock[n].sync_to_host();
+    m_cumNumPerBlock[n].copy_to_host();
+    m_numPerBlock[n].copy_to_host();
     int new_photons = m_cumNumPerBlock[n][m_blocksPerGrid - 1] +
                       m_numPerBlock[n][m_blocksPerGrid - 1];
     Logger::print_info("{} photons are produced!", new_photons);
@@ -409,8 +409,8 @@ RadiationTransferPulsar::produce_pairs(cu_sim_data &data) {
     // be the total
     thrust::exclusive_scan(ptrNumPerBlock,
                            ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
-    m_cumNumPerBlock[n].sync_to_host();
-    m_numPerBlock[n].sync_to_host();
+    m_cumNumPerBlock[n].copy_to_host();
+    m_numPerBlock[n].copy_to_host();
     int new_pairs = (m_cumNumPerBlock[n][m_blocksPerGrid - 1] +
                      m_numPerBlock[n][m_blocksPerGrid - 1]);
     Logger::print_info("{} electron-positron pairs are produced!",

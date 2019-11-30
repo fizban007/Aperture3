@@ -88,21 +88,21 @@ Grid_LogSph::compute_coef(const SimParams& params) {
     // Do not support 3d yet
   }
 
-  m_l1_e.sync_to_device();
-  m_l2_e.sync_to_device();
-  m_l3_e.sync_to_device();
-  m_l1_b.sync_to_device();
-  m_l2_b.sync_to_device();
-  m_l3_b.sync_to_device();
+  m_l1_e.copy_to_device();
+  m_l2_e.copy_to_device();
+  m_l3_e.copy_to_device();
+  m_l1_b.copy_to_device();
+  m_l2_b.copy_to_device();
+  m_l3_b.copy_to_device();
 
-  m_A1_e.sync_to_device();
-  m_A2_e.sync_to_device();
-  m_A3_e.sync_to_device();
-  m_A1_b.sync_to_device();
-  m_A2_b.sync_to_device();
-  m_A3_b.sync_to_device();
+  m_A1_e.copy_to_device();
+  m_A2_e.copy_to_device();
+  m_A3_e.copy_to_device();
+  m_A1_b.copy_to_device();
+  m_A2_b.copy_to_device();
+  m_A3_b.copy_to_device();
 
-  m_dV.sync_to_device();
+  m_dV.copy_to_device();
 }
 
 void
@@ -110,8 +110,8 @@ Grid_LogSph::compute_flux(scalar_field<Scalar> &flux,
                           vector_field<Scalar> &B,
                           vector_field<Scalar> &B_bg) const {
   flux.initialize();
-  flux.sync_to_host();
-  B.sync_to_host();
+  flux.copy_to_host();
+  B.copy_to_host();
   auto &mesh = B.grid().mesh();
 
   for (int j = mesh.guard[1]; j < mesh.dims[1] - mesh.guard[1]; j++) {

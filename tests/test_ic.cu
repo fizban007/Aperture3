@@ -48,12 +48,12 @@ TEST_CASE("testing ic scatter", "[IC]") {
   for (size_t i = 0; i < N; i++) {
     ptc_E[i] = 10.0;
   }
-  ptc_E.sync_to_device();
+  ptc_E.copy_to_device();
 
   knl_ic_scatter<<<n_blocks, n_threads>>>(ph_E.dev_ptr(), ptc_E.dev_ptr(), states, N);
   CudaCheckError();
 
-  ph_E.sync_to_host();
+  ph_E.copy_to_host();
 
   auto &log_ep = rt_ic.log_ep();
   // for (int i = 0; i < log_ep.size(); i++) {

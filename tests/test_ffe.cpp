@@ -40,7 +40,7 @@ class FFETests {
     E.initialize(2, [](Scalar x1, Scalar x2, Scalar x3) {
                       return 1.0 * x1 * x2 * x3;
                     });
-    E.sync_to_device();
+    E.copy_to_device();
     B.initialize(0, [](Scalar x1, Scalar x2, Scalar x3) {
                       return 3.0 * x2 * x2 * x3;
                     });
@@ -50,7 +50,7 @@ class FFETests {
     B.initialize(2, [](Scalar x1, Scalar x2, Scalar x3) {
                       return 1.0 * x1 * x2 * x3;
                     });
-    B.sync_to_device();
+    B.copy_to_device();
   }
 };
 

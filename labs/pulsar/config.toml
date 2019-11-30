@@ -1,8 +1,8 @@
 # Time step size
-delta_t = 0.0005
+delta_t = 0.001
 
 # Charge of an electron
-q_e = 24000.0
+q_e = 32000.0
 
 # Ion mass
 ion_mass = 1.0
@@ -38,10 +38,10 @@ r_cutoff = 3.0
 gravity_on = true
 
 # Gravity strength
-gravity = 0.001
+gravity = 0.1
 
 # Stellar compactness: r_g / R_*
-compactness = 0.5
+compactness = 0.0
 
 # Radiation cooling switch
 rad_cooling_on = true
@@ -58,10 +58,10 @@ data_dir = "/home/alex/storage/Data/Aperture3/2d_wp_experiment/"
 # data_dir = "/home/alex/storage/Data/Aperture3/gr_monopole/"
 
 # Dipole B0
-B0 = 160000.0
+B0 = 240000.0
 
 # Dipole B0
-BQ = 1600000.0
+BQ = 3200000.0
 
 # Damping coefficient
 damping_coef = 0.002
@@ -84,10 +84,10 @@ l_curv = 6.0
 
 # curvature photon characteristic energy
 # e_curv = 6.4e-9
-e_curv = 1.5e-7
+e_curv = 4.5e-7
 
 # curvature photon characteristic free path
-l_ph = 0.02
+l_ph = 0.01
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -95,17 +95,18 @@ l_ph = 0.02
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [2048, 2048, 1]
+# N = [2048, 2048, 1]
+N = [1536, 1536, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
-guard = [2, 2, 0]
+guard = [3, 3, 0]
 
 # Lower limit of the coordinate
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [3.1, 3.1415926535898, 1.0]
+size = [3.4, 3.1415926535898, 1.0]
 
 # Size of a tile of cells
 tile_size = [16, 16, 1]
@@ -118,17 +119,17 @@ random_seed = 3333
 
 # Downsample factor. 1 means no downsample at all, and n means output
 # resolution is divided by n. This should be a power of 2 as well
-downsample = 4
+downsample = 3
 
-max_steps = 400000
+max_steps = 200000
 
-data_interval = 400
+data_interval = 200
 
 snapshot_interval = 5000
 
 sort_interval = 20
 
-current_smoothing = 5
+current_smoothing = 2
 
 update_fields = true
 

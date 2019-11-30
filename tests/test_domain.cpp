@@ -34,8 +34,8 @@ TEST_CASE("Making domain", "[Domain]") {
     data.E[1].assign(2.0);
 
     env.get_sub_guard_cells(data.E);
-    data.E[0].sync_to_host();
-    data.E[1].sync_to_host();
+    data.E[0].copy_to_host();
+    data.E[1].copy_to_host();
 
     auto& mesh = data.E[0].grid().mesh();
     for (int i = 0; i < mesh.dims[0]; i++) {
@@ -61,10 +61,10 @@ TEST_CASE("Making domain", "[Domain]") {
     data.Rho[0][1].assign(0.2);
     env.send_sub_guard_cells(data.J);
     env.send_sub_guard_cells(data.Rho[0]);
-    data.J[0].sync_to_host();
-    data.J[1].sync_to_host();
-    data.Rho[0][0].sync_to_host();
-    data.Rho[0][1].sync_to_host();
+    data.J[0].copy_to_host();
+    data.J[1].copy_to_host();
+    data.Rho[0][0].copy_to_host();
+    data.Rho[0][1].copy_to_host();
     for (int i = 0; i < mesh.dims[0]; i++) {
       REQUIRE(data.J[0](0, i, mesh.dims[1] - 3) == 0.3f);
       REQUIRE(data.J[0](0, i, mesh.dims[1] - 4) == 0.3f);

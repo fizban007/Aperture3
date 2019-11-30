@@ -170,20 +170,20 @@ Grid_1dGR_dev::init(const SimParams& params) {
           m_j0[n], m_K1[n]);
     }
   }
-  m_D1.sync_to_device();
-  m_D2.sync_to_device();
-  m_D3.sync_to_device();
-  m_alpha.sync_to_device();
-  m_K1.sync_to_device();
-  m_K1_j.sync_to_device();
-  m_j0.sync_to_device();
-  m_rho0.sync_to_device();
-  m_agrr.sync_to_device();
-  m_agrf.sync_to_device();
-  m_gamma_rr.sync_to_device();
-  m_gamma_ff.sync_to_device();
-  m_beta_phi.sync_to_device();
-  m_B3B1.sync_to_device();
+  m_D1.copy_to_device();
+  m_D2.copy_to_device();
+  m_D3.copy_to_device();
+  m_alpha.copy_to_device();
+  m_K1.copy_to_device();
+  m_K1_j.copy_to_device();
+  m_j0.copy_to_device();
+  m_rho0.copy_to_device();
+  m_agrr.copy_to_device();
+  m_agrf.copy_to_device();
+  m_gamma_rr.copy_to_device();
+  m_gamma_ff.copy_to_device();
+  m_beta_phi.copy_to_device();
+  m_B3B1.copy_to_device();
 
   HF::File test_out("debug.h5", HF::File::ReadWrite | HF::File::Create |
                                     HF::File::Truncate);

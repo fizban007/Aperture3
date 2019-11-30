@@ -77,17 +77,17 @@ class field {
 
   void set_stagger(int n, Stagger stagger) { m_stagger[n] = stagger; }
 
-  void sync_to_device() {
-    for (int i = 0; i < N; i++) m_array[i].sync_to_device();
+  void copy_to_device() {
+    for (int i = 0; i < N; i++) m_array[i].copy_to_device();
   }
-  void sync_to_device(int n) {
-    m_array[n].sync_to_device();
+  void copy_to_device(int n) {
+    m_array[n].copy_to_device();
   }
-  void sync_to_host() {
-    for (int i = 0; i < N; i++) m_array[i].sync_to_host();
+  void copy_to_host() {
+    for (int i = 0; i < N; i++) m_array[i].copy_to_host();
   }
-  void sync_to_host(int n) {
-    m_array[n].sync_to_host();
+  void copy_to_host(int n) {
+    m_array[n].copy_to_host();
   }
 
  protected:
@@ -130,7 +130,7 @@ field<N, T>::initialize(int component, const Func& f) {
       }
     }
   }
-  sync_to_device(component);
+  copy_to_device(component);
 }
 
 template <int N, typename T>

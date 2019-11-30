@@ -340,8 +340,8 @@ RadiationTransferMagnetar::emit_photons(cu_sim_data& data) {
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
   CudaCheckError();
   // Logger::print_debug("Scan finished");
-  m_cumNumPerBlock.sync_to_host();
-  m_numPerBlock.sync_to_host();
+  m_cumNumPerBlock.copy_to_host();
+  m_numPerBlock.copy_to_host();
   int new_photons = m_cumNumPerBlock[m_blocksPerGrid - 1] +
                     m_numPerBlock[m_blocksPerGrid - 1];
   Logger::print_info("{} photons are produced!", new_photons);
@@ -385,8 +385,8 @@ RadiationTransferMagnetar::produce_pairs(cu_sim_data& data) {
   // the total
   thrust::exclusive_scan(ptrNumPerBlock,
                          ptrNumPerBlock + m_blocksPerGrid, ptrCumNum);
-  m_cumNumPerBlock.sync_to_host();
-  m_numPerBlock.sync_to_host();
+  m_cumNumPerBlock.copy_to_host();
+  m_numPerBlock.copy_to_host();
   int new_pairs = (m_cumNumPerBlock[m_blocksPerGrid - 1] +
                    m_numPerBlock[m_blocksPerGrid - 1]);
   Logger::print_info("{} electron-positron pairs are produced!",

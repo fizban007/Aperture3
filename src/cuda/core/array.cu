@@ -30,7 +30,7 @@ array<T>::free_mem() {
 /// Sync the content between host and device
 template <typename T>
 void
-array<T>::sync_to_device() {
+array<T>::copy_to_device() {
   CudaSafeCall(cudaMemcpy(m_data_d, m_data_h, m_size * sizeof(T),
                           cudaMemcpyHostToDevice));
 }
@@ -38,7 +38,7 @@ array<T>::sync_to_device() {
 /// Sync the content between host and device
 template <typename T>
 void
-array<T>::sync_to_host() {
+array<T>::copy_to_host() {
   CudaSafeCall(cudaMemcpy(m_data_h, m_data_d, m_size * sizeof(T),
                           cudaMemcpyDeviceToHost));
 }
@@ -59,7 +59,7 @@ array<T>::copy_from(const self_type& other) {
   size_t n = std::min(m_size, other.m_size);
   // std::copy(other.m_data_h, other.m_data_h + n, m_data_h);
   CudaSafeCall(cudaMemcpy(m_data_d, other.m_data_d, n * sizeof(T), cudaMemcpyDeviceToDevice));
-  // sync_to_host();
+  // copy_to_host();
 }
 
 template class array<long long>;

@@ -64,7 +64,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   // Write background fields from environment
   // size_t grid_size = data.E.grid().size();
   size_t grid_size = data.E.data(0).size();
-  data.Ebg.sync_to_host();
+  data.Ebg.copy_to_host();
   DataSet data_bg_E1 =
       snapshotfile.createDataSet<Scalar>("bg_E1", DataSpace(grid_size));
   data_bg_E1.write((char *)data.Ebg.data(0).data());
@@ -74,7 +74,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   DataSet data_bg_E3 =
       snapshotfile.createDataSet<Scalar>("bg_E3", DataSpace(grid_size));
   data_bg_E3.write((char *)data.Ebg.data(2).data());
-  data.Bbg.sync_to_host();
+  data.Bbg.copy_to_host();
   DataSet data_bg_B1 =
       snapshotfile.createDataSet<Scalar>("bg_B1", DataSpace(grid_size));
   data_bg_B1.write((char *)data.Bbg.data(0).data());
@@ -87,7 +87,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
 
   // Write sim data
   // Write field values
-  data.E.sync_to_host();
+  data.E.copy_to_host();
   DataSet data_E1 =
       snapshotfile.createDataSet<Scalar>("E1", DataSpace(grid_size));
   data_E1.write((char *)data.E.data(0).data());
@@ -97,7 +97,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   DataSet data_E3 =
       snapshotfile.createDataSet<Scalar>("E3", DataSpace(grid_size));
   data_E3.write((char *)data.E.data(2).data());
-  data.B.sync_to_host();
+  data.B.copy_to_host();
   DataSet data_B1 =
       snapshotfile.createDataSet<Scalar>("B1", DataSpace(grid_size));
   data_B1.write((char *)data.B.data(0).data());
@@ -107,7 +107,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   DataSet data_B3 =
       snapshotfile.createDataSet<Scalar>("B3", DataSpace(grid_size));
   data_B3.write((char *)data.B.data(2).data());
-  data.J.sync_to_host();
+  data.J.copy_to_host();
   DataSet data_J1 =
       snapshotfile.createDataSet<Scalar>("J1", DataSpace(grid_size));
   data_J1.write((char *)data.J.data(0).data());
@@ -119,7 +119,7 @@ cu_data_exporter::write_snapshot(cu_sim_environment &env,
   data_J3.write((char *)data.J.data(2).data());
 
   for (int i = 0; i < data.num_species; i++) {
-    data.Rho[i].sync_to_host();
+    data.Rho[i].copy_to_host();
     DataSet data_Rho = snapshotfile.createDataSet<Scalar>(
         fmt::format("Rho{}", i), DataSpace(grid_size));
     data_Rho.write((char *)data.Rho[i].data().data());
@@ -236,8 +236,8 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
   DataSet data_bg_E3 = snapshotfile.getDataSet("bg_E3");
   data_bg_E3.read((char *)data.Ebg.data(2).data());
 
-  data.Bbg.sync_to_device();
-  data.Ebg.sync_to_device();
+  data.Bbg.copy_to_device();
+  data.Ebg.copy_to_device();
 
   DataSet data_B1 = snapshotfile.getDataSet("B1");
   data_B1.read((char *)data.B.data(0).data());
@@ -257,14 +257,14 @@ cu_data_exporter::load_from_snapshot(cu_sim_environment &env,
   data_J2.read((char *)data.J.data(1).data());
   DataSet data_J3 = snapshotfile.getDataSet("J3");
   data_J3.read((char *)data.J.data(2).data());
-  data.B.sync_to_device();
-  data.E.sync_to_device();
-  data.J.sync_to_device();
+  data.B.copy_to_device();
+  data.E.copy_to_device();
+  data.J.copy_to_device();
 
   for (int i = 0; i < data.num_species; i++) {
     DataSet data_rho = snapshotfile.getDataSet(fmt::format("Rho{}", i));
     data_rho.read((char *)data.Rho[i].data().data());
-    data.Rho[i].sync_to_device();
+    data.Rho[i].copy_to_device();
   }
 }
 
@@ -274,7 +274,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
                                            int components, const T &t) {
   if (components == 1) {
     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync) fptr->copy_to_host();
     auto &mesh = fptr->grid().mesh();
     // #pragma omp simd
     for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -291,7 +291,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<1> &field,
     }
   } else if (components == 3) {
     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync) fptr->copy_to_host();
     auto &mesh = fptr->grid().mesh();
     // #pragma omp simd
     for (int i = 0; i < mesh.reduced_dim(0); i += downsample_factor) {
@@ -317,7 +317,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
                                            int components, const T &t) {
   if (components == 1) {
     auto fptr = dynamic_cast<cu_scalar_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync) fptr->copy_to_host();
     auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
@@ -343,7 +343,7 @@ cu_data_exporter::interpolate_field_values(fieldoutput<2> &field,
     }
   } else if (components == 3) {
     auto fptr = dynamic_cast<cu_vector_field<T> *>(field.field);
-    if (field.sync) fptr->sync_to_host();
+    if (field.sync) fptr->copy_to_host();
     auto &mesh = fptr->grid().mesh();
 #pragma omp simd collapse(2)
     for (int j = 0; j < mesh.reduced_dim(1); j += downsample_factor) {
