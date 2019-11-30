@@ -192,6 +192,12 @@ particle_base<ParticleClass>::copy_from(
 
 template <typename ParticleClass>
 void
+particle_base<ParticleClass>::copy_to_comm_buffers(std::vector<self_type> &buffers) {
+
+}
+
+template <typename ParticleClass>
+void
 particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
   // Compute the number of cells and resize the partition array if
   // needed

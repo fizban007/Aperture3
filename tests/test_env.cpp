@@ -1,5 +1,5 @@
 #include <cstring>
-#include "cuda/core/cu_sim_environment.h"
+#include "sim_environment.h"
 #include "catch.hpp"
 
 using namespace Aperture;
@@ -22,31 +22,23 @@ TEST_CASE("Loading environment", "[Env]") {
   my_argv[7] = nullptr;
   // Aperture::cu_sim_environment &env = Aperture::cu_sim_environment::get_instance().initialize(&my_argc, &my_argv);
   // env = std::make_unique<Aperture::cu_sim_environment>(&my_argc, &my_argv);
-  cu_sim_environment env(&my_argc, &my_argv);
+  sim_environment env(&my_argc, &my_argv);
 
   CHECK(env.params().max_steps == 100000);
   CHECK(env.params().data_interval == 20);
   CHECK(env.params().conf_file == "test.toml");
 
-  check_test_params(env.params());
+  // check_test_params(env.params());
   // delete env;
   CHECK(env.mesh().dims[0] == 10006);
   CHECK(env.mesh().dims[1] == 5);
   CHECK(env.mesh().dims[2] == 11);
 
-  Quadmesh mesh;
-
-  env.check_dev_mesh(mesh);
-
-  CHECK(mesh.dims[0] == 10006);
-  CHECK(mesh.dims[1] == 5);
-  CHECK(mesh.dims[2] == 11);
-
   SimParams p;
   p.data_dir = env.params().data_dir;
 
-  env.check_dev_params(p);
-  check_test_params(p);
+  // env.check_dev_params(p);
+  // check_test_params(p);
 
   for (int i = 0; i < my_argc; i++) delete[] my_argv[i];
   delete[] my_argv;

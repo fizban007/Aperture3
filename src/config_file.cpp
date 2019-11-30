@@ -52,6 +52,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
   params.max_photon_number =
       config->get_as<uint64_t>("max_photon_number")
           .value_or(defaults.max_photon_number);
+  params.ptc_buffer_size = config->get_as<uint64_t>("ptc_buffer_size")
+                              .value_or(defaults.ptc_buffer_size);
+  params.ph_buffer_size = config->get_as<uint64_t>("ph_buffer_size")
+                              .value_or(defaults.ph_buffer_size);
   params.ion_mass =
       config->get_as<double>("ion_mass").value_or(defaults.ion_mass);
   params.q_e = config->get_as<double>("q_e").value_or(defaults.q_e);

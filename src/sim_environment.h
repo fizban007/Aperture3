@@ -5,9 +5,12 @@
 #include "config_file.h"
 #include "sim_params.h"
 
+#include "core/multi_array.h"
 #include "core/domain_info.h"
 #include "core/grid.h"
 #include "core/array.h"
+#include "core/particles.h"
+#include "core/photons.h"
 #include <array>
 #include <memory>
 #include <random>
@@ -105,8 +108,10 @@ class sim_environment {
 
   std::vector<multi_array<Scalar>> m_send_buffers;
   std::vector<multi_array<Scalar>> m_recv_buffers;
-  std::vector<array<char>> m_ptc_send_buffers;
-  std::vector<array<char>> m_ptc_recv_buffers;
+  std::vector<particles_t> m_ptc_send_buffers;
+  std::vector<particles_t> m_ptc_recv_buffers;
+  std::vector<photons_t> m_ph_send_buffers;
+  std::vector<photons_t> m_ph_recv_buffers;
   int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 

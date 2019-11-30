@@ -15,6 +15,7 @@ target_sources(tests PRIVATE
   # "test_stagger.cpp"
   "test_multi_array.cpp"
   "test_flags.cpp"
+  "test_env.cpp"
   # "test_fields.cpp"
   # "test_field_solver.cpp"
   # "test_avx.cpp"
