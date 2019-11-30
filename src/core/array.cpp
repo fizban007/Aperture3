@@ -19,6 +19,12 @@ array<T>::free_mem() {
   }
 }
 
+template <typename T>
+void
+array<T>::assign_dev(const data_type& value, size_t num) {
+  assign(value, num);
+}
+
 /// Sync the content between host and device
 template <typename T>
 void

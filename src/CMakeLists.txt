@@ -28,6 +28,7 @@ set(Aperture_src
   "grids/grid_log_sph.cpp"
   "grids/grid_1dgr.cpp"
   "grids/grid_1dgap.cpp"
+  "data/detail/particle_data_impl.cpp"
   )
 if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
