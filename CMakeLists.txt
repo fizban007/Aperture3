@@ -80,6 +80,7 @@ include_directories(${MPI_INCLUDE_PATH} ${FMT_INCLUDE_DIR}
 
 ######### Check for cuda support
 if (use_cuda)
+  message("Checking cuda support")
   include(CheckLanguage)
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
