@@ -72,10 +72,11 @@ set(VISIT_STRUCT_INCLUDE_DIR deps/visit_struct/include)
 set(HIGHFIVE_INCLUDE_DIR deps/highfive/include)
 set(CATCH_INCLUDE_DIR deps/catch/single_include)
 set(VECTOR_INCLUDE_DIR deps/vectorclass)
+set(MAGIC_GET_INCLUDE_DIR deps/magic_get/include)
 
 include_directories(${MPI_INCLUDE_PATH} ${FMT_INCLUDE_DIR}
   ${CUDALE_INCLUDE_DIR} ${JSON_INCLUDE_DIR} ${CXX_OPTS_INCLUDE_DIR} ${CPPTOML_INCLUDE_DIR}
-  ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR}
+  ${CATCH_INCLUDE_DIR} ${HIGHFIVE_INCLUDE_DIR} ${MAGIC_GET_INCLUDE_DIR}
   ${VISIT_STRUCT_INCLUDE_DIR} ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ${VECTOR_INCLUDE_DIR} include src)
 
 ######### Check for cuda support
