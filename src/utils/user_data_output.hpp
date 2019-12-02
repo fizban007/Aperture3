@@ -6,15 +6,15 @@
 #include "sim_environment.h"
 #include "utils/data_exporter.h"
 #include "utils/util_functions.h"
-#include <highfive/H5File.hpp>
+// #include <highfive/H5File.hpp>
 
-using namespace HighFive;
+// using namespace HighFive;
 
 namespace Aperture {
 
 void
 user_write_field_output(sim_data& data, data_exporter& exporter,
-                        uint32_t timestep, double time, File& file) {
+                        uint32_t timestep, double time, hid_t file) {
   ADD_GRID_OUTPUT(
       exporter, data, "E1",
       {
@@ -114,7 +114,7 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
 
 void
 user_write_ptc_output(sim_data& data, data_exporter& exporter,
-                      uint32_t timestep, double time, File& file) {}
+                      uint32_t timestep, double time, hid_t file) {}
 
 }  // namespace Aperture
 

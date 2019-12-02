@@ -27,24 +27,20 @@ namespace Aperture {
 template <typename Func>
 void
 sample_grid_quantity1d(sim_data& data, const Grid& g, int downsample,
-                       multi_array<float>& result,
-                       std::vector<float>& out, Func f) {
+                       multi_array<float>& result, Func f) {
   // const auto& ext = g.extent();
   auto& mesh = g.mesh();
-  for (unsigned int i = 0; i < out.size(); i++) {
+  for (int i = 0; i < result.extent().width(); i++) {
     Index idx_out(i, 0, 0);
     Index idx_data(i * downsample + mesh.guard[0], 0, 0);
     f(data, result, idx_data, idx_out);
-
-    out[i] = result(i, 0, 0);
   }
 }
 
 template <typename Func>
 void
 sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
-                       multi_array<float>& result,
-                       boost::multi_array<float, 2>& out, Func f) {
+                       multi_array<float>& result, Func f) {
   const auto& ext = result.extent();
   // Logger::print_info("output ext is {}x{}", ext.width(),
   // ext.height());
@@ -55,8 +51,6 @@ sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
       Index idx_data(i * downsample + mesh.guard[0],
                      j * downsample + mesh.guard[1], 0);
       f(data, result, idx_data, idx_out);
-
-      out[j][i] = result(i, j, 0);
     }
   }
 }
@@ -64,8 +58,7 @@ sample_grid_quantity2d(sim_data& data, const Grid& g, int downsample,
 template <typename Func>
 void
 sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
-                       multi_array<float>& result,
-                       boost::multi_array<float, 3>& out, Func f) {
+                       multi_array<float>& result, Func f) {
   const auto& ext = result.extent();
   auto& mesh = g.mesh();
   for (int k = 0; k < ext.depth(); k++) {
@@ -76,8 +69,6 @@ sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
                        j * downsample + mesh.guard[1],
                        k * downsample + mesh.guard[2]);
         f(data, result, idx_data, idx_out);
-
-        out[k][j][i] = result(i, j, k);
       }
     }
   }
@@ -97,16 +88,16 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   Logger::print_info("tmp_grid_data initialized with size {}x{}x{}",
                      tmp_grid_data.width(), tmp_grid_data.height(),
                      tmp_grid_data.depth());
-  if (mesh.dim() == 3) {
-    m_output_3d.resize(
-        boost::extents[tmp_grid_data.depth()][tmp_grid_data.height()]
-                      [tmp_grid_data.width()]);
-  } else if (mesh.dim() == 2) {
-    m_output_2d.resize(
-        boost::extents[tmp_grid_data.height()][tmp_grid_data.width()]);
-  } else {  // 1D
-    m_output_1d.resize(tmp_grid_data.width());
-  }
+  // if (mesh.dim() == 3) {
+  //   m_output_3d.resize(
+  //       boost::extents[tmp_grid_data.depth()][tmp_grid_data.height()]
+  //                     [tmp_grid_data.width()]);
+  // } else if (mesh.dim() == 2) {
+  //   m_output_2d.resize(
+  //       boost::extents[tmp_grid_data.height()][tmp_grid_data.width()]);
+  // } else {  // 1D
+  //   m_output_1d.resize(tmp_grid_data.width());
+  // }
 
   tmp_ptc_uint_data.resize(MAX_TRACKED);
   tmp_ptc_float_data.resize(MAX_TRACKED);
@@ -340,6 +331,52 @@ data_exporter::write_xmf_tail(std::string& buffer) {
 }
 
 void
+data_exporter::write_multi_array(const multi_array<float>& array,
+                                 const std::string& name,
+                                 const Extent& total_ext,
+                                 const Index& offset,
+                                 hid_t file_id) {
+  hsize_t total_dim[3];
+  hsize_t offsets[3];
+  hsize_t local_dim[3];
+  for (int i = 0; i < 3; i++) {
+    total_dim[i] = total_ext[i];
+    offsets[i] = offset[i];
+    local_dim[i] = array.extent()[i];
+  }
+  // TODO: Check the order is correct
+  auto filespace = H5Screate_simple(m_env.grid().dim(), total_dim, NULL);
+  auto memspace = H5Screate_simple(m_env.grid().dim(), local_dim, NULL);
+  auto plist_id = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(plist_id, m_env.grid().dim(), local_dim);
+  auto dset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_FLOAT, filespace,
+                           H5P_DEFAULT, plist_id, H5P_DEFAULT);
+  H5Pclose(plist_id);
+  H5Sclose(filespace);
+
+  hsize_t count[3];
+  hsize_t stride[3];
+  for (int i = 0; i < 3; i++) {
+    count[i] = 1;
+    stride[i] = 1;
+  }
+  filespace = H5Dget_space(dset_id);
+  auto status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets,
+                                    stride, count, local_dim);
+
+  plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+  status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace, filespace,
+                    plist_id, tmp_grid_data.host_ptr());
+
+  H5Dclose(dset_id);
+  H5Sclose(filespace);
+  H5Sclose(memspace);
+  H5Pclose(plist_id);
+}
+
+void
 data_exporter::prepare_xmf_restart(uint32_t restart_step,
                                    int data_interval, float time) {
   boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
@@ -426,9 +463,16 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
 void
 data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
                                 double time) {
-  File datafile(fmt::format("{}ptc.{:05d}.h5", outputDirectory,
-                            timestep / m_env.params().data_interval),
-                File::ReadWrite | File::Create | File::Truncate);
+  // File datafile(fmt::format("{}ptc.{:05d}.h5", outputDirectory,
+  //                           timestep / m_env.params().data_interval),
+  //               File::ReadWrite | File::Create | File::Truncate);
+  std::string filename = fmt::format("{}ptc.{:05d}.h5", outputDirectory,
+                                     timestep / m_env.params().data_interval);
+  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+
+  hid_t datafile = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  H5Pclose(plist_id);
   // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
   user_write_ptc_output(data, *this, timestep, time, datafile);
 }
@@ -436,9 +480,16 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
 void
 data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                                   double time) {
-  File datafile(fmt::format("{}fld.{:05d}.h5", outputDirectory,
-                            timestep / m_env.params().data_interval),
-                File::ReadWrite | File::Create | File::Truncate);
+  // File datafile(fmt::format("{}fld.{:05d}.h5", outputDirectory,
+  //                           timestep / m_env.params().data_interval),
+  //               File::ReadWrite | File::Create | File::Truncate);
+  std::string filename = fmt::format("{}fld.{:05d}.h5", outputDirectory,
+                                     timestep / m_env.params().data_interval);
+  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+
+  hid_t datafile = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  H5Pclose(plist_id);
   // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
 
   user_write_field_output(data, *this, timestep, time, datafile);
@@ -447,69 +498,73 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
 template <typename Func>
 void
 data_exporter::add_grid_output(sim_data& data, const std::string& name,
-                               Func f, File& file, uint32_t timestep) {
+                               Func f, hid_t file_id, uint32_t timestep) {
   int downsample = m_env.params().downsample;
   if (data.env.grid().dim() == 3) {
     sample_grid_quantity3d(data, m_env.local_grid(),
-                           m_env.params().downsample, tmp_grid_data,
-                           m_output_3d, f);
+                           m_env.params().downsample, tmp_grid_data, f);
 
-    std::vector<size_t> dims(3);
+    Extent dims;
+    Index offset;
     for (int i = 0; i < 3; i++) {
-      dims[i] = m_env.params().N[2 - i];
-      if (dims[i] > (size_t)downsample) dims[i] /= downsample;
+      dims[i] = m_env.params().N[i];
+      if (dims[i] > downsample) dims[i] /= downsample;
+      offset = m_env.grid().mesh().offset[i] / downsample;
     }
+
+    write_multi_array(tmp_grid_data, name, dims, offset, file_id);
     // Actually write the temp array to hdf
-    DataSet dataset = file.createDataSet<float>(name, DataSpace(dims));
+    // DataSet dataset = file.createDataSet<float>(name,
+    // DataSpace(dims));
 
-    std::vector<size_t> out_dim(3);
-    std::vector<size_t> offsets(3);
-    for (int i = 0; i < 3; i++) {
-      offsets[i] = m_env.grid().mesh().offset[2 - i] / downsample;
-      out_dim[i] = tmp_grid_data.extent()[2 - i];
-    }
-    dataset.select(offsets, out_dim).write(m_output_2d);
+    // std::vector<size_t> out_dim(3);
+    // std::vector<size_t> offsets(3);
+    // for (int i = 0; i < 3; i++) {
+    //   offsets[i] = m_env.grid().mesh().offset[2 - i] / downsample;
+    //   out_dim[i] = tmp_grid_data.extent()[2 - i];
+    // }
+    // dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 2) {
     sample_grid_quantity2d(data, m_env.local_grid(),
-                           m_env.params().downsample, tmp_grid_data,
-                           m_output_2d, f);
+                           m_env.params().downsample, tmp_grid_data, f);
 
     std::vector<size_t> dims(2);
     dims[0] = m_env.params().N[1] / downsample;
     dims[1] = m_env.params().N[0] / downsample;
     // Logger::print_info("data space size {}x{}", dims[0], dims[1]);
     // Actually write the temp array to hdf
-    auto dataset = file.createDataSet<float>(name, DataSpace(dims));
+    // auto dataset = file.createDataSet<float>(name, DataSpace(dims));
 
-    std::vector<size_t> out_dim(2);
-    std::vector<size_t> offsets(2);
-    offsets[0] = m_env.grid().mesh().offset[1] / downsample;
-    out_dim[0] = tmp_grid_data.extent()[1];
-    offsets[1] = m_env.grid().mesh().offset[0] / downsample;
-    out_dim[1] = tmp_grid_data.extent()[0];
-    // Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
-    // Logger::print_info("out_dim is {}x{}", out_dim[0], out_dim[1]);
-    dataset.select(offsets, out_dim).write(m_output_2d);
+    // std::vector<size_t> out_dim(2);
+    // std::vector<size_t> offsets(2);
+    // offsets[0] = m_env.grid().mesh().offset[1] / downsample;
+    // out_dim[0] = tmp_grid_data.extent()[1];
+    // offsets[1] = m_env.grid().mesh().offset[0] / downsample;
+    // out_dim[1] = tmp_grid_data.extent()[0];
+    // // Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
+    // // Logger::print_info("out_dim is {}x{}", out_dim[0],
+    // out_dim[1]); dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
-                           m_env.params().downsample, tmp_grid_data,
-                           m_output_1d, f);
+                           m_env.params().downsample, tmp_grid_data, f);
 
     std::vector<size_t> dims(1);
     dims[0] = m_env.params().N[0] / downsample;
     // Actually write the temp array to hdf
-    DataSet dataset = file.createDataSet<float>(name, DataSpace(dims));
+    // DataSet dataset = file.createDataSet<float>(name,
+    // DataSpace(dims));
 
-    std::vector<size_t> out_dim(1);
-    std::vector<size_t> offsets(1);
-    offsets[0] = m_env.grid().mesh().offset[0] / downsample;
-    out_dim[0] = tmp_grid_data.extent()[0];
-    // Logger::print_info("offset is {}, dim is {}", offsets[0],
-    //                    out_dim[0]);
-    dataset.select(offsets, out_dim).write(m_output_1d);
+    // std::vector<size_t> out_dim(1);
+    // std::vector<size_t> offsets(1);
+    // offsets[0] = m_env.grid().mesh().offset[0] / downsample;
+    // out_dim[0] = tmp_grid_data.extent()[0];
+    // // Logger::print_info("offset is {}, dim is {}", offsets[0],
+    // //                    out_dim[0]);
+    // dataset.select(offsets, out_dim).write(m_output_1d);
   }
   // m_xmf << "  <Attribute Name=\"" << name
-  //       << "\" Center=\"Node\" AttributeType=\"Scalar\">" << std::endl;
+  //       << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
+  //       std::endl;
   // m_xmf << "    <DataItem Dimensions=\"" << m_dim_str
   //       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
   //       << std::endl;
@@ -520,60 +575,64 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
   // m_xmf << "  </Attribute>" << std::endl;
   m_xmf_buffer += fmt::format(
       "  <Attribute Name=\"{}\" Center=\"Node\" "
-      "AttributeType=\"Scalar\">\n", name);
-  m_xmf_buffer += fmt::format("    <DataItem Dimensions=\"{}\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">\n", m_dim_str);
-  m_xmf_buffer += fmt::format("      fld.{:05d}.h5:{}\n",
-                       timestep / m_env.params().data_interval, name);
+      "AttributeType=\"Scalar\">\n",
+      name);
+  m_xmf_buffer += fmt::format(
+      "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+      "Precision=\"4\" Format=\"HDF\">\n",
+      m_dim_str);
+  m_xmf_buffer +=
+      fmt::format("      fld.{:05d}.h5:{}\n",
+                  timestep / m_env.params().data_interval, name);
   m_xmf_buffer += "    </DataItem>\n";
   m_xmf_buffer += "  </Attribute>\n";
 }
 
 void
 data_exporter::add_array_output(multi_array<float>& array,
-                                const std::string& name, File& file,
+                                const std::string& name, hid_t file_id,
                                 uint32_t timestep) {
   // Actually write the temp array to hdf
-  std::vector<size_t> dims(1);
-  dims[0] = (uint32_t)array.size();
-  DataSet dataset =
-      file.createDataSet<float>(name, DataSpace(dims));
-  dataset.write(array.host_ptr());
+  // std::vector<size_t> dims(1);
+  // dims[0] = (uint32_t)array.size();
+  // DataSet dataset = file.createDataSet<float>(name, DataSpace(dims));
+  // dataset.write(array.host_ptr());
 }
 
-template <typename Func>
-void
-data_exporter::add_ptc_float_output(sim_data& data,
-                                    const std::string& name, size_t num,
-                                    Func f, File& file,
-                                    uint32_t timestep) {
-  Logger::print_info("writing the {} of {} tracked particles", name,
-                     num);
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_float_data, n, num_subset);
-  }
+// template <typename Func>
+// void
+// data_exporter::add_ptc_float_output(sim_data& data,
+//                                     const std::string& name, size_t num,
+//                                     Func f, hid_t file_id,
+//                                     uint32_t timestep) {
+//   Logger::print_info("writing the {} of {} tracked particles", name,
+//                      num);
+//   uint32_t num_subset = 0;
+//   for (uint32_t n = 0; n < num; n++) {
+//     f(data, tmp_ptc_float_data, n, num_subset);
+//   }
 
-  // TODO: Consider MPI!!!
-  DataSet dataset =
-      file.createDataSet<float>(name, DataSpace({num_subset}));
-  dataset.write(tmp_ptc_float_data);
-}
+//   // TODO: Consider MPI!!!
+//   DataSet dataset =
+//       file.createDataSet<float>(name, DataSpace({num_subset}));
+//   dataset.write(tmp_ptc_float_data);
+// }
 
-template <typename Func>
-void
-data_exporter::add_ptc_uint_output(sim_data& data,
-                                   const std::string& name, size_t num,
-                                   Func f, File& file,
-                                   uint32_t timestep) {
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_uint_data, n, num_subset);
-  }
+// template <typename Func>
+// void
+// data_exporter::add_ptc_uint_output(sim_data& data,
+//                                    const std::string& name, size_t num,
+//                                    Func f, hid_t file_id,
+//                                    uint32_t timestep) {
+//   uint32_t num_subset = 0;
+//   for (uint32_t n = 0; n < num; n++) {
+//     f(data, tmp_ptc_uint_data, n, num_subset);
+//   }
 
-  // TODO: Consider MPI!!!
-  DataSet dataset =
-      file.createDataSet<uint32_t>(name, DataSpace({num_subset}));
-  dataset.write(tmp_ptc_uint_data);
-}
+//   // TODO: Consider MPI!!!
+//   DataSet dataset =
+//       file.createDataSet<uint32_t>(name, DataSpace({num_subset}));
+//   dataset.write(tmp_ptc_uint_data);
+// }
 
 }  // namespace Aperture
