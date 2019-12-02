@@ -11,8 +11,8 @@ template class particle_base<single_photon_t>;
 particles_t::particles_t()
     : particle_base<single_particle_t>() {}
 
-particles_t::particles_t(std::size_t max_num)
-    : particle_base<single_particle_t>(max_num) {}
+particles_t::particles_t(std::size_t max_num, bool managed)
+    : particle_base<single_particle_t>(max_num, managed) {}
 
 particles_t::particles_t(const particles_t& other)
     : particle_base<single_particle_t>(other) {}

@@ -4,7 +4,8 @@ namespace Aperture {
 
 photons_t::photons_t() : base_class() {}
 
-photons_t::photons_t(size_t max_num) : base_class(max_num) {}
+photons_t::photons_t(size_t max_num, bool managed)
+    : base_class(max_num, managed) {}
 
 photons_t::photons_t(const photons_t& other) : base_class(other) {}
 
