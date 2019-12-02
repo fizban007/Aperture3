@@ -504,64 +504,30 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     sample_grid_quantity3d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
 
-    Extent dims;
-    Index offset;
-    for (int i = 0; i < 3; i++) {
-      dims[i] = m_env.params().N[i];
-      if (dims[i] > downsample) dims[i] /= downsample;
-      offset = m_env.grid().mesh().offset[i] / downsample;
-    }
-
-    write_multi_array(tmp_grid_data, name, dims, offset, file_id);
-    // Actually write the temp array to hdf
-    // DataSet dataset = file.createDataSet<float>(name,
-    // DataSpace(dims));
-
-    // std::vector<size_t> out_dim(3);
-    // std::vector<size_t> offsets(3);
-    // for (int i = 0; i < 3; i++) {
-    //   offsets[i] = m_env.grid().mesh().offset[2 - i] / downsample;
-    //   out_dim[i] = tmp_grid_data.extent()[2 - i];
-    // }
-    // dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 2) {
     sample_grid_quantity2d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
 
-    std::vector<size_t> dims(2);
-    dims[0] = m_env.params().N[1] / downsample;
-    dims[1] = m_env.params().N[0] / downsample;
-    // Logger::print_info("data space size {}x{}", dims[0], dims[1]);
-    // Actually write the temp array to hdf
-    // auto dataset = file.createDataSet<float>(name, DataSpace(dims));
+    // std::vector<size_t> dims(2);
+    // dims[0] = m_env.params().N[1] / downsample;
+    // dims[1] = m_env.params().N[0] / downsample;
 
-    // std::vector<size_t> out_dim(2);
-    // std::vector<size_t> offsets(2);
-    // offsets[0] = m_env.grid().mesh().offset[1] / downsample;
-    // out_dim[0] = tmp_grid_data.extent()[1];
-    // offsets[1] = m_env.grid().mesh().offset[0] / downsample;
-    // out_dim[1] = tmp_grid_data.extent()[0];
-    // // Logger::print_info("offset is {}x{}", offsets[0], offsets[1]);
-    // // Logger::print_info("out_dim is {}x{}", out_dim[0],
-    // out_dim[1]); dataset.select(offsets, out_dim).write(m_output_2d);
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
 
-    std::vector<size_t> dims(1);
-    dims[0] = m_env.params().N[0] / downsample;
-    // Actually write the temp array to hdf
-    // DataSet dataset = file.createDataSet<float>(name,
-    // DataSpace(dims));
-
-    // std::vector<size_t> out_dim(1);
-    // std::vector<size_t> offsets(1);
-    // offsets[0] = m_env.grid().mesh().offset[0] / downsample;
-    // out_dim[0] = tmp_grid_data.extent()[0];
-    // // Logger::print_info("offset is {}, dim is {}", offsets[0],
-    // //                    out_dim[0]);
-    // dataset.select(offsets, out_dim).write(m_output_1d);
+    // std::vector<size_t> dims(1);
+    // dims[0] = m_env.params().N[0] / downsample;
   }
+  Extent dims;
+  Index offset;
+  for (int i = 0; i < 3; i++) {
+    dims[i] = m_env.params().N[i];
+    if (dims[i] > downsample) dims[i] /= downsample;
+    offset = m_env.grid().mesh().offset[i] / downsample;
+  }
+
+  write_multi_array(tmp_grid_data, name, dims, offset, file_id);
   // m_xmf << "  <Attribute Name=\"" << name
   //       << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
   //       std::endl;
