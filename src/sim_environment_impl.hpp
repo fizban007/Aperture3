@@ -125,13 +125,13 @@ sim_environment::setup_env() {
   Logger::print_info("Created {} particle buffers", num_ptc_buffers);
 
   for (int i = 0; i < num_ptc_buffers; i++) {
-    m_ptc_send_buffers.emplace_back(m_params.ptc_buffer_size);
-    m_ptc_recv_buffers.emplace_back(m_params.ptc_buffer_size);
+    m_ptc_send_buffers.emplace_back(m_params.ptc_buffer_size, true);
+    m_ptc_recv_buffers.emplace_back(m_params.ptc_buffer_size, true);
   }
   Logger::print_info("Created {} photon buffers", num_ptc_buffers);
   for (int i = 0; i < num_ptc_buffers; i++) {
-    m_ph_send_buffers.emplace_back(m_params.ph_buffer_size);
-    m_ph_recv_buffers.emplace_back(m_params.ph_buffer_size);
+    m_ph_send_buffers.emplace_back(m_params.ph_buffer_size, true);
+    m_ph_recv_buffers.emplace_back(m_params.ph_buffer_size, true);
   }
 }
 

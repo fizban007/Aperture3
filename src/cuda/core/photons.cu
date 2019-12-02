@@ -24,8 +24,8 @@ append_ptc(photon_data data, size_t num, Vec3<Pos_t> x, Vec3<Scalar> p,
 
 photons_t::photons_t() {}
 
-photons_t::photons_t(std::size_t max_num)
-    : particle_base<single_photon_t>(max_num) {}
+photons_t::photons_t(std::size_t max_num, bool managed)
+    : particle_base<single_photon_t>(max_num, managed) {}
 
 photons_t::photons_t(const photons_t& other)
     : particle_base<single_photon_t>(other) {}

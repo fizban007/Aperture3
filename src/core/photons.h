@@ -14,7 +14,7 @@ class photons_t : public particle_base<single_photon_t> {
   typedef photon_data data_class;
 
   photons_t();
-  photons_t(size_t max_num);
+  photons_t(size_t max_num, bool managed = false);
   photons_t(const photons_t& other);
   photons_t(photons_t&& other);
   virtual ~photons_t();

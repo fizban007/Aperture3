@@ -29,7 +29,7 @@ particle_base<ParticleClass>::particle_base() {
 }
 
 template <typename ParticleClass>
-particle_base<ParticleClass>::particle_base(std::size_t max_num) {
+particle_base<ParticleClass>::particle_base(std::size_t max_num, bool managed) {
   m_size = max_num;
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num);
@@ -68,6 +68,7 @@ particle_base<ParticleClass>::~particle_base() {
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
+                                        bool managed,
                                         std::size_t alignment) {
   visit_struct::for_each(m_data, [max_num, alignment](const char* name,
                                                       auto& x) {

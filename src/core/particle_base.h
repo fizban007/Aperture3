@@ -33,7 +33,7 @@ class particle_base {
   /// Main constructor, initializing the max number to a given value
   /// and current number to zero.
   /// @param max_num Target maximum number.
-  explicit particle_base(std::size_t max_num);
+  explicit particle_base(std::size_t max_num, bool managed = false);
 
   /// Copy constructor
   particle_base(const self_type& other);
@@ -94,7 +94,7 @@ class particle_base {
   }
 
  protected:
-  void alloc_mem(std::size_t max_num, std::size_t alignment = 64);
+  void alloc_mem(std::size_t max_num, bool managed = false, std::size_t alignment = 64);
   void free_mem();
 
   void rearrange_arrays(const std::string& skip);
