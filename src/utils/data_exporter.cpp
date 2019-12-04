@@ -5,6 +5,7 @@
 #include "sim_params.h"
 #include <boost/filesystem.hpp>
 #include <fmt/core.h>
+#include <type_traits>
 
 #define H5_USE_BOOST
 
@@ -334,8 +335,7 @@ void
 data_exporter::write_multi_array(const multi_array<float>& array,
                                  const std::string& name,
                                  const Extent& total_ext,
-                                 const Index& offset,
-                                 hid_t file_id) {
+                                 const Index& offset, hid_t file_id) {
   hsize_t total_dim[3];
   hsize_t offsets[3];
   hsize_t local_dim[3];
@@ -345,12 +345,14 @@ data_exporter::write_multi_array(const multi_array<float>& array,
     local_dim[i] = array.extent()[i];
   }
   // TODO: Check the order is correct
-  auto filespace = H5Screate_simple(m_env.grid().dim(), total_dim, NULL);
+  auto filespace =
+      H5Screate_simple(m_env.grid().dim(), total_dim, NULL);
   auto memspace = H5Screate_simple(m_env.grid().dim(), local_dim, NULL);
   auto plist_id = H5Pcreate(H5P_DATASET_CREATE);
   H5Pset_chunk(plist_id, m_env.grid().dim(), local_dim);
-  auto dset_id = H5Dcreate(file_id, name.c_str(), H5T_NATIVE_FLOAT, filespace,
-                           H5P_DEFAULT, plist_id, H5P_DEFAULT);
+  auto dset_id =
+      H5Dcreate(file_id, name.c_str(), H5T_NATIVE_FLOAT, filespace,
+                H5P_DEFAULT, plist_id, H5P_DEFAULT);
   H5Pclose(plist_id);
   H5Sclose(filespace);
 
@@ -369,6 +371,55 @@ data_exporter::write_multi_array(const multi_array<float>& array,
 
   status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace, filespace,
                     plist_id, tmp_grid_data.host_ptr());
+
+  H5Dclose(dset_id);
+  H5Sclose(filespace);
+  H5Sclose(memspace);
+  H5Pclose(plist_id);
+}
+
+template <typename T>
+void
+data_exporter::write_collective_array(const T* array,
+                                      const std::string& name,
+                                      size_t total, size_t local,
+                                      size_t offset, hid_t file_id) {
+  hsize_t total_dim[1] = {total};
+  hsize_t offsets[1] = {offset};
+  hsize_t local_dim[1] = {local};
+
+  // Use correct H5 type according to input type
+  hid_t type_id = H5T_NATIVE_CHAR;
+  if (std::is_same<T, float>::value) {
+    type_id = H5T_NATIVE_FLOAT;
+  } else if (std::is_same<T, double>::value) {
+    type_id = H5T_NATIVE_DOUBLE;
+  } else if (std::is_same<T, uint32_t>::value) {
+    type_id = H5T_NATIVE_UINT32;
+  } else if (std::is_same<T, uint64_t>::value) {
+    type_id = H5T_NATIVE_UINT64;
+  }
+
+  auto filespace = H5Screate_simple(1, total_dim, NULL);
+  auto memspace = H5Screate_simple(1, local_dim, NULL);
+  auto plist_id = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(plist_id, 1, local_dim);
+  auto dset_id = H5Dcreate(file_id, name.c_str(), type_id, filespace,
+                           H5P_DEFAULT, plist_id, H5P_DEFAULT);
+  H5Pclose(plist_id);
+  H5Sclose(filespace);
+
+  hsize_t count[1] = {1};
+  hsize_t stride[1] = {1};
+  filespace = H5Dget_space(dset_id);
+  auto status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets,
+                                    stride, count, local_dim);
+
+  plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+  status = H5Dwrite(dset_id, type_id, memspace, filespace, plist_id,
+                    tmp_grid_data.host_ptr());
 
   H5Dclose(dset_id);
   H5Sclose(filespace);
@@ -466,12 +517,14 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
   // File datafile(fmt::format("{}ptc.{:05d}.h5", outputDirectory,
   //                           timestep / m_env.params().data_interval),
   //               File::ReadWrite | File::Create | File::Truncate);
-  std::string filename = fmt::format("{}ptc.{:05d}.h5", outputDirectory,
-                                     timestep / m_env.params().data_interval);
+  std::string filename =
+      fmt::format("{}ptc.{:05d}.h5", outputDirectory,
+                  timestep / m_env.params().data_interval);
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
 
-  hid_t datafile = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  hid_t datafile =
+      H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   H5Pclose(plist_id);
   // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
   user_write_ptc_output(data, *this, timestep, time, datafile);
@@ -483,12 +536,14 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
   // File datafile(fmt::format("{}fld.{:05d}.h5", outputDirectory,
   //                           timestep / m_env.params().data_interval),
   //               File::ReadWrite | File::Create | File::Truncate);
-  std::string filename = fmt::format("{}fld.{:05d}.h5", outputDirectory,
-                                     timestep / m_env.params().data_interval);
+  std::string filename =
+      fmt::format("{}fld.{:05d}.h5", outputDirectory,
+                  timestep / m_env.params().data_interval);
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
 
-  hid_t datafile = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  hid_t datafile =
+      H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   H5Pclose(plist_id);
   // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
 
@@ -498,7 +553,8 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
 template <typename Func>
 void
 data_exporter::add_grid_output(sim_data& data, const std::string& name,
-                               Func f, hid_t file_id, uint32_t timestep) {
+                               Func f, hid_t file_id,
+                               uint32_t timestep) {
   int downsample = m_env.params().downsample;
   if (data.env.grid().dim() == 3) {
     sample_grid_quantity3d(data, m_env.local_grid(),
@@ -568,8 +624,8 @@ data_exporter::add_array_output(multi_array<float>& array,
 // template <typename Func>
 // void
 // data_exporter::add_ptc_float_output(sim_data& data,
-//                                     const std::string& name, size_t num,
-//                                     Func f, hid_t file_id,
+//                                     const std::string& name, size_t
+//                                     num, Func f, hid_t file_id,
 //                                     uint32_t timestep) {
 //   Logger::print_info("writing the {} of {} tracked particles", name,
 //                      num);
@@ -587,8 +643,8 @@ data_exporter::add_array_output(multi_array<float>& array,
 // template <typename Func>
 // void
 // data_exporter::add_ptc_uint_output(sim_data& data,
-//                                    const std::string& name, size_t num,
-//                                    Func f, hid_t file_id,
+//                                    const std::string& name, size_t
+//                                    num, Func f, hid_t file_id,
 //                                    uint32_t timestep) {
 //   uint32_t num_subset = 0;
 //   for (uint32_t n = 0; n < num; n++) {
@@ -600,5 +656,6 @@ data_exporter::add_array_output(multi_array<float>& array,
 //       file.createDataSet<uint32_t>(name, DataSpace({num_subset}));
 //   dataset.write(tmp_ptc_uint_data);
 // }
+
 
 }  // namespace Aperture
