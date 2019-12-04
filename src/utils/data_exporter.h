@@ -51,6 +51,11 @@ class data_exporter {
                          const Extent& total_ext, const Index& offset,
                          hid_t file_id);
 
+  template <typename T>
+  void write_collective_array(const T* array, const std::string& name,
+                              size_t total, size_t local, size_t offset,
+                              hid_t file_id);
+
   void add_array_output(multi_array<float>& array,
                         const std::string& name, hid_t file_id,
                         uint32_t timestep);
