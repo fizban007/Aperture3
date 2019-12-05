@@ -18,24 +18,24 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
   ADD_GRID_OUTPUT(
       exporter, data, "E1",
       {
-        p(idx_out) = 0.5 * (data.E(0, idx) +
-                            data.E(0, idx.x, idx.y + 1, 0));
+        p(idx_out) =
+            0.5 * (data.E(0, idx) + data.E(0, idx.x, idx.y + 1, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "E2",
       {
-        p(idx_out) = 0.5 * (data.E(1, idx) +
-                             data.E(1, idx.x + 1, idx.y, 0));
+        p(idx_out) =
+            0.5 * (data.E(1, idx) + data.E(1, idx.x + 1, idx.y, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "E3",
       {
-        p(idx_out) = 0.25 * (data.E(2, idx) +
-                             data.E(2, idx.x + 1, idx.y, 0) +
-                             data.E(2, idx.x, idx.y + 1, 0) +
-                             data.E(2, idx.x + 1, idx.y + 1, 0));
+        p(idx_out) =
+            0.25 * (data.E(2, idx) + data.E(2, idx.x + 1, idx.y, 0) +
+                    data.E(2, idx.x, idx.y + 1, 0) +
+                    data.E(2, idx.x + 1, idx.y + 1, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
@@ -56,31 +56,29 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
       file, timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "B3",
-      {
-        p(idx_out) = data.B(2, idx) + data.Bbg(2, idx);
-      },
-      file, timestep);
+      { p(idx_out) = data.B(2, idx) + data.Bbg(2, idx); }, file,
+      timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "J1",
       {
-        p(idx_out) = 0.5 * (data.J(0, idx) +
-                            data.J(0, idx.x, idx.y + 1, 0));
+        p(idx_out) =
+            0.5 * (data.J(0, idx) + data.J(0, idx.x, idx.y + 1, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "J2",
       {
-        p(idx_out) = 0.5 * (data.J(1, idx) +
-                             data.J(1, idx.x + 1, idx.y, 0));
+        p(idx_out) =
+            0.5 * (data.J(1, idx) + data.J(1, idx.x + 1, idx.y, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "J3",
       {
-        p(idx_out) = 0.25 * (data.J(2, idx) +
-                             data.J(2, idx.x + 1, idx.y, 0) +
-                             data.J(2, idx.x, idx.y + 1, 0) +
-                             data.J(2, idx.x + 1, idx.y + 1, 0));
+        p(idx_out) =
+            0.25 * (data.J(2, idx) + data.J(2, idx.x + 1, idx.y, 0) +
+                    data.J(2, idx.x, idx.y + 1, 0) +
+                    data.J(2, idx.x + 1, idx.y + 1, 0));
       },
       file, timestep);
   ADD_GRID_OUTPUT(
@@ -104,9 +102,11 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
       exporter, data, "photon_num",
       { p(idx_out) = data.photon_num(idx); }, file, timestep);
   ADD_GRID_OUTPUT(
-      exporter, data, "divE", { p(idx_out) = data.divE(idx); }, file, timestep);
+      exporter, data, "divE", { p(idx_out) = data.divE(idx); }, file,
+      timestep);
   ADD_GRID_OUTPUT(
-      exporter, data, "divB", { p(idx_out) = data.divB(idx); }, file, timestep);
+      exporter, data, "divB", { p(idx_out) = data.divB(idx); }, file,
+      timestep);
   ADD_GRID_OUTPUT(
       exporter, data, "EdotB_avg", { p(idx_out) = data.EdotB(idx); },
       file, timestep);
@@ -114,7 +114,104 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
 
 void
 user_write_ptc_output(sim_data& data, data_exporter& exporter,
-                      uint32_t timestep, double time, hid_t file) {}
+                      const std::vector<uint64_t>& tracked,
+                      const std::vector<uint64_t>& offset,
+                      const std::vector<uint64_t>& total,
+                      uint32_t timestep, double time, hid_t file) {
+  auto& mesh = data.env.grid().mesh();
+  for (int i = 0; i < (int)tracked.size() - 1; i++) {
+    exporter.add_ptc_uint_output(
+        data, fmt::format("{}_id", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<uint32_t>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            v[nsb] = data.particles.tracked_data().id[n];
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_x1", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            auto cell = data.particles.tracked_data().cell[n];
+            auto x = data.particles.tracked_data().x1[n];
+            v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_x2", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            auto cell = data.particles.tracked_data().cell[n];
+            auto x = data.particles.tracked_data().x2[n];
+            v[nsb] = mesh.pos(1, mesh.get_c2(cell), x);
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_x3", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            auto cell = data.particles.tracked_data().cell[n];
+            auto x = data.particles.tracked_data().x3[n];
+            v[nsb] = mesh.pos(2, mesh.get_c3(cell), x);
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_p1", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            v[nsb] = data.particles.tracked_data().p1[n];
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_p2", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            v[nsb] = data.particles.tracked_data().p2[n];
+            nsb += 1;
+          }
+        },
+        file, timestep);
+    exporter.add_ptc_float_output(
+        data, fmt::format("{}_p3", particle_type_name(i)),
+        data.particles.tracked_number(), total[i], offset[i],
+        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+            uint32_t& nsb) {
+          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+              i) {
+            v[nsb] = data.particles.tracked_data().p3[n];
+            nsb += 1;
+          }
+        },
+        file, timestep);
+  }
+}
 
 }  // namespace Aperture
 

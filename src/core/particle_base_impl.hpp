@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <mpi.h>
 
 namespace Aperture {
 
@@ -332,6 +333,19 @@ particle_base<ParticleClass>::get_tracked_ptc() {
     }
   }
   m_num_tracked = num_tracked;
+}
+
+template <typename ParticleClass>
+void
+particle_base<ParticleClass>::get_total_and_offset(uint64_t num) {
+  // Carry out an MPI scan to get the total number and local offset
+  uint64_t result = 0;
+  auto status = MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  uint64_t offset = result - num;
+  uint64_t total = 0;
+  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  m_offset = offset;
+  m_total = total;
 }
 
 }  // namespace Aperture

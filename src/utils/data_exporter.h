@@ -9,12 +9,6 @@
 #include <thread>
 #include <vector>
 
-namespace HighFive {
-
-class File;
-
-}
-
 namespace Aperture {
 
 struct sim_data;
@@ -64,14 +58,19 @@ class data_exporter {
   void add_grid_output(sim_data& data, const std::string& name, Func f,
                        hid_t file_id, uint32_t timestep);
 
+  void add_ptc_output(sim_data& data, int species, hid_t file_id,
+                      uint32_t timestep);
+
   template <typename Func>
   void add_ptc_float_output(sim_data& data, const std::string& name,
-                            size_t num, Func f, hid_t file_id,
+                            uint64_t num, uint64_t total,
+                            uint64_t offset, Func f, hid_t file_id,
                             uint32_t timestep);
 
   template <typename Func>
   void add_ptc_uint_output(sim_data& data, const std::string& name,
-                           size_t num, Func f, hid_t file_id,
+                           uint64_t num, uint64_t total,
+                           uint64_t offset, Func f, hid_t file_id,
                            uint32_t timestep);
 
  protected:

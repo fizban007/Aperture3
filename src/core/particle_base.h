@@ -23,7 +23,9 @@ class particle_base {
 
   size_t m_size = 0;
   size_t m_number = 0;
-  uint32_t m_num_tracked = 0;
+  uint64_t m_num_tracked = 0;
+  uint64_t m_total = 0;
+  uint64_t m_offset = 0;
 
  public:
   /// Default constructor, initializing everything to 0 and set pointers
@@ -64,6 +66,7 @@ class particle_base {
   void sort_by_cell(const Grid& grid);
   // void rearrange_arrays(const std::string& skip);
   void get_tracked_ptc();
+  void get_total_and_offset(uint64_t num);
 
   void clear_guard_cells(const Grid& grid);
 
@@ -92,6 +95,8 @@ class particle_base {
     // called "cell"
     return (m_data.cell[pos] == MAX_CELL);
   }
+  uint64_t num_total() const { return m_total; }
+  uint64_t num_offset() const { return m_offset; }
 
  protected:
   void alloc_mem(std::size_t max_num, bool managed = false, std::size_t alignment = 64);

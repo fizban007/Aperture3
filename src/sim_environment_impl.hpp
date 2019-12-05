@@ -240,6 +240,8 @@ sim_environment::setup_local_grid() {
                      2 * mesh.guard[d];
       mesh.sizes[d] /= m_domain_info.cart_dims[d];
       mesh.lower[d] += m_domain_info.cart_coord[d] * mesh.sizes[d];
+      // TODO: In a non-uniform domain decomposition, the offset could
+      // change, need a more robust way to count this
       mesh.offset[d] =
           m_domain_info.cart_coord[d] * mesh.reduced_dim(d);
       Logger::print_info("offset[{}] is {}", d, mesh.offset[d]);

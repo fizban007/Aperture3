@@ -8,7 +8,7 @@ sim_environment::setup_env_extra() {}
 void
 sim_environment::send_array_guard_cells_single_dir(
     multi_array<Scalar> &array, int dim, int dir) {
-  if (dim < 0 || dim >= m_grid->dim()) return;
+  if (dim < 0 || dim >= (int)m_grid->dim()) return;
 
   int dest, origin;
   MPI_Status status;
@@ -42,7 +42,7 @@ sim_environment::send_array_guard_cells_single_dir(
 void
 sim_environment::send_add_array_guard_cells_single_dir(
     multi_array<Scalar> &array, int dim, int dir) {
-  if (dim < 0 || dim >= m_grid->dim()) return;
+  if (dim < 0 || dim >= (int)m_grid->dim()) return;
 
   int dest, origin;
   MPI_Status status;

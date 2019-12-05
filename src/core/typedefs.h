@@ -3,6 +3,8 @@
 
 #include <bitset>
 #include <cstddef>
+#include <limits>
+#include <cstdint>
 
 namespace Aperture {
 
