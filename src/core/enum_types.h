@@ -2,6 +2,7 @@
 #define _ENUM_TYPES_H_
 
 #include <cstdint>
+#include <string>
 // #include <bitset>
 
 // #define PARTICLE_TYPE_NUM 3
@@ -20,6 +21,18 @@ enum class FieldNormalization : unsigned char {
 
 /// Particle types 
 enum class ParticleType : unsigned char { electron = 0, positron, ion };
+
+inline std::string particle_type_name(int type) {
+  if (type == 0) {
+    return "electron";
+  } else if (type == 1) {
+    return "positron";
+  } else if (type == 2) {
+    return "ion";
+  } else {
+    return "unknown";
+  }
+}
 
 enum class CommTags : char { left = 0, right };
 

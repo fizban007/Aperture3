@@ -9,7 +9,7 @@
 
 namespace Aperture {
 
-struct domain_info {
+struct domain_info_t {
  public:
   int size = 1;
   int rank = 0;

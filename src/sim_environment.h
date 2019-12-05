@@ -65,6 +65,8 @@ class sim_environment {
   float mass(int sp) const { return m_masses[sp]; }
   float q_over_m(int sp) const { return m_q_over_m[sp]; }
 
+  MPI_Comm world() const { return m_world; }
+  const domain_info_t& domain_info() const { return m_domain_info; }
   // const MPICommWorld& world() const { return m_comm->world(); }
   // const MPICommCartesian& cartesian() const { return
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
@@ -95,7 +97,7 @@ class sim_environment {
   MPI_Comm m_world;
   MPI_Comm m_cart;
   MPI_Datatype m_scalar_type;
-  domain_info m_domain_info;
+  domain_info_t m_domain_info;
 
   // std::unique_ptr<MPIComm> m_comm;
   // std::unique_ptr<DataExporter> m_exporter;
