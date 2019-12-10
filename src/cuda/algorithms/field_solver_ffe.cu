@@ -5,7 +5,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data/fields_utils.h"
 #include "cuda/data_ptrs.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/timer.h"

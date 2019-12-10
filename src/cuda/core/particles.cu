@@ -48,8 +48,8 @@ particles_t::particles_t()
 particles_t::particles_t(std::size_t max_num, bool managed)
     : particle_base<single_particle_t>(max_num, managed) {}
 
-particles_t::particles_t(const particles_t& other)
-    : particle_base<single_particle_t>(other) {}
+// particles_t::particles_t(const particles_t& other)
+//     : particle_base<single_particle_t>(other) {}
 
 particles_t::particles_t(particles_t&& other)
     : particle_base<single_particle_t>(std::move(other)) {}

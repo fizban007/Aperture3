@@ -1,7 +1,7 @@
 #include "core/multi_array_impl.hpp"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/multi_array_utils.cuh"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "utils/logger.h"
 #include <algorithm>
 #include <cstring>

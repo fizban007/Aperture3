@@ -20,6 +20,7 @@ target_sources(tests PRIVATE
   # "test_field_solver.cpp"
   # "test_avx.cpp"
   # "test_ptc_update.cpp"
+  # "test_ptc_comm.cpp"
 )
 target_link_libraries(tests
   # PUBLIC AperCuda
@@ -46,9 +47,10 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     # "test_particles.cpp"
     # "test_env.cpp"
     # "test_domain.cpp"
-    "test_pitchptr.cu"
+    # "test_pitchptr.cu"
     # "test_config.cpp"
     # "test_ic.cu"
+    "test_ptc_comm.cu"
     )
   # set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
@@ -58,6 +60,18 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     DEPENDS test_cuda
     WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
   add_dependencies(check run_cuda_tests)
+else()
+  add_executable(test_nocuda "test_nocuda.cpp")
+  target_sources(test_nocuda PUBLIC
+    "test_ptc_comm.cpp")
+  target_link_libraries(test_nocuda
+    PUBLIC Aperture)
+
+  add_custom_target(run_test_nocuda
+    COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_nocuda"
+    DEPENDS test_nocuda
+    WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+  add_dependencies(check run_test_nocuda)
 endif()
 
 # add_executable(test_parse "test_parse.cpp")

@@ -1,7 +1,7 @@
 #ifndef _DATA_PTRS_H_
 #define _DATA_PTRS_H_
 
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "data/particle_data.h"
 
 namespace Aperture {

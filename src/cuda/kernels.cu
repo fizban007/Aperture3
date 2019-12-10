@@ -82,6 +82,14 @@ map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
   }
 }
 
+__global__ void
+adjust_cell_number(uint32_t* cells, size_t num, int shift) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    cells[n] += shift;
+  }
+}
+
 }  // namespace Kernels
 
 void
@@ -135,6 +143,14 @@ map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
   int block_num = std::min(1024ul, (num + 511) / 512);
   Kernels::map_tracked_ptc<<<block_num, 512>>>(flags, cells, num, tracked_map,
                                                num_tracked);
+  CudaCheckError();
+  CudaSafeCall(cudaDeviceSynchronize());
+}
+
+void
+adjust_cell_number(uint32_t* cells, size_t num, int shift) {
+  int block_num = std::min(1024ul, (num + 511) / 512);
+  Kernels::adjust_cell_number<<<block_num, 512>>>(cells, num, shift);
   CudaCheckError();
   CudaSafeCall(cudaDeviceSynchronize());
 }

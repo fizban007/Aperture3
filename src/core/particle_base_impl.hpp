@@ -12,12 +12,12 @@
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
 #include <cstring>
+#include <mpi.h>
 #include <numeric>
 #include <omp.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <mpi.h>
 
 namespace Aperture {
 
@@ -30,7 +30,8 @@ particle_base<ParticleClass>::particle_base() {
 }
 
 template <typename ParticleClass>
-particle_base<ParticleClass>::particle_base(std::size_t max_num, bool managed) {
+particle_base<ParticleClass>::particle_base(std::size_t max_num,
+                                            bool managed) {
   m_size = max_num;
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num);
@@ -38,15 +39,15 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num, bool managed) {
   initialize();
 }
 
-template <typename ParticleClass>
-particle_base<ParticleClass>::particle_base(
-    const particle_base<ParticleClass>& other) {
-  m_size = other.m_size;
-  m_number = other.m_number;
+// template <typename ParticleClass>
+// particle_base<ParticleClass>::particle_base(
+//     const particle_base<ParticleClass>& other) {
+//   m_size = other.m_size;
+//   m_number = other.m_number;
 
-  alloc_mem(m_size);
-  copy_from(other, m_number);
-}
+//   alloc_mem(m_size);
+//   copy_from(other, m_number);
+// }
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(
@@ -196,28 +197,32 @@ particle_base<ParticleClass>::copy_from(
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::copy_to_comm_buffers(
-    std::vector<self_type>& buffers, const Grid& grid) {
+    std::vector<self_type>& buffers, const Quadmesh& mesh) {
   int num_buffers = buffers.size();
-  auto& mesh = grid.mesh();
+  
   std::vector<int> num_ptc(num_buffers, 0);
+  int zone_offset = 0;
+  if (mesh.dim() <= 2) zone_offset -= 9;
+  if (mesh.dim() <= 1) zone_offset -= 3;
 
   for (size_t n = 0; n < m_number; n++) {
-    int zone = mesh.find_zone(m_data.cell[n]);
+    int zone = mesh.find_zone(m_data.cell[n]) + zone_offset;
+    // Logger::print_debug("zone is {}", zone);
     if (zone == num_buffers / 2) continue;
-    if (zone > num_buffers / 2) zone -= 1;
+    // if (zone > num_buffers / 2) zone -= 1;
 
     int num = num_ptc[zone];
-    visit_struct::for_each(m_data, buffers[zone].m_data, [n, num](
-        const char* name, auto& x, auto& y) {
-      y[num] = x[n];
-      // Mark the original slot to be empty
-      if (strcmp(name, "cell") == 0)
-        x[n] = MAX_CELL;
-    });
+    visit_struct::for_each(
+        m_data, buffers[zone].m_data,
+        [n, num](const char* name, auto& x, auto& y) {
+          y[num] = x[n];
+          // Mark the original slot to be empty
+          if (strcmp(name, "cell") == 0) x[n] = MAX_CELL;
+        });
     num_ptc[zone] = num + 1;
   }
   for (int i = 0; i < num_buffers; i++) {
-    buffers[i].m_number = num_ptc[i];
+    buffers[i].set_num(num_ptc[i]);
   }
 }
 
@@ -340,10 +345,12 @@ void
 particle_base<ParticleClass>::get_total_and_offset(uint64_t num) {
   // Carry out an MPI scan to get the total number and local offset
   uint64_t result = 0;
-  auto status = MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  auto status =
+      MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
   uint64_t offset = result - num;
   uint64_t total = 0;
-  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM,
+                         MPI_COMM_WORLD);
   m_offset = offset;
   m_total = total;
 }

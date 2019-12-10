@@ -2,7 +2,7 @@
 #define _ADDITIONAL_DIAGNOSTICS_H_
 
 #include "cuda/data/fields_dev.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include <vector>
 
 namespace Aperture {

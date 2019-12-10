@@ -1,6 +1,6 @@
 #include "catch.hpp"
 #include "cuda/cudaUtility.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include <vector>
 
 using namespace Aperture;

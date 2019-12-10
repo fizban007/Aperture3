@@ -13,7 +13,7 @@ class particles_t : public particle_base<single_particle_t> {
 
   particles_t();
   particles_t(size_t max_num, bool managed = false);
-  particles_t(const particles_t& other);
+  // particles_t(const particles_t& other);
   particles_t(particles_t&& other);
   virtual ~particles_t();
 

@@ -265,7 +265,7 @@ struct Quadmesh {
     int z1 = (c1 >= guard[0]) + (c1 >= (dims[0] - guard[0]));
     int z2 = (c2 >= guard[1]) + (c2 >= (dims[1] - guard[1]));
     int z3 = (c3 >= guard[2]) + (c3 >= (dims[2] - guard[2]));
-    return z1 + z2 * 3 + z3 * 9;
+    return z1 + (z2 * 3) + z3 * 9;
   }
 
   ///  Find the cell index from the global position, and get the

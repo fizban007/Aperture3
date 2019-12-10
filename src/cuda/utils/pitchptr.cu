@@ -1,4 +1,4 @@
-#include "pitchptr.cuh"
+#include "pitchptr.h"
 #include <cstdint>
 
 namespace Aperture {

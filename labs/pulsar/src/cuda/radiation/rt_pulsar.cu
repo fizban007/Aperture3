@@ -10,7 +10,7 @@
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "rt_pulsar.h"
 #include "utils/logger.h"
 #include "utils/timer.h"

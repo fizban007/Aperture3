@@ -27,8 +27,8 @@ photons_t::photons_t() {}
 photons_t::photons_t(std::size_t max_num, bool managed)
     : particle_base<single_photon_t>(max_num, managed) {}
 
-photons_t::photons_t(const photons_t& other)
-    : particle_base<single_photon_t>(other) {}
+// photons_t::photons_t(const photons_t& other)
+//     : particle_base<single_photon_t>(other) {}
 
 photons_t::photons_t(photons_t&& other)
     : particle_base<single_photon_t>(std::move(other)) {}

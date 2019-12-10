@@ -25,16 +25,43 @@
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
 #include <cstring>
+#include <mpi.h>
 #include <numeric>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <mpi.h>
 // #include "types/particles_dev.h"
 
 namespace Aperture {
 
 namespace Kernels {
+
+// __global__ void
+// compute_target_buffers(const uint32_t* cells, size_t num,
+//                        int* buffer_num, size_t num_zones, size_t* idx) {
+//   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+//        n += blockDim.x * gridDim.x) {
+//     int zone = dev_mesh.find_zone(cells[n]);
+//     if (zone == num_zones / 2) continue;
+//     if (zone >= num_zones / 2) zone -= 1;
+
+//     int pos = atomicAdd(&buffer_num[zone], 1);
+//     // Zone is less than 32, so we can use 5 bits to represent this
+//     // hopefully pos won't be exceeding 1<<26 which is 6.7e7
+//     idx[n] = ((pos & 0b11111) << 27) + pos;
+//   }
+// }
+
+// template <typename T>
+// __global__ void
+// copy_component_to_buffer(T* ptr, size_t num, size_t* idx, ) {
+//   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+//        n += blockDim.x * gridDim.x) {
+//     size_t i = idx[n];
+//     int zone = ((i >> 27) & 0b11111);
+//     int pos = i - (zone << 27);
+//   }
+// }
 
 template <typename T>
 __global__ void
@@ -150,8 +177,10 @@ particle_base<ParticleClass>::particle_base()
 }
 
 template <typename ParticleClass>
-particle_base<ParticleClass>::particle_base(std::size_t max_num, bool managed) {
+particle_base<ParticleClass>::particle_base(std::size_t max_num,
+                                            bool managed) {
   m_size = max_num;
+  m_managed = managed;
   std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num, managed);
   // auto alloc = alloc_cuda_managed(max_num);
@@ -164,32 +193,37 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num, bool managed) {
   initialize();
 }
 
-template <typename ParticleClass>
-particle_base<ParticleClass>::particle_base(
-    const particle_base<ParticleClass>& other) {
-  m_size = other.m_size;
-  m_number = other.m_number;
+// template <typename ParticleClass>
+// particle_base<ParticleClass>::particle_base(
+//     const particle_base<ParticleClass>& other) {
+//   m_size = other.m_size;
+//   m_number = other.m_number;
+//   m_managed = other.m_managed;
 
-  alloc_mem(m_size);
-  // auto alloc = alloc_cuda_managed(n);
-  // auto alloc = alloc_cuda_device(n);
-  // alloc(m_index);
-  cudaMalloc(&m_index, m_size * sizeof(Index_t));
-  cudaMalloc(&m_tmp_data_ptr, m_size * sizeof(double));
-  // alloc((double*)m_tmp_data_ptr);
-  // m_index.resize(n);
-  // m_index_bak.resize(n);
-  copy_from(other, m_size);
-}
+//   alloc_mem(m_size, m_managed);
+//   // auto alloc = alloc_cuda_managed(n);
+//   // auto alloc = alloc_cuda_device(n);
+//   // alloc(m_index);
+//   cudaMalloc(&m_index, m_size * sizeof(Index_t));
+//   cudaMalloc(&m_tmp_data_ptr, m_size * sizeof(double));
+//   // alloc((double*)m_tmp_data_ptr);
+//   // m_index.resize(n);
+//   // m_index_bak.resize(n);
+//   copy_from(other, m_size);
+//   Logger::print_info("Finished copy constructor");
+// }
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::particle_base(
     particle_base<ParticleClass>&& other) {
   m_size = other.m_size;
   m_number = other.m_number;
+  m_managed = other.m_managed;
 
   // m_data_ptr = other.m_data_ptr;
   m_data = other.m_data;
+  m_tracked = other.m_tracked;
+  m_tracked_ptc_map = other.m_tracked_ptc_map;
   // auto alloc = alloc_cuda_managed(m_size);
   // auto alloc = alloc_cuda_device(m_size);
   // alloc(m_index);
@@ -202,7 +236,12 @@ particle_base<ParticleClass>::particle_base(
   // boost::fusion::for_each(other.m_data, set_nullptr());
   visit_struct::for_each(
       other.m_data, [](const char* name, auto& x) { x = nullptr; });
+  visit_struct::for_each(
+      other.m_tracked, [](const char* name, auto& x) { x = nullptr; });
+  other.m_tracked_ptc_map = nullptr;
   // other.m_data_ptr = nullptr;
+  // Logger::print_info("number is {}", m_number);
+  // Logger::print_info("Finished move constructor");
 }
 
 template <typename ParticleClass>
@@ -313,17 +352,23 @@ particle_base<ParticleClass>::copy_from(
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::copy_to_comm_buffers(
-    std::vector<self_type>& buffers, const Grid& grid) {
+    std::vector<self_type>& buffers, const Quadmesh& mesh) {
   int num_buffers = buffers.size();
-  auto& mesh = grid.mesh();
+  // auto& mesh = grid.mesh();
   std::vector<int> num_ptc(num_buffers, 0);
 
   for (int i = 0; i < num_buffers; i++) {
     int zone = i;
-    if (zone >= num_buffers / 2) zone += 1;
+    // if (zone >= num_buffers / 2) zone += 1;
+    // Skip central buffer
+    if (zone == (num_buffers - 1) / 2) continue;
+    // Logger::print_info("copying to buffer {}", zone);
+    if (mesh.dim() <= 2) zone += 9;
+    if (mesh.dim() <= 1) zone += 3;
     visit_struct::for_each(
         m_data, buffers[i].m_data,
-        [this, zone, &num_ptc, i](const char* name, auto& x, auto& y) {
+        [this, zone, &num_ptc, i](const char* name, auto& x, auto& y)
+        {
           auto p_cell = thrust::device_pointer_cast(m_data.cell);
           auto p = thrust::device_pointer_cast(x);
           auto p_buf = thrust::device_pointer_cast(y);
@@ -336,6 +381,8 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
                             compare_zone{zone});
           }
         });
+    // Logger::print_info("setting buffer {} number to {}", i, num_ptc[i]);
+    buffers[i].set_num(num_ptc[i]);
   }
 }
 
@@ -433,10 +480,12 @@ void
 particle_base<ParticleClass>::get_total_and_offset(uint64_t num) {
   // Carry out an MPI scan to get the total number and local offset
   uint64_t result = 0;
-  auto status = MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  auto status =
+      MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
   uint64_t offset = result - num;
   uint64_t total = 0;
-  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM,
+                         MPI_COMM_WORLD);
   m_offset = offset;
   m_total = total;
 }

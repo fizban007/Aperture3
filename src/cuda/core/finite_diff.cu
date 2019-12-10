@@ -4,7 +4,7 @@
 #include "cuda/cudaUtility.h"
 #include "core/stagger.h"
 #include "utils/util_functions.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 
 namespace Aperture {
 

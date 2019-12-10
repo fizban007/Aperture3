@@ -1,7 +1,7 @@
 #ifndef _FIELD_DATA_H_
 #define _FIELD_DATA_H_
 
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "core/typedefs.h"
 
 namespace Aperture {

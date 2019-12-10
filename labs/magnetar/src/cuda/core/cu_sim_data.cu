@@ -6,7 +6,7 @@
 #include "cuda/grids/grid_log_sph_dev.h"
 #include "cuda/ptr_util.h"
 #include "cuda/utils/iterate_devices.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "utils/timer.h"
 #include "visit_struct/visit_struct.hpp"
 

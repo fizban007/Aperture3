@@ -3,7 +3,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/kernels.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "sim_data_impl.hpp"
 #include "visit_struct/visit_struct.hpp"
 
