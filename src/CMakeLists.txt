@@ -34,7 +34,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
     "cuda/kernels.cu"
     "cuda/constant_mem.cu"
-    "cuda/utils/pitchptr.cu"
+    # "cuda/utils/pitchptr.cu"
     "cuda/core/array.cu"
     "cuda/core/multi_array.cu"
     "cuda/core/fields.cu"

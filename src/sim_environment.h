@@ -5,10 +5,10 @@
 #include "config_file.h"
 #include "sim_params.h"
 
-#include "core/multi_array.h"
+#include "core/array.h"
 #include "core/domain_info.h"
 #include "core/grid.h"
-#include "core/array.h"
+#include "core/multi_array.h"
 #include "core/particles.h"
 #include "core/photons.h"
 #include <array>
@@ -39,10 +39,21 @@ class sim_environment {
   void setup_local_grid();
 
   void send_array_guard_cells(multi_array<Scalar>& array);
-  void send_array_guard_cells_single_dir(multi_array<Scalar>& array, int dim, int dir);
+  void send_array_guard_cells_single_dir(multi_array<Scalar>& array,
+                                         int dim, int dir);
 
   void send_add_array_guard_cells(multi_array<Scalar>& array);
-  void send_add_array_guard_cells_single_dir(multi_array<Scalar>& array, int dim, int dir);
+  void send_add_array_guard_cells_single_dir(multi_array<Scalar>& array,
+                                             int dim, int dir);
+
+  void send_particles(particles_t& ptc);
+  void send_particles(photons_t& ph);
+
+  template <typename T>
+  void send_particle_array(T& send_buffer, T& recv_buffer, int src,
+                           int dest, int tag, MPI_Request* send_req,
+                           MPI_Request* recv_reg,
+                           MPI_Status* recv_stat);
 
   /// generate a random number between 0 and 1, useful for setting up
   /// things
@@ -110,10 +121,10 @@ class sim_environment {
 
   std::vector<multi_array<Scalar>> m_send_buffers;
   std::vector<multi_array<Scalar>> m_recv_buffers;
-  std::vector<particles_t> m_ptc_send_buffers;
-  std::vector<particles_t> m_ptc_recv_buffers;
-  std::vector<photons_t> m_ph_send_buffers;
-  std::vector<photons_t> m_ph_recv_buffers;
+  std::vector<particles_t::base_class> m_ptc_send_buffers;
+  std::vector<particles_t::base_class> m_ptc_recv_buffers;
+  std::vector<photons_t::base_class> m_ph_send_buffers;
+  std::vector<photons_t::base_class> m_ph_recv_buffers;
   int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 

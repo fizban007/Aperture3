@@ -2,7 +2,7 @@
 #define _GRID_LOG_SPH_PTRS_H_
 
 #include "grids/grid_log_sph.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 
 namespace Aperture {
 

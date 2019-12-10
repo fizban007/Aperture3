@@ -6,7 +6,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cuda_control.h"
 // #include "cuda/ptr_util.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "utils/util_functions.h"
 
 namespace Aperture {

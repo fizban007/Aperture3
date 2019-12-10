@@ -2,7 +2,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
 #include "cuda/ptr_util.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "cuda/radiation/rt_ic.h"
 #include "radiation/spectra.h"
 #include "sim_params.h"

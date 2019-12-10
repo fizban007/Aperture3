@@ -1,6 +1,7 @@
 #ifndef _PARTICLE_BASE_H_
 #define _PARTICLE_BASE_H_
 
+#include "core/array.h"
 #include "core/enum_types.h"
 #include "core/grid.h"
 #include "data/particle_data.h"
@@ -21,6 +22,7 @@ class particle_base {
   void* m_tmp_data_ptr = nullptr;
   std::vector<size_t> m_partition;
 
+  bool m_managed = false;
   size_t m_size = 0;
   size_t m_number = 0;
   uint64_t m_num_tracked = 0;
@@ -38,7 +40,7 @@ class particle_base {
   explicit particle_base(std::size_t max_num, bool managed = false);
 
   /// Copy constructor
-  particle_base(const self_type& other);
+  // particle_base(const self_type& other);
 
   /// Move Constructor
   particle_base(self_type&& other);
@@ -49,15 +51,15 @@ class particle_base {
   void resize(std::size_t max_num);
   void initialize();
   void erase(std::size_t pos, std::size_t amount = 1);
-  void copy_from(const self_type& other,
-                 std::size_t num, std::size_t src_pos = 0,
-                 std::size_t dest_pos = 0);
+  void copy_from(const self_type& other, std::size_t num,
+                 std::size_t src_pos = 0, std::size_t dest_pos = 0);
   // void copy_from(const std::vector<ParticleClass>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0); void copy_to_buffer(std::vector<ParticleClass>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0);
-  void copy_to_comm_buffers(std::vector<self_type>& buffers, const Grid& grid);
+  void copy_to_comm_buffers(std::vector<self_type>& buffers,
+                            const Quadmesh& mesh);
 
   void put(size_t pos, const ParticleClass& part);
   void append(const ParticleClass& part);
@@ -84,7 +86,7 @@ class particle_base {
 
   /// @return Returns the number of tracked particles
   uint32_t tracked_number() const { return m_num_tracked; }
- 
+
   /// Set the current number of particles in the array to a given value
   /// @param num New number of particles in the array
   void set_num(size_t num) { m_number = num; }
@@ -99,13 +101,13 @@ class particle_base {
   uint64_t num_offset() const { return m_offset; }
 
  protected:
-  void alloc_mem(std::size_t max_num, bool managed = false, std::size_t alignment = 64);
+  void alloc_mem(std::size_t max_num, bool managed = false,
+                 std::size_t alignment = 64);
   void free_mem();
 
   void rearrange_arrays(const std::string& skip);
 };  // ----- end of class particle_base -----
 
-
-}
+}  // namespace Aperture
 
 #endif  // _PARTICLE_BASE_H_

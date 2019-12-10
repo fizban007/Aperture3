@@ -4,7 +4,7 @@
 #include "cuda/data_ptrs.h"
 #include "cuda/grids/grid_log_sph_ptrs.h"
 #include "cuda/ptr_util.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/timer.h"

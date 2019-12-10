@@ -6,9 +6,11 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
+#include "utils/mpi_helper.h"
 #include <boost/filesystem.hpp>
 #include <memory>
 // #include "domain_communicator.h"
+#include "visit_struct/visit_struct.hpp"
 
 namespace Aperture {
 
@@ -121,7 +123,7 @@ sim_environment::setup_env() {
 
   setup_env_extra();
 
-  int num_ptc_buffers = std::pow(3, m_super_grid->dim()) - 1;
+  int num_ptc_buffers = std::pow(3, m_super_grid->dim());
   Logger::print_info("Created {} particle buffers", num_ptc_buffers);
 
   for (int i = 0; i < num_ptc_buffers; i++) {
@@ -296,6 +298,122 @@ sim_environment::send_add_array_guard_cells(
   //   send_add_array_guard_cells_z(array, -1);
   //   send_add_array_guard_cells_z(array, 1);
   // }
+}
+
+void
+sim_environment::send_particles(particles_t& ptc) {
+  auto& mesh = m_grid->mesh();
+  ptc.copy_to_comm_buffers(m_ptc_send_buffers, mesh);
+
+  // Send in x direction first
+  int central = 1;
+  int num_buffers = m_ptc_send_buffers.size();
+  int num_send_x = 9;
+  if (mesh.dim() == 2)
+    num_send_x = 3;
+  else if (mesh.dim() == 1)
+    num_send_x = 1;
+
+  // Send left in x
+  std::vector<MPI_Request> req_send(num_send_x);
+  std::vector<MPI_Request> req_recv(num_send_x);
+  std::vector<MPI_Status> stat_recv(num_send_x);
+  for (int i = 0; i < num_send_x; i++) {
+    int buf_send = i * 3;
+    int buf_recv = i * 3 + 1;
+    send_particle_array(
+        m_ptc_send_buffers[buf_send], m_ptc_recv_buffers[buf_recv],
+        m_domain_info.neighbor_right[0], m_domain_info.neighbor_left[0],
+        i, &req_send[i], &req_recv[i], &stat_recv[i]);
+  }
+  // Send right in x
+  for (int i = 0; i < num_send_x; i++) {
+    int buf_send = i * 3 + 2;
+    int buf_recv = i * 3 + 1;
+    send_particle_array(
+        m_ptc_send_buffers[buf_send], m_ptc_recv_buffers[buf_recv],
+        m_domain_info.neighbor_left[0], m_domain_info.neighbor_right[0],
+        i, &req_send[i], &req_recv[i], &stat_recv[i]);
+  }
+
+  // Send in y direction next
+  if (mesh.dim() >= 2) {
+    central += 3;
+    int num_send_y = 3;
+    if (mesh.dim() == 2) num_send_y = 1;
+    // Send left in y
+    for (int i = 0; i < num_send_y; i++) {
+      int buf_send = 1 + i * 9;
+      int buf_recv = 1 + 3 + i * 9;
+      send_particle_array(m_ptc_send_buffers[buf_send],
+                          m_ptc_recv_buffers[buf_recv],
+                          m_domain_info.neighbor_right[1],
+                          m_domain_info.neighbor_left[1], i,
+                          &req_send[i], &req_recv[i], &stat_recv[i]);
+    }
+    // Send right in y
+    for (int i = 0; i < num_send_y; i++) {
+      int buf_send = 1 + 6 + i * 9;
+      int buf_recv = 1 + 3 + i * 9;
+      send_particle_array(m_ptc_send_buffers[buf_send],
+                          m_ptc_recv_buffers[buf_recv],
+                          m_domain_info.neighbor_left[1],
+                          m_domain_info.neighbor_right[1], i,
+                          &req_send[i], &req_recv[i], &stat_recv[i]);
+    }
+
+    // Finally send z direction
+    if (mesh.dim() == 3) {
+      central += 9;
+      // Send left in z
+      int buf_send = 4;
+      int buf_recv = 13;
+      send_particle_array(m_ptc_send_buffers[buf_send],
+                          m_ptc_recv_buffers[buf_recv],
+                          m_domain_info.neighbor_right[2],
+                          m_domain_info.neighbor_left[2], 0,
+                          &req_send[0], &req_recv[0], &stat_recv[0]);
+      // Send right in z
+      buf_send = 22;
+      send_particle_array(m_ptc_send_buffers[buf_send],
+                          m_ptc_recv_buffers[buf_recv],
+                          m_domain_info.neighbor_left[2],
+                          m_domain_info.neighbor_right[2], 0,
+                          &req_send[0], &req_recv[0], &stat_recv[0]);
+    }
+  }
+
+  // Copy the central recv buffer into the main array
+  ptc.copy_from(m_ptc_recv_buffers[central],
+                m_ptc_recv_buffers[central].number(), 0, ptc.number());
+}
+
+template <typename T>
+void
+sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
+                                     int src, int dest, int tag,
+                                     MPI_Request* send_req,
+                                     MPI_Request* recv_req,
+                                     MPI_Status* recv_stat) {
+  int recv_offset = recv_buffer.number();
+  int num_send = send_buffer.number();
+  int num_recv = 0;
+  visit_struct::for_each(
+      send_buffer.data(), recv_buffer.data(),
+      [&](const char* name, auto& u, auto& v) {
+        MPI_Irecv((void*)(v + recv_offset), recv_buffer.size(),
+                  MPI_Helper::get_mpi_datatype(v[0]), src, tag, m_world,
+                  recv_req);
+        MPI_Isend((void*)u, num_send,
+                  MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
+                  m_world, send_req);
+        MPI_Wait(recv_req, recv_stat);
+        if (strcmp(name, "cell") == 0) {
+          MPI_Get_count(recv_stat, MPI_Helper::get_mpi_datatype(u[0]),
+                        &num_recv);
+        }
+      });
+  recv_buffer.set_num(recv_offset + num_recv);
 }
 
 }  // namespace Aperture

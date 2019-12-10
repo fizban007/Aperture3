@@ -1,7 +1,7 @@
 #include "algorithms/field_solver_1dgr.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
-#include "cuda/utils/pitchptr.cuh"
+#include "cuda/utils/pitchptr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
