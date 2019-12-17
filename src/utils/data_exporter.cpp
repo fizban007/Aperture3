@@ -165,8 +165,12 @@ data_exporter::write_grid() {
     Extent total_ext =
         m_env.super_grid().mesh().extent_less() / downsample;
     total_ext.z = 1;
+    Logger::print_info("total ext is {}x{}x{}", total_ext.x,
+                       total_ext.y, total_ext.z);
     Index offset(mesh.offset[0] / downsample,
                  mesh.offset[1] / downsample, 0);
+    Logger::print_info("offset is {}x{}x{}", offset.x,
+                       offset.y, offset.z);
     write_multi_array(x1_array, "x1", total_ext, offset, datafile);
     write_multi_array(x2_array, "x2", total_ext, offset, datafile);
     // File meshfile(meshfilename,
@@ -383,6 +387,7 @@ data_exporter::write_multi_array(const multi_array<float>& array,
     local_dim[i] = array.extent()[i];
   }
   // TODO: Check the order is correct
+  // Logger::print_debug("env grid dim is {}", m_env.grid().dim());
   auto filespace =
       H5Screate_simple(m_env.grid().dim(), total_dim, NULL);
   auto memspace = H5Screate_simple(m_env.grid().dim(), local_dim, NULL);
@@ -408,7 +413,7 @@ data_exporter::write_multi_array(const multi_array<float>& array,
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace, filespace,
-                    plist_id, tmp_grid_data.host_ptr());
+                    plist_id, array.host_ptr());
 
   H5Dclose(dset_id);
   H5Sclose(filespace);
@@ -546,7 +551,7 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   //     new std::thread(&Aperture::data_exporter::write_ptc_output,
   //     this,
   //                     std::ref(data), timestep, time));
-  write_ptc_output(data, timestep, time);
+  // write_ptc_output(data, timestep, time);
 }
 
 void
@@ -727,5 +732,7 @@ data_exporter::add_ptc_uint_output(sim_data& data,
   write_collective_array(tmp_ptc_uint_data.data(), name, total,
                          num_subset, offset, file_id);
 }
+
+
 
 }  // namespace Aperture

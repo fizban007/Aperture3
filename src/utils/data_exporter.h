@@ -45,6 +45,8 @@ class data_exporter {
                          const Extent& total_ext, const Index& offset,
                          hid_t file_id);
 
+  void write_snapshot(const sim_data& data, const std::string& filename);
+
   template <typename T>
   void write_collective_array(const T* array, const std::string& name,
                               size_t total, size_t local, size_t offset,
