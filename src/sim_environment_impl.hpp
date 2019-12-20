@@ -272,6 +272,16 @@ sim_environment::setup_local_grid() {
 }
 
 void
+sim_environment::send_field_guard_cells(sim_data &data) {
+  send_array_guard_cells(data.E.data(0));
+  send_array_guard_cells(data.E.data(1));
+  send_array_guard_cells(data.E.data(2));
+  send_array_guard_cells(data.B.data(0));
+  send_array_guard_cells(data.B.data(1));
+  send_array_guard_cells(data.B.data(2));
+}
+
+void
 sim_environment::send_array_guard_cells(multi_array<Scalar>& array) {
   send_array_guard_cells_single_dir(array, 0, -1);
   send_array_guard_cells_single_dir(array, 0, 1);
