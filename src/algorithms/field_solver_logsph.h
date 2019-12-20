@@ -1,7 +1,6 @@
 #ifndef _FIELD_SOLVER_LOGSPH_H_
 #define _FIELD_SOLVER_LOGSPH_H_
 
-#include "grids/grid_log_sph.h"
 
 namespace Aperture {
 

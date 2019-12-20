@@ -1,4 +1,5 @@
 #include "algorithms/field_solver_logsph.h"
+#include "grids/grid_log_sph.h"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"

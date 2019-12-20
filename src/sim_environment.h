@@ -20,6 +20,8 @@
 
 namespace Aperture {
 
+class sim_data;
+
 ///  Class of the simulation environment. This class holds the basic
 ///  information that is useful for many other modules.
 class sim_environment {
@@ -38,6 +40,7 @@ class sim_environment {
   //                       const domain_info& info);
   void setup_local_grid();
 
+  void send_field_guard_cells(sim_data& data);
   void send_array_guard_cells(multi_array<Scalar>& array);
   void send_array_guard_cells_single_dir(multi_array<Scalar>& array,
                                          int dim, int dir);
