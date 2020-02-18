@@ -37,13 +37,13 @@ struct sim_data {
   vector_field<Scalar> B;
   // vector_field<Scalar> Ebg;
   vector_field<Scalar> Bbg;
-  vector_field<Scalar> J;
+  // vector_field<Scalar> J;
   // std::vector<scalar_field<Scalar>> Rho;
   // std::vector<scalar_field<Scalar>> gamma;
   // std::vector<scalar_field<Scalar>> ptc_num;
   // std::vector<scalar_field<Scalar>> J_s;
-  scalar_field<Scalar> divE;
-  scalar_field<Scalar> divB;
+  // scalar_field<Scalar> divE;
+  // scalar_field<Scalar> divB;
   // scalar_field<Scalar> EdotB;
   // scalar_field<Scalar> photon_produced;
   // scalar_field<Scalar> pair_produced;

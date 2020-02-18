@@ -2,6 +2,7 @@
 #define _FFE_SOLVER_LOGSPH_H_
 
 #include "core/fields.h"
+#include "cuda/cuda_control.h"
 
 namespace Aperture {
 
@@ -13,7 +14,8 @@ class ffe_solver_logsph {
   ffe_solver_logsph(sim_environment& env);
   ~ffe_solver_logsph();
 
-  void update_fields(sim_data& data, double dt, double time = 0.0);
+  void update_fields(sim_data& data, double dt, double omega,
+                     double time = 0.0);
   void apply_boundary(sim_data& data, double omega, double time = 0.0);
 
  private:
@@ -25,10 +27,14 @@ class ffe_solver_logsph {
 
   sim_environment& m_env;
 
-  vector_field<Scalar> En, dE;
+  vector_field<Scalar> En, dE, J;
   vector_field<Scalar> Bn, dB;
   scalar_field<Scalar> rho;
 };
+
+HOST_DEVICE Scalar star_field_b1(Scalar r, Scalar theta, Scalar phi);
+HOST_DEVICE Scalar star_field_b2(Scalar r, Scalar theta, Scalar phi);
+HOST_DEVICE Scalar star_field_b3(Scalar r, Scalar theta, Scalar phi);
 
 }  // namespace Aperture
 

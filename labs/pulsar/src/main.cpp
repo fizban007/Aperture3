@@ -133,7 +133,7 @@ main(int argc, char *argv[]) {
 
     Scalar omega = 0.0;
     Scalar atm_time = 0.0;
-    Scalar sp_time = 4.0;
+    Scalar sp_time = 10.0;
     if (time <= atm_time) {
       omega = 0.0;
     } else if (time <= atm_time + sp_time) {
@@ -166,7 +166,7 @@ main(int argc, char *argv[]) {
     // Inject particles
     if (env.params().inject_particles && step % 2 == 0)
       ptc_updater.inject_ptc(
-          data, 3, 0.05, 0.0, 0.0,
+          data, 4, 0.02, 0.0, 0.0,
           // 1.1 * omega / env.params().omega, omega);
           1.0, omega);
 

@@ -1,4 +1,5 @@
 #include "grids/grid_log_sph.h"
+#include "omp.h"
 
 namespace Aperture {
 
@@ -7,8 +8,8 @@ Grid_LogSph::Grid_LogSph() {}
 Grid_LogSph::~Grid_LogSph() {}
 
 void
-Grid_LogSph::compute_coef(const SimParams& params) {
-  if (m_mesh.dim() == 2) {
+Grid_LogSph::compute_coef(const SimParams &params) {
+  if (m_mesh.dim() >= 2) {
     // Scalar r_g = params.compactness;
     Scalar r_g = 0.0;
     m_l1_e.resize(m_mesh.dims[0], m_mesh.dims[1]);
@@ -84,25 +85,22 @@ Grid_LogSph::compute_coef(const SimParams& params) {
         }
       }
     }
-  } else if (m_mesh.dim() == 3) {
-    // Do not support 3d yet
+    m_l1_e.copy_to_device();
+    m_l2_e.copy_to_device();
+    m_l3_e.copy_to_device();
+    m_l1_b.copy_to_device();
+    m_l2_b.copy_to_device();
+    m_l3_b.copy_to_device();
+
+    m_A1_e.copy_to_device();
+    m_A2_e.copy_to_device();
+    m_A3_e.copy_to_device();
+    m_A1_b.copy_to_device();
+    m_A2_b.copy_to_device();
+    m_A3_b.copy_to_device();
+
+    m_dV.copy_to_device();
   }
-
-  m_l1_e.copy_to_device();
-  m_l2_e.copy_to_device();
-  m_l3_e.copy_to_device();
-  m_l1_b.copy_to_device();
-  m_l2_b.copy_to_device();
-  m_l3_b.copy_to_device();
-
-  m_A1_e.copy_to_device();
-  m_A2_e.copy_to_device();
-  m_A3_e.copy_to_device();
-  m_A1_b.copy_to_device();
-  m_A2_b.copy_to_device();
-  m_A3_b.copy_to_device();
-
-  m_dV.copy_to_device();
 }
 
 void

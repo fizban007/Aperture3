@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 # include(ExternalProject)
-project (Aperture LANGUAGES CXX)
+project (Aperture LANGUAGES C CXX)
 
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
@@ -50,7 +50,8 @@ endif()
 set(HDF5_USE_STATIC_LIBRARIES)
 
 find_package(MPI REQUIRED)
-find_package(HDF5 REQUIRED COMPONENTS CXX)
+# find_package(HDF5 REQUIRED COMPONENTS CXX)
+find_package(HDF5 REQUIRED)
 # set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS system filesystem REQUIRED)
 find_package(OpenMP)
