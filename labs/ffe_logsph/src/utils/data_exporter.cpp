@@ -100,8 +100,8 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   //   m_output_1d.resize(tmp_grid_data.width());
   // }
 
-  tmp_ptc_uint_data.resize(MAX_TRACKED);
-  tmp_ptc_float_data.resize(MAX_TRACKED);
+  // tmp_ptc_uint_data.resize(MAX_TRACKED);
+  // tmp_ptc_float_data.resize(MAX_TRACKED);
 
   outputDirectory = env.params().data_dir;
   // make sure output directory is a directory
@@ -169,8 +169,8 @@ data_exporter::write_grid() {
                        total_ext.y, total_ext.z);
     Index offset(mesh.offset[0] / downsample,
                  mesh.offset[1] / downsample, 0);
-    Logger::print_info("offset is {}x{}x{}", offset.x,
-                       offset.y, offset.z);
+    Logger::print_info("offset is {}x{}x{}", offset.x, offset.y,
+                       offset.z);
     write_multi_array(x1_array, "x1", total_ext, offset, datafile);
     write_multi_array(x2_array, "x2", total_ext, offset, datafile);
     // File meshfile(meshfilename,
@@ -191,12 +191,24 @@ data_exporter::write_grid() {
     for (int k = 0; k < ext.depth(); k++) {
       for (int j = 0; j < ext.height(); j++) {
         for (int i = 0; i < ext.width(); i++) {
-          x1_array(i, j) =
-              mesh.pos(0, i * downsample + mesh.guard[0], false);
-          x2_array(i, j) =
-              mesh.pos(1, j * downsample + mesh.guard[1], false);
-          x3_array(i, j) =
-              mesh.pos(2, k * downsample + mesh.guard[2], false);
+          if (m_env.params().coord_system == "LogSpherical") {
+            float r = std::exp(
+                mesh.pos(0, i * downsample + mesh.guard[0], false));
+            float theta =
+                mesh.pos(1, j * downsample + mesh.guard[1], false);
+            float phi =
+                mesh.pos(2, k * downsample + mesh.guard[2], false);
+            x1_array(i, j, k) = r * std::sin(theta) * std::cos(phi);
+            x2_array(i, j, k) = r * std::sin(theta) * std::sin(phi);
+            x3_array(i, j, k) = r * std::cos(theta);
+          } else {
+            x1_array(i, j) =
+                mesh.pos(0, i * downsample + mesh.guard[0], false);
+            x2_array(i, j) =
+                mesh.pos(1, j * downsample + mesh.guard[1], false);
+            x3_array(i, j) =
+                mesh.pos(2, k * downsample + mesh.guard[2], false);
+          }
         }
       }
     }
@@ -382,10 +394,12 @@ data_exporter::write_multi_array(const multi_array<float>& array,
   hsize_t offsets[3];
   hsize_t local_dim[3];
   for (int i = 0; i < 3; i++) {
-    total_dim[i] = total_ext[i];
-    offsets[i] = offset[i];
-    local_dim[i] = array.extent()[i];
+    total_dim[2 - i] = total_ext[i];
+    offsets[2 - i] = offset[i];
+    local_dim[2 - i] = array.extent()[i];
   }
+  Logger::print_debug("output grid {}x{}x{}", total_dim[0],
+                      total_dim[1], total_dim[2]);
   // TODO: Check the order is correct
   // Logger::print_debug("env grid dim is {}", m_env.grid().dim());
   auto filespace =
@@ -542,64 +556,11 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   }
   m_xmf << m_xmf_buffer;
   m_xmf_buffer = "";
-
-  data.particles.get_tracked_ptc();
-  data.photons.get_tracked_ptc();
-
-  // Launch a new thread to handle the particle output
-  // m_ptc_thread.reset(
-  //     new std::thread(&Aperture::data_exporter::write_ptc_output,
-  //     this,
-  //                     std::ref(data), timestep, time));
-  // write_ptc_output(data, timestep, time);
 }
 
 void
 data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
-                                double time) {
-  SimParams& params = m_env.params();
-  auto& ptc = data.particles;
-  auto& ph = data.photons;
-  std::vector<uint64_t> tracked(params.num_species + 1, 0);
-  std::vector<uint64_t> offset(params.num_species + 1, 0);
-  std::vector<uint64_t> total(params.num_species + 1, 0);
-
-  for (uint64_t n = 0; n < ptc.tracked_number(); n++) {
-    for (int i = 0; i < params.num_species; i++) {
-      if (get_ptc_type(ptc.tracked_data().flag[n]) == i)
-        tracked[i] += 1;
-    }
-  }
-  // last species is photon
-  tracked[params.num_species] = ph.tracked_number();
-
-  // Carry out an MPI scan to get the total number and local offset
-  for (int i = 0; i < params.num_species + 1; i++) {
-    auto status = MPI_Scan(&tracked[i], &offset[i], 1, MPI_UINT64_T,
-                           MPI_SUM, m_env.world());
-    offset[i] -= tracked[i];
-    status = MPI_Allreduce(&tracked[i], &total[i], 1, MPI_UINT64_T,
-                           MPI_SUM, m_env.world());
-    // TODO: handle error here
-    MPI_Helper::handle_mpi_error(status, m_env.domain_info().rank);
-  }
-
-  std::string filename =
-      fmt::format("{}ptc.{:05d}.h5", outputDirectory,
-                  timestep / m_env.params().data_interval);
-  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
-
-  hid_t datafile =
-      H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-  H5Pclose(plist_id);
-  // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
-  // // user_write_ptc_output(data, *this, timestep, time, datafile);
-  user_write_ptc_output(data, *this, tracked, offset, total, timestep,
-                        time, datafile);
-
-  H5Fclose(datafile);
-}
+                                double time) {}
 
 void
 data_exporter::write_field_output(sim_data& data, uint32_t timestep,
@@ -698,41 +659,5 @@ data_exporter::add_array_output(multi_array<float>& array,
 //                               hid_t file_id, uint32_t timestep) {
 
 // }
-
-template <typename Func>
-void
-data_exporter::add_ptc_float_output(sim_data& data,
-                                    const std::string& name,
-                                    uint64_t num, uint64_t total,
-                                    uint64_t offset, Func f,
-                                    hid_t file_id, uint32_t timestep) {
-  // Logger::print_info("writing the {} of {} tracked particles", name,
-  //                    num);
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_float_data, n, num_subset);
-  }
-
-  write_collective_array(tmp_ptc_float_data.data(), name, total,
-                         num_subset, offset, file_id);
-}
-
-template <typename Func>
-void
-data_exporter::add_ptc_uint_output(sim_data& data,
-                                   const std::string& name,
-                                   uint64_t num, uint64_t total,
-                                   uint64_t offset, Func f,
-                                   hid_t file_id, uint32_t timestep) {
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_uint_data, n, num_subset);
-  }
-
-  write_collective_array(tmp_ptc_uint_data.data(), name, total,
-                         num_subset, offset, file_id);
-}
-
-
 
 }  // namespace Aperture

@@ -214,7 +214,7 @@ struct Index : public Vec3<int> {
     y = slice / ext.width();
     x = slice % ext.width();
   }
-  HOST_DEVICE Index(int xi, int yi = 0, int zi = 0) : Vec3(xi, yi, zi) {}
+  HOST_DEVICE explicit Index(int xi, int yi = 0, int zi = 0) : Vec3(xi, yi, zi) {}
   HOST_DEVICE Index(const Vec3<int>& vec) : Vec3(vec) {}
 
   HD_INLINE int index(const Extent& ext) const {

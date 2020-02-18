@@ -27,12 +27,12 @@ sim_data::sim_data(const sim_environment& e)
   Bbg.set_field_type(FieldType::B);
   Bbg.initialize();
 
-  J.resize(env.local_grid());
-  J.set_field_type(FieldType::E);
-  J.initialize();
+  // J.resize(env.local_grid());
+  // J.set_field_type(FieldType::E);
+  // J.initialize();
 
-  divE.resize(env.local_grid());
-  divB.resize(env.local_grid());
+  // divE.resize(env.local_grid());
+  // divB.resize(env.local_grid());
 
   initialize(env);
 }
@@ -47,12 +47,12 @@ sim_data::copy_to_host() {
   E.copy_to_host();
   Logger::print_info("Sync B");
   B.copy_to_host();
-  Logger::print_info("Sync J");
-  J.copy_to_host();
-  Logger::print_info("Sync divE");
-  divE.copy_to_host();
-  Logger::print_info("Sync divB");
-  divB.copy_to_host();
+  // Logger::print_info("Sync J");
+  // J.copy_to_host();
+  // Logger::print_info("Sync divE");
+  // divE.copy_to_host();
+  // Logger::print_info("Sync divB");
+  // divB.copy_to_host();
 }
 
 }

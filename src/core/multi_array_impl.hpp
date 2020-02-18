@@ -2,6 +2,7 @@
 #define __MULTI_ARRAY_IMPL_H_
 
 #include "multi_array.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -22,17 +23,20 @@ multi_array<T>::multi_array(int width, int height, int depth)
   m_size = width * height * depth;
 
   alloc_mem(m_extent);
+
+  Logger::print_debug("Allocating a multiarray with {}x{}x{}",
+                      width, height, depth);
 }
 
 template <typename T>
 multi_array<T>::multi_array(const Extent& extent)
     : multi_array(extent.width(), extent.height(), extent.depth()) {}
 
-template <typename T>
-multi_array<T>::multi_array(const self_type& other)
-    : multi_array(other.m_extent) {
-  copy_from(other);
-}
+// template <typename T>
+// multi_array<T>::multi_array(const self_type& other)
+//     : multi_array(other.m_extent) {
+//   copy_from(other);
+// }
 
 template <typename T>
 multi_array<T>::multi_array(self_type&& other) {
