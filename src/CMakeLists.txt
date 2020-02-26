@@ -68,6 +68,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     )
 else()
   list(APPEND Aperture_src
+    "cuda/constant_mem.cpp"
     "core/array.cpp"
     "core/multi_array.cpp"
     "core/fields.cpp"

@@ -19,6 +19,7 @@
 #include <thrust/extrema.h>
 #include <thrust/fill.h>
 #include <thrust/gather.h>
+#include <thrust/replace.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/sort.h>
 
@@ -165,7 +166,13 @@ struct compare_zone {
   HOST_DEVICE compare_zone(int z) : zone(z) {}
 
   __device__ bool operator()(uint32_t c) {
-    return dev_mesh.find_zone(c) == zone;
+    return (dev_mesh.find_zone(c) == zone);
+  }
+};
+
+struct not_center_zone {
+  __device__ bool operator()(uint32_t c) {
+    return (dev_mesh.find_zone(c) != 13);
   }
 };
 
@@ -181,7 +188,7 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num,
                                             bool managed) {
   m_size = max_num;
   m_managed = managed;
-  std::cout << "New particle array with size " << max_num << std::endl;
+  // std::cout << "New particle array with size " << max_num << std::endl;
   alloc_mem(max_num, managed);
   // auto alloc = alloc_cuda_managed(max_num);
   // auto alloc = alloc_cuda_device(max_num);
@@ -262,6 +269,8 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
     alloc_struct_of_arrays_managed(m_data, max_num);
   else
     alloc_struct_of_arrays(m_data, max_num);
+  // tracked particles are always managed to make transferring between device
+  // and host much easier
   alloc_struct_of_arrays_managed(m_tracked, MAX_TRACKED);
   CudaSafeCall(
       cudaMalloc(&m_tracked_ptc_map, MAX_TRACKED * sizeof(uint32_t)));
@@ -309,8 +318,8 @@ void
 particle_base<ParticleClass>::erase(std::size_t pos,
                                     std::size_t amount) {
   if (pos + amount > m_size) amount = m_size - pos;
-  std::cout << "Erasing from index " << pos << " for " << amount
-            << " number of particles" << std::endl;
+  // std::cout << "Erasing from index " << pos << " for " << amount
+  //           << " number of particles" << std::endl;
 
   auto ptc = ParticleClass{};
   for_each_arg(m_data, ptc, fill_pos_amount{pos, amount});
@@ -384,6 +393,10 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
     // Logger::print_info("setting buffer {} number to {}", i, num_ptc[i]);
     buffers[i].set_num(num_ptc[i]);
   }
+  // Now that all outgoing particles are in buffers, set them to empty in the
+  // main array
+  auto p_cell = thrust::device_pointer_cast(m_data.cell);
+  thrust::replace_if(p_cell, p_cell + m_number, not_center_zone{}, MAX_CELL);
 }
 
 template <typename ParticleClass>
@@ -478,7 +491,8 @@ particle_base<ParticleClass>::get_tracked_ptc() {
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::get_total_and_offset(uint64_t num) {
-  // Carry out an MPI scan to get the total number and local offset
+  // Carry out an MPI scan to get the total number and local offset, used for
+  // particle output into a file
   uint64_t result = 0;
   auto status =
       MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);

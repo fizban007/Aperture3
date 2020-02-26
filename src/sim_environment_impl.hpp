@@ -65,16 +65,17 @@ sim_environment::sim_environment(int* argc, char*** argv)
   Logger::print_info("Snapshot path is {}", snapshotPath.string());
   boost::filesystem::path config_path(m_params.data_dir);
   config_path /= "config.toml";
-  if (boost::filesystem::exists(snapshotPath) &&
-      boost::filesystem::exists(config_path)) {
-    // Reading from a snapshot, use the config file in data output path
-    // instead
-    Logger::print_info(
-        "**** Found a snapshot file, reading its config instead!");
-    m_params.conf_file = config_path.string();
-    m_conf_file.parse_file(m_params.conf_file, m_params);
-    m_params.is_restart = true;
-  }
+  // if (boost::filesystem::exists(snapshotPath) &&
+  //     boost::filesystem::exists(config_path)) {
+  //   // Reading from a snapshot, use the config file in data output
+  //   path
+  //   // instead
+  //   Logger::print_info(
+  //       "**** Found a snapshot file, reading its config instead!");
+  //   m_params.conf_file = config_path.string();
+  //   m_conf_file.parse_file(m_params.conf_file, m_params);
+  //   m_params.is_restart = true;
+  // }
 
   setup_env();
 }
@@ -256,6 +257,9 @@ sim_environment::setup_local_grid() {
     }
   }
   m_grid->compute_coef(m_params);
+  Logger::print_info("Rank {} grid has size {}x{}x{}",
+                     m_domain_info.rank, mesh.dims[0], mesh.dims[1],
+                     mesh.dims[2]);
 
   m_send_buffers.resize(3);
   m_recv_buffers.resize(3);
@@ -278,7 +282,7 @@ sim_environment::setup_local_grid() {
 }
 
 void
-sim_environment::send_field_guard_cells(sim_data &data) {
+sim_environment::send_field_guard_cells(sim_data& data) {
   send_array_guard_cells(data.E.data(0));
   send_array_guard_cells(data.E.data(1));
   send_array_guard_cells(data.E.data(2));
@@ -316,19 +320,25 @@ sim_environment::send_add_array_guard_cells(
   // }
 }
 
+template <typename T>
 void
-sim_environment::send_particles(particles_t& ptc) {
+sim_environment::send_particles(T& ptc) {
   auto& mesh = m_grid->mesh();
-  ptc.copy_to_comm_buffers(m_ptc_send_buffers, mesh);
+  auto& send_buffers = ptc_send_buffers(ptc);
+  auto& recv_buffers = ptc_recv_buffers(ptc);
+  ptc.copy_to_comm_buffers(send_buffers, mesh);
 
   // Send in x direction first
   int central = 1;
-  int num_buffers = m_ptc_send_buffers.size();
+  int num_buffers = send_buffers.size();
   int num_send_x = 9;
-  if (mesh.dim() == 2)
+  if (mesh.dim() == 2) {
+    central = 4;
     num_send_x = 3;
-  else if (mesh.dim() == 1)
+  } else if (mesh.dim() == 1) {
+    central = 13;
     num_send_x = 1;
+  }
 
   // Send left in x
   std::vector<MPI_Request> req_send(num_send_x);
@@ -337,62 +347,68 @@ sim_environment::send_particles(particles_t& ptc) {
   for (int i = 0; i < num_send_x; i++) {
     int buf_send = i * 3;
     int buf_recv = i * 3 + 1;
-    send_particle_array(
-        m_ptc_send_buffers[buf_send], m_ptc_recv_buffers[buf_recv],
-        m_domain_info.neighbor_right[0], m_domain_info.neighbor_left[0],
-        i, &req_send[i], &req_recv[i], &stat_recv[i]);
+    send_particle_array(send_buffers[buf_send],
+                        (buf_recv == central ? recv_buffers[buf_recv]
+                                             : send_buffers[buf_recv]),
+                        m_domain_info.neighbor_right[0],
+                        m_domain_info.neighbor_left[0], i, &req_send[i],
+                        &req_recv[i], &stat_recv[i]);
   }
   // Send right in x
   for (int i = 0; i < num_send_x; i++) {
     int buf_send = i * 3 + 2;
     int buf_recv = i * 3 + 1;
-    send_particle_array(
-        m_ptc_send_buffers[buf_send], m_ptc_recv_buffers[buf_recv],
-        m_domain_info.neighbor_left[0], m_domain_info.neighbor_right[0],
-        i, &req_send[i], &req_recv[i], &stat_recv[i]);
+    send_particle_array(send_buffers[buf_send],
+                        (buf_recv == central ? recv_buffers[buf_recv]
+                                             : send_buffers[buf_recv]),
+                        m_domain_info.neighbor_left[0],
+                        m_domain_info.neighbor_right[0], i,
+                        &req_send[i], &req_recv[i], &stat_recv[i]);
   }
 
   // Send in y direction next
   if (mesh.dim() >= 2) {
-    central += 3;
     int num_send_y = 3;
     if (mesh.dim() == 2) num_send_y = 1;
     // Send left in y
     for (int i = 0; i < num_send_y; i++) {
       int buf_send = 1 + i * 9;
       int buf_recv = 1 + 3 + i * 9;
-      send_particle_array(m_ptc_send_buffers[buf_send],
-                          m_ptc_recv_buffers[buf_recv],
-                          m_domain_info.neighbor_right[1],
-                          m_domain_info.neighbor_left[1], i,
-                          &req_send[i], &req_recv[i], &stat_recv[i]);
+      send_particle_array(
+          send_buffers[buf_send],
+          (buf_recv == central ? recv_buffers[buf_recv]
+                               : send_buffers[buf_recv]),
+          m_domain_info.neighbor_right[1],
+          m_domain_info.neighbor_left[1], i, &req_send[i], &req_recv[i],
+          &stat_recv[i]);
     }
     // Send right in y
     for (int i = 0; i < num_send_y; i++) {
       int buf_send = 1 + 6 + i * 9;
       int buf_recv = 1 + 3 + i * 9;
-      send_particle_array(m_ptc_send_buffers[buf_send],
-                          m_ptc_recv_buffers[buf_recv],
-                          m_domain_info.neighbor_left[1],
-                          m_domain_info.neighbor_right[1], i,
-                          &req_send[i], &req_recv[i], &stat_recv[i]);
+      send_particle_array(
+          send_buffers[buf_send],
+          (buf_recv == central ? recv_buffers[buf_recv]
+                               : send_buffers[buf_recv]),
+          m_domain_info.neighbor_left[1],
+          m_domain_info.neighbor_right[1], i, &req_send[i],
+          &req_recv[i], &stat_recv[i]);
     }
 
     // Finally send z direction
     if (mesh.dim() == 3) {
-      central += 9;
       // Send left in z
       int buf_send = 4;
       int buf_recv = 13;
-      send_particle_array(m_ptc_send_buffers[buf_send],
-                          m_ptc_recv_buffers[buf_recv],
+      send_particle_array(send_buffers[buf_send],
+                          recv_buffers[buf_recv],
                           m_domain_info.neighbor_right[2],
                           m_domain_info.neighbor_left[2], 0,
                           &req_send[0], &req_recv[0], &stat_recv[0]);
       // Send right in z
       buf_send = 22;
-      send_particle_array(m_ptc_send_buffers[buf_send],
-                          m_ptc_recv_buffers[buf_recv],
+      send_particle_array(send_buffers[buf_send],
+                          recv_buffers[buf_recv],
                           m_domain_info.neighbor_left[2],
                           m_domain_info.neighbor_right[2], 0,
                           &req_send[0], &req_recv[0], &stat_recv[0]);
@@ -400,8 +416,8 @@ sim_environment::send_particles(particles_t& ptc) {
   }
 
   // Copy the central recv buffer into the main array
-  ptc.copy_from(m_ptc_recv_buffers[central],
-                m_ptc_recv_buffers[central].number(), 0, ptc.number());
+  ptc.copy_from(recv_buffers[central], recv_buffers[central].number(),
+                0, ptc.number());
 }
 
 template <typename T>
@@ -427,10 +443,41 @@ sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
         if (strcmp(name, "cell") == 0) {
           MPI_Get_count(recv_stat, MPI_Helper::get_mpi_datatype(u[0]),
                         &num_recv);
+
+          // TODO: adjust cell value after particles moved from rank to
+          // rank!!
         }
       });
   recv_buffer.set_num(recv_offset + num_recv);
 }
+
+template <>
+std::vector<typename particles_t::base_class>&
+sim_environment::ptc_send_buffers(const particles_t& ptc) {
+  return m_ptc_send_buffers;
+}
+
+template <>
+std::vector<typename photons_t::base_class>&
+sim_environment::ptc_send_buffers(const photons_t& ptc) {
+  return m_ph_send_buffers;
+}
+
+template <>
+std::vector<typename particles_t::base_class>&
+sim_environment::ptc_recv_buffers(const particles_t& ptc) {
+  return m_ptc_recv_buffers;
+}
+
+template <>
+std::vector<typename photons_t::base_class>&
+sim_environment::ptc_recv_buffers(const photons_t& ptc) {
+  return m_ph_recv_buffers;
+}
+
+template void sim_environment::send_particles(particles_t& ptc);
+
+template void sim_environment::send_particles(photons_t& ptc);
 
 }  // namespace Aperture
 
