@@ -49,8 +49,9 @@ class sim_environment {
   void send_add_array_guard_cells_single_dir(multi_array<Scalar>& array,
                                              int dim, int dir);
 
-  void send_particles(particles_t& ptc);
-  void send_particles(photons_t& ph);
+  template <typename T>
+  void send_particles(T& ptc);
+  // void send_particles(photons_t& ph);
 
   template <typename T>
   void send_particle_array(T& send_buffer, T& recv_buffer, int src,
@@ -85,6 +86,10 @@ class sim_environment {
   // const MPICommCartesian& cartesian() const { return
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
   // return m_domain_info; }
+  template <typename T>
+  std::vector<typename T::base_class>& ptc_send_buffers(const T& ptc);
+  template <typename T>
+  std::vector<typename T::base_class>& ptc_recv_buffers(const T& ptc);
 
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);

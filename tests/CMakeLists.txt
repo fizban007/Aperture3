@@ -20,10 +20,9 @@ target_sources(tests PRIVATE
   # "test_field_solver.cpp"
   # "test_avx.cpp"
   # "test_ptc_update.cpp"
-  # "test_ptc_comm.cpp"
+  "test_ptc_comm.cpp"
 )
 target_link_libraries(tests
-  # PUBLIC AperCuda
   PUBLIC Aperture)
 
 add_custom_target(run_tests
@@ -47,7 +46,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
 #     # "test_particles.cpp"
 #     # "test_env.cpp"
 #     # "test_domain.cpp"
-    # "test_pitchptr.cu"
+      "test_pitchptr.cu"
 #     # "test_config.cpp"
 #     # "test_ic.cu"
 #     "test_ptc_comm.cu"
@@ -74,8 +73,8 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
 #   add_dependencies(check run_test_nocuda)
 endif()
 
-# add_executable(test_parse "test_parse.cpp")
-# target_link_libraries(test_parse Aperture)
+add_executable(test_mpi "test_mpi.cpp")
+target_link_libraries(test_mpi Aperture)
 
 # add_executable(test_IC "test_IC.cpp")
 # target_link_libraries(test_IC Aperture)
