@@ -3,9 +3,7 @@
 
 #include <cmath>
 #include <iostream>
-// #include <mpi.h>
 #include "cuda/cuda_control.h"
-// #include "cuda_runtime.h"
 #include "core/typedefs.h"
 
 namespace Aperture {
@@ -200,6 +198,15 @@ struct Extent : public Vec3<int> {
   // cudaExtent cuda_ext(const T& t) const {
   //   return make_cudaExtent(x*sizeof(T), y, z);
   // }
+  HD_INLINE int dim() const {
+    if (y <= 1 && z <= 1) {
+      return 1;
+    } else if (z <= 1) {
+      return 2;
+    } else {
+      return 3;
+    }
+  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,18 +242,6 @@ abs(const Vec3<T>& v) {
   // return v.length();
   return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
-
-// template <typename T>
-// Vector3 to_eigen(const Vec3<T>& vec) {
-//   Vector3 result(vec.x, vec.y, vec.z);
-//   return result;
-// }
-
-// template <typename T>
-// Vec3<T> from_eigen(const Vector3& vec) {
-//   Vec3<T> result(vec[0], vec[1], vec[2]);
-//   return result;
-// }
 
 }  // namespace Aperture
 

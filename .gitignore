@@ -9,7 +9,7 @@
 *.un~
 *.h5
 result*
-build
+build*
 bin
 Data
 ninja
@@ -22,3 +22,4 @@ GPATH
 GRTAGS
 GTAGS
 ID
+src_*

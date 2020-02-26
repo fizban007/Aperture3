@@ -26,6 +26,7 @@ set(Aperture_src
   "utils/logger.cpp"
   "utils/timer.cpp"
   "utils/mpi_helper.cpp"
+  "utils/hdf_wrapper.cpp"
   # "utils/mpi_comm.cpp"
   "utils/memory.cpp"
   "utils/filesystem.cpp"

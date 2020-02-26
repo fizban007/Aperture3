@@ -1,6 +1,7 @@
 #include "core/multi_array_impl.hpp"
 #include "cuda/cudaUtility.h"
 #include "cuda/data/multi_array_utils.cuh"
+#include "cuda/utils/interpolation.cuh"
 #include "cuda/utils/pitchptr.h"
 #include "utils/logger.h"
 #include <algorithm>
@@ -9,6 +10,51 @@
 #include <thrust/device_ptr.h>
 
 namespace Aperture {
+
+namespace Kernels {
+
+template <typename T>
+__global__ void
+downsample(pitchptr<T> orig_data, pitchptr<float> dst_data,
+           Extent orig_ext, Extent dst_ext, Index offset, Stagger st,
+           int d) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  int j = threadIdx.y + blockIdx.y * blockDim.y;
+  int k = threadIdx.z + blockIdx.z * blockDim.z;
+  if (i < dst_ext.x && j < dst_ext.y && k < dst_ext.z) {
+    size_t orig_idx =
+        i * d + offset.x + (j * d + offset.y) * orig_data.p.pitch +
+        (k * d + offset.z) * orig_data.p.pitch * orig_data.p.ysize;
+    size_t dst_idx = i + j * dst_data.p.pitch +
+                     k * dst_data.p.pitch * dst_data.p.ysize;
+
+    dst_data[dst_idx] =
+        interpolate(orig_data, orig_idx, st, Stagger(0b111),
+                    orig_data.p.pitch, orig_data.p.ysize);
+    // dst_data[dst_idx] = orig_data[orig_idx];
+  }
+}
+
+template <typename T>
+__global__ void
+downsample2d(pitchptr<T> orig_data, pitchptr<float> dst_data,
+             Extent orig_ext, Extent dst_ext, Index offset, Stagger st,
+             int d) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  int j = threadIdx.y + blockIdx.y * blockDim.y;
+  if (i < dst_ext.x && j < dst_ext.y) {
+    size_t orig_idx =
+        i * d + offset.x + (j * d + offset.y) * orig_data.p.pitch;
+    size_t dst_idx = i + j * dst_data.p.pitch;
+
+    dst_data[dst_idx] = interpolate2d(
+        orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
+
+    // dst_data[dst_idx] = orig_data[orig_idx];
+  }
+}
+
+}  // namespace Kernels
 
 template <typename T>
 inline cudaExtent
@@ -210,6 +256,34 @@ multi_array<T>::copy_to_device() {
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
 
+template <typename T>
+void
+multi_array<T>::downsample(int d, multi_array<float>& array,
+                           Index offset, Stagger stagger) {
+  auto& ext = array.extent();
+  if (ext.y == 1 && ext.z == 1) {
+    // Use 1D version which we did not implement
+  } else if (ext.z == 1) {  // Use 2D version
+    dim3 blockSize(32, 32);
+    dim3 gridSize((ext.x + blockSize.x - 1) / blockSize.x,
+                  (ext.y + blockSize.y - 1) / blockSize.y);
+    Kernels::downsample2d<<<gridSize, blockSize>>>(
+        get_pitchptr(*this), get_pitchptr(array), m_extent,
+        array.extent(), offset, stagger, d);
+    CudaCheckError();
+  } else {
+    dim3 blockSize(32, 8, 4);
+    dim3 gridSize((ext.x + blockSize.x - 1) / blockSize.x,
+                  (ext.y + blockSize.y - 1) / blockSize.y,
+                  (ext.z + blockSize.z - 1) / blockSize.z);
+    Kernels::downsample<<<gridSize, blockSize>>>(
+        get_pitchptr(*this), get_pitchptr(array), m_extent,
+        array.extent(), offset, stagger, d);
+    CudaCheckError();
+  }
+  array.copy_to_host();
+}
+
 /////////////////////////////////////////////////////////////////
 // Explicitly instantiate the classes we will use
 /////////////////////////////////////////////////////////////////
@@ -223,6 +297,5 @@ template class multi_array<unsigned long>;
 template class multi_array<unsigned long long>;
 template class multi_array<float>;
 template class multi_array<double>;
-template class multi_array<long double>;
 
 }  // namespace Aperture
