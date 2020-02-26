@@ -14,8 +14,8 @@ add_executable(tests "test.cpp")
 target_sources(tests PRIVATE
   # "test_stagger.cpp"
   "test_multi_array.cpp"
-  "test_flags.cpp"
-  "test_env.cpp"
+  # "test_flags.cpp"
+  # "test_env.cpp"
   # "test_fields.cpp"
   # "test_field_solver.cpp"
   # "test_avx.cpp"
@@ -33,26 +33,26 @@ add_custom_target(run_tests
 add_dependencies(check run_tests)
 
 if (use_cuda AND CMAKE_CUDA_COMPILER)
-  add_executable(test_fd "test.cpp")
-  target_sources(test_fd PRIVATE "test_finite_diff.cpp")
-  target_link_libraries(test_fd
-    PUBLIC Aperture)
-  add_dependencies(check test_fd)
+#   add_executable(test_fd "test.cpp")
+#   target_sources(test_fd PRIVATE "test_finite_diff.cpp")
+#   target_link_libraries(test_fd
+#     PUBLIC Aperture)
+#   add_dependencies(check test_fd)
 
-  # "test_pair_creation.cu")
-  # "test_cuda.cu" "test_particles.cu")
+#   # "test_pair_creation.cu")
+#   # "test_cuda.cu" "test_particles.cu")
   add_executable(test_cuda "test.cu")
   target_sources(test_cuda PUBLIC
-    # "test_multiarray.cu"
-    # "test_particles.cpp"
-    # "test_env.cpp"
-    # "test_domain.cpp"
+#     # "test_multiarray.cu"
+#     # "test_particles.cpp"
+#     # "test_env.cpp"
+#     # "test_domain.cpp"
     # "test_pitchptr.cu"
-    # "test_config.cpp"
-    # "test_ic.cu"
-    "test_ptc_comm.cu"
+#     # "test_config.cpp"
+#     # "test_ic.cu"
+#     "test_ptc_comm.cu"
     )
-  # set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
+#   # set_target_properties(test_cuda PROPERTIES LINKER_LANGUAGE CUDA)
   target_link_libraries(test_cuda
     PUBLIC Aperture)
   add_custom_target(run_cuda_tests
@@ -60,18 +60,18 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     DEPENDS test_cuda
     WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
   add_dependencies(check run_cuda_tests)
-else()
-  add_executable(test_nocuda "test_nocuda.cpp")
-  target_sources(test_nocuda PUBLIC
-    "test_ptc_comm.cpp")
-  target_link_libraries(test_nocuda
-    PUBLIC Aperture)
+# else()
+#   add_executable(test_nocuda "test_nocuda.cpp")
+#   target_sources(test_nocuda PUBLIC
+#     "test_ptc_comm.cpp")
+#   target_link_libraries(test_nocuda
+#     PUBLIC Aperture)
 
-  add_custom_target(run_test_nocuda
-    COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_nocuda"
-    DEPENDS test_nocuda
-    WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-  add_dependencies(check run_test_nocuda)
+#   add_custom_target(run_test_nocuda
+#     COMMAND "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_nocuda"
+#     DEPENDS test_nocuda
+#     WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+#   add_dependencies(check run_test_nocuda)
 endif()
 
 # add_executable(test_parse "test_parse.cpp")

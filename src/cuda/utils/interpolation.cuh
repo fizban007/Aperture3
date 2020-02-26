@@ -216,6 +216,22 @@ interpolate(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
   return 0.5 * (f1 + f0);
 }
 
+template <typename T>
+HOST_DEVICE T
+interpolate2d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
+              size_t dim0) {
+  int di_m = (in[0] == out[0] ? 0 : -1 - out[0]) * sizeof(T);
+  int di_p = (in[0] == out[0] ? 0 : -out[0]) * sizeof(T);
+  int dj_m = (in[1] == out[1] ? 0 : -1 - out[1]);
+  int dj_p = (in[1] == out[1] ? 0 : -out[1]);
+
+  Scalar f1 = 0.5 * (f[idx_lin + di_p + dj_p * dim0] +
+                     f[idx_lin + di_p + dj_m * dim0]);
+  Scalar f0 = 0.5 * (f[idx_lin + di_m + dj_p * dim0] +
+                     f[idx_lin + di_m + dj_m * dim0]);
+  return 0.5 * (f1 + f0);
+}
+
 // template <typename T>
 // HOST_DEVICE T
 // interpolate(pitchptr<T> f, Index idx, Stagger in, Stagger out, int dim0,

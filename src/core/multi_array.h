@@ -97,6 +97,14 @@ class multi_array {
   void check_dimensions(self_type& other, const Index& idx_src,
                         const Index& idx_dst, const Extent& ext) const;
 
+  /// Interpolate to a specific point
+  T interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
+                Stagger stagger) const;
+
+  /// Downsample the multi_array to a new multi_array of smaller sizes
+  void downsample(int d, multi_array<float>& array, Index offset,
+                  Stagger stagger);
+
   // Returns various sizes of the array
   int width() const { return m_extent.width(); }
   int height() const { return m_extent.height(); }
@@ -111,9 +119,6 @@ class multi_array {
   const T* host_ptr() const { return m_data_h; }
   void* dev_ptr() { return m_data_d; }
   const void* dev_ptr() const { return m_data_d; }
-
-  T interpolate(uint32_t idx, Scalar x1, Scalar x2, Scalar x3,
-                Stagger stagger) const;
 
  private:
   void alloc_mem(const Extent& ext);

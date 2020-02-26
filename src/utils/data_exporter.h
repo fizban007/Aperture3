@@ -92,8 +92,8 @@ class data_exporter {
   // boost::multi_array<float, 2> m_output_2d;
   // std::vector<float> m_output_1d;
 
-  // std::vector<float> tmp_ptc_float_data;
-  // std::vector<uint32_t> tmp_ptc_uint_data;
+  std::vector<float> tmp_ptc_float_data;
+  std::vector<uint32_t> tmp_ptc_uint_data;
 
   // std::unique_ptr<std::thread> m_fld_thread;
   // std::unique_ptr<std::thread> m_ptc_thread;
