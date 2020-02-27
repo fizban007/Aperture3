@@ -26,6 +26,7 @@ class particle_base {
   size_t m_size = 0;
   size_t m_number = 0;
   uint64_t m_num_tracked = 0;
+  uint64_t m_max_tracked = 0;
   uint64_t m_total = 0;
   uint64_t m_offset = 0;
 

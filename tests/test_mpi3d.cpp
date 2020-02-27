@@ -8,7 +8,7 @@ int
 main(int argc, char *argv[]) {
   sim_environment env(&argc, &argv);
 
-  particles_t ptc(100, true);
+  particles_t ptc(1000, true);
   int N1 = env.local_grid().mesh().dims[0];
   int N2 = env.local_grid().mesh().dims[1];
   if (env.domain_info().rank == 0) {
