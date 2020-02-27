@@ -19,9 +19,10 @@
 #include <thrust/extrema.h>
 #include <thrust/fill.h>
 #include <thrust/gather.h>
-#include <thrust/replace.h>
 #include <thrust/iterator/counting_iterator.h>
+#include <thrust/replace.h>
 #include <thrust/sort.h>
+#include <thrust/transform.h>
 
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
@@ -39,7 +40,8 @@ namespace Kernels {
 
 // __global__ void
 // compute_target_buffers(const uint32_t* cells, size_t num,
-//                        int* buffer_num, size_t num_zones, size_t* idx) {
+//                        int* buffer_num, size_t num_zones, size_t*
+//                        idx) {
 //   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
 //        n += blockDim.x * gridDim.x) {
 //     int zone = dev_mesh.find_zone(cells[n]);
@@ -160,19 +162,34 @@ struct rearrange_array {
   }
 };
 
-struct compare_zone {
-  int zone;
+// struct compare_zone {
+//   int zone;
 
-  HOST_DEVICE compare_zone(int z) : zone(z) {}
+//   HOST_DEVICE compare_zone(int z) : zone(z) {}
 
-  __device__ bool operator()(uint32_t c) {
-    return (dev_mesh.find_zone(c) == zone);
-  }
-};
+//   __device__ bool operator()(uint32_t c) {
+//     return (dev_mesh.find_zone(c) == zone);
+//   }
+// };
 
-struct not_center_zone {
-  __device__ bool operator()(uint32_t c) {
-    return (dev_mesh.find_zone(c) != 13);
+// struct not_center_zone {
+//   __device__ bool operator()(uint32_t c) {
+//     return (dev_mesh.find_zone(c) != 13);
+//   }
+// };
+
+struct modify_cell {
+  int _dx, _dy, _dz;
+
+  HOST_DEVICE modify_cell(int dx, int dy, int dz) :
+      _dx(dx), _dy(dy), _dz(dz) {}
+
+  __device__ uint32_t operator()(uint32_t c) {
+    return c -
+           _dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
+               dev_mesh.dims[1] -
+           _dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
+           _dx * dev_mesh.reduced_dim(0);
   }
 };
 
@@ -188,7 +205,8 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num,
                                             bool managed) {
   m_size = max_num;
   m_managed = managed;
-  // std::cout << "New particle array with size " << max_num << std::endl;
+  // std::cout << "New particle array with size " << max_num <<
+  // std::endl;
   alloc_mem(max_num, managed);
   // auto alloc = alloc_cuda_managed(max_num);
   // auto alloc = alloc_cuda_device(max_num);
@@ -269,8 +287,8 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
     alloc_struct_of_arrays_managed(m_data, max_num);
   else
     alloc_struct_of_arrays(m_data, max_num);
-  // tracked particles are always managed to make transferring between device
-  // and host much easier
+  // tracked particles are always managed to make transferring between
+  // device and host much easier
   alloc_struct_of_arrays_managed(m_tracked, MAX_TRACKED);
   CudaSafeCall(
       cudaMalloc(&m_tracked_ptc_map, MAX_TRACKED * sizeof(uint32_t)));
@@ -374,29 +392,46 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
     // Logger::print_info("copying to buffer {}", zone);
     if (mesh.dim() <= 2) zone += 9;
     if (mesh.dim() <= 1) zone += 3;
+
+    auto compare_zone = [zone] __device__(uint32_t c) {
+      return dev_mesh.find_zone(c) == zone;
+    };
+
     visit_struct::for_each(
         m_data, buffers[i].m_data,
-        [this, zone, &num_ptc, i](const char* name, auto& x, auto& y)
-        {
+        [this, zone, &compare_zone, &num_ptc, i](const char* name,
+                                                 auto& x, auto& y) {
           auto p_cell = thrust::device_pointer_cast(m_data.cell);
           auto p = thrust::device_pointer_cast(x);
           auto p_buf = thrust::device_pointer_cast(y);
           if (strcmp(name, "cell") == 0) {
-            auto buf_end = thrust::copy_if(p, p + m_number, p_buf,
-                                           compare_zone{zone});
+            auto buf_end =
+                thrust::copy_if(p, p + m_number, p_buf, compare_zone);
             num_ptc[i] = buf_end - p_buf;
+
+            // TODO: adjust cell value after particles are copied to
+            // communication buffer!!
+            int dz = (zone / 9) - 1;
+            int dy = (zone / 3) % 3 - 1;
+            int dx = zone % 3 - 1;
+
+            thrust::transform(p_buf, buf_end, p_buf, modify_cell{dx, dy, dz});
           } else {
             thrust::copy_if(p, p + m_number, p_cell, p_buf,
-                            compare_zone{zone});
+                            compare_zone);
           }
         });
-    // Logger::print_info("setting buffer {} number to {}", i, num_ptc[i]);
+    // Logger::print_info("setting buffer {} number to {}", i,
+    // num_ptc[i]);
     buffers[i].set_num(num_ptc[i]);
   }
-  // Now that all outgoing particles are in buffers, set them to empty in the
-  // main array
+  // Now that all outgoing particles are in buffers, set them to empty
+  // in the main array
   auto p_cell = thrust::device_pointer_cast(m_data.cell);
-  thrust::replace_if(p_cell, p_cell + m_number, not_center_zone{}, MAX_CELL);
+  thrust::replace_if(
+      p_cell, p_cell + m_number,
+      [] __device__(uint32_t c) { return dev_mesh.find_zone(c) != 13; },
+      MAX_CELL);
 }
 
 template <typename ParticleClass>
@@ -491,8 +526,8 @@ particle_base<ParticleClass>::get_tracked_ptc() {
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::get_total_and_offset(uint64_t num) {
-  // Carry out an MPI scan to get the total number and local offset, used for
-  // particle output into a file
+  // Carry out an MPI scan to get the total number and local offset,
+  // used for particle output into a file
   uint64_t result = 0;
   auto status =
       MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);

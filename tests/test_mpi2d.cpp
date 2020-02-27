@@ -8,10 +8,10 @@ int
 main(int argc, char *argv[]) {
   sim_environment env(&argc, &argv);
 
-  particles_t ptc(100);
+  particles_t ptc(100, true);
   int N1 = env.local_grid().mesh().dims[0];
   if (env.domain_info().rank == 0) {
-    ptc.append({0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}, 1 + 5 * N1,
+    ptc.append({0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}, 1 + 7 * N1,
                ParticleType::electron);
     ptc.append({0.5, 0.5, 0.5}, {2.0, 0.0, 0.0}, (N1 - 1) + 3 * N1,
                ParticleType::electron);
@@ -23,8 +23,12 @@ main(int argc, char *argv[]) {
   env.send_particles(ptc);
   ptc.sort_by_cell(env.local_grid());
 
-  Logger::print_debug_all("Rank {} has {} particles", env.domain_info().rank,
+  Logger::print_debug_all("Rank {} has {} particles:", env.domain_info().rank,
                           ptc.number());
+  for (int i = 0; i < ptc.number(); i++) {
+    auto c = ptc.data().cell[i];
+    Logger::print_debug_all("cell {}, {}", c % N1, c / N1);
+  }
 
   return 0;
 }

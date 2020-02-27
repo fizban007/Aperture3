@@ -73,8 +73,11 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
 #   add_dependencies(check run_test_nocuda)
 endif()
 
-add_executable(test_mpi "test_mpi.cpp")
-target_link_libraries(test_mpi Aperture)
+add_executable(test_mpi2d "test_mpi2d.cpp")
+target_link_libraries(test_mpi2d Aperture)
+
+add_executable(test_mpi3d "test_mpi3d.cpp")
+target_link_libraries(test_mpi3d Aperture)
 
 # add_executable(test_IC "test_IC.cpp")
 # target_link_libraries(test_IC Aperture)
