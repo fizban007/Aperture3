@@ -87,9 +87,9 @@ class sim_environment {
   // m_comm->cartesian(); } const DomainInfo& domain_info() const {
   // return m_domain_info; }
   template <typename T>
-  std::vector<typename T::base_class>& ptc_send_buffers(const T& ptc);
-  template <typename T>
-  std::vector<typename T::base_class>& ptc_recv_buffers(const T& ptc);
+  std::vector<typename T::base_class>& ptc_buffers(const T& ptc);
+  // template <typename T>
+  // std::vector<typename T::base_class>& ptc_recv_buffers(const T& ptc);
 
   // void save_snapshot(cu_sim_data& data);
   // void load_snapshot(cu_sim_data& data);
@@ -129,10 +129,10 @@ class sim_environment {
 
   std::vector<multi_array<Scalar>> m_send_buffers;
   std::vector<multi_array<Scalar>> m_recv_buffers;
-  std::vector<particles_t::base_class> m_ptc_send_buffers;
-  std::vector<particles_t::base_class> m_ptc_recv_buffers;
-  std::vector<photons_t::base_class> m_ph_send_buffers;
-  std::vector<photons_t::base_class> m_ph_recv_buffers;
+  std::vector<particles_t::base_class> m_ptc_buffers;
+  // std::vector<particles_t::base_class> m_ptc_recv_buffers;
+  std::vector<photons_t::base_class> m_ph_buffers;
+  // std::vector<photons_t::base_class> m_ph_recv_buffers;
   int m_dev_id = 0;
 };  // ----- end of class sim_environment -----
 
