@@ -287,11 +287,12 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
     alloc_struct_of_arrays_managed(m_data, max_num);
   else
     alloc_struct_of_arrays(m_data, max_num);
-  // tracked particles are always managed to make transferring between
+  // Tracked particles are always managed to make transferring between
   // device and host much easier
-  alloc_struct_of_arrays_managed(m_tracked, MAX_TRACKED);
+  m_max_tracked = std::min(max_num, size_t(MAX_TRACKED)); // No point in allocating more than max_num
+  alloc_struct_of_arrays_managed(m_tracked, m_max_tracked);
   CudaSafeCall(
-      cudaMalloc(&m_tracked_ptc_map, MAX_TRACKED * sizeof(uint32_t)));
+      cudaMalloc(&m_tracked_ptc_map, m_max_tracked * sizeof(uint32_t)));
 }
 
 template <typename ParticleClass>
@@ -506,12 +507,12 @@ particle_base<ParticleClass>::get_tracked_ptc() {
                             sizeof(uint32_t), cudaMemcpyHostToDevice));
 
     map_tracked_ptc(m_data.flag, m_data.cell, m_number,
-                    m_tracked_ptc_map, num_tracked);
+                    m_tracked_ptc_map, num_tracked, m_max_tracked);
     CudaSafeCall(cudaMemcpy(&m_num_tracked, num_tracked,
                             sizeof(uint32_t), cudaMemcpyDeviceToHost));
     CudaSafeCall(cudaFree(num_tracked));
 
-    if (m_num_tracked >= MAX_TRACKED) m_num_tracked = MAX_TRACKED - 1;
+    if (m_num_tracked >= m_max_tracked) m_num_tracked = m_max_tracked - 1;
     visit_struct::for_each(
         m_data, m_tracked, [this](const char* name, auto& u, auto& v) {
           Kernels::get_tracked_ptc_attr<<<256, 512>>>(

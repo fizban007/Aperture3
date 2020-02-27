@@ -72,6 +72,7 @@ void
 particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
                                         bool managed,
                                         std::size_t alignment) {
+  m_max_tracked = std::min(max_num, size_t(MAX_TRACKED)); // No point in allocating more than max_num
   visit_struct::for_each(m_data, [max_num, alignment](const char* name,
                                                       auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
@@ -79,10 +80,10 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   });
-  visit_struct::for_each(m_tracked, [alignment](const char* name,
+  visit_struct::for_each(m_tracked, [this, alignment](const char* name,
                                                 auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    void* p = aligned_malloc(MAX_TRACKED * sizeof(x_type), alignment);
+    void* p = aligned_malloc(m_max_tracked * sizeof(x_type), alignment);
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   });
@@ -199,7 +200,7 @@ void
 particle_base<ParticleClass>::copy_to_comm_buffers(
     std::vector<self_type>& buffers, const Quadmesh& mesh) {
   int num_buffers = buffers.size();
-  
+
   std::vector<int> num_ptc(num_buffers, 0);
   int zone_offset = 0;
   if (mesh.dim() <= 2) zone_offset -= 9;
