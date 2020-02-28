@@ -1,8 +1,8 @@
 #ifndef _HDF_WRAPPER_H_
 #define _HDF_WRAPPER_H_
 
-#include "core/multi_array.h"
 #include "core/array.h"
+#include "core/multi_array.h"
 #include "core/vec3.h"
 #include "hdf5.h"
 #include <string>
@@ -51,9 +51,8 @@ class H5File {
                       const std::string& name);
   template <typename T>
   void write_parallel(const T* array, size_t array_size,
-                      size_t len_total, size_t idx_dst,
-                      size_t len, size_t idx_src,
-                      const std::string& name);
+                      size_t len_total, size_t idx_dst, size_t len,
+                      size_t idx_src, const std::string& name);
 
   template <typename T>
   multi_array<T> read_multi_array(const std::string& name);
@@ -66,6 +65,10 @@ class H5File {
   void read_subset(multi_array<T>& array, const std::string& name,
                    const Index& idx_src, const Extent& ext,
                    const Index& idx_dst);
+
+  template <typename T>
+  void read_subset(T* array, size_t array_size, const std::string& name,
+                   size_t idx_src, size_t len, size_t idx_dst);
 
   void set_parallel(bool p) { m_is_parallel = p; }
 };

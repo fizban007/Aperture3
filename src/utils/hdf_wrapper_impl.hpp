@@ -11,8 +11,8 @@ void
 H5File::write(T value, const std::string& name) {
   auto dataspace_id = H5Screate(H5S_SCALAR);
   auto dataset_id =
-      H5Dcreate(m_file_id, name.c_str(), h5datatype<T>(), dataspace_id,
-                H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      H5Dcreate2(m_file_id, name.c_str(), h5datatype<T>(), dataspace_id,
+                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
   if (m_is_parallel) {
     int rank;
@@ -219,6 +219,56 @@ H5File::read_subset(multi_array<T>& array, const std::string& name,
   H5Sclose(dataspace);
   H5Sclose(memspace);
   H5Pclose(plist_id);
+
+  if (status < 0) {
+    Logger::print_err("H5Dread error in subset read! Status is {}", status);
+  }
+}
+
+template <typename T>
+void
+H5File::read_subset(T* array, size_t array_size,
+                    const std::string& name, size_t idx_src, size_t len,
+                    size_t idx_dst) {
+  hsize_t dims[3], array_dims[1];
+  // dims[i] = ext_total[ext_total.dim() - 1 - i];
+  array_dims[0] = array_size;
+
+  auto dataset = H5Dopen(m_file_id, name.c_str(), H5P_DEFAULT);
+  auto dataspace = H5Dget_space(dataset); /* dataspace handle */
+  int dim = H5Sget_simple_extent_ndims(dataspace);
+  H5Sget_simple_extent_dims(dataspace, dims, NULL);
+
+  auto memspace = H5Screate_simple(1, array_dims, NULL);
+
+  hsize_t offsets[1] = {1};
+  hsize_t offsets_l[1] = {1};
+  hsize_t out_dim[1] = {1};
+  hsize_t count[1] = {1};
+  hsize_t stride[1] = {1};
+
+  offsets[0] = idx_src;
+  offsets_l[0] = idx_dst;
+  out_dim[0] = len;
+
+  H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offsets, stride, count,
+                      out_dim);
+  H5Sselect_hyperslab(memspace, H5S_SELECT_SET, offsets_l, stride,
+                      count, out_dim);
+
+  auto plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+  auto status = H5Dread(dataset, h5datatype<T>(), memspace, dataspace,
+                        plist_id, array);
+
+  H5Dclose(dataset);
+  H5Sclose(dataspace);
+  H5Sclose(memspace);
+  H5Pclose(plist_id);
+
+  if (status < 0) {
+    Logger::print_err("H5Dread error in subset read! Status is {}", status);
+  }
 }
 
 }  // namespace Aperture

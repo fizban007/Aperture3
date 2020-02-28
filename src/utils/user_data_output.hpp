@@ -1,20 +1,17 @@
 #ifndef __USER_DATA_OUTPUT_H_
 #define __USER_DATA_OUTPUT_H_
 
-#include "grids/grid_1dgr.h"
+// #include "grids/grid_1dgr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/data_exporter.h"
 #include "utils/util_functions.h"
-// #include <highfive/H5File.hpp>
-
-// using namespace HighFive;
 
 namespace Aperture {
 
 void
 user_write_field_output(sim_data& data, data_exporter& exporter,
-                        uint32_t timestep, double time, hid_t file) {
+                        uint32_t timestep, double time, H5File& file) {
   ADD_GRID_OUTPUT(
       exporter, data, "E1",
       {
@@ -112,106 +109,106 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
       file, timestep);
 }
 
-void
-user_write_ptc_output(sim_data& data, data_exporter& exporter,
-                      const std::vector<uint64_t>& tracked,
-                      const std::vector<uint64_t>& offset,
-                      const std::vector<uint64_t>& total,
-                      uint32_t timestep, double time, hid_t file) {
-  auto& mesh = data.env.grid().mesh();
-  for (int i = 0; i < (int)tracked.size() - 1; i++) {
-    exporter.add_ptc_uint_output(
-        data, fmt::format("{}_id", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<uint32_t>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            v[nsb] = data.particles.tracked_data().id[n];
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_x1", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            auto cell = data.particles.tracked_data().cell[n];
-            auto x = data.particles.tracked_data().x1[n];
-            v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_x2", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            auto cell = data.particles.tracked_data().cell[n];
-            auto x = data.particles.tracked_data().x2[n];
-            v[nsb] = mesh.pos(1, mesh.get_c2(cell), x);
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_x3", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            auto cell = data.particles.tracked_data().cell[n];
-            auto x = data.particles.tracked_data().x3[n];
-            v[nsb] = mesh.pos(2, mesh.get_c3(cell), x);
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_p1", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            v[nsb] = data.particles.tracked_data().p1[n];
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_p2", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            v[nsb] = data.particles.tracked_data().p2[n];
-            nsb += 1;
-          }
-        },
-        file, timestep);
-    exporter.add_ptc_float_output(
-        data, fmt::format("{}_p3", particle_type_name(i)),
-        data.particles.tracked_number(), total[i], offset[i],
-        [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
-            uint32_t& nsb) {
-          if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
-              i) {
-            v[nsb] = data.particles.tracked_data().p3[n];
-            nsb += 1;
-          }
-        },
-        file, timestep);
-  }
-}
+// void
+// user_write_ptc_output(sim_data& data, data_exporter& exporter,
+//                       const std::vector<uint64_t>& tracked,
+//                       const std::vector<uint64_t>& offset,
+//                       const std::vector<uint64_t>& total,
+//                       uint32_t timestep, double time, hid_t file) {
+//   auto& mesh = data.env.grid().mesh();
+//   for (int i = 0; i < (int)tracked.size() - 1; i++) {
+//     exporter.add_ptc_uint_output(
+//         data, fmt::format("{}_id", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<uint32_t>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             v[nsb] = data.particles.tracked_data().id[n];
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_x1", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             auto cell = data.particles.tracked_data().cell[n];
+//             auto x = data.particles.tracked_data().x1[n];
+//             v[nsb] = mesh.pos(0, mesh.get_c1(cell), x);
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_x2", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             auto cell = data.particles.tracked_data().cell[n];
+//             auto x = data.particles.tracked_data().x2[n];
+//             v[nsb] = mesh.pos(1, mesh.get_c2(cell), x);
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_x3", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             auto cell = data.particles.tracked_data().cell[n];
+//             auto x = data.particles.tracked_data().x3[n];
+//             v[nsb] = mesh.pos(2, mesh.get_c3(cell), x);
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_p1", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             v[nsb] = data.particles.tracked_data().p1[n];
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_p2", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             v[nsb] = data.particles.tracked_data().p2[n];
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//     exporter.add_ptc_float_output(
+//         data, fmt::format("{}_p3", particle_type_name(i)),
+//         data.particles.tracked_number(), total[i], offset[i],
+//         [i, &mesh](sim_data& data, std::vector<float>& v, uint32_t n,
+//             uint32_t& nsb) {
+//           if (get_ptc_type(data.particles.tracked_data().flag[n]) ==
+//               i) {
+//             v[nsb] = data.particles.tracked_data().p3[n];
+//             nsb += 1;
+//           }
+//         },
+//         file, timestep);
+//   }
+// }
 
 }  // namespace Aperture
 
