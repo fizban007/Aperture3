@@ -198,6 +198,8 @@ particle_base<ParticleClass>::particle_base()
     : m_tmp_data_ptr(nullptr), m_index(nullptr) {
   visit_struct::for_each(
       m_data, [](const char* name, auto& x) { x = nullptr; });
+  visit_struct::for_each(
+      m_tracked, [](const char* name, auto& x) { x = nullptr; });
 }
 
 template <typename ParticleClass>
@@ -208,13 +210,6 @@ particle_base<ParticleClass>::particle_base(std::size_t max_num,
   // std::cout << "New particle array with size " << max_num <<
   // std::endl;
   alloc_mem(max_num, managed);
-  // auto alloc = alloc_cuda_managed(max_num);
-  // auto alloc = alloc_cuda_device(max_num);
-  // alloc("index", m_index);
-  cudaMalloc(&m_index, max_num * sizeof(Index_t));
-  cudaMalloc(&m_tmp_data_ptr, max_num * sizeof(double));
-  // m_index.resize(max_num, 0);
-  // m_index_bak.resize(max_num, 0);
   initialize();
 }
 
@@ -249,14 +244,8 @@ particle_base<ParticleClass>::particle_base(
   m_data = other.m_data;
   m_tracked = other.m_tracked;
   m_tracked_ptc_map = other.m_tracked_ptc_map;
-  // auto alloc = alloc_cuda_managed(m_size);
-  // auto alloc = alloc_cuda_device(m_size);
-  // alloc(m_index);
-  cudaMalloc(&m_tmp_data_ptr, m_size * sizeof(double));
-  cudaMalloc(&m_index, m_size * sizeof(Index_t));
-  // alloc((double*)m_tmp_data_ptr);
-  // m_index.resize(other.m_size);
-  // m_index_bak.resize(other.m_size);
+  m_tmp_data_ptr = other.m_tmp_data_ptr;
+  m_index = other.m_index;
 
   // boost::fusion::for_each(other.m_data, set_nullptr());
   visit_struct::for_each(
@@ -264,18 +253,13 @@ particle_base<ParticleClass>::particle_base(
   visit_struct::for_each(
       other.m_tracked, [](const char* name, auto& x) { x = nullptr; });
   other.m_tracked_ptc_map = nullptr;
-  // other.m_data_ptr = nullptr;
-  // Logger::print_info("number is {}", m_number);
-  // Logger::print_info("Finished move constructor");
+  other.m_tmp_data_ptr = nullptr;
+  other.m_index = nullptr;
 }
 
 template <typename ParticleClass>
 particle_base<ParticleClass>::~particle_base() {
   free_mem();
-  free_cuda()(m_index);
-  free_cuda()(m_tmp_data_ptr);
-  // CudaSafeCall(cudaFree(m_index));
-  // CudaSafeCall(cudaFree(m_tmp_data_ptr));
 }
 
 template <typename ParticleClass>
@@ -293,6 +277,8 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
   alloc_struct_of_arrays_managed(m_tracked, m_max_tracked);
   CudaSafeCall(
       cudaMalloc(&m_tracked_ptc_map, m_max_tracked * sizeof(uint32_t)));
+  CudaSafeCall(cudaMalloc(&m_index, max_num * sizeof(Index_t)));
+  CudaSafeCall(cudaMalloc(&m_tmp_data_ptr, max_num * sizeof(double)));
 }
 
 template <typename ParticleClass>
@@ -301,6 +287,8 @@ particle_base<ParticleClass>::free_mem() {
   free_struct_of_arrays(m_data);
   free_struct_of_arrays(m_tracked);
   CudaSafeCall(cudaFree(m_tracked_ptc_map));
+  free_cuda()(m_index);
+  free_cuda()(m_tmp_data_ptr);
 }
 
 template <typename ParticleClass>
