@@ -39,7 +39,7 @@ class Grid {
   Extent extent() const { return m_mesh.extent(); }
 
   /// Dimension of the grid
-  unsigned int dim() const { return m_mesh.dim(); }
+  int dim() const { return m_mesh.dim(); }
 
  protected:
   Quadmesh m_mesh;
