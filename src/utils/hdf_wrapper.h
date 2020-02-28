@@ -50,7 +50,7 @@ class H5File {
                       const Extent& ext, const Index& idx_src,
                       const std::string& name);
   template <typename T>
-  void write_parallel(const T* array,
+  void write_parallel(const T* array, size_t array_size,
                       size_t len_total, size_t idx_dst,
                       size_t len, size_t idx_src,
                       const std::string& name);
