@@ -9,11 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-// #define H5_USE_BOOST
-
-// #include <highfive/H5DataSet.hpp>
-// #include <highfive/H5DataSpace.hpp>
-// #include <highfive/H5File.hpp>
 
 #define ADD_GRID_OUTPUT(exporter, input, name, func, file, step)       \
   exporter.add_grid_output(input, name,                                \
@@ -21,7 +16,7 @@
                               Index idx, Index idx_out) func,          \
                            file, step)
 
-// #include "utils/user_data_output.hpp"
+#include "utils/user_data_output.hpp"
 
 namespace Aperture {
 
@@ -79,27 +74,17 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
     : m_env(env) {
   auto& params = env.params();
   auto& mesh = m_env.local_grid().mesh();
-  auto ext = mesh.extent_less();
+  auto out_ext = mesh.extent_less();
   auto d = m_env.params().downsample;
   for (uint32_t i = 0; i < 3; i++) {
     if (i < m_env.local_grid().dim()) {
-      ext[i] /= d;
+      out_ext[i] /= d;
     }
   }
-  tmp_grid_data = multi_array<float>(ext);
+  tmp_grid_data = multi_array<float>(out_ext);
   Logger::print_info("tmp_grid_data initialized with size {}x{}x{}",
                      tmp_grid_data.width(), tmp_grid_data.height(),
                      tmp_grid_data.depth());
-  // if (mesh.dim() == 3) {
-  //   m_output_3d.resize(
-  //       boost::extents[tmp_grid_data.depth()][tmp_grid_data.height()]
-  //                     [tmp_grid_data.width()]);
-  // } else if (mesh.dim() == 2) {
-  //   m_output_2d.resize(
-  //       boost::extents[tmp_grid_data.height()][tmp_grid_data.width()]);
-  // } else {  // 1D
-  //   m_output_1d.resize(tmp_grid_data.width());
-  // }
 
   // tmp_ptc_uint_data.resize(MAX_TRACKED);
   // tmp_ptc_float_data.resize(MAX_TRACKED);
@@ -519,7 +504,7 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                   timestep / m_env.params().data_interval);
   H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
-  // user_write_field_output(data, *this, timestep, time, datafile);
+  user_write_field_output(data, *this, timestep, time, datafile);
   datafile.close();
 }
 

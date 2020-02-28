@@ -3,7 +3,6 @@
 
 #include "core/multi_array.h"
 #include "utils/hdf_wrapper.h"
-// #include <boost/multi_array.hpp>
 #include <fstream>
 #include <memory>
 #include <thread>
