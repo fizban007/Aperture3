@@ -19,11 +19,11 @@ class field {
 
   field();
   field(const Grid& grid);
-  field(const self_type& other);
+  field(const self_type& other) = delete;
   field(self_type&& other);
   virtual ~field();
 
-  self_type &operator=(const self_type &field);
+  self_type &operator=(const self_type &field) = delete;
   self_type &operator=(self_type &&field);
 
   void initialize();

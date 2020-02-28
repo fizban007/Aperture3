@@ -15,11 +15,11 @@ array<T>::array(size_t size) {
   alloc_mem(size);
 }
 
-template <typename T>
-array<T>::array(const self_type& other) {
-  alloc_mem(other.m_size);
-  copy_from(other);
-}
+// template <typename T>
+// array<T>::array(const self_type& other) {
+//   alloc_mem(other.m_size);
+//   copy_from(other);
+// }
 
 template <typename T>
 array<T>::array(self_type&& other) {
@@ -48,13 +48,13 @@ array<T>::operator=(self_type&& other) {
   return *this;
 }
 
-template <typename T>
-array<T>&
-array<T>::operator=(const self_type& other) {
-  alloc_mem(other.m_size);
-  copy_from(other);
-  return *this;
-}
+// template <typename T>
+// array<T>&
+// array<T>::operator=(const self_type& other) {
+//   alloc_mem(other.m_size);
+//   copy_from(other);
+//   return *this;
+// }
 
 /// Set the whole array to a single initial value on the host
 template <typename T>

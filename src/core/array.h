@@ -17,13 +17,13 @@ class array {
   array();
 
   explicit array(size_t size);
-  array(const self_type& other);
+  array(const self_type& other) = delete;
   array(self_type&& other);
 
   ~array();
 
   /// Assignment operators for copying
-  self_type& operator=(const self_type& other);
+  self_type& operator=(const self_type& other) = delete;
 
   /// Move assignment operator
   self_type& operator=(self_type&& other);
