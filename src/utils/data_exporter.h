@@ -2,8 +2,8 @@
 #define _DATA_EXPORTER_H_
 
 #include "core/multi_array.h"
-#include "hdf5.h"
-#include <boost/multi_array.hpp>
+#include "utils/hdf_wrapper.h"
+// #include <boost/multi_array.hpp>
 #include <fstream>
 #include <memory>
 #include <thread>
@@ -43,36 +43,31 @@ class data_exporter {
   void write_multi_array(const multi_array<float>& array,
                          const std::string& name,
                          const Extent& total_ext, const Index& offset,
-                         hid_t file_id);
+                         H5File& file);
 
   void write_snapshot(const sim_data& data, const std::string& filename);
 
-  template <typename T>
-  void write_collective_array(const T* array, const std::string& name,
-                              size_t total, size_t local, size_t offset,
-                              hid_t file_id);
-
-  void add_array_output(multi_array<float>& array,
-                        const std::string& name, hid_t file_id,
+  void add_array_output(multi_array<float>& array, Stagger stagger,
+                        const std::string& name, H5File& file,
                         uint32_t timestep);
 
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
-                       hid_t file_id, uint32_t timestep);
+                       H5File& file, uint32_t timestep);
 
-  void add_ptc_output(sim_data& data, int species, hid_t file_id,
+  void add_ptc_output(sim_data& data, int species, H5File& file,
                       uint32_t timestep);
 
   template <typename Func>
   void add_ptc_float_output(sim_data& data, const std::string& name,
                             uint64_t num, uint64_t total,
-                            uint64_t offset, Func f, hid_t file_id,
+                            uint64_t offset, Func f, H5File& file,
                             uint32_t timestep);
 
   template <typename Func>
   void add_ptc_uint_output(sim_data& data, const std::string& name,
                            uint64_t num, uint64_t total,
-                           uint64_t offset, Func f, hid_t file_id,
+                           uint64_t offset, Func f, H5File& file,
                            uint32_t timestep);
 
  protected:

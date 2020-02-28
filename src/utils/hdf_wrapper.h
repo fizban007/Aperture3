@@ -43,13 +43,16 @@ class H5File {
   template <typename T>
   void write(const multi_array<T>& array, const std::string& name);
   template <typename T>
-  void write(const array<T>& array, const std::string& name);
-  template <typename T>
   void write(T value, const std::string& name);
   template <typename T>
   void write_parallel(const multi_array<T>& array,
                       const Extent& ext_total, const Index& idx_dst,
                       const Extent& ext, const Index& idx_src,
+                      const std::string& name);
+  template <typename T>
+  void write_parallel(const T* array,
+                      size_t len_total, size_t idx_dst,
+                      size_t len, size_t idx_src,
                       const std::string& name);
 
   template <typename T>
