@@ -53,6 +53,6 @@ template class array<uint32_t>;
 template class array<uint64_t>;
 template class array<float>;
 template class array<double>;
-template class array<long double>;
+// template class array<long double>;
 
 }  // namespace Aperture
