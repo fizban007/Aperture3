@@ -2,6 +2,7 @@
 #define _HDF_WRAPPER_IMPL_H_
 
 #include "hdf_wrapper.h"
+#include "utils/logger.h"
 
 namespace Aperture {
 
@@ -88,6 +89,53 @@ H5File::write_parallel(const multi_array<T>& array,
   H5Sclose(filespace_id);
   H5Sclose(memspace_id);
   H5Pclose(plist_id);
+
+  if (status < 0) {
+    Logger::print_err("H5Dwrite error! Status is {}", status);
+  }
+}
+
+template <typename T>
+void
+H5File::write_parallel(const T* array, size_t array_size,
+                       size_t len_total, size_t idx_dst, size_t len,
+                       size_t idx_src, const std::string& name) {
+  hsize_t dims[1], array_dims[1];
+  dims[0] = len_total;
+  array_dims[0] = array_size;
+  auto filespace_id = H5Screate_simple(1, dims, NULL);
+  auto memspace_id = H5Screate_simple(1, array_dims, NULL);
+
+  auto dataset_id =
+      H5Dcreate2(m_file_id, name.c_str(), h5datatype<T>(), filespace_id,
+                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  hsize_t offsets[1], offsets_l[1], out_dim[1];
+  hsize_t count[1], stride[1];
+  count[0] = 1;
+  stride[0] = 1;
+  offsets[0] = idx_dst;
+  offsets_l[0] = idx_src;
+  out_dim[0] = len;
+
+  H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, offsets, stride,
+                      count, out_dim);
+  H5Sselect_hyperslab(memspace_id, H5S_SELECT_SET, offsets_l, stride,
+                      count, out_dim);
+
+  auto plist_id = H5Pcreate(H5P_DATASET_XFER);
+  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+  auto status = H5Dwrite(dataset_id, h5datatype<T>(), memspace_id,
+                         filespace_id, plist_id, array);
+
+  H5Dclose(dataset_id);
+  H5Sclose(filespace_id);
+  H5Sclose(memspace_id);
+  H5Pclose(plist_id);
+
+  if (status < 0) {
+    Logger::print_err("H5Dwrite error! Status is {}", status);
+  }
 }
 
 template <typename T>

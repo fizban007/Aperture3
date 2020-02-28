@@ -31,9 +31,6 @@ class data_exporter {
   void write_xmf(uint32_t step, double time);
   void prepare_xmf_restart(uint32_t restart_step, int data_interval,
                            float time);
-  void write_snapshot(sim_data& data, uint32_t step);
-  void load_from_snapshot(sim_data& data, uint32_t step, double time);
-
   void write_output(sim_data& data, uint32_t timestep, double time);
 
   void write_field_output(sim_data& data, uint32_t timestep,
@@ -45,8 +42,6 @@ class data_exporter {
                          const Extent& total_ext, const Index& offset,
                          H5File& file);
 
-  void write_snapshot(const sim_data& data, const std::string& filename);
-
   void add_array_output(multi_array<float>& array, Stagger stagger,
                         const std::string& name, H5File& file,
                         uint32_t timestep);
@@ -54,6 +49,11 @@ class data_exporter {
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
                        H5File& file, uint32_t timestep);
+
+  template <typename T>
+  void add_grid_output(multi_array<T>& array, Stagger stagger,
+                       const std::string& name, H5File& file,
+                       uint32_t timestep);
 
   void add_ptc_output(sim_data& data, int species, H5File& file,
                       uint32_t timestep);
@@ -69,6 +69,11 @@ class data_exporter {
                            uint64_t num, uint64_t total,
                            uint64_t offset, Func f, H5File& file,
                            uint32_t timestep);
+
+  void save_snapshot(const std::string& filename, sim_data& data,
+                     uint32_t step, Scalar time);
+  void load_snapshot(const std::string& filename, sim_data& data,
+                     uint32_t& step, Scalar& time);
 
  protected:
   // std::unique_ptr<Grid> grid;
@@ -89,6 +94,7 @@ class data_exporter {
 
   std::vector<float> tmp_ptc_float_data;
   std::vector<uint32_t> tmp_ptc_uint_data;
+  void* tmp_ptc_data;
 
   // std::unique_ptr<std::thread> m_fld_thread;
   // std::unique_ptr<std::thread> m_ptc_thread;

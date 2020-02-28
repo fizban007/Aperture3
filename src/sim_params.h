@@ -23,6 +23,7 @@ struct SimParamsBase {
   uint64_t max_photon_number = 100000;
   uint64_t ptc_buffer_size = 100000;
   uint64_t ph_buffer_size = 100000;
+  uint64_t max_tracked = 100000;
   Scalar ion_mass = 1.0;
   int num_species = 3;
   bool use_bg_fields = true;

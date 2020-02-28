@@ -21,7 +21,7 @@
                               Index idx, Index idx_out) func,          \
                            file, step)
 
-#include "utils/user_data_output.hpp"
+// #include "utils/user_data_output.hpp"
 
 namespace Aperture {
 
@@ -77,6 +77,7 @@ sample_grid_quantity3d(sim_data& data, const Grid& g, int downsample,
 
 data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
     : m_env(env) {
+  auto& params = env.params();
   auto& mesh = m_env.local_grid().mesh();
   auto ext = mesh.extent_less();
   auto d = m_env.params().downsample;
@@ -100,8 +101,13 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   //   m_output_1d.resize(tmp_grid_data.width());
   // }
 
-  tmp_ptc_uint_data.resize(MAX_TRACKED);
-  tmp_ptc_float_data.resize(MAX_TRACKED);
+  // tmp_ptc_uint_data.resize(MAX_TRACKED);
+  // tmp_ptc_float_data.resize(MAX_TRACKED);
+
+  // Allocate temporary particle data
+  size_t max_num =
+      std::max(params.max_ptc_number, params.max_photon_number);
+  tmp_ptc_data = ::operator new(max_num * 64);
 
   outputDirectory = env.params().data_dir;
   // make sure output directory is a directory
@@ -114,38 +120,41 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   copy_config_file();
 }
 
-data_exporter::~data_exporter() {}
+data_exporter::~data_exporter() {
+  // delete[] (double*)tmp_ptc_data;
+  ::operator delete(tmp_ptc_data);
+}
 
 void
 data_exporter::write_grid() {
+  auto& params = m_env.params();
   auto& mesh = m_env.local_grid().mesh();
-  auto ext = tmp_grid_data.extent();
-  auto downsample = m_env.params().downsample;
-
-  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+  auto out_ext = tmp_grid_data.extent();
+  auto downsample = params.downsample;
 
   std::string meshfilename = outputDirectory + "mesh.h5";
-  hid_t datafile = H5Fcreate(meshfilename.c_str(), H5F_ACC_TRUNC,
-                             H5P_DEFAULT, plist_id);
-  H5Pclose(plist_id);
+  H5File meshfile =
+      hdf_create(meshfilename, H5CreateMode::trunc_parallel);
 
   if (m_env.local_grid().dim() == 1) {
-    std::vector<float> x_array(ext.x);
+    std::vector<float> x_array(out_ext.x);
 
-    for (int i = 0; i < ext.x; i++) {
+    for (int i = 0; i < out_ext.x; i++) {
       x_array[i] = mesh.pos(0, i * downsample + mesh.guard[0], false);
     }
 
-    write_collective_array(x_array.data(), "x1",
-                           m_env.params().N[0] / downsample, ext.x,
-                           mesh.offset[0] / downsample, datafile);
+    meshfile.write_parallel(
+        x_array.data(), out_ext.x, params.N[0] / downsample,
+        mesh.offset[0] / downsample, out_ext.x, 0, "x1");
+    // write_collective_array(x_array.data(), "x1",
+    //                        m_env.params().N[0] / downsample, ext.x,
+    //                        mesh.offset[0] / downsample, datafile);
   } else if (m_env.local_grid().dim() == 2) {
-    multi_array<float> x1_array(ext);
-    multi_array<float> x2_array(ext);
+    multi_array<float> x1_array(out_ext);
+    multi_array<float> x2_array(out_ext);
 
-    for (int j = 0; j < ext.height(); j++) {
-      for (int i = 0; i < ext.width(); i++) {
+    for (int j = 0; j < out_ext.height(); j++) {
+      for (int i = 0; i < out_ext.width(); i++) {
         if (m_env.params().coord_system == "LogSpherical") {
           float r = std::exp(
               mesh.pos(0, i * downsample + mesh.guard[0], false));
@@ -169,28 +178,22 @@ data_exporter::write_grid() {
                        total_ext.y, total_ext.z);
     Index offset(mesh.offset[0] / downsample,
                  mesh.offset[1] / downsample, 0);
-    Logger::print_info("offset is {}x{}x{}", offset.x,
-                       offset.y, offset.z);
-    write_multi_array(x1_array, "x1", total_ext, offset, datafile);
-    write_multi_array(x2_array, "x2", total_ext, offset, datafile);
-    // File meshfile(meshfilename,
-    //               File::ReadWrite | File::Create | File::Truncate);
-    // DataSet mesh_x1 =
-    //     meshfile.createDataSet<float>("x1",
-    //     DataSpace::From(x1_array));
-    // mesh_x1.write(x1_array);
-    // DataSet mesh_x2 =
-    //     meshfile.createDataSet<float>("x2",
-    //     DataSpace::From(x2_array));
-    // mesh_x2.write(x2_array);
+    Logger::print_info("offset is {}x{}x{}", offset.x, offset.y,
+                       offset.z);
+    // write_multi_array(x1_array, "x1", total_ext, offset, datafile);
+    // write_multi_array(x2_array, "x2", total_ext, offset, datafile);
+    meshfile.write_parallel(x1_array, total_ext, offset, out_ext,
+                            Index(0, 0, 0), "x1");
+    meshfile.write_parallel(x2_array, total_ext, offset, out_ext,
+                            Index(0, 0, 0), "x2");
   } else if (m_env.local_grid().dim() == 3) {
-    multi_array<float> x1_array(ext);
-    multi_array<float> x2_array(ext);
-    multi_array<float> x3_array(ext);
+    multi_array<float> x1_array(out_ext);
+    multi_array<float> x2_array(out_ext);
+    multi_array<float> x3_array(out_ext);
 
-    for (int k = 0; k < ext.depth(); k++) {
-      for (int j = 0; j < ext.height(); j++) {
-        for (int i = 0; i < ext.width(); i++) {
+    for (int k = 0; k < out_ext.depth(); k++) {
+      for (int j = 0; j < out_ext.height(); j++) {
+        for (int i = 0; i < out_ext.width(); i++) {
           x1_array(i, j) =
               mesh.pos(0, i * downsample + mesh.guard[0], false);
           x2_array(i, j) =
@@ -206,12 +209,19 @@ data_exporter::write_grid() {
     Index offset(mesh.offset[0] / downsample,
                  mesh.offset[1] / downsample,
                  mesh.offset[2] / downsample);
-    write_multi_array(x1_array, "x1", total_ext, offset, datafile);
-    write_multi_array(x2_array, "x2", total_ext, offset, datafile);
-    write_multi_array(x3_array, "x3", total_ext, offset, datafile);
+    // write_multi_array(x1_array, "x1", total_ext, offset, datafile);
+    // write_multi_array(x2_array, "x2", total_ext, offset, datafile);
+    // write_multi_array(x3_array, "x3", total_ext, offset, datafile);
+    meshfile.write_parallel(x1_array, total_ext, offset, out_ext,
+                            Index(0, 0, 0), "x1");
+    meshfile.write_parallel(x2_array, total_ext, offset, out_ext,
+                            Index(0, 0, 0), "x2");
+    meshfile.write_parallel(x3_array, total_ext, offset, out_ext,
+                            Index(0, 0, 0), "x3");
   }
 
-  H5Fclose(datafile);
+  // H5Fclose(datafile);
+  meshfile.close();
 }
 
 void
@@ -377,98 +387,20 @@ void
 data_exporter::write_multi_array(const multi_array<float>& array,
                                  const std::string& name,
                                  const Extent& total_ext,
-                                 const Index& offset, hid_t file_id) {
-  hsize_t total_dim[3];
-  hsize_t offsets[3];
-  hsize_t local_dim[3];
-  for (int i = 0; i < 3; i++) {
-    total_dim[i] = total_ext[i];
-    offsets[i] = offset[i];
-    local_dim[i] = array.extent()[i];
-  }
-  // TODO: Check the order is correct
-  // Logger::print_debug("env grid dim is {}", m_env.grid().dim());
-  auto filespace =
-      H5Screate_simple(m_env.grid().dim(), total_dim, NULL);
-  auto memspace = H5Screate_simple(m_env.grid().dim(), local_dim, NULL);
-  auto plist_id = H5Pcreate(H5P_DATASET_CREATE);
-  H5Pset_chunk(plist_id, m_env.grid().dim(), local_dim);
-  auto dset_id =
-      H5Dcreate(file_id, name.c_str(), H5T_NATIVE_FLOAT, filespace,
-                H5P_DEFAULT, plist_id, H5P_DEFAULT);
-  H5Pclose(plist_id);
-  H5Sclose(filespace);
-
-  hsize_t count[3];
-  hsize_t stride[3];
-  for (int i = 0; i < 3; i++) {
-    count[i] = 1;
-    stride[i] = 1;
-  }
-  filespace = H5Dget_space(dset_id);
-  auto status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets,
-                                    stride, count, local_dim);
-
-  plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-
-  status = H5Dwrite(dset_id, H5T_NATIVE_FLOAT, memspace, filespace,
-                    plist_id, array.host_ptr());
-
-  H5Dclose(dset_id);
-  H5Sclose(filespace);
-  H5Sclose(memspace);
-  H5Pclose(plist_id);
+                                 const Index& offset, H5File& file) {
+  file.write_parallel(array, total_ext, offset, array.extent(),
+                      Index(0, 0, 0), name);
 }
 
-template <typename T>
 void
-data_exporter::write_collective_array(const T* array,
-                                      const std::string& name,
-                                      size_t total, size_t local,
-                                      size_t offset, hid_t file_id) {
-  hsize_t total_dim[1] = {total};
-  hsize_t offsets[1] = {offset};
-  hsize_t local_dim[1] = {local};
+data_exporter::save_snapshot(const std::string& filename,
+                             sim_data& data, uint32_t step,
+                             Scalar time) {}
 
-  // Use correct H5 type according to input type
-  hid_t type_id = H5T_NATIVE_CHAR;
-  if (std::is_same<T, float>::value) {
-    type_id = H5T_NATIVE_FLOAT;
-  } else if (std::is_same<T, double>::value) {
-    type_id = H5T_NATIVE_DOUBLE;
-  } else if (std::is_same<T, uint32_t>::value) {
-    type_id = H5T_NATIVE_UINT32;
-  } else if (std::is_same<T, uint64_t>::value) {
-    type_id = H5T_NATIVE_UINT64;
-  }
-
-  auto filespace = H5Screate_simple(1, total_dim, NULL);
-  auto memspace = H5Screate_simple(1, local_dim, NULL);
-  auto plist_id = H5Pcreate(H5P_DATASET_CREATE);
-  H5Pset_chunk(plist_id, 1, local_dim);
-  auto dset_id = H5Dcreate(file_id, name.c_str(), type_id, filespace,
-                           H5P_DEFAULT, plist_id, H5P_DEFAULT);
-  H5Pclose(plist_id);
-  H5Sclose(filespace);
-
-  hsize_t count[1] = {1};
-  hsize_t stride[1] = {1};
-  filespace = H5Dget_space(dset_id);
-  auto status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets,
-                                    stride, count, local_dim);
-
-  plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-
-  status = H5Dwrite(dset_id, type_id, memspace, filespace, plist_id,
-                    tmp_grid_data.host_ptr());
-
-  H5Dclose(dset_id);
-  H5Sclose(filespace);
-  H5Sclose(memspace);
-  H5Pclose(plist_id);
-}
+void
+data_exporter::load_snapshot(const std::string& filename,
+                             sim_data& data, uint32_t& step,
+                             Scalar& time) {}
 
 void
 data_exporter::prepare_xmf_restart(uint32_t restart_step,
@@ -510,13 +442,6 @@ data_exporter::prepare_xmf_restart(uint32_t restart_step,
 }
 
 void
-data_exporter::write_snapshot(sim_data& data, uint32_t step) {}
-
-void
-data_exporter::load_from_snapshot(sim_data& data, uint32_t step,
-                                  double time) {}
-
-void
 data_exporter::write_output(sim_data& data, uint32_t timestep,
                             double time) {
   data.copy_to_host();
@@ -524,12 +449,8 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   if (!m_xmf.is_open()) {
     m_xmf.open(outputDirectory + "data.xmf");
   }
-  // write_xmf_step_header(m_xmf, time);
   write_xmf_step_header(m_xmf_buffer, time);
-  // Launch a new thread to handle the field output
-  // m_fld_thread.reset(
-  //     new std::thread(&Aperture::data_exporter::write_field_output,
-  //                     this, std::ref(data), timestep, time));
+
   write_field_output(data, timestep, time);
 
   write_xmf_step_close(m_xmf_buffer);
@@ -546,12 +467,7 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   data.particles.get_tracked_ptc();
   data.photons.get_tracked_ptc();
 
-  // Launch a new thread to handle the particle output
-  // m_ptc_thread.reset(
-  //     new std::thread(&Aperture::data_exporter::write_ptc_output,
-  //     this,
-  //                     std::ref(data), timestep, time));
-  // write_ptc_output(data, timestep, time);
+  write_ptc_output(data, timestep, time);
 }
 
 void
@@ -587,65 +503,41 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
   std::string filename =
       fmt::format("{}ptc.{:05d}.h5", outputDirectory,
                   timestep / m_env.params().data_interval);
-  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+  H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
+  // user_write_ptc_output(data, *this, tracked, offset, total,
+  // timestep,
+  //                       time, datafile);
 
-  hid_t datafile =
-      H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-  H5Pclose(plist_id);
-  // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
-  // // user_write_ptc_output(data, *this, timestep, time, datafile);
-  user_write_ptc_output(data, *this, tracked, offset, total, timestep,
-                        time, datafile);
-
-  H5Fclose(datafile);
+  datafile.close();
 }
 
 void
 data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                                   double time) {
-  // File datafile(fmt::format("{}fld.{:05d}.h5", outputDirectory,
-  //                           timestep / m_env.params().data_interval),
-  //               File::ReadWrite | File::Create | File::Truncate);
   std::string filename =
       fmt::format("{}fld.{:05d}.h5", outputDirectory,
                   timestep / m_env.params().data_interval);
-  hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+  H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
-  hid_t datafile =
-      H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-  H5Pclose(plist_id);
-  // MPIOFileDriver(MPI_COMM_WORLD, MPI_INFO_NULL));
-
-  user_write_field_output(data, *this, timestep, time, datafile);
-  H5Fclose(datafile);
+  // user_write_field_output(data, *this, timestep, time, datafile);
+  datafile.close();
 }
 
 template <typename Func>
 void
 data_exporter::add_grid_output(sim_data& data, const std::string& name,
-                               Func f, hid_t file_id,
+                               Func f, H5File& file,
                                uint32_t timestep) {
   int downsample = m_env.params().downsample;
   if (data.env.grid().dim() == 3) {
     sample_grid_quantity3d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
-
   } else if (data.env.grid().dim() == 2) {
     sample_grid_quantity2d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
-
-    // std::vector<size_t> dims(2);
-    // dims[0] = m_env.params().N[1] / downsample;
-    // dims[1] = m_env.params().N[0] / downsample;
-
   } else if (data.env.grid().dim() == 1) {
     sample_grid_quantity1d(data, m_env.local_grid(),
                            m_env.params().downsample, tmp_grid_data, f);
-
-    // std::vector<size_t> dims(1);
-    // dims[0] = m_env.params().N[0] / downsample;
   }
   Extent dims;
   Index offset;
@@ -655,18 +547,41 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
     offset[i] = m_env.grid().mesh().offset[i] / downsample;
   }
 
-  write_multi_array(tmp_grid_data, name, dims, offset, file_id);
-  // m_xmf << "  <Attribute Name=\"" << name
-  //       << "\" Center=\"Node\" AttributeType=\"Scalar\">" <<
-  //       std::endl;
-  // m_xmf << "    <DataItem Dimensions=\"" << m_dim_str
-  //       << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
-  //       << std::endl;
-  // m_xmf << fmt::format("      fld.{:05d}.h5:{}",
-  //                      timestep / m_env.params().data_interval, name)
-  //       << std::endl;
-  // m_xmf << "    </DataItem>" << std::endl;
-  // m_xmf << "  </Attribute>" << std::endl;
+  write_multi_array(tmp_grid_data, name, dims, offset, file);
+
+  m_xmf_buffer += fmt::format(
+      "  <Attribute Name=\"{}\" Center=\"Node\" "
+      "AttributeType=\"Scalar\">\n",
+      name);
+  m_xmf_buffer += fmt::format(
+      "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+      "Precision=\"4\" Format=\"HDF\">\n",
+      m_dim_str);
+  m_xmf_buffer +=
+      fmt::format("      fld.{:05d}.h5:{}\n",
+                  timestep / m_env.params().data_interval, name);
+  m_xmf_buffer += "    </DataItem>\n";
+  m_xmf_buffer += "  </Attribute>\n";
+}
+
+template <typename T>
+void
+data_exporter::add_grid_output(multi_array<T>& array, Stagger stagger,
+                               const std::string& name, H5File& file,
+                               uint32_t timestep) {
+  int downsample = m_env.params().downsample;
+  auto& mesh = m_env.local_grid().mesh();
+  array.downsample(downsample, tmp_grid_data,
+                   Index(mesh.guard[0], mesh.guard[1], mesh.guard[2]),
+                   stagger);
+
+  Extent dims;
+  Index offset;
+  for (int i = 0; i < 3; i++) {
+    dims[i] = m_env.params().N[i];
+    if (dims[i] > downsample) dims[i] /= downsample;
+    offset[i] = m_env.grid().mesh().offset[i] / downsample;
+  }
   m_xmf_buffer += fmt::format(
       "  <Attribute Name=\"{}\" Center=\"Node\" "
       "AttributeType=\"Scalar\">\n",
@@ -684,7 +599,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
 
 void
 data_exporter::add_array_output(multi_array<float>& array,
-                                const std::string& name, hid_t file_id,
+                                Stagger stagger,
+                                const std::string& name, H5File& file,
                                 uint32_t timestep) {
   // Actually write the temp array to hdf
   // std::vector<size_t> dims(1);
@@ -699,40 +615,40 @@ data_exporter::add_array_output(multi_array<float>& array,
 
 // }
 
-template <typename Func>
-void
-data_exporter::add_ptc_float_output(sim_data& data,
-                                    const std::string& name,
-                                    uint64_t num, uint64_t total,
-                                    uint64_t offset, Func f,
-                                    hid_t file_id, uint32_t timestep) {
-  // Logger::print_info("writing the {} of {} tracked particles", name,
-  //                    num);
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_float_data, n, num_subset);
-  }
+// template <typename Func>
+// void
+// data_exporter::add_ptc_float_output(sim_data& data,
+//                                     const std::string& name,
+//                                     uint64_t num, uint64_t total,
+//                                     uint64_t offset, Func f,
+//                                     H5File& file, uint32_t timestep)
+//                                     {
+//   // Logger::print_info("writing the {} of {} tracked particles",
+//   name,
+//   //                    num);
+//   uint32_t num_subset = 0;
+//   for (uint32_t n = 0; n < num; n++) {
+//     f(data, tmp_ptc_float_data, n, num_subset);
+//   }
 
-  write_collective_array(tmp_ptc_float_data.data(), name, total,
-                         num_subset, offset, file_id);
-}
+//   write_collective_array(tmp_ptc_float_data.data(), name, total,
+//                          num_subset, offset, file_id);
+// }
 
-template <typename Func>
-void
-data_exporter::add_ptc_uint_output(sim_data& data,
-                                   const std::string& name,
-                                   uint64_t num, uint64_t total,
-                                   uint64_t offset, Func f,
-                                   hid_t file_id, uint32_t timestep) {
-  uint32_t num_subset = 0;
-  for (uint32_t n = 0; n < num; n++) {
-    f(data, tmp_ptc_uint_data, n, num_subset);
-  }
+// template <typename Func>
+// void
+// data_exporter::add_ptc_uint_output(sim_data& data,
+//                                    const std::string& name,
+//                                    uint64_t num, uint64_t total,
+//                                    uint64_t offset, Func f,
+//                                    H5File& file, uint32_t timestep) {
+//   uint32_t num_subset = 0;
+//   for (uint32_t n = 0; n < num; n++) {
+//     f(data, tmp_ptc_uint_data, n, num_subset);
+//   }
 
-  write_collective_array(tmp_ptc_uint_data.data(), name, total,
-                         num_subset, offset, file_id);
-}
-
-
+//   write_collective_array(tmp_ptc_uint_data.data(), name, total,
+//                          num_subset, offset, file_id);
+// }
 
 }  // namespace Aperture

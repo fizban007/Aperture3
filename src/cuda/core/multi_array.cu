@@ -31,7 +31,6 @@ downsample(pitchptr<T> orig_data, pitchptr<float> dst_data,
     dst_data[dst_idx] =
         interpolate(orig_data, orig_idx, st, Stagger(0b111),
                     orig_data.p.pitch, orig_data.p.ysize);
-    // dst_data[dst_idx] = orig_data[orig_idx];
   }
 }
 
@@ -49,8 +48,22 @@ downsample2d(pitchptr<T> orig_data, pitchptr<float> dst_data,
 
     dst_data[dst_idx] = interpolate2d(
         orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
+  }
+}
 
-    // dst_data[dst_idx] = orig_data[orig_idx];
+template <typename T>
+__global__ void
+downsample1d(pitchptr<T> orig_data, pitchptr<float> dst_data,
+             Extent orig_ext, Extent dst_ext, Index offset, Stagger st,
+             int d) {
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i < dst_ext.x) {
+    size_t orig_idx =
+        i * d + offset.x;
+    size_t dst_idx = i;
+
+    dst_data[dst_idx] = interpolate1d(
+        orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
   }
 }
 
@@ -262,7 +275,12 @@ multi_array<T>::downsample(int d, multi_array<float>& array,
                            Index offset, Stagger stagger) {
   auto& ext = array.extent();
   if (ext.y == 1 && ext.z == 1) {
-    // Use 1D version which we did not implement
+    int blockSize = 512;
+    int gridSize = (blockSize + ext.x - 1) / blockSize;
+    Kernels::downsample<<<gridSize, blockSize>>>(
+        get_pitchptr(*this), get_pitchptr(array),
+        m_extent, array.extent(), offset, stagger, d);
+    CudaCheckError();
   } else if (ext.z == 1) {  // Use 2D version
     dim3 blockSize(32, 32);
     dim3 gridSize((ext.x + blockSize.x - 1) / blockSize.x,
