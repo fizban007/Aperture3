@@ -1,0 +1,33 @@
+max_ptc_number = 1000
+max_photon_number = 1000
+max_tracked = 100
+
+ptc_buffer_size = 100
+ph_buffer_size = 100
+
+
+# Whether to use periodic boundary condition in each direction
+periodic_boundary = [true, true, true]
+
+# This section describes the grid parameters. Every parameter is an array with 3
+# elements, describing the number for each dimension. If you wish to disable one
+# dimension, just set N to 1 and guard to 0 on that dimension.
+[Grid]
+# Number of grid points in each direction, excluding guard cells
+N = [24, 24, 24]
+
+# Number of guard cells on each end. Effective number of cells per dimension
+# will be N + 2*guard
+guard = [3, 3, 3]
+
+# Number of ranks for domain decomp in each directions
+nodes = [2, 2, 2]
+
+# Lower limit of the coordinate
+lower = [1.0, 2.0, 3.0]
+
+# Size of the box in each dimension
+size = [100.0, 10.0, 2.0]
+
+# Size of a tile of cells
+tile_size = [8, 8, 8]
