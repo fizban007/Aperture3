@@ -19,11 +19,11 @@ struct SimParamsBase {
   Scalar delta_t = 0.01;
   Scalar q_e = 1.0;
   int ptc_per_cell = 1;
-  uint64_t max_ptc_number = 100000;
-  uint64_t max_photon_number = 100000;
-  uint64_t ptc_buffer_size = 100000;
-  uint64_t ph_buffer_size = 100000;
-  uint64_t max_tracked = 100000;
+  uint64_t max_ptc_number = 100;
+  uint64_t max_photon_number = 100;
+  uint64_t ptc_buffer_size = 100;
+  uint64_t ph_buffer_size = 100;
+  uint64_t max_tracked = 100;
   Scalar ion_mass = 1.0;
   int num_species = 3;
   bool use_bg_fields = true;
@@ -115,7 +115,7 @@ struct SimParams : public SimParamsBase {
   // std::array<std::string, 3> data_grid_config;
 
   // std::string algorithm_ptc_move = "mapping";
-  std::string algorithm_ptc_move = "beadonwire";
+  std::string algorithm_ptc_move = "default";
   std::string algorithm_ptc_push = "Vay";
   std::string algorithm_field_update = "default";
   std::string algorithm_current_deposit = "Esirkepov";
