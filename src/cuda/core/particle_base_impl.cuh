@@ -38,33 +38,38 @@ namespace Aperture {
 
 namespace Kernels {
 
-// __global__ void
-// compute_target_buffers(const uint32_t* cells, size_t num,
-//                        int* buffer_num, size_t num_zones, size_t*
-//                        idx) {
-//   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
-//        n += blockDim.x * gridDim.x) {
-//     int zone = dev_mesh.find_zone(cells[n]);
-//     if (zone == num_zones / 2) continue;
-//     if (zone >= num_zones / 2) zone -= 1;
+template <typename T>
+__global__ void
+compute_target_buffers(const T* cells, size_t num,
+                       int* buffer_num, size_t num_zones, uint32_t* idx) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    int zone = dev_mesh.find_zone(cells[n]);
 
-//     int pos = atomicAdd(&buffer_num[zone], 1);
-//     // Zone is less than 32, so we can use 5 bits to represent this
-//     // hopefully pos won't be exceeding 1<<26 which is 6.7e7
-//     idx[n] = ((pos & 0b11111) << 27) + pos;
-//   }
-// }
+    int pos = atomicAdd(&buffer_num[zone], 1);
+    // Zone is less than 32, so we can use 5 bits to represent this
+    // hopefully the number of communicated particles won't be exceeding
+    // 1<<26 which is 6.7e7.
+    idx[n] = ((pos & 0b11111) << 27) + pos;
+  }
+}
 
-// template <typename T>
-// __global__ void
-// copy_component_to_buffer(T* ptr, size_t num, size_t* idx, ) {
-//   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
-//        n += blockDim.x * gridDim.x) {
-//     size_t i = idx[n];
-//     int zone = ((i >> 27) & 0b11111);
-//     int pos = i - (zone << 27);
-//   }
-// }
+template <typename DataType>
+__global__ void
+copy_component_to_buffer(DataType ptc_data, size_t num, uint32_t* idx,
+                         DataType* ptc_buffers) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    uint32_t i = idx[n];
+    uint32_t zone = ((i >> 27) & 0b11111);
+    uint32_t pos = i & ((1 << 27) - 1);
+    // Copy the particle data from ptc_data[n] to ptc_buffers[zone][pos]
+    assign_ptc(ptc_buffers[zone], pos, ptc_data, n);
+    // Set the particle to empty
+    ptc_data.cell[n] = MAX_CELL;
+    // TODO: Compute particle cell delta
+  }
+}
 
 template <typename T>
 __global__ void
