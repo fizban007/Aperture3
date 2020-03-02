@@ -25,19 +25,6 @@ endif()
 set(Aperture_src
   "utils/logger.cpp"
   "utils/timer.cpp"
-  "utils/mpi_helper.cpp"
-  "utils/hdf_wrapper.cpp"
-  # "utils/mpi_comm.cpp"
-  "utils/memory.cpp"
-  "utils/filesystem.cpp"
-  "utils/data_exporter.cpp"
-  "core/grid.cpp"
-  "commandline_args.cpp"
-  "config_file.cpp"
-  "grids/grid_log_sph.cpp"
-  "grids/grid_1dgr.cpp"
-  "grids/grid_1dgap.cpp"
-  "data/detail/particle_data_impl.cpp"
   )
 if (use_cuda AND CMAKE_CUDA_COMPILER)
   list(APPEND Aperture_src
@@ -90,6 +77,21 @@ else()
     # "radiation/rt_1d.cpp"
     )
 endif()
+list(APPEND Aperture_src
+  "utils/mpi_helper.cpp"
+  "utils/hdf_wrapper.cpp"
+  # "utils/mpi_comm.cpp"
+  "utils/memory.cpp"
+  "utils/filesystem.cpp"
+  "utils/data_exporter.cpp"
+  "core/grid.cpp"
+  "commandline_args.cpp"
+  "config_file.cpp"
+  "grids/grid_log_sph.cpp"
+  "grids/grid_1dgr.cpp"
+  "grids/grid_1dgap.cpp"
+  "data/detail/particle_data_impl.cpp"
+  )
 
 if(LAB_ROOT_DIR)
   foreach(ARG ${Lab_Aperture_src})

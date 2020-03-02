@@ -6,6 +6,7 @@
 #include "core/vec3.h"
 #include "hdf5.h"
 #include <string>
+#include <vector>
 
 namespace Aperture {
 
@@ -58,6 +59,8 @@ class H5File {
   multi_array<T> read_multi_array(const std::string& name);
   template <typename T>
   array<T> read_array(const std::string& name);
+  template <typename T>
+  std::vector<T> read_vector(const std::string& name);
   template <typename T>
   T read_scalar(const std::string& name);
 

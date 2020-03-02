@@ -11,14 +11,16 @@ namespace Aperture {
 ///  Base class for particle storage
 template <typename ParticleClass>
 class particle_base {
- protected:
+ public:
   typedef typename ptc_array_type<ParticleClass>::type array_type;
   typedef particle_base<ParticleClass> self_type;
 
+ protected:
   array_type m_data;
   array_type m_tracked;
   uint32_t* m_tracked_ptc_map;
   size_t* m_index = nullptr;
+  int* m_zone_buffer_num = nullptr;
   void* m_tmp_data_ptr = nullptr;
   std::vector<size_t> m_partition;
 
@@ -59,6 +61,9 @@ class particle_base {
   // 0); void copy_to_buffer(std::vector<ParticleClass>& buffer,
   // std::size_t num, std::size_t src_pos = 0, std::size_t dest_pos =
   // 0);
+  void copy_to_comm_buffers(std::vector<self_type>& buffers,
+                            array_type* buf_ptrs,
+                            const Quadmesh& mesh);
   void copy_to_comm_buffers(std::vector<self_type>& buffers,
                             const Quadmesh& mesh);
 

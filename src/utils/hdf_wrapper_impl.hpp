@@ -179,6 +179,28 @@ H5File::read_scalar(const std::string& name) {
 }
 
 template <typename T>
+std::vector<T>
+H5File::read_vector(const std::string& name) {
+  auto dataset = H5Dopen(m_file_id, name.c_str(), H5P_DEFAULT);
+  auto dataspace = H5Dget_space(dataset); /* dataspace handle */
+  int dim = H5Sget_simple_extent_ndims(dataspace);
+  std::vector<hsize_t> dims(dim);
+  H5Sget_simple_extent_dims(dataspace, dims.data(), NULL);
+  size_t total_dim = 1;
+  for (int i = 0; i < dim; i++) {
+    total_dim *= dims[i];
+  }
+
+  std::vector<T> result(total_dim);
+  H5Dread(dataset, h5datatype<T>(), H5S_ALL, H5S_ALL, H5P_DEFAULT,
+          result.data());
+
+  H5Dclose(dataset);
+  H5Sclose(dataspace);
+  return result;
+}
+
+template <typename T>
 void
 H5File::read_subset(multi_array<T>& array, const std::string& name,
                     const Index& idx_src, const Extent& ext,

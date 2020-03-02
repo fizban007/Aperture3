@@ -4,7 +4,6 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 // #include "cuda/data/particle_base_dev.h"
-#include "core/particle_base.h"
 #include "cuda/cuda_control.h"
 #include "cuda/kernels.h"
 #include "cuda/memory.h"
@@ -32,44 +31,12 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include "core/particle_base.h"
 // #include "types/particles_dev.h"
 
 namespace Aperture {
 
 namespace Kernels {
-
-template <typename T>
-__global__ void
-compute_target_buffers(const T* cells, size_t num,
-                       int* buffer_num, size_t num_zones, uint32_t* idx) {
-  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
-       n += blockDim.x * gridDim.x) {
-    int zone = dev_mesh.find_zone(cells[n]);
-
-    int pos = atomicAdd(&buffer_num[zone], 1);
-    // Zone is less than 32, so we can use 5 bits to represent this
-    // hopefully the number of communicated particles won't be exceeding
-    // 1<<26 which is 6.7e7.
-    idx[n] = ((pos & 0b11111) << 27) + pos;
-  }
-}
-
-template <typename DataType>
-__global__ void
-copy_component_to_buffer(DataType ptc_data, size_t num, uint32_t* idx,
-                         DataType* ptc_buffers) {
-  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
-       n += blockDim.x * gridDim.x) {
-    uint32_t i = idx[n];
-    uint32_t zone = ((i >> 27) & 0b11111);
-    uint32_t pos = i & ((1 << 27) - 1);
-    // Copy the particle data from ptc_data[n] to ptc_buffers[zone][pos]
-    assign_ptc(ptc_buffers[zone], pos, ptc_data, n);
-    // Set the particle to empty
-    ptc_data.cell[n] = MAX_CELL;
-    // TODO: Compute particle cell delta
-  }
-}
 
 template <typename T>
 __global__ void
@@ -189,9 +156,7 @@ struct modify_cell {
 
   HOST_DEVICE modify_cell(uint32_t dc) : _dc(dc) {}
 
-  __device__ uint32_t operator()(uint32_t c) {
-    return c + _dc;
-  }
+  __device__ uint32_t operator()(uint32_t c) { return c + _dc; }
 };
 
 template <typename ParticleClass>
@@ -285,6 +250,7 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
       cudaMalloc(&m_tracked_ptc_map, m_max_tracked * sizeof(uint32_t)));
   CudaSafeCall(cudaMalloc(&m_index, max_num * sizeof(Index_t)));
   CudaSafeCall(cudaMalloc(&m_tmp_data_ptr, max_num * sizeof(double)));
+  CudaSafeCall(cudaMallocManaged(&m_zone_buffer_num, 27 * sizeof(int)));
 }
 
 template <typename ParticleClass>
@@ -295,6 +261,7 @@ particle_base<ParticleClass>::free_mem() {
   CudaSafeCall(cudaFree(m_tracked_ptc_map));
   free_cuda()(m_index);
   free_cuda()(m_tmp_data_ptr);
+  free_cuda()(m_zone_buffer_num);
 }
 
 template <typename ParticleClass>
@@ -409,10 +376,10 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
             int dz = (zone / 9) - 1;
             int dy = (zone / 3) % 3 - 1;
             int dx = zone % 3 - 1;
-            uint32_t dcell =
-                -dz * mesh.reduced_dim(2) * mesh.dims[0] * mesh.dims[1] -
-                dy * mesh.reduced_dim(1) * mesh.dims[0] -
-                dx * mesh.reduced_dim(0);
+            uint32_t dcell = -dz * mesh.reduced_dim(2) * mesh.dims[0] *
+                                 mesh.dims[1] -
+                             dy * mesh.reduced_dim(1) * mesh.dims[0] -
+                             dx * mesh.reduced_dim(0);
 
             thrust::transform(p_buf, buf_end, p_buf,
                               modify_cell{dcell});
@@ -432,6 +399,30 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
       p_cell, p_cell + m_number,
       [] __device__(uint32_t c) { return dev_mesh.find_zone(c) != 13; },
       MAX_CELL);
+}
+
+template <typename ParticleClass>
+void
+particle_base<ParticleClass>::copy_to_comm_buffers(
+    std::vector<self_type>& buffers,
+    array_type* buf_ptrs, const Quadmesh& mesh) {
+  if (m_number > 0) {
+    compute_target_buffers(m_data.cell, m_number, m_zone_buffer_num,
+                           m_index);
+
+    copy_ptc_to_buffers(m_data, m_number, m_index, buf_ptrs);
+    CudaSafeCall(cudaDeviceSynchronize());
+    int zone_offset = 0;
+    if (mesh.dim() == 2)
+      zone_offset = 9;
+    else if (mesh.dim() == 1)
+      zone_offset = 12;
+    for (unsigned int i = 0; i < buffers.size(); i++) {
+      // Logger::print_info("zone {} buffer has {} ptc", i, m_zone_buffer_num[i + zone_offset]);
+      buffers[i].set_num(m_zone_buffer_num[i + zone_offset]);
+    }
+  }
+
 }
 
 template <typename ParticleClass>
