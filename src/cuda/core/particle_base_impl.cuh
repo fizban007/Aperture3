@@ -191,10 +191,6 @@ struct modify_cell {
 
   __device__ uint32_t operator()(uint32_t c) {
     return c + _dc;
-           // _dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
-           //     dev_mesh.dims[1] -
-           // _dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
-           // _dx * dev_mesh.reduced_dim(0);
   }
 };
 
