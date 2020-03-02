@@ -1,5 +1,5 @@
-#include "sim_environment_impl.hpp"
 #include "cuda/constant_mem_func.h"
+#include "sim_environment_impl.hpp"
 #include <cuda_runtime.h>
 
 namespace Aperture {
@@ -77,16 +77,6 @@ sim_environment::send_add_array_guard_cells_single_dir(
 
 void
 sim_environment::setup_env_extra() {
-  // Poll the system to detect how many GPUs are on the node
-  int n_devices;
-  cudaGetDeviceCount(&n_devices);
-  if (n_devices <= 0) {
-    Logger::err("No usable Cuda device found!!");
-    exit(1);
-  }
-  m_dev_id = m_domain_info.rank % n_devices;
-  cudaSetDevice(m_dev_id);
-
   // m_dev_map.resize(n_devices);
   init_dev_params(m_params);
   init_dev_mesh(m_grid->mesh());
@@ -97,7 +87,46 @@ sim_environment::setup_env_extra() {
   init_dev_masses(m_masses.data());
 
   init_dev_rank(m_domain_info.rank);
+
+  // Initialize a managed array for particle_data and photon_data
+  int num_ptc_buffers = m_ptc_buffers.size();
+  cudaMallocManaged(&m_ptc_buf_ptrs,
+                    num_ptc_buffers * sizeof(particle_data));
+  cudaMallocManaged(&m_ph_buf_ptrs,
+                    num_ptc_buffers * sizeof(photon_data));
+
+  for (int i = 0; i < num_ptc_buffers; i++) {
+    visit_struct::for_each(
+        m_ptc_buf_ptrs[i], m_ptc_buffers[i].data(),
+        [](const char *name, auto &v1, const auto &v2) {
+          v1 = v2;
+        });
+    visit_struct::for_each(
+        m_ph_buf_ptrs[i], m_ph_buffers[i].data(),
+        [](const char *name, auto &v1, const auto &v2) {
+          v1 = v2;
+        });
+  }
 }
 
+void
+sim_environment::destruct_extra() {
+  cudaFree(&m_ptc_buf_ptrs);
+  cudaFree(&m_ph_buf_ptrs);
+}
+
+void
+sim_environment::setup_device() {
+  // Poll the system to detect how many GPUs are on the node
+  int n_devices;
+  cudaGetDeviceCount(&n_devices);
+  if (n_devices <= 0) {
+    Logger::err("No usable Cuda device found!!");
+    exit(1);
+  }
+  m_dev_id = m_domain_info.rank % n_devices;
+  cudaSetDevice(m_dev_id);
 
 }
+
+}  // namespace Aperture

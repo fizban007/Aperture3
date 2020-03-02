@@ -42,6 +42,7 @@ sim_environment::sim_environment(int* argc, char*** argv)
   Logger::print_info("Num of ranks is {}", m_domain_info.size);
   Logger::print_info("Current rank is {}", m_domain_info.rank);
 
+  setup_device();
   // Read in command line configuration
   // Handle the case of wrong command line arguments, exit gracefully
   try {
@@ -128,20 +129,16 @@ sim_environment::setup_env() {
   Logger::print_info("Each photon is worth {} bytes",
                      photon_data::size);
 
-  setup_env_extra();
-
   int num_ptc_buffers = std::pow(3, m_super_grid->dim());
   for (int i = 0; i < num_ptc_buffers; i++) {
     m_ptc_buffers.emplace_back(m_params.ptc_buffer_size, true);
     // m_ptc_recv_buffers.emplace_back(m_params.ptc_buffer_size, true);
+    m_ph_buffers.emplace_back(m_params.ph_buffer_size, true);
   }
   Logger::print_info("Created {} particle buffers", num_ptc_buffers);
-
-  for (int i = 0; i < num_ptc_buffers; i++) {
-    m_ph_buffers.emplace_back(m_params.ph_buffer_size, true);
-    // m_ph_recv_buffers.emplace_back(m_params.ph_buffer_size, true);
-  }
   Logger::print_info("Created {} photon buffers", num_ptc_buffers);
+
+  setup_env_extra();
 }
 
 void
@@ -325,8 +322,10 @@ void
 sim_environment::send_particles(T& ptc) {
   auto& mesh = m_grid->mesh();
   auto& buffers = ptc_buffers(ptc);
+  auto buf_ptrs = ptc_buffer_ptrs(ptc);
   // auto& recv_buffers = ptc_recv_buffers(ptc);
-  ptc.copy_to_comm_buffers(buffers, mesh);
+  // ptc.copy_to_comm_buffers(buffers, mesh);
+  ptc.copy_to_comm_buffers(buffers, buf_ptrs, mesh);
 
   // Define the central zone and number of send_recv in x direction
   int central = 13;
@@ -447,6 +446,18 @@ template <>
 std::vector<typename photons_t::base_class>&
 sim_environment::ptc_buffers(const photons_t& ptc) {
   return m_ph_buffers;
+}
+
+template <>
+particle_data*
+sim_environment::ptc_buffer_ptrs(const particles_t& ptc) {
+  return m_ptc_buf_ptrs;
+}
+
+template <>
+photon_data*
+sim_environment::ptc_buffer_ptrs(const photons_t& ptc) {
+  return m_ph_buf_ptrs;
 }
 
 // template <>

@@ -1,13 +1,14 @@
 #include "grid_1dgr.h"
 #include "utils/logger.h"
 #include "utils/util_functions.h"
-#define H5_USE_BOOST
-#include <highfive/H5DataSet.hpp>
-#include <highfive/H5DataSpace.hpp>
-#include <highfive/H5File.hpp>
+#include "utils/hdf_wrapper.h"
+// #define H5_USE_BOOST
+// #include <highfive/H5DataSet.hpp>
+// #include <highfive/H5DataSpace.hpp>
+// #include <highfive/H5File.hpp>
 #include <vector>
 
-namespace HF = HighFive;
+// namespace HF = HighFive;
 
 namespace Aperture {
 
@@ -38,38 +39,46 @@ Grid_1dGR::compute_coef(const SimParams& params) {
   m_B3B1 = array<Scalar>(n_size);
 
   Logger::print_info("Reading h5");
-  HF::File coef_file("coef.h5", HF::File::ReadOnly);
-  HF::DataSet data_B1 = coef_file.getDataSet("Bu1");
-  uint32_t size = data_B1.getSpace().getDimensions()[0];
+  // HF::File coef_file("coef.h5", HF::File::ReadOnly);
+  H5File coef_file("coef.h5", H5OpenMode::read_only);
+  // HF::DataSet data_B1 = coef_file.getDataSet("Bu1");
+  // uint32_t size = data_B1.getSpace().getDimensions()[0];
   // Logger::print_info("Storage size is {}",
   // data_B1.getSpace().getDimensions()[0]);
-  HF::DataSet data_B3 = coef_file.getDataSet("Bu3");
-  HF::DataSet data_jr = coef_file.getDataSet("ju1");
-  HF::DataSet data_rho = coef_file.getDataSet("rho");
-  HF::DataSet data_r = coef_file.getDataSet("r");
-  HF::DataSet data_theta = coef_file.getDataSet("th");
-  HF::DataSet data_dpsidth = coef_file.getDataSet("dpsidth");
+  // HF::DataSet data_B3 = coef_file.getDataSet("Bu3");
+  // HF::DataSet data_jr = coef_file.getDataSet("ju1");
+  // HF::DataSet data_rho = coef_file.getDataSet("rho");
+  // HF::DataSet data_r = coef_file.getDataSet("r");
+  // HF::DataSet data_theta = coef_file.getDataSet("th");
+  // HF::DataSet data_dpsidth = coef_file.getDataSet("dpsidth");
 
-  std::vector<float> v_B1(size);
-  std::vector<float> v_B3(size);
-  std::vector<float> v_jr(size);
-  std::vector<float> v_rho(size);
-  std::vector<float> v_r(size);
-  std::vector<float> v_theta(size);
-  std::vector<float> v_dpsidth(size);
-  data_B1.read(v_B1.data());
-  data_B3.read(v_B3.data());
-  data_jr.read(v_jr.data());
-  data_rho.read(v_rho.data());
-  data_r.read(v_r.data());
-  data_theta.read(v_theta.data());
-  data_dpsidth.read(v_dpsidth.data());
+  // std::vector<float> v_B1(size);
+  // std::vector<float> v_B3(size);
+  // std::vector<float> v_jr(size);
+  // std::vector<float> v_rho(size);
+  // std::vector<float> v_r(size);
+  // std::vector<float> v_theta(size);
+  // std::vector<float> v_dpsidth(size);
+  auto v_B1 = coef_file.read_vector<float>("Bu1");
+  auto v_B3 = coef_file.read_vector<float>("Bu3");
+  auto v_jr = coef_file.read_vector<float>("ju1");
+  auto v_rho = coef_file.read_vector<float>("rho");
+  auto v_r = coef_file.read_vector<float>("r");
+  auto v_theta = coef_file.read_vector<float>("th");
+  auto v_dpsidth = coef_file.read_vector<float>("dpsidth");
+  // data_B1.read(v_B1.data());
+  // data_B3.read(v_B3.data());
+  // data_jr.read(v_jr.data());
+  // data_rho.read(v_rho.data());
+  // data_r.read(v_r.data());
+  // data_theta.read(v_theta.data());
+  // data_dpsidth.read(v_dpsidth.data());
 
   Scalar omega, a;
-  HF::DataSet data_omega = coef_file.getDataSet("w");
+  // HF::DataSet data_omega = coef_file.getDataSet("w");
   // data_omega.read(omega);
   omega = params.omega;
-  HF::DataSet data_a = coef_file.getDataSet("a");
+  // HF::DataSet data_a = coef_file.getDataSet("a");
   // data_a.read(a);
   a = params.a;
   Logger::print_info("------- omega is {}, a is {}", omega, a);

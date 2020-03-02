@@ -1,6 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/kernels.h"
+#include "data/particle_data.h"
 #include "utils/util_functions.h"
 
 namespace Aperture {
@@ -69,7 +70,8 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
 
 __global__ void
 map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
-                uint32_t* tracked_map, uint32_t* num_tracked, uint64_t max_tracked) {
+                uint32_t* tracked_map, uint32_t* num_tracked,
+                uint64_t max_tracked) {
   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
     if (check_bit(flags[n], ParticleFlag::tracked) &&
@@ -87,6 +89,60 @@ adjust_cell_number(uint32_t* cells, size_t num, int shift) {
   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
     cells[n] += shift;
+  }
+}
+
+__global__ void
+compute_target_buffers(const uint32_t* cells, size_t num,
+                       int* buffer_num, size_t* idx) {
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    if (cells[n] == MAX_CELL) continue;
+    size_t zone = dev_mesh.find_zone(cells[n]);
+
+    size_t pos = atomicAdd(&buffer_num[zone], 1);
+    // Zone is less than 32, so we can use 5 bits to represent this. The
+    // rest of the bits go to encode the index of this particle in that
+    // zone.
+    idx[n] = ((zone & 0b11111) << (sizeof(size_t) * 8 - 5)) + pos;
+    printf("computed zone is %lu, idx[n] is %lu, num[zone] is %d\n", zone,
+           idx[n], buffer_num[zone]);
+  }
+}
+
+template <typename DataType>
+__global__ void
+copy_component_to_buffer(DataType ptc_data, size_t num, size_t* idx,
+                         DataType* ptc_buffers) {
+  int zone_offset = 0;
+  if (dev_mesh.dim() == 2)
+    zone_offset = 9;
+  else if (dev_mesh.dim() == 1)
+    zone_offset = 12;
+  int bitshift_width = (sizeof(size_t) * 8 - 5);
+  for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
+       n += blockDim.x * gridDim.x) {
+    if (ptc_data.cell[n] == MAX_CELL) continue;
+    size_t i = idx[n];
+    size_t zone = ((i >> bitshift_width) & 0b11111);
+    if (zone == 13) continue;
+    size_t pos = i & ((1 << bitshift_width) - 1);
+    printf("zone - offset is %lu, pos is %lu\n", zone - zone_offset, pos);
+    // Copy the particle data from ptc_data[n] to ptc_buffers[zone][pos]
+    assign_ptc(ptc_buffers[zone - zone_offset], pos, ptc_data, n);
+    // printf("ptc_buffers[zone-zone_offset].cell[pos] is %u\n",
+    //        ptc_buffers[zone - zone_offset].cell[pos]);
+    // Set the particle to empty
+    ptc_data.cell[n] = MAX_CELL;
+    // Compute particle cell delta
+    int dz = (zone / 9) - 1;
+    int dy = (zone / 3) % 3 - 1;
+    int dx = zone % 3 - 1;
+    uint32_t dcell = -dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
+                         dev_mesh.dims[1] -
+                     dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
+                     dx * dev_mesh.reduced_dim(0);
+    ptc_buffers[zone - zone_offset].cell[pos] += dcell;
   }
 }
 
@@ -139,10 +195,11 @@ init_rand_states(curandState* states, int seed, int blockPerGrid,
 
 void
 map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
-                uint32_t* tracked_map, uint32_t* num_tracked, uint64_t max_tracked) {
+                uint32_t* tracked_map, uint32_t* num_tracked,
+                uint64_t max_tracked) {
   int block_num = std::min(1024ul, (num + 511) / 512);
-  Kernels::map_tracked_ptc<<<block_num, 512>>>(flags, cells, num, tracked_map,
-                                               num_tracked, max_tracked);
+  Kernels::map_tracked_ptc<<<block_num, 512>>>(
+      flags, cells, num, tracked_map, num_tracked, max_tracked);
   CudaCheckError();
   CudaSafeCall(cudaDeviceSynchronize());
 }
@@ -154,5 +211,30 @@ adjust_cell_number(uint32_t* cells, size_t num, int shift) {
   CudaCheckError();
   CudaSafeCall(cudaDeviceSynchronize());
 }
+
+void
+compute_target_buffers(const uint32_t* cells, size_t num,
+                       int* buffer_num, size_t* idx) {
+  Kernels::compute_target_buffers<<<256, 512>>>(cells, num, buffer_num,
+                                                idx);
+  CudaCheckError();
+}
+
+template <typename DataType>
+void
+copy_ptc_to_buffers(DataType ptc_data, size_t num, size_t* idx,
+                    DataType* ptc_buffers) {
+  Kernels::copy_component_to_buffer<<<256, 512>>>(ptc_data, num, idx,
+                                                  ptc_buffers);
+  CudaCheckError();
+}
+
+template void copy_ptc_to_buffers<particle_data>(
+    particle_data ptc_data, size_t num, size_t* idx,
+    particle_data* ptc_buffers);
+
+template void copy_ptc_to_buffers<photon_data>(
+    photon_data ptc_data, size_t num, size_t* idx,
+    photon_data* ptc_buffers);
 
 }  // namespace Aperture

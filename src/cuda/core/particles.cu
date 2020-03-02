@@ -3,6 +3,8 @@
 
 namespace Aperture {
 
+template class particle_base<single_particle_t>;
+
 namespace Kernels {
 
 __global__ void
@@ -14,7 +16,7 @@ compute_ptc_energies(const Scalar* p1, const Scalar* p2,
       Scalar p1p = p1[i];
       Scalar p2p = p2[i];
       Scalar p3p = p3[i];
-      E[i] = std::sqrt(1.0f + p1p * p1p + p2p * p2p + p3p * p3p);
+      E[i] = sqrt(1.0f + p1p * p1p + p2p * p2p + p3p * p3p);
     }
   }
 }
@@ -24,6 +26,7 @@ __global__ void
 append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
            Vec3<Scalar> p, int cell, ParticleType type, Scalar w,
            uint32_t flag) {
+  printf("%f, %f, %f\n", x[0], x[1], x[2]);
   data.x1[num] = x[0];
   data.x2[num] = x[1];
   data.x3[num] = x[2];
@@ -31,7 +34,7 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
   data.p2[num] = p[1];
   data.p3[num] = p[2];
   data.E[num] =
-      std::sqrt(1.0f + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
+      sqrt(1.0f + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
   data.weight[num] = w;
   data.cell[num] = cell;
   data.flag[num] = flag | gen_ptc_type_flag(type);
@@ -39,11 +42,7 @@ append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
 
 }  // namespace Kernels
 
-template class particle_base<single_particle_t>;
-template class particle_base<single_photon_t>;
-
-particles_t::particles_t()
-    : particle_base<single_particle_t>() {}
+particles_t::particles_t() : particle_base<single_particle_t>() {}
 
 particles_t::particles_t(std::size_t max_num, bool managed)
     : particle_base<single_particle_t>(max_num, managed) {}

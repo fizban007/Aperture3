@@ -3,9 +3,6 @@
 namespace Aperture {
 
 void
-sim_environment::setup_env_extra() {}
-
-void
 sim_environment::send_array_guard_cells_single_dir(
     multi_array<Scalar> &array, int dim, int dir) {
   if (dim < 0 || dim >= (int)m_grid->dim()) return;
@@ -72,5 +69,14 @@ sim_environment::send_add_array_guard_cells_single_dir(
                    m_recv_buffers[dim].extent());
   }
 }
+
+void
+sim_environment::setup_env_extra() {}
+
+void
+sim_environment::destruct_extra() {}
+
+void
+sim_environment::setup_device() {}
 
 }  // namespace Aperture

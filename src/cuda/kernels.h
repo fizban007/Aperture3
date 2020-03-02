@@ -23,6 +23,13 @@ void map_tracked_ptc(uint32_t* flags, uint32_t* cells, size_t num,
                      uint64_t max_tracked);
 void adjust_cell_number(uint32_t* cells, size_t num, int shift);
 
+void compute_target_buffers(const uint32_t* cells, size_t num, int* buffer_num,
+                            size_t* idx);
+
+template <typename DataType>
+void copy_ptc_to_buffers(DataType ptc_data, size_t num, size_t* idx,
+                         DataType* ptc_buffers);
+
 }  // namespace Aperture
 
 #endif  // _KERNELS_H_

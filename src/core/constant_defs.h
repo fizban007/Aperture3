@@ -25,7 +25,7 @@
 
 #define NUM_BOUNDARIES 6
 // Number of particle communication buffers
-#define NUM_PTC_BUFFERS 18
+/* #define NUM_PTC_BUFFERS 18 */
 
 #define NEIGHBOR_NULL -1
 

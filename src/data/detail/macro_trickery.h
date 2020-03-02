@@ -1,6 +1,7 @@
 #ifndef _MACRO_TRICKERY_H_
 #define _MACRO_TRICKERY_H_
 
+#include "cuda/cuda_control.h"
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/facilities/expand.hpp>
 #include <boost/preprocessor/seq/fold_right.hpp>
@@ -83,8 +84,8 @@
     typedef name##_data type;                                          \
   };                                                                   \
                                                                        \
-  HD_INLINE void assign_ptc(name##_data& array_1, size_t idx_1,        \
-                            name##_data& array_2, size_t idx_2) {      \
+  HD_INLINE void assign_ptc(name##_data array_1, size_t idx_1,         \
+                            name##_data array_2, size_t idx_2) {       \
     BOOST_PP_SEQ_FOR_EACH(ASSIGN_ENTRY,                                \
                           (array_1)(idx_1)(array_2)(idx_2),            \
                           GLK_PP_SEQ_DOUBLE_PARENS(content))           \

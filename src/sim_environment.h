@@ -30,6 +30,7 @@ class sim_environment {
   sim_environment(const std::string& conf_file);
   ~sim_environment();
 
+  void setup_device();
   // Remove copy and assignment operators
   sim_environment(sim_environment const&) = delete;
   sim_environment& operator=(sim_environment const&) = delete;
@@ -88,6 +89,8 @@ class sim_environment {
   // return m_domain_info; }
   template <typename T>
   std::vector<typename T::base_class>& ptc_buffers(const T& ptc);
+  template <typename T>
+  typename T::base_class::array_type* ptc_buffer_ptrs(const T& ptc);
   // template <typename T>
   // std::vector<typename T::base_class>& ptc_recv_buffers(const T& ptc);
 
@@ -101,10 +104,14 @@ class sim_environment {
     return m_domain_info.is_boundary[(int)bdy];
   }
 
+  particle_data* ptc_buf_ptrs() { return m_ptc_buf_ptrs; }
+  photon_data* ph_buf_ptrs() { return m_ph_buf_ptrs; }
+
  protected:
   // sim_environment() {}
   void setup_env();
   void setup_env_extra();
+  void destruct_extra();
 
   CommandArgs m_args;
   SimParams m_params;
@@ -134,6 +141,9 @@ class sim_environment {
   std::vector<photons_t::base_class> m_ph_buffers;
   // std::vector<photons_t::base_class> m_ph_recv_buffers;
   int m_dev_id = 0;
+
+  particle_data* m_ptc_buf_ptrs;
+  photon_data* m_ph_buf_ptrs;
 };  // ----- end of class sim_environment -----
 
 }  // namespace Aperture
