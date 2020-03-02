@@ -12,7 +12,7 @@ namespace Aperture {
 template <typename ParticleClass>
 class particle_base {
  protected:
-  typedef typename particle_array_type<ParticleClass>::type array_type;
+  typedef typename ptc_array_type<ParticleClass>::type array_type;
   typedef particle_base<ParticleClass> self_type;
 
   array_type m_data;
