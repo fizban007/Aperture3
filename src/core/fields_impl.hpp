@@ -17,13 +17,13 @@ field<N, T>::field(const Grid& grid) : m_grid(&grid) {
   initialize();
 }
 
-template <int N, typename T>
-field<N, T>::field(const self_type& other) : m_grid(other.m_grid) {
-  for (int i = 0; i < N; i++) {
-    m_array[i] = other.m_array[i];
-    m_stagger[i] = other.m_stagger[i];
-  }
-}
+// template <int N, typename T>
+// field<N, T>::field(const self_type& other) : m_grid(other.m_grid) {
+//   for (int i = 0; i < N; i++) {
+//     m_array[i] = other.m_array[i];
+//     m_stagger[i] = other.m_stagger[i];
+//   }
+// }
 
 template <int N, typename T>
 field<N, T>::field(self_type&& other) : m_grid(other.m_grid) {
@@ -36,17 +36,17 @@ field<N, T>::field(self_type&& other) : m_grid(other.m_grid) {
 template <int N, typename T>
 field<N, T>::~field() {}
 
-template <int N, typename T>
-field<N, T>&
-field<N, T>::operator=(const self_type& other) {
-  m_grid = other.m_grid;
+// template <int N, typename T>
+// field<N, T>&
+// field<N, T>::operator=(const self_type& other) {
+//   m_grid = other.m_grid;
 
-  for (int i = 0; i < N; i++) {
-    m_array[i] = other.m_array[i];
-    m_stagger[i] = other.m_stagger[i];
-  }
-  return *this;
-}
+//   for (int i = 0; i < N; i++) {
+//     m_array[i] = other.m_array[i];
+//     m_stagger[i] = other.m_stagger[i];
+//   }
+//   return *this;
+// }
 
 template <int N, typename T>
 field<N, T>&

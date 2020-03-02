@@ -2,6 +2,7 @@
 #define _CUDA_MEMORY_H_
 
 #include "cuda/cuda_control.h"
+#include "utils/logger.h"
 #include "visit_struct/visit_struct.hpp"
 
 namespace Aperture {
@@ -16,9 +17,10 @@ struct alloc_cuda_managed {
   void operator()(const char* name, T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     void* p;
-    cudaMallocManaged(&p, N_ * sizeof(x_type));
-    cudaMemAdvise(p, N_ * sizeof(x_type),
-                  cudaMemAdviseSetPreferredLocation, 0);
+    // Logger::print_info("--- Allocating {} managed bytes", N_ * sizeof(x_type));
+    CudaSafeCall(cudaMallocManaged(&p, N_ * sizeof(x_type)));
+    CudaSafeCall(cudaMemAdvise(p, N_ * sizeof(x_type),
+                               cudaMemAdviseSetPreferredLocation, 0));
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   }
@@ -37,7 +39,8 @@ struct alloc_cuda_device {
   void operator()(const char* name, T& x) const {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
     void* p;
-    cudaMalloc(&p, N_ * sizeof(x_type));
+    // Logger::print_info("--- Allocating {} bytes", N_ * sizeof(x_type));
+    CudaSafeCall(cudaMalloc(&p, N_ * sizeof(x_type)));
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   }
