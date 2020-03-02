@@ -2,7 +2,7 @@
 #define _SIM_ENVIRONMENT_H_
 
 #include "commandline_args.h"
-#include "config_file.h"
+// #include "config_file.h"
 #include "sim_params.h"
 
 #include "core/array.h"
@@ -115,7 +115,7 @@ class sim_environment {
 
   CommandArgs m_args;
   SimParams m_params;
-  ConfigFile m_conf_file;
+  // ConfigFile m_conf_file;
 
   std::unique_ptr<Grid> m_grid;
   std::unique_ptr<Grid> m_super_grid;

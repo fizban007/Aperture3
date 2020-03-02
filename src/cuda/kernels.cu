@@ -105,8 +105,8 @@ compute_target_buffers(const uint32_t* cells, size_t num,
     // rest of the bits go to encode the index of this particle in that
     // zone.
     idx[n] = ((zone & 0b11111) << (sizeof(size_t) * 8 - 5)) + pos;
-    printf("computed zone is %lu, idx[n] is %lu, num[zone] is %d\n", zone,
-           idx[n], buffer_num[zone]);
+    // printf("computed zone is %lu, idx[n] is %lu, num[zone] is %d\n", zone,
+           // idx[n], buffer_num[zone]);
   }
 }
 
@@ -127,7 +127,7 @@ copy_component_to_buffer(DataType ptc_data, size_t num, size_t* idx,
     size_t zone = ((i >> bitshift_width) & 0b11111);
     if (zone == 13) continue;
     size_t pos = i & ((1 << bitshift_width) - 1);
-    printf("zone - offset is %lu, pos is %lu\n", zone - zone_offset, pos);
+    // printf("zone - offset is %lu, pos is %lu\n", zone - zone_offset, pos);
     // Copy the particle data from ptc_data[n] to ptc_buffers[zone][pos]
     assign_ptc(ptc_buffers[zone - zone_offset], pos, ptc_data, n);
     // printf("ptc_buffers[zone-zone_offset].cell[pos] is %u\n",

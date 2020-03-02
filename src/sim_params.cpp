@@ -1,4 +1,4 @@
-#include "config_file.h"
+#include "sim_params.h"
 #include "cpptoml.h"
 #include "utils/logger.h"
 #include <algorithm>
@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <sstream>
 
-using namespace Aperture;
+namespace Aperture {
 
 ///  Function to convert a string to a bool variable.
 ///
@@ -23,27 +23,12 @@ to_bool(std::string& str) {
   return b;
 }
 
-///  Whether we should skip the line in configuration file
-bool
-skip_line_or_word(const std::string& str) {
-  if (str == "" || str[0] == '#')
-    return true;
-  else
-    return false;
-}
-
-ConfigFile::ConfigFile() {
-  Logger::print_info("Size of params is {}", sizeof(SimParams));
-  // m_grid_conf.resize(3);
-}
-
-void
-ConfigFile::parse_file(const std::string& filename, SimParams& params) {
-  // std::cout << filename << std::endl;
+SimParams
+parse_config(const std::string& filename) {
+  SimParams params, defaults;
   if (filename.empty()) throw(exceptions::file_not_found());
 
   auto config = cpptoml::parse_file(filename);
-  SimParams defaults;
 
   params.delta_t =
       config->get_as<double>("delta_t").value_or(defaults.delta_t);
@@ -210,10 +195,10 @@ ConfigFile::parse_file(const std::string& filename, SimParams& params) {
       config->get_as<int64_t>("n_gamma").value_or(defaults.n_gamma);
   params.n_ep = config->get_as<int64_t>("n_ep").value_or(defaults.n_ep);
 
-  compute_derived_quantities(params);
+  // Compute derived quantities
+  params.log_file = params.data_dir + "output.log";
+
+  return params;
 }
 
-void
-ConfigFile::compute_derived_quantities(SimParams& params) {
-  params.log_file = params.data_dir + "output.log";
 }

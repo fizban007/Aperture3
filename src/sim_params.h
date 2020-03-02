@@ -9,6 +9,21 @@
 
 namespace Aperture {
 
+namespace exceptions {
+
+class file_not_found : public std::exception {
+  std::string m_message;
+
+ public:
+  virtual const char* what() const throw() { return m_message.c_str(); }
+
+  file_not_found() : m_message("File not found") {}
+  file_not_found(const std::string& filename)
+      : m_message("File not found: " + filename) {}
+};
+
+}  // namespace exceptions
+
 /////////////////////////////////////////////////////////////////////////
 ///  This is the standard simulation parameters class. This class will
 ///  be maintained in the environment class and be passed around as
@@ -129,6 +144,9 @@ struct SimParams : public SimParamsBase {
   bool update_fields = true;
   bool inject_particles = true;
 };
+
+/// Reads a toml config file, parses the above data structure, and returns it.
+SimParams parse_config(const std::string& filename);
 
 }  // namespace Aperture
 
