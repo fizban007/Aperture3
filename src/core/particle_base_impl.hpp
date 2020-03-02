@@ -56,10 +56,19 @@ particle_base<ParticleClass>::particle_base(
   m_number = other.m_number;
 
   m_data = other.m_data;
-  m_tmp_data_ptr = other.m_tmp_data_ptr;
-  m_index = other.m_index;
+  m_tracked = other.m_tracked;
   visit_struct::for_each(
       other.m_data, [](const char* name, auto& x) { x = nullptr; });
+  visit_struct::for_each(
+      other.m_tracked, [](const char* name, auto& x) { x = nullptr; });
+
+  m_tmp_data_ptr = other.m_tmp_data_ptr;
+  m_index = other.m_index;
+  m_tracked_ptc_map = other.m_tracked_ptc_map;
+
+  other.m_tracked_ptc_map = nullptr;
+  other.m_index = nullptr;
+  other.m_tmp_data_ptr = nullptr;
 }
 
 template <typename ParticleClass>
@@ -76,21 +85,26 @@ particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
   visit_struct::for_each(m_data, [max_num, alignment](const char* name,
                                                       auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
+    // void* p = aligned_malloc(max_num * sizeof(x_type), alignment);
+    void* p = ::operator new(max_num * sizeof(x_type));
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   });
   visit_struct::for_each(m_tracked, [this, alignment](const char* name,
                                                 auto& x) {
     typedef typename std::remove_reference<decltype(*x)>::type x_type;
-    void* p = aligned_malloc(m_max_tracked * sizeof(x_type), alignment);
+    // void* p = aligned_malloc(m_max_tracked * sizeof(x_type), alignment);
+    void* p = ::operator new(m_max_tracked * sizeof(x_type));
     x = reinterpret_cast<
         typename std::remove_reference<decltype(x)>::type>(p);
   });
 
   // Allocate the index array
-  m_index =
-      (size_t*)aligned_malloc(max_num * sizeof(size_t), alignment);
+  // m_index =
+  //     (size_t*)aligned_malloc(max_num * sizeof(size_t), alignment);
+  m_tracked_ptc_map = new uint32_t[m_max_tracked];
+  m_index = new size_t[max_num];
+  m_tmp_data_ptr = ::operator new(max_num * sizeof(double));
   // m_tmp_data_ptr = aligned_malloc(max_num * sizeof(double),
   // alignment);
 }
@@ -100,18 +114,24 @@ void
 particle_base<ParticleClass>::free_mem() {
   visit_struct::for_each(m_data, [](const char* name, auto& x) {
     if (x != nullptr) {
-      aligned_free(x);
+      // aligned_free(x);
+      ::operator delete(x);
       x = nullptr;
     }
   });
   visit_struct::for_each(m_tracked, [](const char* name, auto& x) {
     if (x != nullptr) {
-      aligned_free(x);
+      // aligned_free(x);
+      ::operator delete(x);
       x = nullptr;
     }
   });
-  aligned_free(m_index);
+  // aligned_free(m_index);
   // aligned_free(m_tmp_data_ptr);
+  if (m_tracked_ptc_map != nullptr) delete[] m_tracked_ptc_map;
+  if (m_index != nullptr) delete[] m_index;
+  if (m_tmp_data_ptr != nullptr)
+    ::operator delete(m_tmp_data_ptr);
 }
 
 template <typename ParticleClass>
