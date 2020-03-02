@@ -110,8 +110,8 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
     type = (int)cudaMemcpyDeviceToDevice;
 
   check_dimensions(other, idx_src, idx_dst, ext);
-  cudaExtent cuda_ext =
-      make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
+  cudaExtent cu_ext = cuda_ext(ext, T{});
+      // make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 
   // Here we use the convention of:
   // cudaMemcpyHostToHost = 0
@@ -139,7 +139,7 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
   }
   copy_parms.dstPos =
       make_cudaPos(idx_dst.x * sizeof(T), idx_dst.y, idx_dst.z);
-  copy_parms.extent = cuda_ext;
+  copy_parms.extent = cu_ext;
   copy_parms.kind = (cudaMemcpyKind)type;
   CudaSafeCall(cudaMemcpy3D(&copy_parms));
 }
@@ -187,8 +187,9 @@ multi_array<T>::alloc_mem(const Extent& ext) {
   CudaSafeCall(cudaMalloc3D(&ptr, extent));
   m_data_d = ptr.ptr;
   m_pitch = ptr.pitch;
-  Logger::print_info("pitch is {}, x is {}, y is {}", m_pitch,
-                     ptr.xsize, ptr.ysize);
+  Logger::print_info("pitch is {}, x is {}, y is {}, z is {}", m_pitch,
+                     ptr.xsize, ptr.ysize, ext.z);
+  Logger::print_info("--- Allocated {} bytes", m_pitch * ptr.ysize * ext.z);
 }
 
 template <typename T>

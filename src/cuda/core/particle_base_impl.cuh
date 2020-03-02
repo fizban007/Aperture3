@@ -179,17 +179,17 @@ struct rearrange_array {
 // };
 
 struct modify_cell {
-  int _dx, _dy, _dz;
+  // int _dx, _dy, _dz;
+  uint32_t _dc;
 
-  HOST_DEVICE modify_cell(int dx, int dy, int dz) :
-      _dx(dx), _dy(dy), _dz(dz) {}
+  HOST_DEVICE modify_cell(uint32_t dc) : _dc(dc) {}
 
   __device__ uint32_t operator()(uint32_t c) {
-    return c -
-           _dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
-               dev_mesh.dims[1] -
-           _dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
-           _dx * dev_mesh.reduced_dim(0);
+    return c + _dc;
+           // _dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
+           //     dev_mesh.dims[1] -
+           // _dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
+           // _dx * dev_mesh.reduced_dim(0);
   }
 };
 
@@ -267,13 +267,18 @@ void
 particle_base<ParticleClass>::alloc_mem(std::size_t max_num,
                                         bool managed,
                                         std::size_t alignment) {
+  // Logger::print_info("Allocating {} particles/photons", max_num);
   if (managed)
     alloc_struct_of_arrays_managed(m_data, max_num);
   else
     alloc_struct_of_arrays(m_data, max_num);
   // Tracked particles are always managed to make transferring between
   // device and host much easier
-  m_max_tracked = std::min(max_num, size_t(MAX_TRACKED)); // No point in allocating more than max_num
+  m_max_tracked = std::min(
+      max_num,
+      size_t(MAX_TRACKED));  // No point in allocating more than max_num
+  // Logger::print_info("Allocating {} tracked particles/photons",
+  // m_max_tracked);
   alloc_struct_of_arrays_managed(m_tracked, m_max_tracked);
   CudaSafeCall(
       cudaMalloc(&m_tracked_ptc_map, m_max_tracked * sizeof(uint32_t)));
@@ -388,8 +393,8 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
 
     visit_struct::for_each(
         m_data, buffers[i].m_data,
-        [this, zone, &compare_zone, &num_ptc, i](const char* name,
-                                                 auto& x, auto& y) {
+        [this, zone, &mesh, &compare_zone, &num_ptc, i](
+            const char* name, auto& x, auto& y) {
           auto p_cell = thrust::device_pointer_cast(m_data.cell);
           auto p = thrust::device_pointer_cast(x);
           auto p_buf = thrust::device_pointer_cast(y);
@@ -403,8 +408,13 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
             int dz = (zone / 9) - 1;
             int dy = (zone / 3) % 3 - 1;
             int dx = zone % 3 - 1;
+            uint32_t dcell =
+                -dz * mesh.reduced_dim(2) * mesh.dims[0] * mesh.dims[1] -
+                dy * mesh.reduced_dim(1) * mesh.dims[0] -
+                dx * mesh.reduced_dim(0);
 
-            thrust::transform(p_buf, buf_end, p_buf, modify_cell{dx, dy, dz});
+            thrust::transform(p_buf, buf_end, p_buf,
+                              modify_cell{dcell});
           } else {
             thrust::copy_if(p, p + m_number, p_cell, p_buf,
                             compare_zone);
@@ -500,7 +510,8 @@ particle_base<ParticleClass>::get_tracked_ptc() {
                             sizeof(uint32_t), cudaMemcpyDeviceToHost));
     CudaSafeCall(cudaFree(num_tracked));
 
-    if (m_num_tracked >= m_max_tracked) m_num_tracked = m_max_tracked - 1;
+    if (m_num_tracked >= m_max_tracked)
+      m_num_tracked = m_max_tracked - 1;
     visit_struct::for_each(
         m_data, m_tracked, [this](const char* name, auto& u, auto& v) {
           Kernels::get_tracked_ptc_attr<<<256, 512>>>(
