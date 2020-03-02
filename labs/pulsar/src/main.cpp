@@ -29,36 +29,36 @@ main(int argc, char *argv[]) {
   // Initialize data exporter
   data_exporter exporter(env, start_step);
 
-  if (env.params().is_restart) {
-    Logger::print_info("This is a restart");
-    exporter.load_from_snapshot(data, start_step, start_time);
-    exporter.prepare_xmf_restart(step, env.params().data_interval,
-                                 start_time);
-    step = start_step + 1;
-    time = start_time + env.params().delta_t;
-    // data.fill_multiplicity(1.0, 1);
-    // for (int j = 100; j < data.grid[0]->mesh().dims[1] - 99; j++) {
-    //   Scalar th = data.grid[0]->mesh().pos(1, j, 0.5f);
-    //   // Scalar p = 10.0;
-    //   // Scalar pp1 = 2.0 * p * cos(th);
-    //   // Scalar pp2 = p * sin(th);
-    //   // Scalar rot = 1.0;
-    //   // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
-    //   // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
-    //   data.particles[0].append(
-    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-    //       // std::abs(p) * 0.1 * sin(th) *
-    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
-    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
-    //       200 + 1540 * j, ParticleType::electron, std::sin(th));
-    //   data.particles[0].append(
-    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-    //       // std::abs(p) * 0.1 * sin(th) *
-    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
-    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
-    //       200 + 1540 * j, ParticleType::positron, std::sin(th));
-    // }
-  } else {
+  // if (env.params().is_restart) {
+  //   Logger::print_info("This is a restart");
+  //   exporter.load_from_snapshot(data, start_step, start_time);
+  //   exporter.prepare_xmf_restart(step, env.params().data_interval,
+  //                                start_time);
+  //   step = start_step + 1;
+  //   time = start_time + env.params().delta_t;
+  //   // data.fill_multiplicity(1.0, 1);
+  //   // for (int j = 100; j < data.grid[0]->mesh().dims[1] - 99; j++) {
+  //   //   Scalar th = data.grid[0]->mesh().pos(1, j, 0.5f);
+  //   //   // Scalar p = 10.0;
+  //   //   // Scalar pp1 = 2.0 * p * cos(th);
+  //   //   // Scalar pp2 = p * sin(th);
+  //   //   // Scalar rot = 1.0;
+  //   //   // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
+  //   //   // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
+  //   //   data.particles[0].append(
+  //   //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+  //   //       // std::abs(p) * 0.1 * sin(th) *
+  //   //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
+  //   //       // 200 + 516 * 100, ParticleType::electron, 1.0);
+  //   //       200 + 1540 * j, ParticleType::electron, std::sin(th));
+  //   //   data.particles[0].append(
+  //   //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
+  //   //       // std::abs(p) * 0.1 * sin(th) *
+  //   //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
+  //   //       // 200 + 516 * 100, ParticleType::electron, 1.0);
+  //   //       200 + 1540 * j, ParticleType::positron, std::sin(th));
+  //   // }
+  // } else {
     exporter.copy_config_file();
     exporter.write_grid();
 
@@ -112,7 +112,7 @@ main(int argc, char *argv[]) {
     //     120 + 516 * j, ParticleType::electron, 1.0);
     // }
     // data.fill_multiplicity(1.0, 6);
-  }
+  // }
   // Initialize the field solver
   field_solver_logsph field_solver(env);
 

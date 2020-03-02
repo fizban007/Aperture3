@@ -725,25 +725,21 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     timer::show_duration_since_stamp("Depositing particles", "us",
                                      "ptc_deposit");
 
-    // timer::stamp("comm");
-    // m_env.send_sub_guard_cells(data.J);
-    // for (int i = 0; i < data.env.params().num_species; i++) {
-    //   m_env.send_sub_guard_cells(data.Rho[i]);
-    // }
     Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(data_p,
                                                        mesh_ptrs, dt);
     CudaCheckError();
     CudaSafeCall(cudaDeviceSynchronize());
 
+    // timer::stamp("comm");
+    // m_env.send_sub_guard_cells(data.J);
+    m_env.send_add_guard_cells(data.J);
+    for (int i = 0; i < data.env.params().num_species; i++) {
+      m_env.send_add_guard_cells(data.Rho[i]);
+    }
+
     Logger::print_debug("current smoothing {} times",
                         m_env.params().current_smoothing);
     for (int i = 0; i < m_env.params().current_smoothing; i++) {
-      // m_env.get_sub_guard_cells(data.J);
-      // if ((step + 1) % data.env.params().data_interval == 0) {
-      //   for (int i = 0; i < data.env.params().num_species; i++) {
-      //     m_env.get_sub_guard_cells(data.Rho[i]);
-      //   }
-      // }
       auto &mesh = grid->mesh();
       dim3 blockSize(32, 16);
       dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
@@ -780,6 +776,12 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
         }
       }
       CudaSafeCall(cudaDeviceSynchronize());
+      m_env.send_guard_cells(data.J);
+      if ((step + 1) % data.env.params().data_interval == 0) {
+        for (int i = 0; i < data.env.params().num_species; i++) {
+          m_env.send_guard_cells(data.Rho[i]);
+        }
+      }
     }
     // timer::stamp("ph_update");
     // Skip empty particle array
@@ -799,6 +801,9 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
   // data.send_particles();
+  m_env.send_particles(data.particles);
+  m_env.send_particles(data.photons);
+
   apply_boundary(data, dt, step);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
 }

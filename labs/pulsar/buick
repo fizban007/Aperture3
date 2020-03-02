@@ -3,16 +3,15 @@
 opt=$1
 lab_dir=`pwd`
 
+mkdir -p build
+cd build
 if [ ! -z $opt ] && [ $opt = "cmake" ]; then
     # Run cmake with the correct definition of LAB_ROOT_DIR
-    cd build
     shift
     cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
 elif [ ! -z $opt ] && [ $opt = "build" ]; then
-    cd build
     make
 elif [ ! -z $opt ] && [ $opt = "clean" ]; then
-    cd build
     if [ -f "Makefile" ]; then
         make clean
     fi
@@ -20,7 +19,6 @@ elif [ ! -z $opt ] && [ $opt = "clean" ]; then
 else
     # Argument not supplied, or just followed by cmake arguments, run
     # cmake if the build dir does not contain a makefile
-    cd build
     if [ -f "Makefile" ]; then
         make
     else
