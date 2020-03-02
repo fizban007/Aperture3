@@ -33,6 +33,14 @@
 #define GET_PTR_NAME_(type, name, dv) (type*, name)
 #define GET_PTR_NAME(r, data, elem) EXPAND_ELEMS(GET_PTR_NAME_, elem)
 
+#define ASSIGN_ENTRY_(arr1, idx1, arr2, idx2, name) \
+  arr1.name[idx1] = arr2.name[idx2];
+#define ASSIGN_ENTRY(r, data, elem)                           \
+  ASSIGN_ENTRY_(                                              \
+      BOOST_PP_SEQ_ELEM(0, data), BOOST_PP_SEQ_ELEM(1, data), \
+      BOOST_PP_SEQ_ELEM(2, data), BOOST_PP_SEQ_ELEM(3, data), \
+      BOOST_PP_TUPLE_ELEM(3, 1, elem))
+
 #define ADD_SIZEOF(s, state, elem) state + sizeof(elem)
 
 #define GLK_PP_DETAIL_SEQ_DOUBLE_PARENS_0(...) \
@@ -71,9 +79,16 @@
   };                                                                   \
                                                                        \
   template <>                                                          \
-  struct particle_array_type<single_##name##_t> {                      \
+  struct ptc_array_type<single_##name##_t> {                           \
     typedef name##_data type;                                          \
   };                                                                   \
+                                                                       \
+  HD_INLINE void assign_ptc(name##_data& array_1, size_t idx_1,        \
+                            name##_data& array_2, size_t idx_2) {      \
+    BOOST_PP_SEQ_FOR_EACH(ASSIGN_ENTRY,                                \
+                          (array_1)(idx_1)(array_2)(idx_2),            \
+                          GLK_PP_SEQ_DOUBLE_PARENS(content))           \
+  }                                                                    \
   }                                                                    \
   VISITABLE_STRUCT(                                                    \
       Aperture::single_##name##_t,                                     \

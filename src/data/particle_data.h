@@ -12,7 +12,7 @@
 
 namespace Aperture {
 template <typename SingleType>
-struct particle_array_type;
+struct ptc_array_type;
 }
 
 // Here we define particle types through some macro magic. The macro

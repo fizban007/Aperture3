@@ -13,7 +13,6 @@ struct read_at_idx {
 
   template <typename T, typename U>
   HD_INLINE void operator()(T& t, U& u) const {
-    // boost::fusion::at_c<0>(x) = boost::fusion::at_c<1>(x)[idx_];
     u = t[idx_];
   }
 };
