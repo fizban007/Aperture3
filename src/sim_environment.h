@@ -6,6 +6,7 @@
 #include "sim_params.h"
 
 #include "core/array.h"
+#include "core/fields.h"
 #include "core/domain_info.h"
 #include "core/grid.h"
 #include "core/multi_array.h"
@@ -41,7 +42,10 @@ class sim_environment {
   //                       const domain_info& info);
   void setup_local_grid();
 
+  void send_guard_cells(scalar_field<Scalar>& field);
+  void send_guard_cells(vector_field<Scalar>& field);
   void send_field_guard_cells(sim_data& data);
+
   void send_array_guard_cells(multi_array<Scalar>& array);
   void send_array_guard_cells_single_dir(multi_array<Scalar>& array,
                                          int dim, int dir);
@@ -49,6 +53,8 @@ class sim_environment {
   void send_add_array_guard_cells(multi_array<Scalar>& array);
   void send_add_array_guard_cells_single_dir(multi_array<Scalar>& array,
                                              int dim, int dir);
+  void send_add_guard_cells(scalar_field<Scalar>& field);
+  void send_add_guard_cells(vector_field<Scalar>& field);
 
   template <typename T>
   void send_particles(T& ptc);

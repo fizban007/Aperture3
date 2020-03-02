@@ -3,6 +3,7 @@
 
 #include "core/vec3.h"
 #include "core/multi_array.h"
+#include "core/fields.h"
 #include "cuda/cuda_control.h"
 // #include <cuda_runtime.h>
 
@@ -72,11 +73,21 @@ pitchptr<T> get_pitchptr(multi_array<T>& array) {
   return pitchptr<T>(get_cudaPitchedPtr(array));
 }
 
+template <int N, typename T>
+pitchptr<T> get_pitchptr(field<N, T>& field, int n = 0) {
+  return pitchptr<T>(get_cudaPitchedPtr(field.data(n)));
+}
+
 template <typename T>
 cudaPitchedPtr get_cudaPitchedPtr(multi_array<T>& array) {
   return make_cudaPitchedPtr(array.dev_ptr(), array.pitch(),
                              array.extent().width(),
                              array.extent().height());
+}
+
+template <int N, typename T>
+cudaPitchedPtr get_cudaPitchedPtr(field<N, T>& field, int n) {
+  return get_cudaPitchedPtr(field.data(n));
 }
 
 }  // namespace Aperture

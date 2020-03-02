@@ -308,21 +308,21 @@ ptc_updater::update_particles(sim_data &data, double dt,
       dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
 
       Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J.data(0)), get_pitchptr(m_tmp_j),
+          get_pitchptr(data.J, 0), get_pitchptr(m_tmp_j),
           m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(0).copy_from(m_tmp_j);
       CudaCheckError();
 
       Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J.data(1)), get_pitchptr(m_tmp_j),
+          get_pitchptr(data.J, 1), get_pitchptr(m_tmp_j),
           m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(1).copy_from(m_tmp_j);
       CudaCheckError();
 
       Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J.data(2)), get_pitchptr(m_tmp_j),
+          get_pitchptr(data.J, 2), get_pitchptr(m_tmp_j),
           m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
       data.J.data(2).copy_from(m_tmp_j);
@@ -331,7 +331,7 @@ ptc_updater::update_particles(sim_data &data, double dt,
       if ((step + 1) % data.env.params().data_interval == 0) {
         for (int i = 0; i < data.env.params().num_species; i++) {
           Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-              get_pitchptr(data.Rho[i].data()), get_pitchptr(m_tmp_j),
+              get_pitchptr(data.Rho[i]), get_pitchptr(m_tmp_j),
               m_env.is_boundary(0), m_env.is_boundary(1),
               m_env.is_boundary(2), m_env.is_boundary(3));
           data.Rho[i].data().copy_from(m_tmp_j);

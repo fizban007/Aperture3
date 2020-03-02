@@ -152,7 +152,7 @@ void
 compute_tile(uint32_t* tile, const uint32_t* cell, size_t num) {
   Kernels::compute_tile<<<256, 256>>>(tile, cell, num);
   // Wait for GPU to finish before accessing on host
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -160,7 +160,7 @@ void
 erase_ptc_in_guard_cells(uint32_t* cell, size_t num) {
   Kernels::erase_ptc_in_guard_cells<<<512, 512>>>(cell, num);
   // Wait for GPU to finish
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   CudaCheckError();
 }
 
@@ -170,7 +170,7 @@ compute_energy_histogram(uint32_t* hist, const Scalar* E, size_t num,
   Kernels::compute_energy_histogram<<<512, 512>>>(hist, E, num,
                                                   num_bins, Emax);
   // Wait for GPU to finish
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   CudaCheckError();
 }
 

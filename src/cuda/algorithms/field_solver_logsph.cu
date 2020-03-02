@@ -337,8 +337,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   if (data.env.grid().dim() != 2) return;
   timer::stamp("field_update");
 
-  // First communicate to get the E field guard cells
-  // data.env.get_sub_guard_cells(data.E);
+  // Assume E field guard cells are already in place
 
   Grid_LogSph &grid = *dynamic_cast<Grid_LogSph *>(&m_env.local_grid());
   auto mesh_ptrs = get_mesh_ptrs(grid);
@@ -355,8 +354,8 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   CudaCheckError();
 
   // Communicate the new B values to guard cells
-  // data.env.get_sub_guard_cells(data.B);
-  // data.env.get_sub_guard_cells(data.J);
+  m_env.send_guard_cells(data.B);
+  m_env.send_guard_cells(data.J);
 
   // Update E
   Kernels::compute_e_update<<<gridSize, blockSize>>>(
@@ -368,7 +367,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   CudaCheckError();
 
   // Communicate the new E values to guard cells
-  // data.env.get_sub_guard_cells(data.E);
+  m_env.send_guard_cells(data.E);
 
   // Update B
   Kernels::compute_divs<<<gridSize, blockSize>>>(

@@ -1,5 +1,5 @@
 #include "core/particles.h"
-#include "particle_base_impl.cuh"
+#include "particle_base_impl.cu"
 
 namespace Aperture {
 
@@ -26,7 +26,6 @@ __global__ void
 append_ptc(particle_data data, size_t num, Vec3<Pos_t> x,
            Vec3<Scalar> p, int cell, ParticleType type, Scalar w,
            uint32_t flag) {
-  printf("%f, %f, %f\n", x[0], x[1], x[2]);
   data.x1[num] = x[0];
   data.x2[num] = x[1];
   data.x3[num] = x[2];

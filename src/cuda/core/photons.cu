@@ -1,5 +1,5 @@
 #include "core/photons.h"
-#include "particle_base_impl.cuh"
+#include "particle_base_impl.cu"
 
 namespace Aperture {
 
@@ -7,9 +7,9 @@ template class particle_base<single_photon_t>;
 
 namespace Kernels {
 
-template <typename PtcData>
+// template <typename PtcData>
 __global__ void
-append_ph(PtcData data, size_t num, Vec3<Pos_t> x, Vec3<Scalar> p,
+append_ph(photon_data data, size_t num, Vec3<Pos_t> x, Vec3<Scalar> p,
           Scalar path_left, int cell, Scalar w, uint32_t flag) {
   printf("%f, %f, %f\n", x[0], x[1], x[2]);
   data.x1[num] = x[0];

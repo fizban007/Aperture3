@@ -279,6 +279,18 @@ sim_environment::send_field_guard_cells(sim_data& data) {
 }
 
 void
+sim_environment::send_guard_cells(scalar_field<Scalar> &field) {
+  send_array_guard_cells(field.data());
+}
+
+void
+sim_environment::send_guard_cells(vector_field<Scalar> &field) {
+  send_array_guard_cells(field.data(0));
+  send_array_guard_cells(field.data(1));
+  send_array_guard_cells(field.data(2));
+}
+
+void
 sim_environment::send_array_guard_cells(multi_array<Scalar>& array) {
   send_array_guard_cells_single_dir(array, 0, -1);
   send_array_guard_cells_single_dir(array, 0, 1);
@@ -305,6 +317,18 @@ sim_environment::send_add_array_guard_cells(
   //   send_add_array_guard_cells_z(array, -1);
   //   send_add_array_guard_cells_z(array, 1);
   // }
+}
+
+void
+sim_environment::send_add_guard_cells(scalar_field<Scalar> &field) {
+  send_add_array_guard_cells(field.data());
+}
+
+void
+sim_environment::send_add_guard_cells(vector_field<Scalar> &field) {
+  send_add_array_guard_cells(field.data(0));
+  send_add_array_guard_cells(field.data(1));
+  send_add_array_guard_cells(field.data(2));
 }
 
 template <typename T>
