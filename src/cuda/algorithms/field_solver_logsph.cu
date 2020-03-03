@@ -4,7 +4,6 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/grids/grid_log_sph_ptrs.h"
-#include "cuda/ptr_util.h"
 #include "cuda/utils/pitchptr.h"
 #include "sim_data.h"
 #include "sim_environment.h"
@@ -355,7 +354,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
 
   // Communicate the new B values to guard cells
   m_env.send_guard_cells(data.B);
-  m_env.send_guard_cells(data.J);
+  // m_env.send_guard_cells(data.J);
 
   // Update E
   Kernels::compute_e_update<<<gridSize, blockSize>>>(
@@ -369,7 +368,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   // Communicate the new E values to guard cells
   m_env.send_guard_cells(data.E);
 
-  // Update B
+  // Compute divergences
   Kernels::compute_divs<<<gridSize, blockSize>>>(
       get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
       get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
