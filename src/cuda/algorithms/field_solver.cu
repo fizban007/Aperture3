@@ -15,8 +15,10 @@ __global__ void
 compute_e_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
                    pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                   pitchptr<Scalar> j1, pitchptr<Scalar> j2,
-                   pitchptr<Scalar> j3, Scalar dt) {
+                   pitchptr<Scalar> b01, pitchptr<Scalar> b02,
+                   pitchptr<Scalar> b03, pitchptr<Scalar> j1,
+                   pitchptr<Scalar> j2, pitchptr<Scalar> j3,
+                   Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -28,26 +30,35 @@ compute_e_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   e1[globalOffset] +=
-      dt * ((b3(n1, n2 + 1) - b3(n1, n2)) * dev_mesh.inv_delta[1] -
-            j1(n1, n2));
+      dt *
+      ((b3(n1, n2 + 1) - b3(n1, n2) - b03(n1, n2 + 1) + b03(n1, n2)) *
+           dev_mesh.inv_delta[1] -
+       j1(n1, n2));
   // (Curl u)_2 = d3u1 - d1u3
   e2[globalOffset] +=
-      dt * ((b3(n1, n2) - b3(n1 + 1, n2)) * dev_mesh.inv_delta[0] -
-            j2(n1, n2));
+      dt *
+      ((b3(n1, n2) - b3(n1 + 1, n2) - b03(n1, n2) + b03(n1 + 1, n2)) *
+           dev_mesh.inv_delta[0] -
+       j2(n1, n2));
 
   // (Curl u)_3 = d1u2 - d2u1
   e3[globalOffset] +=
-      dt * ((b2(n1 + 1, n2) - b2(n1, n2)) * dev_mesh.inv_delta[0] +
-            (b1(n1, n2) - b1(n1, n2 + 1)) * dev_mesh.inv_delta[1] -
-            j3(n1, n2));
+      dt *
+      ((b2(n1 + 1, n2) - b2(n1, n2) - b02(n1 + 1, n2) + b02(n1, n2)) *
+           dev_mesh.inv_delta[0] +
+       (b1(n1, n2) - b1(n1, n2 + 1) - b01(n1, n2) + b01(n1, n2 + 1)) *
+           dev_mesh.inv_delta[1] -
+       j3(n1, n2));
 }
 
 __global__ void
 compute_e_update3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
                    pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                   pitchptr<Scalar> j1, pitchptr<Scalar> j2,
-                   pitchptr<Scalar> j3, Scalar dt) {
+                   pitchptr<Scalar> b01, pitchptr<Scalar> b02,
+                   pitchptr<Scalar> b03, pitchptr<Scalar> j1,
+                   pitchptr<Scalar> j2, pitchptr<Scalar> j3,
+                   Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
   int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
@@ -61,31 +72,38 @@ compute_e_update3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  e1[globalOffset] +=
-      dt *
-      ((b3(n1, n2 + 1, n3) - b3(n1, n2, n3)) * dev_mesh.inv_delta[1] +
-       (b2(n1, n2, n3) - b2(n1, n2, n3 + 1)) * dev_mesh.inv_delta[2] -
-       j1(n1, n2, n3));
+  e1[globalOffset] += dt * ((b3(n1, n2 + 1, n3) - b3(n1, n2, n3) -
+                             b03(n1, n2 + 1, n3) + b03(n1, n2, n3)) *
+                                dev_mesh.inv_delta[1] +
+                            (b2(n1, n2, n3) - b2(n1, n2, n3 + 1) -
+                             b02(n1, n2, n3) + b02(n1, n2, n3 + 1)) *
+                                dev_mesh.inv_delta[2] -
+                            j1(n1, n2, n3));
   // (Curl u)_2 = d3u1 - d1u3
-  e2[globalOffset] +=
-      dt *
-      ((b3(n1, n2, n3) - b3(n1 + 1, n2, n3)) * dev_mesh.inv_delta[0] +
-       (b1(n1, n2, n3 + 1) - b1(n1, n2, n3)) * dev_mesh.inv_delta[2] -
-       j2(n1, n2, n3));
+  e2[globalOffset] += dt * ((b3(n1, n2, n3) - b3(n1 + 1, n2, n3) -
+                             b03(n1, n2, n3) + b03(n1 + 1, n2, n3)) *
+                                dev_mesh.inv_delta[0] +
+                            (b1(n1, n2, n3 + 1) - b1(n1, n2, n3) -
+                             b01(n1, n2, n3 + 1) + b01(n1, n2, n3)) *
+                                dev_mesh.inv_delta[2] -
+                            j2(n1, n2, n3));
 
   // (Curl u)_3 = d1u2 - d2u1
-  e3[globalOffset] +=
-      dt *
-      ((b2(n1 + 1, n2, n3) - b2(n1, n2, n3)) * dev_mesh.inv_delta[0] +
-       (b1(n1, n2, n3) - b1(n1, n2 + 1, n3)) * dev_mesh.inv_delta[1] -
-       j3(n1, n2, n3));
+  e3[globalOffset] += dt * ((b2(n1 + 1, n2, n3) - b2(n1, n2, n3) -
+                             b02(n1 + 1, n2, n3) + b02(n1, n2, n3)) *
+                                dev_mesh.inv_delta[0] +
+                            (b1(n1, n2, n3) - b1(n1, n2 + 1, n3) -
+                             b01(n1, n2, n3) + b01(n1, n2 + 1, n3)) *
+                                dev_mesh.inv_delta[1] -
+                            j3(n1, n2, n3));
 }
 
 __global__ void
 compute_b_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                   pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                   pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                   Scalar dt) {
+                   pitchptr<Scalar> e3, pitchptr<Scalar> e01,
+                   pitchptr<Scalar> e02, pitchptr<Scalar> e03,
+                   pitchptr<Scalar> b1, pitchptr<Scalar> b2,
+                   pitchptr<Scalar> b3, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -97,22 +115,30 @@ compute_b_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   b1[globalOffset] -=
-      dt * (e3(n1, n2 + 1) - e3(n1, n2)) * dev_mesh.inv_delta[1];
+      dt *
+      (e3(n1, n2 + 1) - e3(n1, n2) - e03(n1, n2 + 1) + e03(n1, n2)) *
+      dev_mesh.inv_delta[1];
   // (Curl u)_2 = d3u1 - d1u3
   b2[globalOffset] -=
-      dt * (e3(n1, n2) - e3(n1 + 1, n2)) * dev_mesh.inv_delta[0];
+      dt *
+      (e3(n1, n2) - e3(n1 + 1, n2) - e03(n1, n2) + e03(n1 + 1, n2)) *
+      dev_mesh.inv_delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
   b3[globalOffset] +=
-      dt * ((e2(n1 + 1, n2) - e2(n1, n2)) * dev_mesh.inv_delta[0] +
-            (e1(n1, n2) - e1(n1, n2 + 1)) * dev_mesh.inv_delta[1]);
+      dt *
+      ((e2(n1 + 1, n2) - e2(n1, n2) - e02(n1 + 1, n2) + e02(n1, n2)) *
+           dev_mesh.inv_delta[0] +
+       (e1(n1, n2) - e1(n1, n2 + 1) - e01(n1, n2) + e01(n1, n2 + 1)) *
+           dev_mesh.inv_delta[1]);
 }
 
 __global__ void
 compute_b_update3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                   pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                   pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                   Scalar dt) {
+                   pitchptr<Scalar> e3, pitchptr<Scalar> e01,
+                   pitchptr<Scalar> e02, pitchptr<Scalar> e03,
+                   pitchptr<Scalar> b1, pitchptr<Scalar> b2,
+                   pitchptr<Scalar> b3, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
   int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
@@ -126,21 +152,27 @@ compute_b_update3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  b1[globalOffset] -=
-      dt *
-      ((e3(n1, n2 + 1, n3) - e3(n1, n2, n3)) * dev_mesh.inv_delta[1] +
-       (e2(n1, n2, n3) - e2(n1, n2, n3 + 1)) * dev_mesh.inv_delta[2]);
+  b1[globalOffset] -= dt * ((e3(n1, n2 + 1, n3) - e3(n1, n2, n3) -
+                             e03(n1, n2 + 1, n3) + e03(n1, n2, n3)) *
+                                dev_mesh.inv_delta[1] +
+                            (e2(n1, n2, n3) - e2(n1, n2, n3 + 1) -
+                             e02(n1, n2, n3) + e02(n1, n2, n3 + 1)) *
+                                dev_mesh.inv_delta[2]);
   // (Curl u)_2 = d3u1 - d1u3
-  b2[globalOffset] -=
-      dt *
-      ((e3(n1, n2, n3) - e3(n1 + 1, n2, n3)) * dev_mesh.inv_delta[0] +
-       (e1(n1, n2, n3 + 1) - e1(n1, n2, n3)) * dev_mesh.inv_delta[2]);
+  b2[globalOffset] -= dt * ((e3(n1, n2, n3) - e3(n1 + 1, n2, n3) -
+                             e03(n1, n2, n3) + e03(n1 + 1, n2, n3)) *
+                                dev_mesh.inv_delta[0] +
+                            (e1(n1, n2, n3 + 1) - e1(n1, n2, n3) -
+                             e01(n1, n2, n3 + 1) + e01(n1, n2, n3)) *
+                                dev_mesh.inv_delta[2]);
 
   // (Curl u)_3 = d1u2 - d2u1
-  b3[globalOffset] +=
-      dt *
-      ((e2(n1 + 1, n2, n3) - e2(n1, n2, n3)) * dev_mesh.inv_delta[0] +
-       (e1(n1, n2, n3) - e1(n1, n2 + 1, n3)) * dev_mesh.inv_delta[1]);
+  b3[globalOffset] += dt * ((e2(n1 + 1, n2, n3) - e2(n1, n2, n3) -
+                             e02(n1 + 1, n2, n3) + e02(n1, n2, n3)) *
+                                dev_mesh.inv_delta[0] +
+                            (e1(n1, n2, n3) - e1(n1, n2 + 1, n3) -
+                             e01(n1, n2, n3) + e01(n1, n2 + 1, n3)) *
+                                dev_mesh.inv_delta[1]);
 }
 
 }  // namespace Kernels
@@ -163,8 +195,10 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
 
     Kernels::compute_b_update2d<<<gridSize, blockSize>>>(
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)), dt);
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.Ebg.data(0)),
+        get_pitchptr(data.Ebg.data(1)), get_pitchptr(data.Ebg.data(2)),
+        get_pitchptr(data.B.data(0)), get_pitchptr(data.B.data(1)),
+        get_pitchptr(data.B.data(2)), dt);
     CudaCheckError();
 
     // Communicate the new B values to guard cells
@@ -175,8 +209,9 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
         get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
         get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-        get_pitchptr(data.J.data(0)), get_pitchptr(data.J.data(1)),
-        get_pitchptr(data.J.data(2)), dt);
+        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
+        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
+        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
     CudaCheckError();
   } else if (m_env.grid().dim() == 3) {
     blockSize = dim3(32, 8, 4);
@@ -187,8 +222,10 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
 
     Kernels::compute_b_update3d<<<gridSize, blockSize>>>(
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)), dt);
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.Ebg.data(0)),
+        get_pitchptr(data.Ebg.data(1)), get_pitchptr(data.Ebg.data(2)),
+        get_pitchptr(data.B.data(0)), get_pitchptr(data.B.data(1)),
+        get_pitchptr(data.B.data(2)), dt);
     CudaCheckError();
 
     // Communicate the new B values to guard cells
@@ -199,8 +236,9 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
         get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
         get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-        get_pitchptr(data.J.data(0)), get_pitchptr(data.J.data(1)),
-        get_pitchptr(data.J.data(2)), dt);
+        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
+        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
+        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
     CudaCheckError();
   }
 
