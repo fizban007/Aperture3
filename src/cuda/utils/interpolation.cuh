@@ -234,8 +234,7 @@ interpolate2d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
 
 template <typename T>
 HOST_DEVICE T
-interpolate1d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
-              size_t dim0) {
+interpolate1d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out) {
   int di_m = (in[0] == out[0] ? 0 : -1 - out[0]) * sizeof(T);
   int di_p = (in[0] == out[0] ? 0 : -out[0]) * sizeof(T);
 

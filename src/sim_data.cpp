@@ -3,7 +3,7 @@
 namespace Aperture {
 
 void
-sim_data::initialize(const sim_environment& env) {}
+sim_data::initialize(sim_environment& env) {}
 
 void
 sim_data::finalize() {}

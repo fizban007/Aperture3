@@ -56,24 +56,22 @@ ptc_push_cart(data_ptrs data, size_t num, Scalar dt) {
     gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
-          (interp(data.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
+          interp(data.E1, old_x1, old_x2, c1, c2, Stagger(0b110)) *
           q_over_m;
       Scalar E2 =
-          (interp(data.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
+          interp(data.E2, old_x1, old_x2, c1, c2, Stagger(0b101)) *
           q_over_m;
       Scalar E3 =
-          (interp(data.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
+          interp(data.E3, old_x1, old_x2, c1, c2, Stagger(0b011)) *
           q_over_m;
       Scalar B1 =
-          (interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
-           interp(data.Bbg1, old_x1, old_x2, c1, c2, Stagger(0b001))) *
+          interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
           q_over_m;
       Scalar B2 =
-          (interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
-           interp(data.Bbg2, old_x1, old_x2, c1, c2, Stagger(0b010))) *
+          interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
           q_over_m;
       Scalar B3 =
-          (interp(data.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
+          interp(data.B3, old_x1, old_x2, c1, c2, Stagger(0b100)) *
           q_over_m;
 
       // printf("B1 = %f, B2 = %f, B3 = %f\n", B1, B2, B3);
