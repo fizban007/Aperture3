@@ -454,8 +454,8 @@ particle_base<ParticleClass>::sort_by_cell(const Grid& grid) {
                             MAX_CELL - 1) -
         ptr_cell;
 
-    // Logger::print_info("Sorting complete, there are {} particles in
-    // the pool", m_number); cudaDeviceSynchronize();
+    Logger::print_info("Sorting complete, there are {} particles in the pool", m_number);
+    cudaDeviceSynchronize();
     CudaCheckError();
   }
 }

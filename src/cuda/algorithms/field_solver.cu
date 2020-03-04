@@ -62,27 +62,23 @@ compute_e_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // (Curl u)_1 = d2u3 - d3u2
   e1[globalOffset] +=
       dt *
-      // ((b3(n1, n2 + 1) - b3(n1, n2) - b03(n1, n2 + 1) + b03(n1, n2)) *
-      ((b3(n1, n2 + 1) - b3(n1, n2)) *
+      ((b3(n1, n2 + 1) - b3(n1, n2) - b03(n1, n2 + 1) + b03(n1, n2)) *
            dev_mesh.inv_delta[1] -
        j1(n1, n2));
 
   // (Curl u)_2 = d3u1 - d1u3
   e2[globalOffset] +=
       dt *
-      // ((b3(n1, n2) - b3(n1 + 1, n2) - b03(n1, n2) + b03(n1 + 1, n2)) *
-      ((b3(n1, n2) - b3(n1 + 1, n2)) *
+      ((b3(n1, n2) - b3(n1 + 1, n2) - b03(n1, n2) + b03(n1 + 1, n2)) *
            dev_mesh.inv_delta[0] -
        j2(n1, n2));
 
   // (Curl u)_3 = d1u2 - d2u1
   e3[globalOffset] +=
       dt *
-      // ((b2(n1 + 1, n2) - b2(n1, n2) - b02(n1 + 1, n2) + b02(n1, n2)) *
-      ((b2(n1 + 1, n2) - b2(n1, n2)) *
+      ((b2(n1 + 1, n2) - b2(n1, n2) - b02(n1 + 1, n2) + b02(n1, n2)) *
            dev_mesh.inv_delta[0] +
-       // (b1(n1, n2) - b1(n1, n2 + 1) - b01(n1, n2) + b01(n1, n2 + 1)) *
-       (b1(n1, n2) - b1(n1, n2 + 1)) *
+       (b1(n1, n2) - b1(n1, n2 + 1) - b01(n1, n2) + b01(n1, n2 + 1)) *
            dev_mesh.inv_delta[1] -
        j3(n1, n2));
 }
@@ -152,12 +148,12 @@ compute_b_update1d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // b1 does not change in 1d
   // (Curl u)_2 = d3u1 - d1u3
   b2[globalOffset] -= dt *
-                      (e3(n1) - e3(n1 + 1) - e03(n1) + e03(n1 + 1)) *
+                      (e3(n1 - 1) - e3(n1) - e03(n1 - 1) + e03(n1)) *
                       dev_mesh.inv_delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
   b3[globalOffset] -= dt *
-                      (e2(n1 + 1) - e2(n1) - e02(n1 + 1) + e02(n1)) *
+                      (e2(n1) - e2(n1 - 1) - e02(n1) + e02(n1 - 1)) *
                       dev_mesh.inv_delta[0];
 }
 
@@ -179,24 +175,20 @@ compute_b_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // (Curl u)_1 = d2u3 - d3u2
   b1[globalOffset] -=
       dt *
-      // (e3(n1, n2 + 1) - e3(n1, n2) - e03(n1, n2 + 1) + e03(n1, n2)) *
-      (e3(n1, n2 + 1) - e3(n1, n2)) *
+      (e3(n1, n2) - e3(n1, n2 - 1) - e03(n1, n2) + e03(n1, n2 - 1)) *
       dev_mesh.inv_delta[1];
   // (Curl u)_2 = d3u1 - d1u3
   b2[globalOffset] -=
       dt *
-      // (e3(n1, n2) - e3(n1 + 1, n2) - e03(n1, n2) + e03(n1 + 1, n2)) *
-      (e3(n1, n2) - e3(n1 + 1, n2)) *
+      (e3(n1 - 1, n2) - e3(n1, n2) - e03(n1 - 1, n2) + e03(n1, n2)) *
       dev_mesh.inv_delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
   b3[globalOffset] -=
       dt *
-      // ((e2(n1 + 1, n2) - e2(n1, n2) - e02(n1 + 1, n2) + e02(n1, n2)) *
-      ((e2(n1 + 1, n2) - e2(n1, n2)) *
+      ((e2(n1, n2) - e2(n1 - 1, n2) - e02(n1, n2) + e02(n1 - 1, n2)) *
            dev_mesh.inv_delta[0] +
-       // (e1(n1, n2) - e1(n1, n2 + 1) - e01(n1, n2) + e01(n1, n2 + 1)) *
-       (e1(n1, n2) - e1(n1, n2 + 1)) *
+       (e1(n1, n2 - 1) - e1(n1, n2) - e01(n1, n2 - 1) + e01(n1, n2)) *
            dev_mesh.inv_delta[1]);
 }
 
@@ -254,16 +246,15 @@ compute_divs_1d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   int c1 = threadIdx.x;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   if (n1 >= dev_mesh.dims[0]) return;
-  // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
+
   size_t globalOffset = divE.compute_offset(n1);
 
-  // if (n1 > dev_mesh.guard[0] + 1) {
   divE[globalOffset] =
       (e1(n1 + 1) - e01(n1 + 1) - e1(n1) + e01(n1)) *
           dev_mesh.inv_delta[0];
 
   divB[globalOffset] =
-      (b1(n1 + 1) - b01(n1 + 1) - b1(n1) + b01(n1)) *
+      (b1(n1) - b01(n1) - b1(n1 - 1) + b01(n1 - 1)) *
           dev_mesh.inv_delta[0];
 }
 
@@ -280,22 +271,19 @@ compute_divs_2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   if (n1 >= dev_mesh.dims[0] || n2 >= dev_mesh.dims[1]) return;
-  // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
+
   size_t globalOffset = divE.compute_offset(n1, n2);
 
   divE[globalOffset] =
-      // (e1(n1 + 1, n2) - e01(n1 + 1, n2) - e1(n1, n2) + e01(n1, n2)) *
-      (e1(n1 + 1, n2) - e1(n1, n2)) *
+      (e1(n1 + 1, n2) - e01(n1 + 1, n2) - e1(n1, n2) + e01(n1, n2)) *
           dev_mesh.inv_delta[0] +
-      (e2(n1, n2 + 1) - e2(n1, n2)) *
+      (e2(n1, n2 + 1) - e02(n1, n2 + 1) - e2(n1, n2) + e02(n1, n2)) *
           dev_mesh.inv_delta[1];
 
   divB[globalOffset] =
-      // (b1(n1 + 1, n2) - b01(n1 + 1, n2) - b1(n1, n2) + b01(n1, n2)) *
-      (b1(n1 + 1, n2) - b1(n1, n2)) *
+      (b1(n1, n2) - b01(n1, n2) - b1(n1 - 1, n2) + b01(n1 - 1, n2)) *
           dev_mesh.inv_delta[0] +
-      // (b2(n1, n2 + 1) - b02(n1, n2 + 1) - b2(n1, n2) + b02(n1, n2)) *
-      (b2(n1, n2 + 1) - b2(n1, n2)) *
+      (b2(n1, n2) - b02(n1, n2) - b2(n1, n2 - 1) + b02(n1, n2 - 1)) *
           dev_mesh.inv_delta[1];
 }
 
@@ -329,11 +317,11 @@ compute_divs_3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
           dev_mesh.inv_delta[2];
 
   divB[globalOffset] =
-      (b1(n1 + 1, n2, n3) - b01(n1 + 1, n2, n3) - b1(n1, n2, n3) + b01(n1, n2, n3)) *
+      (b1(n1, n2, n3) - b01(n1, n2, n3) - b1(n1 - 1, n2, n3) + b01(n1 - 1, n2, n3)) *
           dev_mesh.inv_delta[0] +
-      (b2(n1, n2 + 1, n3) - b02(n1, n2 + 1, n3) - b2(n1, n2, n3) + b02(n1, n2, n3)) *
+      (b2(n1, n2, n3) - b02(n1, n2, n3) - b2(n1, n2 - 1, n3) + b02(n1, n2 - 1, n3)) *
           dev_mesh.inv_delta[1] +
-      (b3(n1, n2, n3 + 1) - b03(n1, n2, n3 + 1) - b3(n1, n2, n3) + b03(n1, n2, n3)) *
+      (b3(n1, n2, n3) - b03(n1, n2, n3) - b3(n1, n2, n3 - 1) + b03(n1, n2, n3 - 1)) *
           dev_mesh.inv_delta[2];
 }
 
