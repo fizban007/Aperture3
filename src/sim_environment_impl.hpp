@@ -43,30 +43,22 @@ sim_environment::sim_environment(int* argc, char*** argv)
   Logger::print_info("Current rank is {}", m_domain_info.rank);
 
   setup_device();
+
   // Read in command line configuration
   // Handle the case of wrong command line arguments, exit gracefully
   try {
     m_args.read_args(*argc, *argv, m_params);
   } catch (exceptions::program_option_terminate& e) {
-    exit(0);
+    exit(1);
   }
 
   // Read in the input file
   try {
-    // m_conf_file.parse_file(m_params.conf_file, m_params);
-    m_params = parse_config(m_params.conf_file);
-  } catch (exceptions::file_not_found& e) {
-    Logger::err("Config file not found, exiting");
+    parse_config(m_params.conf_file, m_params);
+  } catch (std::exception& e) {
+    Logger::err("Config file not be parsed, exiting");
     exit(1);
   }
-
-  // Look at the output directory to see if we are restarting from a
-  // snapshot
-  boost::filesystem::path snapshotPath(m_params.data_dir);
-  snapshotPath /= "snapshot.h5";
-  Logger::print_info("Snapshot path is {}", snapshotPath.string());
-  boost::filesystem::path config_path(m_params.data_dir);
-  config_path /= "config.toml";
 
   setup_env();
 }
@@ -77,8 +69,8 @@ sim_environment::sim_environment(const std::string& conf_file)
   // Read in the input file
   try {
     m_params = parse_config(conf_file);
-  } catch (exceptions::file_not_found& e) {
-    Logger::err("Config file not found, exiting");
+  } catch (std::exception& e) {
+    Logger::err("Config file not be parsed, exiting");
     exit(1);
   }
 

@@ -2,27 +2,12 @@
 #define _SIM_PARAMS_H_
 
 #include "core/enum_types.h"
-#include "core/typedefs.h"
 #include "core/quadmesh.h"
+#include "core/typedefs.h"
 #include <array>
 #include <string>
 
 namespace Aperture {
-
-namespace exceptions {
-
-class file_not_found : public std::exception {
-  std::string m_message;
-
- public:
-  virtual const char* what() const throw() { return m_message.c_str(); }
-
-  file_not_found() : m_message("File not found") {}
-  file_not_found(const std::string& filename)
-      : m_message("File not found: " + filename) {}
-};
-
-}  // namespace exceptions
 
 /////////////////////////////////////////////////////////////////////////
 ///  This is the standard simulation parameters class. This class will
@@ -102,12 +87,7 @@ struct SimParamsBase {
   int n_gamma = 600;
   int n_ep = 600;
 
-  // Domain decomposition parameters
-  int dim_x = 1;
-  int dim_y = 1;
-  int dim_z = 1;
-
-  // Mesh parameters
+  // Grid parameters
   int N[3] = {1, 1, 1};
   int guard[3] = {0, 0, 0};
   float lower[3] = {0.0, 0.0, 0.0};
@@ -125,6 +105,7 @@ struct SimParams : public SimParamsBase {
   std::string log_method = "stdout";
   std::string log_file = data_dir + "output.log";
   std::string conf_file = "config.toml";
+  std::string restart_file = "";
 
   // std::array<std::string, 3> grid_config;
   // std::array<std::string, 3> data_grid_config;
@@ -145,8 +126,10 @@ struct SimParams : public SimParamsBase {
   bool inject_particles = true;
 };
 
-/// Reads a toml config file, parses the above data structure, and returns it.
+/// Reads a toml config file, parses the above data structure, and
+/// returns it.
 SimParams parse_config(const std::string& filename);
+void parse_config(const std::string& filename, SimParams& params);
 
 }  // namespace Aperture
 
