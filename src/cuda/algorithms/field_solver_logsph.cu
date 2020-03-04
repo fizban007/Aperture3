@@ -300,9 +300,9 @@ axis_boundary_upper(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 }
 
 __global__ void
-outflow_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
+outflow_boundary_sph(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                     pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                     pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
   for (int j = blockIdx.x * blockDim.x + threadIdx.x;
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     for (int i = 0; i < dev_params.damping_length; i++) {
@@ -401,7 +401,7 @@ field_solver_logsph::apply_boundary(sim_data &data, double omega,
   }
 
   if (data.env.is_boundary(BoundaryPos::upper0)) {
-    Kernels::outflow_boundary<<<32, 256>>>(
+    Kernels::outflow_boundary_sph<<<32, 256>>>(
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
         get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
         get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
