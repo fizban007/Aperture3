@@ -490,6 +490,29 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
 }
 
 __global__ void
+filter_current_cart_1d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
+                       bool boundary_lower0, bool boundary_upper0) {
+  // Load position parameters
+  int n1 = dev_mesh.guard[0] + blockIdx.x * blockDim.x + threadIdx.x;
+  // size_t globalOffset = n2 * j.p.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = j.compute_offset(n1);
+
+  size_t d1_plus = sizeof(Scalar);
+  if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] - 1)
+    d1_plus = 0;
+  // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
+  //                                                : 0);
+  size_t d1_minus = -sizeof(Scalar);
+  if (boundary_lower0 && n1 == dev_mesh.guard[0]) d1_minus = 0;
+  // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+  // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  // Do the actual computation here
+  j_tmp[globalOffset] = 0.5f * j[globalOffset];
+  j_tmp[globalOffset] += 0.25f * j[globalOffset + d1_plus];
+  j_tmp[globalOffset] += 0.25f * j[globalOffset + d1_minus];
+}
+
+__global__ void
 filter_current_cart_2d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
                        bool boundary_lower0, bool boundary_upper0,
                        bool boundary_lower1, bool boundary_upper1) {
@@ -499,38 +522,94 @@ filter_current_cart_2d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
   // size_t globalOffset = n2 * j.p.pitch + n1 * sizeof(Scalar);
   size_t globalOffset = j.compute_offset(n1, n2);
 
-  size_t dr_plus = sizeof(Scalar);
+  size_t d1_plus = sizeof(Scalar);
   if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] - 1)
-    dr_plus = 0;
+    d1_plus = 0;
   // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
   //                                                : 0);
-  size_t dr_minus = sizeof(Scalar);
-  if (boundary_lower0 && n1 == dev_mesh.guard[0]) dr_minus = 0;
+  size_t d1_minus = sizeof(Scalar);
+  if (boundary_lower0 && n1 == dev_mesh.guard[0]) d1_minus = 0;
   // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
-  size_t dt_plus = j.p.pitch;
+  size_t d2_plus = j.p.pitch;
   if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1)
-    dt_plus = 0;
+    d2_plus = 0;
   // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
-  size_t dt_minus = j.p.pitch;
-  if (boundary_lower1 && n2 == dev_mesh.guard[1]) dt_minus = 0;
+  size_t d2_minus = j.p.pitch;
+  if (boundary_lower1 && n2 == dev_mesh.guard[1]) d2_minus = 0;
   // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
   // Do the actual computation here
   j_tmp[globalOffset] = 0.25f * j[globalOffset];
-  j_tmp[globalOffset] += 0.125f * j[globalOffset + dr_plus];
-  j_tmp[globalOffset] += 0.125f * j[globalOffset - dr_minus];
-  j_tmp[globalOffset] += 0.125f * j[globalOffset + dt_plus];
-  j_tmp[globalOffset] += 0.125f * j[globalOffset - dt_minus];
-  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus + dt_plus];
-  j_tmp[globalOffset] += 0.0625f * j[globalOffset - dr_minus + dt_plus];
-  j_tmp[globalOffset] += 0.0625f * j[globalOffset + dr_plus - dt_minus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset + d1_plus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset - d1_minus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset + d2_plus];
+  j_tmp[globalOffset] += 0.125f * j[globalOffset - d2_minus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + d1_plus + d2_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset - d1_minus + d2_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + d1_plus - d2_minus];
   j_tmp[globalOffset] +=
-      0.0625f * j[globalOffset - dr_minus - dt_minus];
+      0.0625f * j[globalOffset - d1_minus - d2_minus];
 }
 
 __global__ void
 filter_current_cart_3d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
                        bool boundary_lower0, bool boundary_upper0,
-                       bool boundary_lower1, bool boundary_upper1) {}
+                       bool boundary_lower1, bool boundary_upper1,
+                       bool boundary_lower2, bool boundary_upper2) {
+  // Load position parameters
+  int n1 = dev_mesh.guard[0] + blockIdx.x * blockDim.x + threadIdx.x;
+  int n2 = dev_mesh.guard[1] + blockIdx.y * blockDim.y + threadIdx.y;
+  int n3 = dev_mesh.guard[2] + blockIdx.z * blockDim.z + threadIdx.z;
+  // size_t globalOffset = n2 * j.p.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = j.compute_offset(n1, n2, n3);
+
+  size_t d1_plus = sizeof(Scalar);
+  if (boundary_upper0 && n1 == dev_mesh.dims[0] - dev_mesh.guard[0] - 1)
+    d1_plus = 0;
+  // (n1 < dev_mesh.dims[0] - dev_mesh.guard[0] - 1 ? sizeof(Scalar)
+  //                                                : 0);
+  size_t d1_minus = sizeof(Scalar);
+  if (boundary_lower0 && n1 == dev_mesh.guard[0]) d1_minus = 0;
+  // (n1 > dev_mesh.guard[0] ? sizeof(Scalar) : 0);
+  size_t d2_plus = j.p.pitch;
+  if (boundary_upper1 && n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1)
+    d2_plus = 0;
+  // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+  size_t d2_minus = j.p.pitch;
+  if (boundary_lower1 && n2 == dev_mesh.guard[1]) d2_minus = 0;
+  // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  size_t d3[2] = {j.p.pitch * j.p.ysize, -j.p.pitch * j.p.ysize};
+  if (boundary_upper2 && n3 == dev_mesh.dims[2] - dev_mesh.guard[2] - 1)
+    d3[0] = 0;
+  // (n2 < dev_mesh.dims[1] - dev_mesh.guard[1] - 1 ? j.pitch : 0);
+  if (boundary_lower2 && n3 == dev_mesh.guard[2]) d3[1] = 0;
+  // (n2 > dev_mesh.guard[1] ? j.pitch : 0);
+  // Do the actual computation here
+  j_tmp[globalOffset] = 0.125f * j[globalOffset];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + d1_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset - d1_minus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset + d2_plus];
+  j_tmp[globalOffset] += 0.0625f * j[globalOffset - d2_minus];
+  j_tmp[globalOffset] += 0.03125f * j[globalOffset + d1_plus + d2_plus];
+  j_tmp[globalOffset] += 0.03125f * j[globalOffset - d1_minus + d2_plus];
+  j_tmp[globalOffset] += 0.03125f * j[globalOffset + d1_plus - d2_minus];
+  j_tmp[globalOffset] +=
+      0.03125f * j[globalOffset - d1_minus - d2_minus];
+  for (int i = 0; i < 2; i++) {
+    j_tmp[globalOffset] += 0.0625f * j[globalOffset + d3[i]];
+    j_tmp[globalOffset] += 0.03152f * j[globalOffset + d1_plus + d3[i]];
+    j_tmp[globalOffset] += 0.03152f * j[globalOffset - d1_minus + d3[i]];
+    j_tmp[globalOffset] += 0.03152f * j[globalOffset + d2_plus + d3[i]];
+    j_tmp[globalOffset] += 0.03152f * j[globalOffset - d2_minus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.015625f * j[globalOffset + d1_plus + d2_plus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.015625f * j[globalOffset - d1_minus + d2_plus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.015625f * j[globalOffset + d1_plus - d2_minus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.015625f * j[globalOffset - d1_minus - d2_minus + d3[i]];
+  }
+}
 
 }  // namespace Kernels
 
