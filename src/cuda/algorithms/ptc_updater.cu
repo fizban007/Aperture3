@@ -312,7 +312,6 @@ deposit_current_cart_2d(data_ptrs data, size_t num, Scalar dt,
 
     Scalar x = dev_mesh.pos(0, c1, old_x1);
     Scalar y = dev_mesh.pos(1, c2, old_x2);
-    Scalar z = old_x3;
 
     v1 = v1 / gamma;
     v2 = v2 / gamma;
@@ -334,7 +333,7 @@ deposit_current_cart_2d(data_ptrs data, size_t num, Scalar dt,
 
     ptc.x1[idx] = new_x1;
     ptc.x2[idx] = new_x2;
-    ptc.x3[idx] = z + v3 * dt;
+    ptc.x3[idx] = old_x3 + v3 * dt;
 
     // step 2: Deposit current
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
@@ -744,13 +743,14 @@ ptc_updater::update_particles(sim_data &data, double dt,
   }
   auto &grid = m_env.local_grid();
 
-  timer::stamp("ptc_push");
+  timer::stamp("ptc_update");
   // Skip empty particle array
   if (data.particles.number() > 0) {
     Logger::print_info(
         "Updating {} particles in Cartesian coordinates",
         data.particles.number());
 
+    timer::stamp("ptc_push");
     // Push the particle with E and B fields
     if (grid.dim() == 1) {
       Kernels::ptc_push_cart_1d<<<256, 512>>>(
@@ -765,7 +765,7 @@ ptc_updater::update_particles(sim_data &data, double dt,
     CudaCheckError();
     CudaSafeCall(cudaDeviceSynchronize());
 
-    timer::show_duration_since_stamp("Pushing particles", "us",
+    timer::show_duration_since_stamp("Pushing particles", "ms",
                                      "ptc_push");
 
     timer::stamp("ptc_deposit");
@@ -782,7 +782,7 @@ ptc_updater::update_particles(sim_data &data, double dt,
     }
     CudaCheckError();
     CudaSafeCall(cudaDeviceSynchronize());
-    timer::show_duration_since_stamp("Depositing particles", "us",
+    timer::show_duration_since_stamp("Depositing particles", "ms",
                                      "ptc_deposit");
 
     m_env.send_add_guard_cells(data.J);
@@ -795,9 +795,10 @@ ptc_updater::update_particles(sim_data &data, double dt,
     smooth_current(data, step);
     m_env.send_particles(data.particles);
   }
-  // timer::show_duration_since_stamp("Sending guard cells", "us",
+  // timer::show_duration_since_stamp("Sending guard cells", "ms",
   // "comm");
-  if (data.particles.number() > 0) {
+  if (data.photons.number() > 0) {
+    timer::stamp("photon_move");
     Logger::print_info(
         "Updating {} photons in Cartesian coordinates",
         data.photons.number());
@@ -816,16 +817,18 @@ ptc_updater::update_particles(sim_data &data, double dt,
     CudaCheckError();
     CudaSafeCall(cudaDeviceSynchronize());
     m_env.send_particles(data.photons);
+    timer::show_duration_since_stamp("Moving photons", "ms",
+                                     "photon_move");
   }
   apply_boundary(data, dt, step);
-  timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
+  timer::show_duration_since_stamp("Ptc update", "ms", "ptc_update");
 }
 
 void
 ptc_updater::apply_boundary(sim_data &data, double dt, uint32_t step) {
-  data.particles.clear_guard_cells(m_env.local_grid());
-  data.photons.clear_guard_cells(m_env.local_grid());
-  CudaSafeCall(cudaDeviceSynchronize());
+  // data.particles.clear_guard_cells(m_env.local_grid());
+  // data.photons.clear_guard_cells(m_env.local_grid());
+  // CudaSafeCall(cudaDeviceSynchronize());
 
   // TODO: apply other boundary conditions on current/rho/particles
 }

@@ -39,7 +39,7 @@ struct SimParamsBase {
 
   // simulation parameters
   int interpolation_order = 1;
-  int current_smoothing = 3;
+  int current_smoothing = 0;
   bool data_compress = true;
   LogLevel log_lvl = LogLevel::debug;
   size_t max_steps = 1000;
@@ -100,15 +100,11 @@ struct SimParamsBase {
 struct SimParams : public SimParamsBase {
   std::string coord_system = "Cartesian";
 
-  std::string data_dir = "../Data/";
-  std::string data_file_prefix = "output";
+  std::string data_dir = "Data/";
   std::string log_method = "stdout";
   std::string log_file = data_dir + "output.log";
   std::string conf_file = "config.toml";
   std::string restart_file = "";
-
-  // std::array<std::string, 3> grid_config;
-  // std::array<std::string, 3> data_grid_config;
 
   // std::string algorithm_ptc_move = "mapping";
   std::string algorithm_ptc_move = "default";
@@ -117,7 +113,7 @@ struct SimParams : public SimParamsBase {
   std::string algorithm_current_deposit = "Esirkepov";
   std::string initial_condition = "empty";
 
-  int random_seed = 4321;
+  int random_seed = 43210;
   int downsample = 1;
   int sort_interval = 20;
   int snapshot_interval = 1000;

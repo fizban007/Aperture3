@@ -103,6 +103,7 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   boost::filesystem::create_directories(outPath, returnedError);
 
   copy_config_file();
+  write_grid();
 }
 
 data_exporter::~data_exporter() {
@@ -117,7 +118,7 @@ data_exporter::write_grid() {
   auto out_ext = tmp_grid_data.extent();
   auto downsample = params.downsample;
 
-  std::string meshfilename = outputDirectory + "mesh.h5";
+  std::string meshfilename = outputDirectory + "grid.h5";
   H5File meshfile =
       hdf_create(meshfilename, H5CreateMode::trunc_parallel);
 
@@ -263,20 +264,20 @@ data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
   fs << "    <DataItem Dimensions=\"" << m_dim_str
      << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
      << std::endl;
-  fs << "      mesh.h5:x1" << std::endl;
+  fs << "      grid.h5:x1" << std::endl;
   fs << "    </DataItem>" << std::endl;
   if (grid.dim() >= 2) {
     fs << "    <DataItem Dimensions=\"" << m_dim_str
        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
        << std::endl;
-    fs << "      mesh.h5:x2" << std::endl;
+    fs << "      grid.h5:x2" << std::endl;
     fs << "    </DataItem>" << std::endl;
   }
   if (grid.dim() >= 3) {
     fs << "    <DataItem Dimensions=\"" << m_dim_str
        << "\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">"
        << std::endl;
-    fs << "      mesh.h5:x3" << std::endl;
+    fs << "      grid.h5:x3" << std::endl;
     fs << "    </DataItem>" << std::endl;
   }
 
@@ -322,14 +323,14 @@ data_exporter::write_xmf_step_header(std::string& buffer, double time) {
       "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
       "Precision=\"4\" Format=\"HDF\">\n",
       m_dim_str);
-  buffer += "      mesh.h5:x1\n";
+  buffer += "      grid.h5:x1\n";
   buffer += "    </DataItem>\n";
   if (grid.dim() >= 2) {
     buffer += fmt::format(
         "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
         "Precision=\"4\" Format=\"HDF\">\n",
         m_dim_str);
-    buffer += "      mesh.h5:x2\n";
+    buffer += "      grid.h5:x2\n";
     buffer += "    </DataItem>\n";
   }
   if (grid.dim() >= 3) {
@@ -337,7 +338,7 @@ data_exporter::write_xmf_step_header(std::string& buffer, double time) {
         "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
         "Precision=\"4\" Format=\"HDF\">\n",
         m_dim_str);
-    buffer += "      mesh.h5:x3\n";
+    buffer += "      grid.h5:x3\n";
     buffer += "    </DataItem>\n";
   }
 
@@ -597,6 +598,9 @@ data_exporter::add_grid_output(multi_array<T>& array, Stagger stagger,
                   timestep / m_env.params().data_interval, name);
   m_xmf_buffer += "    </DataItem>\n";
   m_xmf_buffer += "  </Attribute>\n";
+
+  file.write_parallel(tmp_grid_data, dims, offset,
+                      tmp_grid_data.extent(), Index(0, 0, 0), name);
 }
 
 void

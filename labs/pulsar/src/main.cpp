@@ -59,8 +59,6 @@ main(int argc, char *argv[]) {
   //   //       200 + 1540 * j, ParticleType::positron, std::sin(th));
   //   // }
   // } else {
-    exporter.copy_config_file();
-    exporter.write_grid();
 
     // Setup initial conditions
     Scalar B0 = env.params().B0;

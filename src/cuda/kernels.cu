@@ -99,14 +99,13 @@ compute_target_buffers(const uint32_t* cells, size_t num,
        n += blockDim.x * gridDim.x) {
     if (cells[n] == MAX_CELL) continue;
     size_t zone = dev_mesh.find_zone(cells[n]);
-
+    if (zone == 13) continue;
     size_t pos = atomicAdd(&buffer_num[zone], 1);
+    // printf("pos is %lu, zone is %lu\n", pos, zone);
     // Zone is less than 32, so we can use 5 bits to represent this. The
     // rest of the bits go to encode the index of this particle in that
     // zone.
     idx[n] = ((zone & 0b11111) << (sizeof(size_t) * 8 - 5)) + pos;
-    // printf("computed zone is %lu, idx[n] is %lu, num[zone] is %d\n", zone,
-           // idx[n], buffer_num[zone]);
   }
 }
 
@@ -120,29 +119,31 @@ copy_component_to_buffer(DataType ptc_data, size_t num, size_t* idx,
   else if (dev_mesh.dim() == 1)
     zone_offset = 12;
   int bitshift_width = (sizeof(size_t) * 8 - 5);
+  // loop through the particle array
   for (size_t n = threadIdx.x + blockIdx.x * blockDim.x; n < num;
        n += blockDim.x * gridDim.x) {
     if (ptc_data.cell[n] == MAX_CELL) continue;
     size_t i = idx[n];
     size_t zone = ((i >> bitshift_width) & 0b11111);
-    if (zone == 13) continue;
-    size_t pos = i & ((1 << bitshift_width) - 1);
-    // printf("zone - offset is %lu, pos is %lu\n", zone - zone_offset, pos);
+    if (zone == 13 || zone > 27) continue;
+    size_t pos = i - (zone << bitshift_width);
+    // printf("in copy, pos is %lu, zone is %lu\n", pos, zone);
     // Copy the particle data from ptc_data[n] to ptc_buffers[zone][pos]
     assign_ptc(ptc_buffers[zone - zone_offset], pos, ptc_data, n);
-    // printf("ptc_buffers[zone-zone_offset].cell[pos] is %u\n",
-    //        ptc_buffers[zone - zone_offset].cell[pos]);
-    // Set the particle to empty
-    ptc_data.cell[n] = MAX_CELL;
+    // printf("pos is %lu, %u, %u\n", pos, ptc_buffers[zone - zone_offset].cell[pos], ptc_data.cell[n]);
     // Compute particle cell delta
-    int dz = (zone / 9) - 1;
-    int dy = (zone / 3) % 3 - 1;
+    int dz = (dev_mesh.dim() > 2 ? (zone / 9) - 1 : 0);
+    int dy = (dev_mesh.dim() > 1 ? (zone / 3) % 3 - 1 : 0);
     int dx = zone % 3 - 1;
-    uint32_t dcell = -dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
+    int dcell = -dz * dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
                          dev_mesh.dims[1] -
                      dy * dev_mesh.reduced_dim(1) * dev_mesh.dims[0] -
                      dx * dev_mesh.reduced_dim(0);
     ptc_buffers[zone - zone_offset].cell[pos] += dcell;
+    // printf("dc is %d, cell is %u, cell after is %u\n", dcell, ptc_data.cell[n],
+    //        ptc_buffers[zone - zone_offset].cell[pos]);
+    // Set the particle to empty
+    ptc_data.cell[n] = MAX_CELL;
   }
 }
 

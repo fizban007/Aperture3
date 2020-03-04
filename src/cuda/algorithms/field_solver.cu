@@ -62,22 +62,27 @@ compute_e_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // (Curl u)_1 = d2u3 - d3u2
   e1[globalOffset] +=
       dt *
-      ((b3(n1, n2 + 1) - b3(n1, n2) - b03(n1, n2 + 1) + b03(n1, n2)) *
+      // ((b3(n1, n2 + 1) - b3(n1, n2) - b03(n1, n2 + 1) + b03(n1, n2)) *
+      ((b3(n1, n2 + 1) - b3(n1, n2)) *
            dev_mesh.inv_delta[1] -
        j1(n1, n2));
+
   // (Curl u)_2 = d3u1 - d1u3
   e2[globalOffset] +=
       dt *
-      ((b3(n1, n2) - b3(n1 + 1, n2) - b03(n1, n2) + b03(n1 + 1, n2)) *
+      // ((b3(n1, n2) - b3(n1 + 1, n2) - b03(n1, n2) + b03(n1 + 1, n2)) *
+      ((b3(n1, n2) - b3(n1 + 1, n2)) *
            dev_mesh.inv_delta[0] -
        j2(n1, n2));
 
   // (Curl u)_3 = d1u2 - d2u1
   e3[globalOffset] +=
       dt *
-      ((b2(n1 + 1, n2) - b2(n1, n2) - b02(n1 + 1, n2) + b02(n1, n2)) *
+      // ((b2(n1 + 1, n2) - b2(n1, n2) - b02(n1 + 1, n2) + b02(n1, n2)) *
+      ((b2(n1 + 1, n2) - b2(n1, n2)) *
            dev_mesh.inv_delta[0] +
-       (b1(n1, n2) - b1(n1, n2 + 1) - b01(n1, n2) + b01(n1, n2 + 1)) *
+       // (b1(n1, n2) - b1(n1, n2 + 1) - b01(n1, n2) + b01(n1, n2 + 1)) *
+       (b1(n1, n2) - b1(n1, n2 + 1)) *
            dev_mesh.inv_delta[1] -
        j3(n1, n2));
 }
@@ -174,20 +179,24 @@ compute_b_update2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // (Curl u)_1 = d2u3 - d3u2
   b1[globalOffset] -=
       dt *
-      (e3(n1, n2 + 1) - e3(n1, n2) - e03(n1, n2 + 1) + e03(n1, n2)) *
+      // (e3(n1, n2 + 1) - e3(n1, n2) - e03(n1, n2 + 1) + e03(n1, n2)) *
+      (e3(n1, n2 + 1) - e3(n1, n2)) *
       dev_mesh.inv_delta[1];
   // (Curl u)_2 = d3u1 - d1u3
   b2[globalOffset] -=
       dt *
-      (e3(n1, n2) - e3(n1 + 1, n2) - e03(n1, n2) + e03(n1 + 1, n2)) *
+      // (e3(n1, n2) - e3(n1 + 1, n2) - e03(n1, n2) + e03(n1 + 1, n2)) *
+      (e3(n1, n2) - e3(n1 + 1, n2)) *
       dev_mesh.inv_delta[0];
 
   // (Curl u)_3 = d1u2 - d2u1
   b3[globalOffset] -=
       dt *
-      ((e2(n1 + 1, n2) - e2(n1, n2) - e02(n1 + 1, n2) + e02(n1, n2)) *
+      // ((e2(n1 + 1, n2) - e2(n1, n2) - e02(n1 + 1, n2) + e02(n1, n2)) *
+      ((e2(n1 + 1, n2) - e2(n1, n2)) *
            dev_mesh.inv_delta[0] +
-       (e1(n1, n2) - e1(n1, n2 + 1) - e01(n1, n2) + e01(n1, n2 + 1)) *
+       // (e1(n1, n2) - e1(n1, n2 + 1) - e01(n1, n2) + e01(n1, n2 + 1)) *
+       (e1(n1, n2) - e1(n1, n2 + 1)) *
            dev_mesh.inv_delta[1]);
 }
 
@@ -274,17 +283,19 @@ compute_divs_2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
   size_t globalOffset = divE.compute_offset(n1, n2);
 
-  // if (n1 > dev_mesh.guard[0] + 1) {
   divE[globalOffset] =
-      (e1(n1 + 1, n2) - e01(n1 + 1, n2) - e1(n1, n2) + e01(n1, n2)) *
+      // (e1(n1 + 1, n2) - e01(n1 + 1, n2) - e1(n1, n2) + e01(n1, n2)) *
+      (e1(n1 + 1, n2) - e1(n1, n2)) *
           dev_mesh.inv_delta[0] +
-      (e2(n1, n2 + 1) - e02(n1, n2 + 1) - e2(n1, n2) + e02(n1, n2)) *
+      (e2(n1, n2 + 1) - e2(n1, n2)) *
           dev_mesh.inv_delta[1];
 
   divB[globalOffset] =
-      (b1(n1 + 1, n2) - b01(n1 + 1, n2) - b1(n1, n2) + b01(n1, n2)) *
+      // (b1(n1 + 1, n2) - b01(n1 + 1, n2) - b1(n1, n2) + b01(n1, n2)) *
+      (b1(n1 + 1, n2) - b1(n1, n2)) *
           dev_mesh.inv_delta[0] +
-      (b2(n1, n2 + 1) - b02(n1, n2 + 1) - b2(n1, n2) + b02(n1, n2)) *
+      // (b2(n1, n2 + 1) - b02(n1, n2 + 1) - b2(n1, n2) + b02(n1, n2)) *
+      (b2(n1, n2 + 1) - b2(n1, n2)) *
           dev_mesh.inv_delta[1];
 }
 
@@ -333,8 +344,30 @@ field_solver::field_solver(sim_environment &env) : m_env(env) {}
 field_solver::~field_solver() {}
 
 void
-field_solver::update_fields(sim_data &data, double dt, double time) {
+field_solver::update_fields(sim_data &data, double dt, uint32_t step) {
   timer::stamp("field_update");
+  if (step == 0) {
+    update_e_field(data, 0.5 * dt);
+    m_env.send_guard_cells(data.E);
+  }
+
+  update_b_field(data, dt);
+  // Communicate the new B values to guard cells
+  m_env.send_guard_cells(data.B);
+
+  update_e_field(data, dt);
+  // Communicate the new E values to guard cells
+  m_env.send_guard_cells(data.E);
+
+  compute_divs(data);
+
+  CudaSafeCall(cudaDeviceSynchronize());
+  timer::show_duration_since_stamp("Field update", "us",
+                                   "field_update");
+}
+
+void
+field_solver::update_b_field(sim_data &data, double dt) {
   dim3 blockSize, gridSize;
   auto &grid = m_env.grid();
   auto &mesh = grid.mesh();
@@ -348,20 +381,6 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.Ebg.data(1)), get_pitchptr(data.Ebg.data(2)),
         get_pitchptr(data.B.data(0)), get_pitchptr(data.B.data(1)),
         get_pitchptr(data.B.data(2)), dt);
-    CudaCheckError();
-
-    // Communicate the new B values to guard cells
-    m_env.send_guard_cells(data.B);
-
-    // Update E
-    Kernels::compute_e_update1d<<<gridSize, blockSize>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
-        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
-        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
-    CudaCheckError();
   } else if (grid.dim() == 2) {
     blockSize = dim3(32, 16);
     gridSize =
@@ -374,20 +393,6 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.Ebg.data(1)), get_pitchptr(data.Ebg.data(2)),
         get_pitchptr(data.B.data(0)), get_pitchptr(data.B.data(1)),
         get_pitchptr(data.B.data(2)), dt);
-    CudaCheckError();
-
-    // Communicate the new B values to guard cells
-    m_env.send_guard_cells(data.B);
-
-    // Update E
-    Kernels::compute_e_update2d<<<gridSize, blockSize>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
-        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
-        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
-    CudaCheckError();
   } else if (grid.dim() == 3) {
     blockSize = dim3(32, 8, 4);
     gridSize =
@@ -401,12 +406,46 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.Ebg.data(1)), get_pitchptr(data.Ebg.data(2)),
         get_pitchptr(data.B.data(0)), get_pitchptr(data.B.data(1)),
         get_pitchptr(data.B.data(2)), dt);
-    CudaCheckError();
+  }
+  CudaCheckError();
+}
 
-    // Communicate the new B values to guard cells
-    m_env.send_guard_cells(data.B);
+void
+field_solver::update_e_field(sim_data &data, double dt) {
+  dim3 blockSize, gridSize;
+  auto &grid = m_env.grid();
+  auto &mesh = grid.mesh();
+  if (grid.dim() == 1) {
+    blockSize = dim3(512);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x);
+    Kernels::compute_e_update1d<<<gridSize, blockSize>>>(
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
+        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
+        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
+  } else if (grid.dim() == 2) {
+    blockSize = dim3(32, 16);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+             (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y);
 
-    // Update E
+    Kernels::compute_e_update2d<<<gridSize, blockSize>>>(
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
+        get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
+        get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
+  } else if (grid.dim() == 3) {
+    blockSize = dim3(32, 8, 4);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+             (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y,
+             (mesh.reduced_dim(2) + blockSize.z - 1) / blockSize.z);
+
     Kernels::compute_e_update3d<<<gridSize, blockSize>>>(
         get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
         get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
@@ -414,18 +453,63 @@ field_solver::update_fields(sim_data &data, double dt, double time) {
         get_pitchptr(data.Bbg.data(0)), get_pitchptr(data.Bbg.data(1)),
         get_pitchptr(data.Bbg.data(2)), get_pitchptr(data.J.data(0)),
         get_pitchptr(data.J.data(1)), get_pitchptr(data.J.data(2)), dt);
-    CudaCheckError();
   }
-
-  // Communicate the new E values to guard cells
-  m_env.send_guard_cells(data.E);
-
-  CudaSafeCall(cudaDeviceSynchronize());
-  timer::show_duration_since_stamp("Field update", "us",
-                                   "field_update");
+  CudaCheckError();
 }
 
 void
 field_solver::apply_outflow_boundary(sim_data &data, double time) {}
+
+void
+field_solver::compute_divs(sim_data& data) {
+  dim3 blockSize, gridSize;
+  auto &grid = m_env.grid();
+  auto &mesh = grid.mesh();
+  if (grid.dim() == 1) {
+    blockSize = dim3(512);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x);
+    Kernels::compute_divs_1d<<<gridSize, blockSize>>>(
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        get_pitchptr(data.Ebg.data(0)), get_pitchptr(data.Ebg.data(1)),
+        get_pitchptr(data.Ebg.data(2)), get_pitchptr(data.Bbg.data(0)),
+        get_pitchptr(data.Bbg.data(1)), get_pitchptr(data.Bbg.data(2)),
+        get_pitchptr(data.divE), get_pitchptr(data.divB));
+    CudaCheckError();
+  } else if (grid.dim() == 2) {
+    blockSize = dim3(32, 16);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+             (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y);
+
+    Kernels::compute_divs_2d<<<gridSize, blockSize>>>(
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        get_pitchptr(data.Ebg.data(0)), get_pitchptr(data.Ebg.data(1)),
+        get_pitchptr(data.Ebg.data(2)), get_pitchptr(data.Bbg.data(0)),
+        get_pitchptr(data.Bbg.data(1)), get_pitchptr(data.Bbg.data(2)),
+        get_pitchptr(data.divE), get_pitchptr(data.divB));
+    CudaCheckError();
+  } else if (grid.dim() == 3) {
+    blockSize = dim3(32, 8, 4);
+    gridSize =
+        dim3((mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+             (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y,
+             (mesh.reduced_dim(2) + blockSize.z - 1) / blockSize.z);
+
+    Kernels::compute_divs_3d<<<gridSize, blockSize>>>(
+        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
+        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
+        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
+        get_pitchptr(data.Ebg.data(0)), get_pitchptr(data.Ebg.data(1)),
+        get_pitchptr(data.Ebg.data(2)), get_pitchptr(data.Bbg.data(0)),
+        get_pitchptr(data.Bbg.data(1)), get_pitchptr(data.Bbg.data(2)),
+        get_pitchptr(data.divE), get_pitchptr(data.divB));
+    CudaCheckError();
+  }
+}
 
 }  // namespace Aperture

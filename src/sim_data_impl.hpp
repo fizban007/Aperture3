@@ -58,8 +58,11 @@ sim_data::sim_data(sim_environment& e)
   }
 
   divE.resize(env.local_grid());
+  divE.set_stagger(0, Stagger(0b111));
   divB.resize(env.local_grid());
+  divB.set_stagger(0, Stagger(0b000));
   EdotB.resize(env.local_grid());
+  EdotB.set_stagger(0, Stagger(0b000));
   photon_produced.resize(env.local_grid());
   pair_produced.resize(env.local_grid());
   photon_num.resize(env.local_grid());
@@ -82,34 +85,34 @@ sim_data::sort_particles() {
 
 void
 sim_data::copy_to_host() {
-  Logger::print_debug("Sync E");
+  // Logger::print_debug("Sync E");
   E.copy_to_host();
-  Logger::print_debug("Sync B");
+  // Logger::print_debug("Sync B");
   B.copy_to_host();
-  Logger::print_debug("Sync J");
+  // Logger::print_debug("Sync J");
   J.copy_to_host();
-  Logger::print_debug("Sync rho");
+  // Logger::print_debug("Sync rho");
   for (int n = 0; n < num_species; n++)
     Rho[n].copy_to_host();
-  Logger::print_debug("Sync gamma");
+  // Logger::print_debug("Sync gamma");
   for (int n = 0; n < num_species; n++)
     gamma[n].copy_to_host();
-  Logger::print_debug("Sync ptc_num");
+  // Logger::print_debug("Sync ptc_num");
   for (int n = 0; n < num_species; n++)
     ptc_num[n].copy_to_host();
-  Logger::print_debug("Sync divE");
+  // Logger::print_debug("Sync divE");
   divE.copy_to_host();
-  Logger::print_debug("Sync divB");
+  // Logger::print_debug("Sync divB");
   divB.copy_to_host();
-  Logger::print_debug("Sync EdotB");
+  // Logger::print_debug("Sync EdotB");
   EdotB.copy_to_host();
-  Logger::print_debug("Sync photon_produced");
+  // Logger::print_debug("Sync photon_produced");
   photon_produced.copy_to_host();
-  Logger::print_debug("Sync pair_produced");
+  // Logger::print_debug("Sync pair_produced");
   pair_produced.copy_to_host();
-  Logger::print_debug("Sync photon_num");
+  // Logger::print_debug("Sync photon_num");
   photon_num.copy_to_host();
-  Logger::print_debug("Sync ph_flux");
+  // Logger::print_debug("Sync ph_flux");
   ph_flux.copy_to_host();
 }
 

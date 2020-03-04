@@ -23,6 +23,7 @@
 #include <thrust/sort.h>
 #include <thrust/transform.h>
 
+#include "core/particle_base.h"
 #include "visit_struct/visit_struct.hpp"
 #include <algorithm>
 #include <cstring>
@@ -31,7 +32,6 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include "core/particle_base.h"
 // #include "types/particles_dev.h"
 
 namespace Aperture {
@@ -152,9 +152,9 @@ struct rearrange_array {
 
 struct modify_cell {
   // int _dx, _dy, _dz;
-  uint32_t _dc;
+  int _dc;
 
-  HOST_DEVICE modify_cell(uint32_t dc) : _dc(dc) {}
+  HOST_DEVICE modify_cell(int dc) : _dc(dc) {}
 
   __device__ uint32_t operator()(uint32_t c) { return c + _dc; }
 };
@@ -333,7 +333,7 @@ particle_base<ParticleClass>::copy_from(
   // Adjust the number so that we don't over fill
   if (dest_pos + num > m_size) num = m_size - dest_pos;
   for_each_arg(m_data, other.m_data,
-               copy_to_dest(num, src_pos, dest_pos));
+               copy_to_dest{num, src_pos, dest_pos});
   // Adjust the new number of particles in the array
   if (dest_pos + num > m_number) m_number = dest_pos + num;
 }
@@ -373,10 +373,10 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
 
             // TODO: adjust cell value after particles are copied to
             // communication buffer!!
-            int dz = (zone / 9) - 1;
-            int dy = (zone / 3) % 3 - 1;
+            int dz = (mesh.dim() > 2 ? (zone / 9) - 1 : 0);
+            int dy = (mesh.dim() > 1 ? (zone / 3) % 3 - 1 : 0);
             int dx = zone % 3 - 1;
-            uint32_t dcell = -dz * mesh.reduced_dim(2) * mesh.dims[0] *
+            int dcell = -dz * mesh.reduced_dim(2) * mesh.dims[0] *
                                  mesh.dims[1] -
                              dy * mesh.reduced_dim(1) * mesh.dims[0] -
                              dx * mesh.reduced_dim(0);
@@ -388,8 +388,6 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
                             compare_zone);
           }
         });
-    // Logger::print_info("setting buffer {} number to {}", i,
-    // num_ptc[i]);
     buffers[i].set_num(num_ptc[i]);
   }
   // Now that all outgoing particles are in buffers, set them to empty
@@ -404,13 +402,17 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
 template <typename ParticleClass>
 void
 particle_base<ParticleClass>::copy_to_comm_buffers(
-    std::vector<self_type>& buffers,
-    array_type* buf_ptrs, const Quadmesh& mesh) {
+    std::vector<self_type>& buffers, array_type* buf_ptrs,
+    const Quadmesh& mesh) {
   if (m_number > 0) {
+    auto ptr_idx = thrust::device_pointer_cast(m_index);
+    thrust::fill_n(ptr_idx, m_number, -1);
+    for (int i = 0; i < 27; i++) {
+      m_zone_buffer_num[i] = 0;
+    }
     compute_target_buffers(m_data.cell, m_number, m_zone_buffer_num,
                            m_index);
 
-    copy_ptc_to_buffers(m_data, m_number, m_index, buf_ptrs);
     CudaSafeCall(cudaDeviceSynchronize());
     int zone_offset = 0;
     if (mesh.dim() == 2)
@@ -418,11 +420,13 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
     else if (mesh.dim() == 1)
       zone_offset = 12;
     for (unsigned int i = 0; i < buffers.size(); i++) {
-      // Logger::print_info("zone {} buffer has {} ptc", i, m_zone_buffer_num[i + zone_offset]);
+      // Logger::print_info("zone {} buffer has {} ptc", i + zone_offset,
+      //                    m_zone_buffer_num[i + zone_offset]);
+      if (i + zone_offset == 13) continue;
       buffers[i].set_num(m_zone_buffer_num[i + zone_offset]);
     }
+    copy_ptc_to_buffers(m_data, m_number, m_index, buf_ptrs);
   }
-
 }
 
 template <typename ParticleClass>

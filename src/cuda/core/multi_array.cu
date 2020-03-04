@@ -23,9 +23,9 @@ downsample(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int k = threadIdx.z + blockIdx.z * blockDim.z;
   if (i < dst_ext.x && j < dst_ext.y && k < dst_ext.z) {
     size_t orig_idx =
-        i * d + offset.x + (j * d + offset.y) * orig_data.p.pitch +
+        (i * d + offset.x) * sizeof(T) + (j * d + offset.y) * orig_data.p.pitch +
         (k * d + offset.z) * orig_data.p.pitch * orig_data.p.ysize;
-    size_t dst_idx = i + j * dst_data.p.pitch +
+    size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch +
                      k * dst_data.p.pitch * dst_data.p.ysize;
 
     dst_data[dst_idx] =
@@ -43,8 +43,8 @@ downsample2d(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int j = threadIdx.y + blockIdx.y * blockDim.y;
   if (i < dst_ext.x && j < dst_ext.y) {
     size_t orig_idx =
-        i * d + offset.x + (j * d + offset.y) * orig_data.p.pitch;
-    size_t dst_idx = i + j * dst_data.p.pitch;
+        (i * d + offset.x) * sizeof(T) + (j * d + offset.y) * orig_data.p.pitch;
+    size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch;
 
     dst_data[dst_idx] = interpolate2d(
         orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
@@ -59,11 +59,11 @@ downsample1d(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i < dst_ext.x) {
     size_t orig_idx =
-        i * d + offset.x;
-    size_t dst_idx = i;
+        (i * d + offset.x) * sizeof(T);
+    size_t dst_idx = i * sizeof(T);
 
     dst_data[dst_idx] = interpolate1d(
-        orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
+        orig_data, orig_idx, st, Stagger(0b111));
   }
 }
 
@@ -248,7 +248,7 @@ multi_array<T>::copy_to_host() {
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
 
-  // Logger::print_info("dev pitch {}, host pitch {}", m_pitch,
+  // Logger::print_info("copy to host with dev pitch {}, host pitch {}", m_pitch,
   //                    sizeof(T) * m_extent.width());
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
@@ -278,12 +278,12 @@ multi_array<T>::downsample(int d, multi_array<float>& array,
   if (ext.y == 1 && ext.z == 1) {
     int blockSize = 512;
     int gridSize = (blockSize + ext.x - 1) / blockSize;
-    Kernels::downsample<<<gridSize, blockSize>>>(
+    Kernels::downsample1d<<<gridSize, blockSize>>>(
         get_pitchptr(*this), get_pitchptr(array),
         m_extent, array.extent(), offset, stagger, d);
     CudaCheckError();
   } else if (ext.z == 1) {  // Use 2D version
-    dim3 blockSize(32, 32);
+    dim3 blockSize(32, 16);
     dim3 gridSize((ext.x + blockSize.x - 1) / blockSize.x,
                   (ext.y + blockSize.y - 1) / blockSize.y);
     Kernels::downsample2d<<<gridSize, blockSize>>>(
@@ -300,6 +300,7 @@ multi_array<T>::downsample(int d, multi_array<float>& array,
         array.extent(), offset, stagger, d);
     CudaCheckError();
   }
+  CudaSafeCall(cudaDeviceSynchronize());
   array.copy_to_host();
 }
 

@@ -4,74 +4,30 @@ delta_t = 0.001
 # Charge of an electron
 q_e = 1.0
 
-# Ion mass
-ion_mass = 5.0
-
-# Number of species
+# Number of species, default 2 species are electron and positrons. Set this to 3
+# to enable ions
 num_species = 2
 
-# Maximum number of particles per node
+# Ion mass, only useful when num_species is larger than 2
+ion_mass = 5.0
+
+# Maximum number of particles per rank
 max_ptc_number = 250000000
 
-# Maximum number of photons per node
+# Maximum number of photons per rank
 max_photon_number = 50000000
 
-# Create pairs or not
-create_pairs = true
-
-# Trace photons or not
-trace_photons = true
-
-# Threshold for creating a photon / pair
-gamma_thr = 30.0
-
-# Free path for energetic photons
-photon_path = 0.5
-
-# Secondary particle energy
-E_secondary = 6.0
-
-# Radius cutoff for pair creation
-r_cutoff = 3.0
-
-# Gravity switch
-gravity_on = false
-
-# Gravity strength
-gravity = 1.0
-
-# Free path for inverse Compton once a particle reaches threshold
-ic_path = 20.0
-
-# Spectral index alpha for the background soft photon
-spectral_alpha = 1.2
-
-# Minimum energy for the above power law soft photon
-e_min = 1.0e-5
-
-# Separation between two energy regimes for inverse Compton scattering
-e_s = 0.2
-
 # Whether to use periodic boundary condition in each direction
-periodic_boundary = [false, false]
+periodic_boundary = [true, true]
 
 # Fraction of total particles to track
 track_percent = 0.1
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/Aperture3/"
+data_dir = "Data/"
 
 # Dipole B0
-B0 = 30000.0
-
-# Damping coefficient
-damping_coef = 0.003
-
-# Damping layer thickness in cells
-damping_length = 32
-
-# Star rotating omega
-omega = 0.1
+B0 = 1000.0
 
 # This section describes the grid parameters. Every parameter is an array with 3
 # elements, describing the number for each dimension. If you wish to disable one
@@ -89,15 +45,20 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [3.3, 3.1415926535898, 1.0]
-
-# Size of a tile of cells
-tile_size = [16, 16, 1]
+size = [1.0, 1.0, 1.0]
 
 [Simulation]
 
-coord_system = "LogSpherical"
+coord_system = "Cartesian"
 
 random_seed = 3333
 
 downsample = 2
+
+max_steps = 10000
+
+data_interval = 100
+
+snapshot_interval = 1000
+
+current_smoothing = 0
