@@ -6,17 +6,16 @@
 #include "core/particles.h"
 #include "core/photons.h"
 #include "utils/logger.h"
+#include "sim_environment.h"
 #include <vector>
 
 namespace Aperture {
 
-class sim_environment;
-
 struct sim_data {
-  sim_data(const sim_environment& env);
+  sim_data(sim_environment& env);
   ~sim_data();
 
-  void initialize(const sim_environment& env);
+  void initialize(sim_environment& env);
   void finalize();
 
   void fill_multiplicity(Scalar weight, int multiplicity);
@@ -24,10 +23,16 @@ struct sim_data {
   template <class Func>
   void init_bg_B_field(int component, const Func& f) {
     Bbg.initialize(component, f);
+    B.initialize(component, f);
+    env.send_array_guard_cells(Bbg.data(component));
+    env.send_array_guard_cells(B.data(component));
   }
   template <class Func>
   void init_bg_E_field(int component, const Func& f) {
     Ebg.initialize(component, f);
+    E.initialize(component, f);
+    env.send_array_guard_cells(Ebg.data(component));
+    env.send_array_guard_cells(E.data(component));
   }
 
   void sort_particles();
@@ -36,7 +41,7 @@ struct sim_data {
   void compute_edotb();
   void copy_to_host();
 
-  const sim_environment& env;
+  sim_environment& env;
   vector_field<Scalar> E;
   vector_field<Scalar> B;
   vector_field<Scalar> Ebg;

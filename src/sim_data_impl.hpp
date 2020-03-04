@@ -9,7 +9,7 @@
 
 namespace Aperture {
 
-sim_data::sim_data(const sim_environment& e)
+sim_data::sim_data(sim_environment& e)
     : env(e),
       particles(env.params().max_ptc_number),
       photons(env.params().max_photon_number) {
@@ -82,34 +82,34 @@ sim_data::sort_particles() {
 
 void
 sim_data::copy_to_host() {
-  Logger::print_info("Sync E");
+  Logger::print_debug("Sync E");
   E.copy_to_host();
-  Logger::print_info("Sync B");
+  Logger::print_debug("Sync B");
   B.copy_to_host();
-  Logger::print_info("Sync J");
+  Logger::print_debug("Sync J");
   J.copy_to_host();
-  Logger::print_info("Sync rho");
+  Logger::print_debug("Sync rho");
   for (int n = 0; n < num_species; n++)
     Rho[n].copy_to_host();
-  Logger::print_info("Sync gamma");
+  Logger::print_debug("Sync gamma");
   for (int n = 0; n < num_species; n++)
     gamma[n].copy_to_host();
-  Logger::print_info("Sync ptc_num");
+  Logger::print_debug("Sync ptc_num");
   for (int n = 0; n < num_species; n++)
     ptc_num[n].copy_to_host();
-  Logger::print_info("Sync divE");
+  Logger::print_debug("Sync divE");
   divE.copy_to_host();
-  Logger::print_info("Sync divB");
+  Logger::print_debug("Sync divB");
   divB.copy_to_host();
-  Logger::print_info("Sync EdotB");
+  Logger::print_debug("Sync EdotB");
   EdotB.copy_to_host();
-  Logger::print_info("Sync photon_produced");
+  Logger::print_debug("Sync photon_produced");
   photon_produced.copy_to_host();
-  Logger::print_info("Sync pair_produced");
+  Logger::print_debug("Sync pair_produced");
   pair_produced.copy_to_host();
-  Logger::print_info("Sync photon_num");
+  Logger::print_debug("Sync photon_num");
   photon_num.copy_to_host();
-  Logger::print_info("Sync ph_flux");
+  Logger::print_debug("Sync ph_flux");
   ph_flux.copy_to_host();
 }
 

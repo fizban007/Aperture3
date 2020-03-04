@@ -3,6 +3,7 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/kernels.h"
+#include "cuda/utils/interpolation.cuh"
 #include "cuda/utils/pitchptr.h"
 #include "sim_data_impl.hpp"
 #include "visit_struct/visit_struct.hpp"
@@ -15,28 +16,94 @@ namespace Kernels {
 
 template <typename T>
 __global__ void
-compute_EdotB(pitchptr<T> e1, pitchptr<T> e2, pitchptr<T> e3,
-              pitchptr<T> b1, pitchptr<T> b2, pitchptr<T> b3,
-              pitchptr<T> b1bg, pitchptr<T> b2bg, pitchptr<T> b3bg,
-              pitchptr<T> EdotB) {
+compute_EdotB_3d(pitchptr<T> e1, pitchptr<T> e2, pitchptr<T> e3,
+                 pitchptr<T> b1, pitchptr<T> b2, pitchptr<T> b3,
+                 pitchptr<T> EdotB) {
+  // Compute time-averaged EdotB over the output interval
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  int n3 = dev_mesh.guard[2] + t3 * blockDim.y + c3;
+
+  size_t globalOffset = e1.compute_offset(n1, n2, n3);
+
+  float delta = 1.0f / dev_params.data_interval;
+  Scalar E1 = interpolate(e1, globalOffset, Stagger(0b110),
+                          Stagger(0b000), e1.p.pitch, e1.p.ysize);
+  Scalar E2 = interpolate(e2, globalOffset, Stagger(0b101),
+                          Stagger(0b000), e2.p.pitch, e2.p.ysize);
+  Scalar E3 = interpolate(e3, globalOffset, Stagger(0b011),
+                          Stagger(0b000), e3.p.pitch, e3.p.ysize);
+  Scalar B1 = interpolate(b1, globalOffset, Stagger(0b001),
+                          Stagger(0b000), b1.p.pitch, b1.p.ysize);
+  Scalar B2 = interpolate(b2, globalOffset, Stagger(0b010),
+                          Stagger(0b000), b2.p.pitch, b2.p.ysize);
+  Scalar B3 = interpolate(b3, globalOffset, Stagger(0b100),
+                          Stagger(0b000), b3.p.pitch, b3.p.ysize);
+
+  // Do the actual computation here
+  EdotB[globalOffset] += delta * (E1 * B1 + E2 * B2 + E3 * B3) /
+                         sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+}
+
+template <typename T>
+__global__ void
+compute_EdotB_2d(pitchptr<T> e1, pitchptr<T> e2, pitchptr<T> e3,
+                 pitchptr<T> b1, pitchptr<T> b2, pitchptr<T> b3,
+                 pitchptr<T> EdotB) {
   // Compute time-averaged EdotB over the output interval
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  // size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
+
   size_t globalOffset = e1.compute_offset(n1, n2);
 
   float delta = 1.0f / dev_params.data_interval;
-  Scalar E1 = 0.5f * (e1(n1, n2) + e1(n1, n2 - 1));
-  Scalar E2 = 0.5f * (e2(n1, n2) + e2(n1 - 1, n2));
-  Scalar E3 = 0.25f * (e3(n1, n2) + e3(n1 - 1, n2) + e3(n1, n2 - 1) +
-                       e3(n1 - 1, n2 - 1));
-  Scalar B1 = 0.5f * (b1(n1, n2) + b1(n1 - 1, n2)) +
-              0.5f * (b1bg(n1, n2) + b1bg(n1 - 1, n2));
-  Scalar B2 = 0.5f * (b2(n1, n2) + b2(n1, n2 - 1)) +
-              0.5f * (b2bg(n1, n2) + b2bg(n1, n2 - 1));
-  Scalar B3 = b3[globalOffset] + b3bg[globalOffset];
+  Scalar E1 = interpolate2d(e1, globalOffset, Stagger(0b110),
+                            Stagger(0b000), e1.p.pitch);
+  Scalar E2 = interpolate2d(e2, globalOffset, Stagger(0b101),
+                            Stagger(0b000), e2.p.pitch);
+  Scalar E3 = interpolate2d(e3, globalOffset, Stagger(0b011),
+                            Stagger(0b000), e3.p.pitch);
+  Scalar B1 = interpolate2d(b1, globalOffset, Stagger(0b001),
+                            Stagger(0b000), b1.p.pitch);
+  Scalar B2 = interpolate2d(b2, globalOffset, Stagger(0b010),
+                            Stagger(0b000), b2.p.pitch);
+  Scalar B3 = interpolate2d(b3, globalOffset, Stagger(0b100),
+                            Stagger(0b000), b3.p.pitch);
+
+  // Do the actual computation here
+  EdotB[globalOffset] += delta * (E1 * B1 + E2 * B2 + E3 * B3) /
+                         sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+}
+
+template <typename T>
+__global__ void
+compute_EdotB_1d(pitchptr<T> e1, pitchptr<T> e2, pitchptr<T> e3,
+                 pitchptr<T> b1, pitchptr<T> b2, pitchptr<T> b3,
+                 pitchptr<T> EdotB) {
+  // Compute time-averaged EdotB over the output interval
+  int t1 = blockIdx.x;
+  int c1 = threadIdx.x;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+
+  size_t globalOffset = e1.compute_offset(n1);
+
+  float delta = 1.0f / dev_params.data_interval;
+  Scalar E1 =
+      interpolate1d(e1, globalOffset, Stagger(0b110), Stagger(0b000));
+  Scalar E2 =
+      interpolate1d(e2, globalOffset, Stagger(0b101), Stagger(0b000));
+  Scalar E3 =
+      interpolate1d(e3, globalOffset, Stagger(0b011), Stagger(0b000));
+  Scalar B1 =
+      interpolate1d(b1, globalOffset, Stagger(0b001), Stagger(0b000));
+  Scalar B2 =
+      interpolate1d(b2, globalOffset, Stagger(0b010), Stagger(0b000));
+  Scalar B3 =
+      interpolate1d(b3, globalOffset, Stagger(0b100), Stagger(0b000));
 
   // Do the actual computation here
   EdotB[globalOffset] += delta * (E1 * B1 + E2 * B2 + E3 * B3) /
@@ -91,185 +158,9 @@ fill_particles(particle_data ptc, size_t number, Scalar weight,
   }
 }
 
-// __global__ void
-// send_particles(particle_data ptc_src, size_t num_src,
-//                particle_data ptc_dst, size_t num_dst, int *ptc_sent,
-//                int dim, int dir) {
-//   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
-//        i += blockDim.x * gridDim.x) {
-//     uint32_t cell = ptc_src.cell[i];
-//     int c, delta_cell;
-//     if (dim == 0) {
-//       c = dev_mesh.get_c1(cell);
-//       delta_cell = dev_mesh.reduced_dim(0);
-//     } else if (dim == 1) {
-//       c = dev_mesh.get_c2(cell);
-//       delta_cell = dev_mesh.reduced_dim(1) * dev_mesh.dims[0];
-//     } else if (dim == 2) {
-//       c = dev_mesh.get_c3(cell);
-//       delta_cell =
-//           dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
-//           dev_mesh.dims[1];
-//     }
-//     if ((dir == 0 && c < dev_mesh.guard[dim]) ||
-//         (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim]))
-//         {
-//       size_t pos = atomicAdd(ptc_sent, 1) + num_dst;
-//       ptc_src.cell[i] = MAX_CELL;
-//       ptc_dst.cell[pos] = cell + (dir == 0 ? 1 : -1) * delta_cell;
-//       ptc_dst.x1[pos] = ptc_src.x1[i];
-//       ptc_dst.x2[pos] = ptc_src.x2[i];
-//       ptc_dst.x3[pos] = ptc_src.x3[i];
-//       ptc_dst.p1[pos] = ptc_src.p1[i];
-//       ptc_dst.p2[pos] = ptc_src.p2[i];
-//       ptc_dst.p3[pos] = ptc_src.p3[i];
-//       ptc_dst.E[pos] = ptc_src.E[i];
-//       ptc_dst.weight[pos] = ptc_src.weight[i];
-//       ptc_dst.flag[pos] = ptc_src.flag[i];
-//     }
-//   }
-// }
-
-// __global__ void
-// send_particles(particle_data ptc_src, size_t num_src,
-//                particle_data buffer_left, particle_data buffer_right,
-//                int dim, int *ptc_sent_left, int *ptc_sent_right) {
-//   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
-//        i += blockDim.x * gridDim.x) {
-//     uint32_t cell = ptc_src.cell[i];
-//     int c, delta_cell;
-//     if (dim == 0) {
-//       c = dev_mesh.get_c1(cell);
-//       delta_cell = dev_mesh.reduced_dim(0);
-//     } else if (dim == 1) {
-//       c = dev_mesh.get_c2(cell);
-//       delta_cell = dev_mesh.reduced_dim(1) * dev_mesh.dims[0];
-//     } else if (dim == 2) {
-//       c = dev_mesh.get_c3(cell);
-//       delta_cell =
-//           dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
-//           dev_mesh.dims[1];
-//     }
-//     if (c < dev_mesh.guard[dim]) {
-//       size_t pos = atomicAdd(ptc_sent_left, 1);
-//       ptc_src.cell[i] = MAX_CELL;
-//       buffer_left.cell[pos] = cell + delta_cell;
-//       buffer_left.x1[pos] = ptc_src.x1[i];
-//       buffer_left.x2[pos] = ptc_src.x2[i];
-//       buffer_left.x3[pos] = ptc_src.x3[i];
-//       buffer_left.p1[pos] = ptc_src.p1[i];
-//       buffer_left.p2[pos] = ptc_src.p2[i];
-//       buffer_left.p3[pos] = ptc_src.p3[i];
-//       buffer_left.E[pos] = ptc_src.E[i];
-//       buffer_left.weight[pos] = ptc_src.weight[i];
-//       buffer_left.flag[pos] = ptc_src.flag[i];
-//     } else if (c >= dev_mesh.dims[dim] - dev_mesh.guard[dim]) {
-//       size_t pos = atomicAdd(ptc_sent_right, 1);
-//       ptc_src.cell[i] = MAX_CELL;
-//       buffer_right.cell[pos] = cell - delta_cell;
-//       buffer_right.x1[pos] = ptc_src.x1[i];
-//       buffer_right.x2[pos] = ptc_src.x2[i];
-//       buffer_right.x3[pos] = ptc_src.x3[i];
-//       buffer_right.p1[pos] = ptc_src.p1[i];
-//       buffer_right.p2[pos] = ptc_src.p2[i];
-//       buffer_right.p3[pos] = ptc_src.p3[i];
-//       buffer_right.E[pos] = ptc_src.E[i];
-//       buffer_right.weight[pos] = ptc_src.weight[i];
-//       buffer_right.flag[pos] = ptc_src.flag[i];
-//     }
-//   }
-// }
-
-// __global__ void
-// send_photons(photon_data ptc_src, size_t num_src, photon_data
-// ptc_dst,
-//              size_t num_dst, int *ptc_sent, int dim, int dir) {
-//   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
-//        i += blockDim.x * gridDim.x) {
-//     uint32_t cell = ptc_src.cell[i];
-//     int c;
-//     if (dim == 0) {
-//       c = dev_mesh.get_c1(cell);
-//     } else if (dim == 1) {
-//       c = dev_mesh.get_c2(cell);
-//     } else if (dim == 2) {
-//       c = dev_mesh.get_c3(cell);
-//     }
-//     if ((dir == 0 && c < dev_mesh.guard[dim]) ||
-//         (dir == 1 && c >= dev_mesh.dims[dim] - dev_mesh.guard[dim]))
-//         {
-//       size_t pos = atomicAdd(ptc_sent, 1) + num_dst;
-//       ptc_src.cell[i] = MAX_CELL;
-//       ptc_dst.cell[pos] = cell;
-//       ptc_dst.x1[pos] = ptc_src.x1[i];
-//       ptc_dst.x2[pos] = ptc_src.x2[i];
-//       ptc_dst.x3[pos] = ptc_src.x3[i];
-//       ptc_dst.p1[pos] = ptc_src.p1[i];
-//       ptc_dst.p2[pos] = ptc_src.p2[i];
-//       ptc_dst.p3[pos] = ptc_src.p3[i];
-//       ptc_dst.E[pos] = ptc_src.E[i];
-//       ptc_dst.weight[pos] = ptc_src.weight[i];
-//       ptc_dst.path_left[pos] = ptc_src.path_left[i];
-//       ptc_dst.flag[pos] = ptc_src.flag[i];
-//     }
-//   }
-// }
-
-// __global__ void
-// send_photons(photon_data ph_src, size_t num_src,
-//              photon_data buffer_left, photon_data buffer_right, int
-//              dim, int *ph_sent_left, int *ph_sent_right) {
-//   for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < num_src;
-//        i += blockDim.x * gridDim.x) {
-//     uint32_t cell = ph_src.cell[i];
-//     int c, delta_cell;
-//     if (dim == 0) {
-//       c = dev_mesh.get_c1(cell);
-//       delta_cell = dev_mesh.reduced_dim(0);
-//     } else if (dim == 1) {
-//       c = dev_mesh.get_c2(cell);
-//       delta_cell = dev_mesh.reduced_dim(1) * dev_mesh.dims[0];
-//     } else if (dim == 2) {
-//       c = dev_mesh.get_c3(cell);
-//       delta_cell =
-//           dev_mesh.reduced_dim(2) * dev_mesh.dims[0] *
-//           dev_mesh.dims[1];
-//     }
-//     if (c < dev_mesh.guard[dim]) {
-//       size_t pos = atomicAdd(ph_sent_left, 1);
-//       ph_src.cell[i] = MAX_CELL;
-//       buffer_left.cell[pos] = cell + delta_cell;
-//       buffer_left.x1[pos] = ph_src.x1[i];
-//       buffer_left.x2[pos] = ph_src.x2[i];
-//       buffer_left.x3[pos] = ph_src.x3[i];
-//       buffer_left.p1[pos] = ph_src.p1[i];
-//       buffer_left.p2[pos] = ph_src.p2[i];
-//       buffer_left.p3[pos] = ph_src.p3[i];
-//       buffer_left.E[pos] = ph_src.E[i];
-//       buffer_left.weight[pos] = ph_src.weight[i];
-//       buffer_left.path_left[pos] = ph_src.path_left[i];
-//       buffer_left.flag[pos] = ph_src.flag[i];
-//     } else if (c >= dev_mesh.dims[dim] - dev_mesh.guard[dim]) {
-//       size_t pos = atomicAdd(ph_sent_right, 1);
-//       ph_src.cell[i] = MAX_CELL;
-//       buffer_right.cell[pos] = cell - delta_cell;
-//       buffer_right.x1[pos] = ph_src.x1[i];
-//       buffer_right.x2[pos] = ph_src.x2[i];
-//       buffer_right.x3[pos] = ph_src.x3[i];
-//       buffer_right.p1[pos] = ph_src.p1[i];
-//       buffer_right.p2[pos] = ph_src.p2[i];
-//       buffer_right.p3[pos] = ph_src.p3[i];
-//       buffer_right.E[pos] = ph_src.E[i];
-//       buffer_right.weight[pos] = ph_src.weight[i];
-//       buffer_right.path_left[pos] = ph_src.path_left[i];
-//       buffer_right.flag[pos] = ph_src.flag[i];
-//     }
-//   }
-// }
-
 }  // namespace Kernels
 void
-sim_data::initialize(const sim_environment& env) {
+sim_data::initialize(sim_environment& env) {
   init_bg_fields();
 
   g_ptrs.E1 = get_pitchptr(E.data(0));
@@ -343,7 +234,41 @@ sim_data::check_dev_mesh() {
 }
 
 void
-sim_data::compute_edotb() {}
+sim_data::compute_edotb() {
+  auto& grid = env.grid();
+  auto& mesh = grid.mesh();
+  if (grid.dim() == 3) {
+    dim3 blockSize(32, 8, 4);
+    dim3 gridSize(
+        (mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+        (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y,
+        (mesh.reduced_dim(2) + blockSize.z - 1) / blockSize.z);
+    Kernels::compute_EdotB_3d<<<gridSize, blockSize>>>(
+        get_pitchptr(E, 0), get_pitchptr(E, 1), get_pitchptr(E, 2),
+        get_pitchptr(B, 0), get_pitchptr(B, 1), get_pitchptr(B, 2),
+        get_pitchptr(EdotB));
+    CudaCheckError();
+  } else if (grid.dim() == 2) {
+    dim3 blockSize(32, 16);
+    dim3 gridSize(
+        (mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+        (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y);
+    Kernels::compute_EdotB_2d<<<gridSize, blockSize>>>(
+        get_pitchptr(E, 0), get_pitchptr(E, 1), get_pitchptr(E, 2),
+        get_pitchptr(B, 0), get_pitchptr(B, 1), get_pitchptr(B, 2),
+        get_pitchptr(EdotB));
+    CudaCheckError();
+  } else if (grid.dim() == 1) {  //
+    dim3 blockSize(512);
+    dim3 gridSize((mesh.reduced_dim(0) + blockSize.x - 1) /
+                  blockSize.x);
+    Kernels::compute_EdotB_1d<<<gridSize, blockSize>>>(
+        get_pitchptr(E, 0), get_pitchptr(E, 1), get_pitchptr(E, 2),
+        get_pitchptr(B, 0), get_pitchptr(B, 1), get_pitchptr(B, 2),
+        get_pitchptr(EdotB));
+    CudaCheckError();
+  }
+}
 
 void
 sim_data::fill_multiplicity(Scalar weight, int multiplicity) {

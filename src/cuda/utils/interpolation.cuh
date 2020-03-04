@@ -125,16 +125,6 @@ struct Interpolator3D {
   }
 
   template <typename FloatT>
-  HOST_DEVICE Scalar compute_weight(FloatT x1, FloatT x2, FloatT x3,
-                                    int c1, int c2, int c3, int t1,
-                                    int t2, int t3,
-                                    Stagger stagger) const {
-    return interp_cell(interp, x1, c1, t1, stagger[0]) *
-           interp_cell(interp, x2, c2, t2, stagger[1]) *
-           interp_cell(interp, x3, c3, t3, stagger[2]);
-  }
-
-  template <typename FloatT>
   HD_INLINE Scalar interpolate(FloatT x) const {
     return interp(x);
   }
@@ -171,12 +161,33 @@ struct Interpolator2D {
   }
 
   template <typename FloatT>
-  HOST_DEVICE Scalar compute_weight(FloatT x1, FloatT x2, FloatT x3,
-                                    int c1, int c2, int c3, int t1,
-                                    int t2, int t3,
-                                    Stagger stagger) const {
-    return interp_cell(interp, x1, c1, t1, stagger[0]) *
-           interp_cell(interp, x2, c2, t2, stagger[1]);
+  HD_INLINE Scalar interpolate(FloatT x) const {
+    return interp(x);
+  }
+
+  HD_INLINE int radius() const { return Interp::radius + 1; }
+  HD_INLINE int support() const { return Interp::support; }
+};
+
+template <typename Interp>
+struct Interpolator1D {
+  Interp interp;
+
+  template <typename FloatT>
+  HOST_DEVICE Scalar operator()(pitchptr<Scalar> f, FloatT x1,
+                                int c1,
+                                Stagger stagger) const {
+    Scalar result = 0.0f;
+    for (int i = 0; i <= Interp::support; i++) {
+      int ii = i + c1 - Interp::radius;
+      size_t globalOffset = ii * sizeof(Scalar);
+      // printf("add %f\n", *ptrAddr(f, globalOffset));
+
+      result +=
+          f[globalOffset] * interp_cell(interp, x1, c1, ii, stagger[0]);
+      // printf("%f\n",result);
+    }
+    return result;
   }
 
   template <typename FloatT>
@@ -234,8 +245,7 @@ interpolate2d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
 
 template <typename T>
 HOST_DEVICE T
-interpolate1d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out,
-              size_t dim0) {
+interpolate1d(pitchptr<T> f, std::size_t idx_lin, Stagger in, Stagger out) {
   int di_m = (in[0] == out[0] ? 0 : -1 - out[0]) * sizeof(T);
   int di_p = (in[0] == out[0] ? 0 : -out[0]) * sizeof(T);
 
