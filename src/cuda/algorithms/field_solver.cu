@@ -233,6 +233,99 @@ compute_b_update3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
                                 dev_mesh.inv_delta[1]);
 }
 
+__global__ void
+compute_divs_1d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                pitchptr<Scalar> e01, pitchptr<Scalar> e02,
+                pitchptr<Scalar> e03, pitchptr<Scalar> b01,
+                pitchptr<Scalar> b02, pitchptr<Scalar> b03,
+                pitchptr<Scalar> divE, pitchptr<Scalar> divB) {
+  int t1 = blockIdx.x;
+  int c1 = threadIdx.x;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  if (n1 >= dev_mesh.dims[0]) return;
+  // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = divE.compute_offset(n1);
+
+  // if (n1 > dev_mesh.guard[0] + 1) {
+  divE[globalOffset] =
+      (e1(n1 + 1) - e01(n1 + 1) - e1(n1) + e01(n1)) *
+          dev_mesh.inv_delta[0];
+
+  divB[globalOffset] =
+      (b1(n1 + 1) - b01(n1 + 1) - b1(n1) + b01(n1)) *
+          dev_mesh.inv_delta[0];
+}
+
+__global__ void
+compute_divs_2d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                pitchptr<Scalar> e01, pitchptr<Scalar> e02,
+                pitchptr<Scalar> e03, pitchptr<Scalar> b01,
+                pitchptr<Scalar> b02, pitchptr<Scalar> b03,
+                pitchptr<Scalar> divE, pitchptr<Scalar> divB) {
+  int t1 = blockIdx.x, t2 = blockIdx.y;
+  int c1 = threadIdx.x, c2 = threadIdx.y;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  if (n1 >= dev_mesh.dims[0] || n2 >= dev_mesh.dims[1]) return;
+  // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
+  size_t globalOffset = divE.compute_offset(n1, n2);
+
+  // if (n1 > dev_mesh.guard[0] + 1) {
+  divE[globalOffset] =
+      (e1(n1 + 1, n2) - e01(n1 + 1, n2) - e1(n1, n2) + e01(n1, n2)) *
+          dev_mesh.inv_delta[0] +
+      (e2(n1, n2 + 1) - e02(n1, n2 + 1) - e2(n1, n2) + e02(n1, n2)) *
+          dev_mesh.inv_delta[1];
+
+  divB[globalOffset] =
+      (b1(n1 + 1, n2) - b01(n1 + 1, n2) - b1(n1, n2) + b01(n1, n2)) *
+          dev_mesh.inv_delta[0] +
+      (b2(n1, n2 + 1) - b02(n1, n2 + 1) - b2(n1, n2) + b02(n1, n2)) *
+          dev_mesh.inv_delta[1];
+}
+
+__global__ void
+compute_divs_3d(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                pitchptr<Scalar> e01, pitchptr<Scalar> e02,
+                pitchptr<Scalar> e03, pitchptr<Scalar> b01,
+                pitchptr<Scalar> b02, pitchptr<Scalar> b03,
+                pitchptr<Scalar> divE, pitchptr<Scalar> divB) {
+  // Load position parameters
+  int t1 = blockIdx.x, t2 = blockIdx.y, t3 = blockIdx.z;
+  int c1 = threadIdx.x, c2 = threadIdx.y, c3 = threadIdx.z;
+  int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
+  int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
+  int n3 = dev_mesh.guard[2] + t3 * blockDim.z + c3;
+  if (n1 >= dev_mesh.dims[0] || n2 >= dev_mesh.dims[1] ||
+      n3 >= dev_mesh.dims[2])
+    return;
+
+  size_t globalOffset = divE.compute_offset(n1, n2, n3);
+
+  // if (n1 > dev_mesh.guard[0] + 1) {
+  divE[globalOffset] =
+      (e1(n1 + 1, n2, n3) - e01(n1 + 1, n2, n3) - e1(n1, n2, n3) + e01(n1, n2, n3)) *
+          dev_mesh.inv_delta[0] +
+      (e2(n1, n2 + 1, n3) - e02(n1, n2 + 1, n3) - e2(n1, n2, n3) + e02(n1, n2, n3)) *
+          dev_mesh.inv_delta[1] +
+      (e3(n1, n2, n3 + 1) - e03(n1, n2, n3 + 1) - e3(n1, n2, n3) + e03(n1, n2, n3)) *
+          dev_mesh.inv_delta[2];
+
+  divB[globalOffset] =
+      (b1(n1 + 1, n2, n3) - b01(n1 + 1, n2, n3) - b1(n1, n2, n3) + b01(n1, n2, n3)) *
+          dev_mesh.inv_delta[0] +
+      (b2(n1, n2 + 1, n3) - b02(n1, n2 + 1, n3) - b2(n1, n2, n3) + b02(n1, n2, n3)) *
+          dev_mesh.inv_delta[1] +
+      (b3(n1, n2, n3 + 1) - b03(n1, n2, n3 + 1) - b3(n1, n2, n3) + b03(n1, n2, n3)) *
+          dev_mesh.inv_delta[2];
+}
+
 }  // namespace Kernels
 
 field_solver::field_solver(sim_environment &env) : m_env(env) {}

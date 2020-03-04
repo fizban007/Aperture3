@@ -27,12 +27,12 @@ alpha_gr(Scalar r) {
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                 pitchptr<Scalar> j1, pitchptr<Scalar> j2,
-                 pitchptr<Scalar> j3, mesh_ptrs_log_sph mesh_ptrs,
-                 Scalar dt) {
+compute_e_update_logsph(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                        pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                        pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                        pitchptr<Scalar> j1, pitchptr<Scalar> j2,
+                        pitchptr<Scalar> j3,
+                        mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
@@ -113,10 +113,10 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                 mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
+compute_b_update_logsph(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                        pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                        pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                        mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -184,11 +184,11 @@ compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_divs(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-             pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-             pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-             pitchptr<Scalar> divE, pitchptr<Scalar> divB,
-             mesh_ptrs_log_sph mesh_ptrs) {
+compute_divs_logsph(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
+                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
+                    pitchptr<Scalar> b2, pitchptr<Scalar> b3,
+                    pitchptr<Scalar> divE, pitchptr<Scalar> divB,
+                    mesh_ptrs_log_sph mesh_ptrs) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
@@ -345,7 +345,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   dim3 blockSize(32, 16);
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
   // Update B
-  Kernels::compute_b_update<<<gridSize, blockSize>>>(
+  Kernels::compute_b_update_logsph<<<gridSize, blockSize>>>(
       get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
       get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
       get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
@@ -357,7 +357,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   // m_env.send_guard_cells(data.J);
 
   // Update E
-  Kernels::compute_e_update<<<gridSize, blockSize>>>(
+  Kernels::compute_e_update_logsph<<<gridSize, blockSize>>>(
       get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
       get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
       get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
@@ -369,7 +369,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   m_env.send_guard_cells(data.E);
 
   // Compute divergences
-  Kernels::compute_divs<<<gridSize, blockSize>>>(
+  Kernels::compute_divs_logsph<<<gridSize, blockSize>>>(
       get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
       get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
       get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
