@@ -633,8 +633,10 @@ ptc_updater::update_particles(sim_data &data, double dt,
   // Skip empty particle array
   if (data.particles.number() > 0) {
     Logger::print_info(
-        "Updating {} particles in log spherical coordinates",
+        "Updating {} particles in Cartesian coordinates",
         data.particles.number());
+
+    // Push the particle with E and B fields
     if (grid.dim() == 1) {
       Kernels::ptc_push_cart_1d<<<256, 512>>>(
           data_p, data.particles.number(), dt);
@@ -652,7 +654,7 @@ ptc_updater::update_particles(sim_data &data, double dt,
                                      "ptc_push");
 
     timer::stamp("ptc_deposit");
-
+    // Deposit current and move the particle
     if (grid.dim() == 1) {
       Kernels::deposit_current_cart_1d<<<256, 512>>>(
           data_p, data.particles.number(), dt, step);
@@ -679,7 +681,8 @@ ptc_updater::update_particles(sim_data &data, double dt,
   }
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
-  // data.send_particles();
+  m_env.send_particles(data.particles);
+  m_env.send_particles(data.photons);
   apply_boundary(data, dt, step);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
 }
@@ -700,53 +703,59 @@ ptc_updater::smooth_current(sim_data &data, uint32_t step) {
   auto &grid = m_env.local_grid();
   auto &mesh = grid.mesh();
 
-  if (grid.dim() == 2) {
-    for (int i = 0; i < m_env.params().current_smoothing; i++) {
-      dim3 blockSize(32, 16);
-      dim3 gridSize(
-          (mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
-          (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y);
+  for (int i = 0; i < m_env.params().current_smoothing; i++) {
+    smooth_current(data.J.data(0));
+    smooth_current(data.J.data(1));
+    smooth_current(data.J.data(2));
 
-      Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J, 0), get_pitchptr(m_tmp_j),
-          m_env.is_boundary(0), m_env.is_boundary(1),
-          m_env.is_boundary(2), m_env.is_boundary(3));
-      data.J.data(0).copy_from(m_tmp_j);
-      CudaCheckError();
-
-      Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J, 1), get_pitchptr(m_tmp_j),
-          m_env.is_boundary(0), m_env.is_boundary(1),
-          m_env.is_boundary(2), m_env.is_boundary(3));
-      data.J.data(1).copy_from(m_tmp_j);
-      CudaCheckError();
-
-      Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J, 2), get_pitchptr(m_tmp_j),
-          m_env.is_boundary(0), m_env.is_boundary(1),
-          m_env.is_boundary(2), m_env.is_boundary(3));
-      data.J.data(2).copy_from(m_tmp_j);
-      CudaCheckError();
-
-      if ((step + 1) % data.env.params().data_interval == 0) {
-        for (int i = 0; i < data.env.params().num_species; i++) {
-          Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
-              get_pitchptr(data.Rho[i]), get_pitchptr(m_tmp_j),
-              m_env.is_boundary(0), m_env.is_boundary(1),
-              m_env.is_boundary(2), m_env.is_boundary(3));
-          data.Rho[i].data().copy_from(m_tmp_j);
-          CudaCheckError();
-        }
+    m_env.send_guard_cells(data.J);
+    if ((step + 1) % data.env.params().data_interval == 0) {
+      for (int i = 0; i < data.env.params().num_species; i++) {
+        smooth_current(data.Rho[i].data());
+        m_env.send_guard_cells(data.Rho[i]);
       }
-      m_env.send_guard_cells(data.J);
-      if ((step + 1) % data.env.params().data_interval == 0) {
-        for (int i = 0; i < data.env.params().num_species; i++) {
-          m_env.send_guard_cells(data.Rho[i]);
-        }
-      }
-      CudaSafeCall(cudaDeviceSynchronize());
     }
+    CudaSafeCall(cudaDeviceSynchronize());
   }
+}
+
+void
+ptc_updater::smooth_current(multi_array<Scalar> &array) {
+  auto &grid = m_env.local_grid();
+  auto &mesh = grid.mesh();
+  if (grid.dim() == 1) {
+    dim3 blockSize(512);
+    dim3 gridSize((mesh.reduced_dim(0) + blockSize.x - 1) /
+                  blockSize.x);
+    Kernels::filter_current_cart_1d<<<gridSize, blockSize>>>(
+        get_pitchptr(array), get_pitchptr(m_tmp_j),
+        m_env.is_boundary(0), m_env.is_boundary(1));
+  } else if (grid.dim() == 2) {
+    dim3 blockSize(32, 16);
+    dim3 gridSize(
+        (mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+        (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y);
+
+    Kernels::filter_current_cart_2d<<<gridSize, blockSize>>>(
+        get_pitchptr(array), get_pitchptr(m_tmp_j),
+        m_env.is_boundary(0), m_env.is_boundary(1),
+        m_env.is_boundary(2), m_env.is_boundary(3));
+  } else if (grid.dim() == 3) {
+    dim3 blockSize(32, 8, 4);
+    dim3 gridSize(
+        (mesh.reduced_dim(0) + blockSize.x - 1) / blockSize.x,
+        (mesh.reduced_dim(1) + blockSize.y - 1) / blockSize.y,
+        (mesh.reduced_dim(2) + blockSize.z - 1) / blockSize.z);
+
+    Kernels::filter_current_cart_3d<<<gridSize, blockSize>>>(
+        get_pitchptr(array), get_pitchptr(m_tmp_j),
+        m_env.is_boundary(0), m_env.is_boundary(1),
+        m_env.is_boundary(2), m_env.is_boundary(3),
+        m_env.is_boundary(4), m_env.is_boundary(5));
+  }
+
+  CudaCheckError();
+  array.copy_from(m_tmp_j);
 }
 
 }  // namespace Aperture

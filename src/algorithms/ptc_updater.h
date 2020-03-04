@@ -16,6 +16,7 @@ class ptc_updater {
   void update_particles(sim_data& data, double dt, uint32_t step = 0);
   void apply_boundary(sim_data& data, double dt, uint32_t step = 0);
   void smooth_current(sim_data& data, uint32_t step = 0);
+  void smooth_current(multi_array<Scalar>& array);
 
  protected:
   sim_environment& m_env;
