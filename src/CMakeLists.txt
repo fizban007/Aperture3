@@ -59,7 +59,7 @@ if (use_cuda AND CMAKE_CUDA_COMPILER)
     # "cuda/algorithms/ffe_solver_logsph.cu"
     "cuda/algorithms/ptc_updater.cu"
     "cuda/algorithms/ptc_updater_logsph.cu"
-    "cuda/algorithms/ptc_updater_cart.cu"
+    # "cuda/algorithms/ptc_updater_cart.cu"
     "cuda/algorithms/ptc_updater_1dgr.cu"
     "cuda/algorithms/ptc_updater_1dgap.cu"
     "cuda/radiation/radiative_transfer.cu"

@@ -260,8 +260,8 @@ deposit_current_cart_1d(data_ptrs data, size_t num, Scalar dt,
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
     Scalar weight = dev_charges[sp] * w;
 
-    int i_0 = (dc1 == -1 ? -2 : -1);
-    int i_1 = (dc1 == 1 ? 1 : 0);
+    int i_0 = (dc1 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int i_1 = (dc1 == 1 ? spline_t::radius : spline_t::radius - 1);
     Scalar djx = 0.0f;
     for (int i = i_0; i <= i_1; i++) {
       Scalar sx0 = interp(-old_x1 + i + 1);
@@ -318,8 +318,8 @@ deposit_current_cart_2d(data_ptrs data, size_t num, Scalar dt,
     v2 = v2 / gamma;
     v3 = v3 / gamma;
 
-    Pos_t new_x1 = old_x1 + (v1 * dt) / dev_mesh.delta[0];
-    Pos_t new_x2 = old_x2 + (v2 * dt) / dev_mesh.delta[1];
+    Pos_t new_x1 = old_x1 + (v1 * dt) * dev_mesh.inv_delta[0];
+    Pos_t new_x2 = old_x2 + (v2 * dt) * dev_mesh.inv_delta[1];
 
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
@@ -340,11 +340,13 @@ deposit_current_cart_2d(data_ptrs data, size_t num, Scalar dt,
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
     Scalar weight = -dev_charges[sp] * w;
 
-    int j_0 = (dc2 == -1 ? -2 : -1);
-    int j_1 = (dc2 == 1 ? 1 : 0);
-    int i_0 = (dc1 == -1 ? -2 : -1);
-    int i_1 = (dc1 == 1 ? 1 : 0);
-    Scalar djy[3] = {0.0f};
+    // int j_0 = (dc2 == -1 ? -2 : -1);
+    // int j_1 = (dc2 == 1 ? 1 : 0);
+    int j_0 = (dc2 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int j_1 = (dc2 == 1 ? spline_t::radius : spline_t::radius - 1);
+    int i_0 = (dc1 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int i_1 = (dc1 == 1 ? spline_t::radius : spline_t::radius - 1);
+    Scalar djy[spline_t::support + 1] = {0.0f};
     for (int j = j_0; j <= j_1; j++) {
       Scalar sy0 = interp(-old_x2 + j + 1);
       Scalar sy1 = interp(-new_x2 + (j + 1 - dc2));
@@ -411,9 +413,9 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
     v2 = v2 / gamma;
     v3 = v3 / gamma;
 
-    Pos_t new_x1 = old_x1 + (v1 * dt) / dev_mesh.delta[0];
-    Pos_t new_x2 = old_x2 + (v2 * dt) / dev_mesh.delta[1];
-    Pos_t new_x3 = old_x3 + (v3 * dt) / dev_mesh.delta[2];
+    Pos_t new_x1 = old_x1 + (v1 * dt) * dev_mesh.inv_delta[0];
+    Pos_t new_x2 = old_x2 + (v2 * dt) * dev_mesh.inv_delta[1];
+    Pos_t new_x3 = old_x3 + (v3 * dt) * dev_mesh.inv_delta[2];
 
     int dc1 = floor(new_x1);
     int dc2 = floor(new_x2);
@@ -437,20 +439,20 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
     if (check_bit(flag, ParticleFlag::ignore_current)) continue;
     Scalar weight = -dev_charges[sp] * w;
 
-    int k_0 = (dc3 == -1 ? -2 : -1);
-    int k_1 = (dc3 == 1 ? 1 : 0);
-    int j_0 = (dc2 == -1 ? -2 : -1);
-    int j_1 = (dc2 == 1 ? 1 : 0);
-    int i_0 = (dc1 == -1 ? -2 : -1);
-    int i_1 = (dc1 == 1 ? 1 : 0);
+    int k_0 = (dc3 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int k_1 = (dc3 == 1 ? spline_t::radius : spline_t::radius - 1);
+    int j_0 = (dc2 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int j_1 = (dc2 == 1 ? spline_t::radius : spline_t::radius - 1);
+    int i_0 = (dc1 == -1 ? -spline_t::radius - 1 : -spline_t::radius);
+    int i_1 = (dc1 == 1 ? spline_t::radius : spline_t::radius - 1);
     // Zero initialize both arrays
-    Scalar djz[3][3] = {0.0f};
+    Scalar djz[spline_t::support + 1][spline_t::support + 1] = {0.0f};
     for (int k = k_0; k <= k_1; k++) {
       Scalar sz0 = interp(-old_x3 + k + 1);
       Scalar sz1 = interp(-new_x3 + (k + 1 - dc3));
 
       size_t k_offset = (k + c3) * data.J1.p.pitch * data.J1.p.ysize;
-      Scalar djy[3] = {0.0f};
+      Scalar djy[spline_t::support + 1] = {0.0f};
       for (int j = j_0; j <= j_1; j++) {
         Scalar sy0 = interp(-old_x2 + j + 1);
         Scalar sy1 = interp(-new_x2 + (j + 1 - dc2));
@@ -611,6 +613,119 @@ filter_current_cart_3d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
   }
 }
 
+__global__ void
+move_photons_cart_1d(photon_data photons, size_t num, Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = photons.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+    // Load particle quantities
+    auto p1 = photons.p1[idx], p2 = photons.p2[idx],
+         p3 = photons.p3[idx];
+    Scalar E = std::sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+
+    auto old_x1 = photons.x1[idx], old_x2 = photons.x2[idx],
+         old_x3 = photons.x3[idx];
+
+    Pos_t new_x1 = old_x1 + p1 / E * dt * dev_mesh.inv_delta[0];
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
+    // %f\n", new_x1, new_x2, old_x1, old_x2);
+    int dc1 = floor(new_x1);
+    photons.cell[idx] = c + dc1;
+    new_x1 -= (Pos_t)dc1;
+
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+    // dc2);
+    photons.x1[idx] = new_x1;
+    photons.x2[idx] = old_x2 + p2 * dt / E;
+    photons.x3[idx] = old_x3 + p3 * dt / E;
+    photons.path_left[idx] -= dt;
+  }
+}
+
+__global__ void
+move_photons_cart_2d(photon_data photons, size_t num, Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = photons.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+    // Load particle quantities
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    auto v1 = photons.p1[idx], v2 = photons.p2[idx],
+         v3 = photons.p3[idx];
+    Scalar E = std::sqrt(v1 * v1 + v2 * v2 + v3 * v3);
+    v1 /= E;
+    v2 /= E;
+    v3 /= E;
+
+    auto old_x1 = photons.x1[idx], old_x2 = photons.x2[idx],
+         old_x3 = photons.x3[idx];
+
+    Pos_t new_x1 = old_x1 + v1 * dt * dev_mesh.inv_delta[0];
+    Pos_t new_x2 = old_x2 + v2 * dt * dev_mesh.inv_delta[1];
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
+    // %f\n", new_x1, new_x2, old_x1, old_x2);
+    int dc1 = floor(new_x1);
+    int dc2 = floor(new_x2);
+    photons.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2);
+    new_x1 -= (Pos_t)dc1;
+    new_x2 -= (Pos_t)dc2;
+
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+    // dc2);
+    photons.x1[idx] = new_x1;
+    photons.x2[idx] = new_x2;
+    photons.x3[idx] = old_x3 + v3 * dt;
+    photons.path_left[idx] -= dt;
+  }
+}
+
+__global__ void
+move_photons_cart_3d(photon_data photons, size_t num, Scalar dt) {
+  for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
+       idx += blockDim.x * gridDim.x) {
+    auto c = photons.cell[idx];
+    // Skip empty particles
+    if (c == MAX_CELL) continue;
+    // Load particle quantities
+    int c1 = dev_mesh.get_c1(c);
+    int c2 = dev_mesh.get_c2(c);
+    int c3 = dev_mesh.get_c3(c);
+    auto v1 = photons.p1[idx], v2 = photons.p2[idx],
+         v3 = photons.p3[idx];
+    Scalar E = std::sqrt(v1 * v1 + v2 * v2 + v3 * v3);
+    v1 /= E;
+    v2 /= E;
+    v3 /= E;
+
+    auto old_x1 = photons.x1[idx], old_x2 = photons.x2[idx],
+         old_x3 = photons.x3[idx];
+
+    Pos_t new_x1 = old_x1 + v1 * dt * dev_mesh.inv_delta[0];
+    Pos_t new_x2 = old_x2 + v2 * dt * dev_mesh.inv_delta[1];
+    Pos_t new_x3 = old_x3 + v3 * dt * dev_mesh.inv_delta[2];
+    // printf("new_x1 is %f, new_x2 is %f, old_x1 is %f, old_x2 is
+    // %f\n", new_x1, new_x2, old_x1, old_x2);
+    int dc1 = floor(new_x1);
+    int dc2 = floor(new_x2);
+    int dc3 = floor(new_x3);
+    photons.cell[idx] = dev_mesh.get_idx(c1 + dc1, c2 + dc2, c3 + dc3);
+    new_x1 -= (Pos_t)dc1;
+    new_x2 -= (Pos_t)dc2;
+    new_x3 -= (Pos_t)dc3;
+
+    // printf("new_x1 is %f, new_x2 is %f, dc2 = %d\n", new_x1, new_x2,
+    // dc2);
+    photons.x1[idx] = new_x1;
+    photons.x2[idx] = new_x2;
+    photons.x3[idx] = new_x3;
+    photons.path_left[idx] -= dt;
+  }
+}
+
 }  // namespace Kernels
 
 ptc_updater::ptc_updater(sim_environment &env) : m_env(env) {
@@ -678,11 +793,30 @@ ptc_updater::update_particles(sim_data &data, double dt,
     }
 
     smooth_current(data, step);
+    m_env.send_particles(data.particles);
   }
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
-  m_env.send_particles(data.particles);
-  m_env.send_particles(data.photons);
+  if (data.particles.number() > 0) {
+    Logger::print_info(
+        "Updating {} photons in Cartesian coordinates",
+        data.photons.number());
+
+    // Push the particle with E and B fields
+    if (grid.dim() == 1) {
+      Kernels::move_photons_cart_1d<<<256, 512>>>(
+          data.photons.data(), data.photons.number(), dt);
+    } else if (grid.dim() == 2) {
+      Kernels::move_photons_cart_2d<<<256, 512>>>(
+          data.photons.data(), data.photons.number(), dt);
+    } else if (grid.dim() == 3) {
+      Kernels::move_photons_cart_3d<<<256, 512>>>(
+          data.photons.data(), data.photons.number(), dt);
+    }
+    CudaCheckError();
+    CudaSafeCall(cudaDeviceSynchronize());
+    m_env.send_particles(data.photons);
+  }
   apply_boundary(data, dt, step);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
 }
