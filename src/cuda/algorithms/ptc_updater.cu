@@ -176,9 +176,13 @@ ptc_push_cart_3d(data_ptrs data, size_t num, Scalar dt) {
 
     // step 0: Grab E & M fields at the particle position
     gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
+    size_t global_offset = data.E1.compute_offset(c1, c2, c3);
     if (!check_bit(flag, ParticleFlag::ignore_EM)) {
       Scalar E1 =
           interp(data.E1, x1, x2, x3, c1, c2, c3, Stagger(0b110)) *
+          // interpolate(data.E1, global_offset, {x1, x2, x3},
+          //             Stagger(0b110), data.E1.p.pitch,
+          //             data.E1.p.ysize) *
           q_over_m;
       Scalar E2 =
           interp(data.E2, x1, x2, x3, c1, c2, c3, Stagger(0b101)) *
@@ -591,16 +595,20 @@ filter_current_cart_3d(pitchptr<Scalar> j, pitchptr<Scalar> j_tmp,
   j_tmp[globalOffset] += 0.0625f * j[globalOffset + d2_plus];
   j_tmp[globalOffset] += 0.0625f * j[globalOffset - d2_minus];
   j_tmp[globalOffset] += 0.03125f * j[globalOffset + d1_plus + d2_plus];
-  j_tmp[globalOffset] += 0.03125f * j[globalOffset - d1_minus + d2_plus];
-  j_tmp[globalOffset] += 0.03125f * j[globalOffset + d1_plus - d2_minus];
+  j_tmp[globalOffset] +=
+      0.03125f * j[globalOffset - d1_minus + d2_plus];
+  j_tmp[globalOffset] +=
+      0.03125f * j[globalOffset + d1_plus - d2_minus];
   j_tmp[globalOffset] +=
       0.03125f * j[globalOffset - d1_minus - d2_minus];
   for (int i = 0; i < 2; i++) {
     j_tmp[globalOffset] += 0.0625f * j[globalOffset + d3[i]];
     j_tmp[globalOffset] += 0.03152f * j[globalOffset + d1_plus + d3[i]];
-    j_tmp[globalOffset] += 0.03152f * j[globalOffset - d1_minus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.03152f * j[globalOffset - d1_minus + d3[i]];
     j_tmp[globalOffset] += 0.03152f * j[globalOffset + d2_plus + d3[i]];
-    j_tmp[globalOffset] += 0.03152f * j[globalOffset - d2_minus + d3[i]];
+    j_tmp[globalOffset] +=
+        0.03152f * j[globalOffset - d2_minus + d3[i]];
     j_tmp[globalOffset] +=
         0.015625f * j[globalOffset + d1_plus + d2_plus + d3[i]];
     j_tmp[globalOffset] +=
@@ -746,9 +754,8 @@ ptc_updater::update_particles(sim_data &data, double dt,
   timer::stamp("ptc_update");
   // Skip empty particle array
   if (data.particles.number() > 0) {
-    Logger::print_info(
-        "Updating {} particles in Cartesian coordinates",
-        data.particles.number());
+    Logger::print_info("Updating {} particles in Cartesian coordinates",
+                       data.particles.number());
 
     timer::stamp("ptc_push");
     // Push the particle with E and B fields
@@ -799,9 +806,8 @@ ptc_updater::update_particles(sim_data &data, double dt,
   // "comm");
   if (data.photons.number() > 0) {
     timer::stamp("photon_move");
-    Logger::print_info(
-        "Updating {} photons in Cartesian coordinates",
-        data.photons.number());
+    Logger::print_info("Updating {} photons in Cartesian coordinates",
+                       data.photons.number());
 
     // Push the particle with E and B fields
     if (grid.dim() == 1) {
