@@ -6,7 +6,7 @@
 using namespace Aperture;
 
 int
-main(int argc, char *argv[]) {
+main(int argc, char* argv[]) {
   sim_environment env(&argc, &argv);
 
   particles_t ptc(100, true);
@@ -28,13 +28,49 @@ main(int argc, char *argv[]) {
   ptc.sort_by_cell(env.local_grid());
   ph.sort_by_cell(env.local_grid());
 
-  Logger::print_debug_all("Rank {} has {} particles:", env.domain_info().rank,
-                          ptc.number());
-  Logger::print_debug_all("Rank {} has {} photons:", env.domain_info().rank,
-                          ph.number());
+  Logger::print_debug_all("Rank {} has {} particles:",
+                          env.domain_info().rank, ptc.number());
+  Logger::print_debug_all(
+      "Rank {} has {} photons:", env.domain_info().rank, ph.number());
   for (unsigned int i = 0; i < ptc.number(); i++) {
     auto c = ptc.data().cell[i];
     Logger::print_debug_all("cell {}, {}", c % N1, c / N1);
+  }
+
+  auto& mesh = env.local_grid().mesh();
+  multi_array<float> v(mesh.extent());
+  v.assign_dev(env.domain_info().rank);
+  env.send_array_guard_cells(v);
+  v.copy_to_host();
+
+  for (int n = 0; n < env.domain_info().size; n++) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (n == env.domain_info().rank) {
+      std::cout << "This is the initial content from rank " << n << std::endl;
+      for (int j = 0; j < mesh.dims[1]; j++) {
+        for (int i = 0; i < mesh.dims[0]; i++) {
+          std::cout << v(i, j) << " ";
+        }
+        std::cout << std::endl;
+      }
+    }
+  }
+
+  env.send_add_array_guard_cells(v);
+
+  v.copy_to_host();
+
+  for (int n = 0; n < env.domain_info().size; n++) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (n == env.domain_info().rank) {
+      std::cout << "This is the content from rank " << n << std::endl;
+      for (int j = 0; j < mesh.dims[1]; j++) {
+        for (int i = 0; i < mesh.dims[0]; i++) {
+          std::cout << v(i, j) << " ";
+        }
+        std::cout << std::endl;
+      }
+    }
   }
 
   return 0;

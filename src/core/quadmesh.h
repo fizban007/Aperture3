@@ -2,10 +2,10 @@
 #define _QUADMESH_H_
 
 #include "core/constant_defs.h"
-#include "cuda/cuda_control.h"
 #include "core/stagger.h"
 #include "core/typedefs.h"
 #include "core/vec3.h"
+#include "cuda/cuda_control.h"
 // #include "utils/simd.h"
 #include <algorithm>
 // #include <immintrin.h>
@@ -252,8 +252,12 @@ struct Quadmesh {
 
   ///  Get the size of the grid (product of all dimensions).
   HD_INLINE int size() const {
-    int tmp = dims[0] * dims[1] * dims[2];
-    return tmp;
+    return dims[0] * dims[1] * dims[2];
+  }
+
+  ///  Get the size of the grid (product of all dimensions).
+  HD_INLINE int size_reduced() const {
+    return reduced_dim(0) * reduced_dim(1) * reduced_dim(2);
   }
 
   ///  Find the zone the cell belongs to (for communication purposes)

@@ -6,11 +6,11 @@ periodic_boundary = [true, true]
 # dimension, just set N to 1 and guard to 0 on that dimension.
 [Grid]
 # Number of grid points in each direction, excluding guard cells
-N = [24, 24, 1]
+N = [10, 10, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard
-guard = [3, 3, 0]
+guard = [2, 2, 0]
 
 # Number of ranks for domain decomp in each directions
 nodes = [2, 2, 1]

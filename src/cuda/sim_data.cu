@@ -1,6 +1,7 @@
 #include "cuda/constant_mem.h"
 #include "cuda/constant_mem_func.h"
 #include "cuda/cudaUtility.h"
+#include "cuda/cudarng.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/kernels.h"
 #include "cuda/utils/interpolation.cuh"
@@ -127,33 +128,26 @@ check_dev_mesh() {
 
 __global__ void
 fill_particles(particle_data ptc, size_t number, Scalar weight,
-               int multiplicity) {
-  for (int j =
-           blockIdx.y * blockDim.y + threadIdx.y + dev_mesh.guard[1];
-       j < dev_mesh.dims[1] - dev_mesh.guard[1];
-       j += blockDim.y * gridDim.y) {
-    for (int i =
-             blockIdx.x * blockDim.x + threadIdx.x + dev_mesh.guard[0];
-         i < dev_mesh.dims[0] - dev_mesh.guard[0];
-         i += blockDim.x * gridDim.x) {
-      uint32_t cell = i + j * dev_mesh.dims[0];
-      Scalar theta = dev_mesh.pos(1, j, 0.5f);
-      // int Np = 3;
-      for (int n = 0; n < multiplicity; n++) {
-        size_t idx = number + cell * multiplicity * 2 + n * 2;
-        ptc.x1[idx] = ptc.x1[idx + 1] = 0.5f;
-        ptc.x2[idx] = ptc.x2[idx + 1] = 0.5f;
-        ptc.x3[idx] = ptc.x3[idx + 1] = 0.0f;
-        ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
-        ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
-        ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
-        ptc.E[idx] = ptc.E[idx + 1] = 1.0f;
-        ptc.cell[idx] = ptc.cell[idx + 1] = cell;
-        ptc.weight[idx] = ptc.weight[idx + 1] = weight * sin(theta);
-        ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
-        ptc.flag[idx + 1] =
-            set_ptc_type_flag(0, ParticleType::positron);
-      }
+               int multiplicity, curandState* states) {
+  int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  CudaRng rng(&states[tid]);
+  for (uint32_t cell = tid;
+       cell < dev_mesh.size(); cell += blockDim.x * gridDim.x) {
+    if (!dev_mesh.is_in_bulk(cell)) continue;
+    // int Np = 3;
+    for (int n = 0; n < multiplicity; n++) {
+      size_t idx = number + cell * multiplicity * 2 + n * 2;
+      ptc.x1[idx] = ptc.x1[idx + 1] = rng();
+      ptc.x2[idx] = ptc.x2[idx + 1] = rng();
+      ptc.x3[idx] = ptc.x3[idx + 1] = rng();
+      ptc.p1[idx] = ptc.p1[idx + 1] = 0.0f;
+      ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
+      ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
+      ptc.E[idx] = ptc.E[idx + 1] = 1.0f;
+      ptc.cell[idx] = ptc.cell[idx + 1] = cell;
+      ptc.weight[idx] = ptc.weight[idx + 1] = weight;
+      ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
+      ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
     }
   }
 }
@@ -272,14 +266,18 @@ sim_data::compute_edotb() {
 
 void
 sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
-  Kernels::fill_particles<<<dim3(16, 16), dim3(32, 32)>>>(
-      particles.data(), particles.number(), weight, multiplicity);
+  int num_cells = env.mesh().size();
+  int blockSize = 512;
+  int gridSize = std::min((num_cells + blockSize - 1) / blockSize, 512);
+  Kernels::fill_particles<<<gridSize, blockSize>>>(
+      particles.data(), particles.number(), weight, multiplicity,
+      (curandState*)d_rand_states);
   // cudaDeviceSynchronize();
   CudaCheckError();
 
-  auto& mesh = env.local_grid().mesh();
+  auto& mesh = env.mesh();
   particles.set_num(particles.number() +
-                    mesh.dims[0] * mesh.dims[1] * 2 * multiplicity);
+                    mesh.size_reduced() * 2 * multiplicity);
   CudaSafeCall(cudaDeviceSynchronize());
 }
 
