@@ -476,7 +476,7 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
           atomicAdd(&data.J2[offset + data.J2.p.pitch],
                     weight * djy[i - i_0]);
 
-          // j3 is simply v3 times rho at volume average
+          // j3 is movement in x3
           djz[j - j_0][i - i_0] +=
               movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
           atomicAdd(
@@ -763,10 +763,10 @@ ptc_updater::update_particles(sim_data &data, double dt,
       Kernels::ptc_push_cart_1d<<<256, 512>>>(
           data_p, data.particles.number(), dt);
     } else if (grid.dim() == 2) {
-      Kernels::ptc_push_cart_2d<<<256, 512>>>(
+      Kernels::ptc_push_cart_2d<<<512, 512>>>(
           data_p, data.particles.number(), dt);
     } else if (grid.dim() == 3) {
-      Kernels::ptc_push_cart_3d<<<256, 512>>>(
+      Kernels::ptc_push_cart_3d<<<512, 256>>>(
           data_p, data.particles.number(), dt);
     }
     CudaCheckError();
@@ -781,10 +781,10 @@ ptc_updater::update_particles(sim_data &data, double dt,
       Kernels::deposit_current_cart_1d<<<256, 512>>>(
           data_p, data.particles.number(), dt, step);
     } else if (grid.dim() == 2) {
-      Kernels::deposit_current_cart_2d<<<256, 512>>>(
+      Kernels::deposit_current_cart_2d<<<512, 256>>>(
           data_p, data.particles.number(), dt, step);
     } else if (grid.dim() == 3) {
-      Kernels::deposit_current_cart_3d<<<256, 512>>>(
+      Kernels::deposit_current_cart_3d<<<512, 128>>>(
           data_p, data.particles.number(), dt, step);
     }
     CudaCheckError();

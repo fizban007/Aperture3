@@ -47,23 +47,23 @@ main(int argc, char* argv[]) {
 
   data.E.initialize(0, [&](Scalar x, Scalar y, Scalar z) {
     // Put your initial condition for Ex here
-    return ex_norm * std::sin(kx * x + ky * y);
+    return params.B0 * ex_norm * std::sin(kx * x + ky * y);
   });
 
   data.E.initialize(1, [&](Scalar x, Scalar y, Scalar z) {
     // Put your initial condition for Ey here
-    return ey_norm * std::sin(kx * x + ky * y);
+    return params.B0 * ey_norm * std::sin(kx * x + ky * y);
   });
 
   data.B.initialize(2, [&](Scalar x, Scalar y, Scalar z) {
     // Put your initial condition for Bz here
-    return std::sin(kx * x + ky * y);
+    return params.B0 * std::sin(kx * x + ky * y);
   });
 
   env.send_guard_cells(data.E);
   env.send_guard_cells(data.B);
 
-  data.fill_multiplicity(1.0f, 10);
+  data.fill_multiplicity(1.0f, 2);
 
   // Main pic loop
   for (; step <= params.max_steps; step++) {

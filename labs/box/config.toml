@@ -2,7 +2,7 @@
 delta_t = 0.0025
 
 # Charge of an electron
-q_e = 1.0
+q_e = 1000.0
 
 # Number of species, default 2 species are electron and positrons. Set this to 3
 # to enable ions
@@ -12,10 +12,10 @@ num_species = 2
 ion_mass = 5.0
 
 # Maximum number of particles per rank
-max_ptc_number = 250000000
+max_ptc_number = 280000000
 
 # Maximum number of photons per rank
-max_photon_number = 50000000
+max_photon_number = 100
 
 # Maximum number of tracked particles/photons per rank
 max_tracked = 1000000
@@ -44,7 +44,7 @@ B0 = 1000.0
 [Grid]
 # Number of grid points in each direction, excluding guard cells. This should be
 # a power of 2.
-N = [512, 512, 1]
+N = [1024, 1024, 1]
 
 # Number of guard cells on each end. Effective number of cells per dimension
 # will be N + 2*guard. Minimum 2 is required!
@@ -54,7 +54,7 @@ guard = [2, 2, 0]
 lower = [0.0, 0.0, 0.0]
 
 # Size of the box in each dimension
-size = [10.0, 10.0, 1.0]
+size = [10.0, 10.0, 10.0]
 
 [Simulation]
 
@@ -62,7 +62,7 @@ coord_system = "Cartesian"
 
 random_seed = 3333
 
-downsample = 1
+downsample = 2
 
 max_steps = 10000
 

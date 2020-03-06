@@ -19,8 +19,6 @@ namespace Aperture {
 
 namespace Kernels {
 
-typedef Spline::cloud_in_cell spline_t;
-
 __device__ Scalar beta_phi(Scalar r, Scalar theta);
 
 __device__ Scalar alpha_gr(Scalar r);

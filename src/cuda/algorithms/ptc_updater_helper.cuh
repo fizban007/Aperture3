@@ -8,7 +8,8 @@ namespace Aperture {
 
 namespace Kernels {
 
-typedef Spline::cloud_in_cell spline_t;
+typedef Spline::spline_t<1> spline_t;
+// typedef Spline::spline_t<3> spline_t;
 
 // HD_INLINE Scalar
 // cloud_in_cell_f(Scalar dx) {
