@@ -58,17 +58,6 @@ DEF_PARTICLE_STRUCT(particle,
                     (Aperture::Scalar, weight, 0.0)
                     (uint32_t, cell, MAX_CELL)
                     (uint64_t, id, 0)
-                    // (uint32_t, tile, MAX_TILE)
-                    (uint32_t, flag, 0));
-
-DEF_PARTICLE_STRUCT(particle1d,
-                    (Aperture::Pos_t, x1, 0.0)
-                    (Aperture::Scalar, p1, 0.0)
-                    (Aperture::Scalar, E, 0.0)
-                    (Aperture::Scalar, weight, 0.0)
-                    (Aperture::Scalar, u0inf, 0.0)
-                    (uint32_t, cell, MAX_CELL)
-                    (uint64_t, id, 0)
                     (uint32_t, flag, 0));
 
 // We use a 32-bit integer to give every particle a "flag". The highest
@@ -86,19 +75,6 @@ DEF_PARTICLE_STRUCT(photon,
                     (Aperture::Scalar, E, 0.0)
                     (Aperture::Scalar, weight, 0.0)
                     (Aperture::Scalar, path_left, 0.0)
-                    (uint32_t, cell, MAX_CELL)
-                    (uint64_t, id, 0)
-                    // (uint32_t, tile, MAX_TILE)
-                    (uint32_t, flag, 0));
-
-DEF_PARTICLE_STRUCT(photon1d,
-                    (Aperture::Pos_t, x1, 0.0)
-                    (Aperture::Scalar, p1, 0.0)
-                    (Aperture::Scalar, pf, 0.0)
-                    (Aperture::Scalar, E, 0.0)
-                    (Aperture::Scalar, weight, 0.0)
-                    (Aperture::Scalar, path_left, 0.0)
-                    (Aperture::Scalar, u0inf, 0.0)
                     (uint32_t, cell, MAX_CELL)
                     (uint64_t, id, 0)
                     (uint32_t, flag, 0));
