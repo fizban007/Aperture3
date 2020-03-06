@@ -65,6 +65,7 @@ struct sim_data {
   double time = 0.0;
   int devId;
   void* d_rand_states;
+  int rand_state_size = 0;
 };
 
 }  // namespace Aperture

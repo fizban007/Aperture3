@@ -56,6 +56,8 @@ class sim_environment {
   void send_add_guard_cells(scalar_field<Scalar>& field);
   void send_add_guard_cells(vector_field<Scalar>& field);
 
+  void get_total_num_offset(uint64_t num, uint64_t& total, uint64_t& offset);
+
   template <typename T>
   void send_particles(T& ptc);
   // void send_particles(photons_t& ph);

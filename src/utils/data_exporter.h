@@ -54,20 +54,35 @@ class data_exporter {
                        const std::string& name, H5File& file,
                        uint32_t timestep);
 
-  void add_ptc_output(sim_data& data, int species, H5File& file,
-                      uint32_t timestep);
+  void add_tracked_ptc_output(sim_data& data, int sp,
+                              const std::string& prefix, H5File& file,
+                              uint32_t timestep);
 
-  template <typename Func>
-  void add_ptc_float_output(sim_data& data, const std::string& name,
-                            uint64_t num, uint64_t total,
-                            uint64_t offset, Func f, H5File& file,
-                            uint32_t timestep);
+  template <typename Ptc>
+  void add_ptc_output(Ptc& data, size_t num, H5File& file,
+                      const std::string& prefix);
 
-  template <typename Func>
-  void add_ptc_uint_output(sim_data& data, const std::string& name,
-                           uint64_t num, uint64_t total,
-                           uint64_t offset, Func f, H5File& file,
-                           uint32_t timestep);
+  template <typename Ptc>
+  void read_ptc_output(Ptc& data, size_t num, H5File& file,
+                       const std::string& prefix);
+
+  template <typename T, typename Func>
+  void add_tracked_ptc_output(sim_data& data, int sp,
+                              const std::string& name,
+                              uint64_t total, uint64_t offset,
+                              Func f, H5File& file);
+
+  // template <typename Func>
+  // void add_ptc_float_output(sim_data& data, const std::string& name,
+  //                           uint64_t num, uint64_t total,
+  //                           uint64_t offset, Func f, H5File& file,
+  //                           uint32_t timestep);
+
+  // template <typename Func>
+  // void add_ptc_uint_output(sim_data& data, const std::string& name,
+  //                          uint64_t num, uint64_t total,
+  //                          uint64_t offset, Func f, H5File& file,
+  //                          uint32_t timestep);
 
   void save_snapshot(const std::string& filename, sim_data& data,
                      uint32_t step, Scalar time);
@@ -87,16 +102,9 @@ class data_exporter {
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output
-  // boost::multi_array<float, 3> m_output_3d;
-  // boost::multi_array<float, 2> m_output_2d;
-  // std::vector<float> m_output_1d;
-
-  std::vector<float> tmp_ptc_float_data;
-  std::vector<uint32_t> tmp_ptc_uint_data;
+  // std::vector<float> tmp_ptc_float_data;
+  // std::vector<uint32_t> tmp_ptc_uint_data;
   void* tmp_ptc_data;
-
-  // std::unique_ptr<std::thread> m_fld_thread;
-  // std::unique_ptr<std::thread> m_ptc_thread;
 };
 
 }  // namespace Aperture

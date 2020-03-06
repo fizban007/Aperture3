@@ -449,6 +449,20 @@ sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
   send_buffer.set_num(0);
 }
 
+void
+sim_environment::get_total_num_offset(uint64_t num, uint64_t &total, uint64_t &offset) {
+  // Carry out an MPI scan to get the total number and local offset,
+  // used for particle output into a file
+  uint64_t result = 0;
+  auto status =
+      MPI_Scan(&num, &result, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
+  offset = result - num;
+  total = 0;
+  status = MPI_Allreduce(&num, &total, 1, MPI_UINT64_T, MPI_SUM,
+                         MPI_COMM_WORLD);
+  MPI_Helper::handle_mpi_error(status, m_domain_info.rank);
+}
+
 template <>
 std::vector<typename particles_t::base_class>&
 sim_environment::ptc_buffers(const particles_t& ptc) {
