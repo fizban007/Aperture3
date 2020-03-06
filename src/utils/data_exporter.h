@@ -41,10 +41,6 @@ class data_exporter {
                          const Extent& total_ext, const Index& offset,
                          H5File& file);
 
-  void add_array_output(multi_array<float>& array, Stagger stagger,
-                        const std::string& name, H5File& file,
-                        uint32_t timestep);
-
   template <typename Func>
   void add_grid_output(sim_data& data, const std::string& name, Func f,
                        H5File& file, uint32_t timestep);
@@ -53,10 +49,6 @@ class data_exporter {
   void add_grid_output(multi_array<T>& array, Stagger stagger,
                        const std::string& name, H5File& file,
                        uint32_t timestep);
-
-  void add_tracked_ptc_output(sim_data& data, int sp,
-                              const std::string& prefix, H5File& file,
-                              uint32_t timestep);
 
   template <typename Ptc>
   void add_ptc_output(Ptc& data, size_t num, H5File& file,
@@ -72,25 +64,12 @@ class data_exporter {
                               uint64_t total, uint64_t offset,
                               Func f, H5File& file);
 
-  // template <typename Func>
-  // void add_ptc_float_output(sim_data& data, const std::string& name,
-  //                           uint64_t num, uint64_t total,
-  //                           uint64_t offset, Func f, H5File& file,
-  //                           uint32_t timestep);
-
-  // template <typename Func>
-  // void add_ptc_uint_output(sim_data& data, const std::string& name,
-  //                          uint64_t num, uint64_t total,
-  //                          uint64_t offset, Func f, H5File& file,
-  //                          uint32_t timestep);
-
   void save_snapshot(const std::string& filename, sim_data& data,
                      uint32_t step, Scalar time);
   void load_snapshot(const std::string& filename, sim_data& data,
                      uint32_t& step, Scalar& time);
 
  protected:
-  // std::unique_ptr<Grid> grid;
   sim_environment& m_env;
   std::string
       outputDirectory;  //!< Sets the directory of all the data files
@@ -102,8 +81,6 @@ class data_exporter {
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output
-  // std::vector<float> tmp_ptc_float_data;
-  // std::vector<uint32_t> tmp_ptc_uint_data;
   void* tmp_ptc_data;
 };
 

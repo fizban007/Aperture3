@@ -742,25 +742,6 @@ data_exporter::add_grid_output(multi_array<T>& array, Stagger stagger,
                       tmp_grid_data.extent(), Index(0, 0, 0), name);
 }
 
-void
-data_exporter::add_array_output(multi_array<float>& array,
-                                Stagger stagger,
-                                const std::string& name, H5File& file,
-                                uint32_t timestep) {
-  // Actually write the temp array to hdf
-  // std::vector<size_t> dims(1);
-  // dims[0] = (uint32_t)array.size();
-  // DataSet dataset = file.createDataSet<float>(name, DataSpace(dims));
-  // dataset.write(array.host_ptr());
-}
-
-void
-data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
-                                      const std::string& prefix,
-                                      H5File& file, uint32_t timestep) {
-  // Write all components of particle data to file, one by one
-}
-
 template <typename Ptc>
 void
 data_exporter::add_ptc_output(Ptc& data, size_t num, H5File& file,
@@ -824,40 +805,5 @@ data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
       fmt::format("{}_{}", particle_type_name(sp), name));
 }
 
-// template <typename Func>
-// void
-// data_exporter::add_ptc_float_output(sim_data& data,
-//                                     const std::string& name,
-//                                     uint64_t num, uint64_t total,
-//                                     uint64_t offset, Func f,
-//                                     H5File& file, uint32_t timestep)
-//                                     {
-//   // Logger::print_info("writing the {} of {} tracked particles",
-//   name,
-//   //                    num);
-//   uint32_t num_subset = 0;
-//   for (uint32_t n = 0; n < num; n++) {
-//     f(data, tmp_ptc_float_data, n, num_subset);
-//   }
-
-//   write_collective_array(tmp_ptc_float_data.data(), name, total,
-//                          num_subset, offset, file_id);
-// }
-
-// template <typename Func>
-// void
-// data_exporter::add_ptc_uint_output(sim_data& data,
-//                                    const std::string& name,
-//                                    uint64_t num, uint64_t total,
-//                                    uint64_t offset, Func f,
-//                                    H5File& file, uint32_t timestep) {
-//   uint32_t num_subset = 0;
-//   for (uint32_t n = 0; n < num; n++) {
-//     f(data, tmp_ptc_uint_data, n, num_subset);
-//   }
-
-//   write_collective_array(tmp_ptc_uint_data.data(), name, total,
-//                          num_subset, offset, file_id);
-// }
 
 }  // namespace Aperture
