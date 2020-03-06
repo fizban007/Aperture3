@@ -182,11 +182,14 @@ multi_array<T>::alloc_mem(const Extent& ext) {
   auto size = ext.size();
   m_data_h = new T[size];
 
-  auto extent = cuda_ext(ext, T{});
-  cudaPitchedPtr ptr;
-  CudaSafeCall(cudaMalloc3D(&ptr, extent));
-  m_data_d = ptr.ptr;
-  m_pitch = ptr.pitch;
+  // auto extent = cuda_ext(ext, T{});
+  // cudaPitchedPtr ptr;
+  // CudaSafeCall(cudaMalloc3D(&ptr, extent));
+  // m_data_d = ptr.ptr;
+  // m_pitch = ptr.pitch;
+  CudaSafeCall(cudaMalloc(&m_data_d, size * sizeof(T)));
+  m_pitch = ext.x * sizeof(T);
+  cudaPitchedPtr ptr = make_cudaPitchedPtr(m_data_d, m_pitch, ext.x, ext.y);
   Logger::print_info("pitch is {}, x is {}, y is {}, z is {}", m_pitch,
                      ptr.xsize, ptr.ysize, ext.z);
   Logger::print_info("--- Allocated {} bytes", m_pitch * ptr.ysize * ext.z);
