@@ -477,7 +477,7 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
                     weight * djy[i - i_0]);
 
           // j3 is simply v3 times rho at volume average
-          djz[j - j_0][i - i_0] =
+          djz[j - j_0][i - i_0] +=
               movement3d(sx0, sx1, sy0, sy1, sz0, sz1);
           atomicAdd(
               &data.J3[offset + data.J3.p.pitch * data.J3.p.ysize],
