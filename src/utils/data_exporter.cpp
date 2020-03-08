@@ -464,6 +464,7 @@ data_exporter::save_snapshot(const std::string& filename,
 
   datafile.write(step, "step");
   datafile.write(time, "time");
+  datafile.write(params.data_interval, "data_interval");
   datafile.write(num_ranks, "num_ranks");
 
   datafile.close();
@@ -553,6 +554,9 @@ data_exporter::load_snapshot(const std::string& filename,
 
   data.particles.sort_by_cell(grid);
   data.photons.sort_by_cell(grid);
+
+  auto data_interval = datafile.read_scalar<size_t>("data_interval");
+  prepare_xmf_restart(step, data_interval, time);
 }
 
 void
