@@ -79,6 +79,8 @@ target_link_libraries(test_mpi2d Aperture)
 add_executable(test_mpi3d "test_mpi3d.cpp")
 target_link_libraries(test_mpi3d Aperture)
 
+add_executable(test_hdf5 "test_hdf5.cpp")
+target_link_libraries(test_hdf5 Aperture)
 # add_executable(test_IC "test_IC.cpp")
 # target_link_libraries(test_IC Aperture)
 

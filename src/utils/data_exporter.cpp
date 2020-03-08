@@ -454,8 +454,17 @@ data_exporter::save_snapshot(const std::string& filename,
   add_ptc_output(data.photons.data(), data.photons.number(), datafile,
                  "ph_");
 
+  // write the number of particles in each rank into the hdf5 file
+  uint64_t ptc_num = data.particles.number();
+  uint64_t ph_num = data.photons.number();
+  datafile.write_parallel(&ptc_num, 1, m_env.domain_info().size,
+                          m_env.domain_info().rank, 1, 0, "ptc_num");
+  datafile.write_parallel(&ph_num, 1, m_env.domain_info().size,
+                          m_env.domain_info().rank, 1, 0, "ph_num");
+
   datafile.write(step, "step");
   datafile.write(time, "time");
+  datafile.write(num_ranks, "num_ranks");
 
   datafile.close();
 }
@@ -463,7 +472,88 @@ data_exporter::save_snapshot(const std::string& filename,
 void
 data_exporter::load_snapshot(const std::string& filename,
                              sim_data& data, uint32_t& step,
-                             Scalar& time) {}
+                             Scalar& time) {
+  // Check whether filename exists
+  if (!boost::filesystem::exists(filename)) {
+    Logger::print_info(
+        "Can't find restart file, proceeding without loading it!");
+    return;
+  }
+
+  // Open the snapshot file for reading
+  H5File datafile(filename, H5OpenMode::read_parallel);
+
+  int rank = m_env.domain_info().rank;
+  int num_ranks = m_env.domain_info().size;
+  int restart_ranks = datafile.read_scalar<int>("num_ranks");
+
+  if (num_ranks != restart_ranks) {
+    Logger::print_err(
+        "Restarting with different rank configuration is not allowed!");
+    exit(1);
+  }
+
+  auto& params = m_env.params();
+  auto& grid = m_env.grid();
+  auto& mesh = m_env.mesh();
+  Extent ext;
+  Index idx_dst, idx_src;
+  for (int i = 0; i < mesh.dim(); i++) {
+    // ext_total[i] = params.N[i] + 2 * params.guard[i];
+    ext[i] = mesh.reduced_dim(i);
+    idx_src[i] = mesh.offset[i];
+    idx_dst[i] = 0;
+    if (idx_src[i] > 0) {
+      idx_src[i] += mesh.guard[i];
+      idx_dst[i] += mesh.guard[i];
+    }
+    if (m_env.domain_info().neighbor_left[i] == NEIGHBOR_NULL) {
+      ext[i] += mesh.guard[i];
+    }
+    if (m_env.domain_info().neighbor_right[i] == NEIGHBOR_NULL) {
+      ext[i] += mesh.guard[i];
+    }
+  }
+
+  datafile.read_subset(data.E.data(0), "Ex", idx_src, ext, idx_dst);
+  datafile.read_subset(data.E.data(1), "Ey", idx_src, ext, idx_dst);
+  datafile.read_subset(data.E.data(2), "Ez", idx_src, ext, idx_dst);
+  datafile.read_subset(data.B.data(0), "Bx", idx_src, ext, idx_dst);
+  datafile.read_subset(data.B.data(1), "By", idx_src, ext, idx_dst);
+  datafile.read_subset(data.B.data(2), "Bz", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Bbg.data(0), "B0x", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Bbg.data(1), "B0y", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Bbg.data(2), "B0z", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Ebg.data(0), "E0x", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Ebg.data(1), "E0y", idx_src, ext, idx_dst);
+  datafile.read_subset(data.Ebg.data(2), "E0z", idx_src, ext, idx_dst);
+
+#ifdef USE_CUDA
+  size_t rand_array_size = 1024 * 512 * data.rand_state_size;
+  datafile.read_subset((char*)data.d_rand_states, rand_array_size,
+                          "rand_states", rand_array_size * rank,
+                          rand_array_size, 0);
+#endif
+
+  step = datafile.read_scalar<uint32_t>("step");
+  time = datafile.read_scalar<Scalar>("time");
+
+  m_env.send_guard_cells(data.E);
+  m_env.send_guard_cells(data.B);
+  m_env.send_guard_cells(data.Ebg);
+  m_env.send_guard_cells(data.Bbg);
+
+  // Read particle numbers
+  uint64_t ptc_num, ph_num;
+  datafile.read_subset(&ptc_num, 1, "ptc_num", rank, 1, 0);
+  datafile.read_subset(&ph_num, 1, "ph_num", rank, 1, 0);
+
+  read_ptc_output(data.particles.data(), ptc_num, datafile, "ptc_");
+  read_ptc_output(data.photons.data(), ptc_num, datafile, "ph_");
+
+  data.particles.sort_by_cell(grid);
+  data.photons.sort_by_cell(grid);
+}
 
 void
 data_exporter::prepare_xmf_restart(uint32_t restart_step,
@@ -778,6 +868,43 @@ data_exporter::add_ptc_output(Ptc& data, size_t num, H5File& file,
 #endif
 }
 
+template <typename Ptc>
+void
+data_exporter::read_ptc_output(Ptc& data, size_t num, H5File& file,
+                               const std::string& prefix) {
+
+  uint64_t offset, total;
+  m_env.get_total_num_offset(num, total, offset);
+
+  void* data_ptr;
+
+#ifdef USE_CUDA
+  cudaPointerAttributes attributes;
+  cudaPointerGetAttributes(&attributes, data.cell);
+  bool is_device = (attributes.type == cudaMemoryTypeDevice);
+
+  visit_struct::for_each(data, [&](const char* name, auto& ptr) {
+    typedef typename std::remove_reference<decltype(*ptr)>::type x_type;
+    if (is_device) {
+      cudaMemcpy(tmp_ptc_data, ptr, num * sizeof(x_type),
+                 cudaMemcpyDeviceToHost);
+      data_ptr = tmp_ptc_data;
+    } else {
+      data_ptr = (void*)ptr;
+    }
+    file.read_subset((x_type*)data_ptr, num, prefix + std::string(name),
+                     offset, num, 0);
+  });
+#else
+  visit_struct::for_each(data, [&](const char* name, auto& ptr) {
+    typedef typename std::remove_reference<decltype(*ptr)>::type x_type;
+    data_ptr = (void*)ptr;
+    file.read_subset((x_type*)data_ptr, num, prefix + std::string(name),
+                     offset, num, 0);
+  });
+#endif
+}
+
 template <typename T, typename Func>
 void
 data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
@@ -804,6 +931,5 @@ data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
       (T*)tmp_ptc_data, n_subset, total, offset, n_subset, 0,
       fmt::format("{}_{}", particle_type_name(sp), name));
 }
-
 
 }  // namespace Aperture
