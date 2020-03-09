@@ -141,6 +141,7 @@ ptc_push_cart_2d(data_ptrs data, size_t num, Scalar dt) {
 }
 
 __global__ void
+__launch_bounds__(256)
 ptc_push_cart_3d(data_ptrs data, size_t num, Scalar dt) {
   for (size_t idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num;
        idx += blockDim.x * gridDim.x) {
@@ -385,6 +386,7 @@ deposit_current_cart_2d(data_ptrs data, size_t num, Scalar dt,
 }
 
 __global__ void
+__launch_bounds__(256)
 deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
                         uint32_t step) {
   auto &ptc = data.particles;
@@ -475,6 +477,7 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
           djy[i - i_0] += movement3d(sx0, sx1, sz0, sz1, sy0, sy1);
           atomicAdd(&data.J2[offset + data.J2.p.pitch],
                     weight * djy[i - i_0]);
+                    // weight * movement3d(sx0, sx1, sz0, sz1, sy0, sy1));
 
           // j3 is movement in x3
           djz[j - j_0][i - i_0] +=
@@ -482,6 +485,7 @@ deposit_current_cart_3d(data_ptrs data, size_t num, Scalar dt,
           atomicAdd(
               &data.J3[offset + data.J3.p.pitch * data.J3.p.ysize],
               weight * djz[j - j_0][i - i_0]);
+              // weight * movement3d(sx0, sx1, sy0, sy1, sz0, sz1));
 
           // rho is deposited at the final position
           if ((step + 1) % dev_params.data_interval == 0) {
@@ -784,7 +788,7 @@ ptc_updater::update_particles(sim_data &data, double dt,
       Kernels::deposit_current_cart_2d<<<512, 256>>>(
           data_p, data.particles.number(), dt, step);
     } else if (grid.dim() == 3) {
-      Kernels::deposit_current_cart_3d<<<512, 128>>>(
+      Kernels::deposit_current_cart_3d<<<512, 256>>>(
           data_p, data.particles.number(), dt, step);
     }
     CudaCheckError();
@@ -792,15 +796,21 @@ ptc_updater::update_particles(sim_data &data, double dt,
     timer::show_duration_since_stamp("Depositing particles", "ms",
                                      "ptc_deposit");
 
+    timer::stamp("send_j");
     m_env.send_add_guard_cells(data.J);
     if ((step + 1) % data.env.params().data_interval == 0) {
       for (int i = 0; i < data.env.params().num_species; i++) {
         m_env.send_add_guard_cells(data.Rho[i]);
       }
     }
+    timer::show_duration_since_stamp("Sending current", "ms",
+                                     "send_j");
 
     smooth_current(data, step);
+    timer::stamp("ptc_comm");
     m_env.send_particles(data.particles);
+    timer::show_duration_since_stamp("Communicating particles", "ms",
+                                     "ptc_comm");
   }
   // timer::show_duration_since_stamp("Sending guard cells", "ms",
   // "comm");

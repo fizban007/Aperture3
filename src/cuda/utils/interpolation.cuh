@@ -100,27 +100,34 @@ struct Interpolator3D {
 // for (int k = c3 - Interp::radius;
 //      k <= c3 + Interp::support - Interp::radius; k++) {
 #pragma unroll
-    for (int k = 0; k <= Interp::support; k++) {
-      int kk = k + c3 - Interp::radius;
-      size_t k_offset = kk * f.p.pitch * f.p.ysize;
+    for (int k = -Interp::radius; k <= Interp::support - Interp::radius;
+         k++) {
+      // int kk = k + c3;
+      size_t k_offset = (k + c3) * f.p.pitch * f.p.ysize;
+      Scalar interp3 = interp_cell(interp, x3, c3, k + c3, stagger[2]);
 #pragma unroll
-      for (int j = 0; j <= Interp::support; j++) {
+      for (int j = -Interp::radius;
+           j <= Interp::support - Interp::radius; j++) {
         // for (int j = c2 - Interp::radius;
         //      j <= c2 + Interp::support - Interp::radius; j++) {
-        int jj = j + c2 - Interp::radius;
-        size_t j_offset = jj * f.p.pitch;
+        // int jj = j + c2 - Interp::radius;
+        size_t j_offset = (j + c2) * f.p.pitch;
+        Scalar interp2 =
+            interp_cell(interp, x2, c2, j + c2, stagger[1]);
 #pragma unroll
-        for (int i = 0; i <= Interp::support; i++) {
+        for (int i = -Interp::radius;
+             i <= Interp::support - Interp::radius; i++) {
           // for (int i = c1 - Interp::radius;
           //      i <= c1 + Interp::support - Interp::radius; i++) {
-          int ii = i + c1 - Interp::radius;
+          // int ii = i + c1 - Interp::radius;
           size_t globalOffset =
-              k_offset + j_offset + ii * sizeof(Scalar);
+              k_offset + j_offset + (i + c1) * sizeof(Scalar);
 
           result += f[globalOffset] *
-                    interp_cell(interp, x1, c1, ii, stagger[0]) *
-                    interp_cell(interp, x2, c2, jj, stagger[1]) *
-                    interp_cell(interp, x3, c3, kk, stagger[2]);
+                    interp_cell(interp, x1, c1, i + c1, stagger[0]) *
+                    interp2 * interp3;
+          // interp_cell(interp, x2, c2, j + c2, stagger[1]) *
+          // interp_cell(interp, x3, c3, k + c3, stagger[2]);
         }
       }
     }

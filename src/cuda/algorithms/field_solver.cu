@@ -341,7 +341,10 @@ field_solver::update_fields(sim_data &data, double dt, uint32_t step) {
 
   update_b_field(data, dt);
   // Communicate the new B values to guard cells
+  timer::stamp("send_B");
   m_env.send_guard_cells(data.B);
+  timer::show_duration_since_stamp("Sending B field", "ms",
+                                   "send_B");
 
   update_e_field(data, dt);
   // Communicate the new E values to guard cells
@@ -350,7 +353,7 @@ field_solver::update_fields(sim_data &data, double dt, uint32_t step) {
   compute_divs(data);
 
   CudaSafeCall(cudaDeviceSynchronize());
-  timer::show_duration_since_stamp("Field update", "us",
+  timer::show_duration_since_stamp("Field update", "ms",
                                    "field_update");
 }
 

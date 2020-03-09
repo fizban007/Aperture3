@@ -51,9 +51,9 @@ CommandArgs::read_args(int argc, char* argv[], SimParams& params) {
     params.conf_file = result["config"].as<std::string>();
     params.restart_file = result["restart_file"].as<std::string>();
   } catch (std::exception& e) {
-    Logger::err("Error");
-    Logger::err(e.what());
-    std::cout << m_options->help({""}) << std::endl;
+    Logger::err("Error: {}", e.what());
+    // Logger::err(e.what());
+    std::cout << m_options->help() << std::endl;
     throw(exceptions::program_option_terminate());
   }
 }
