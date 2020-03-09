@@ -23,6 +23,13 @@ class Logger {
   static bool open_log_file();
 
   template <typename... Args>
+  static void print(const char* str, Args&&... args) {
+    if (m_rank == 0) {
+      fmt::print(str, std::forward<Args>(args)...);
+    }
+  }
+
+  template <typename... Args>
   static void err(const char* str, Args&&... args) {
     fmt::print(stderr, str, std::forward<Args>(args)...);
     fmt::print("\n");
@@ -74,7 +81,7 @@ class Logger {
       if (m_file == nullptr)
         if (!open_log_file()) {
           fmt::print("File can't be opened!");
-          return; 
+          return;
         }
       fmt::print(m_file, str, std::forward<Args>(args)...);
       fmt::print("\n");
