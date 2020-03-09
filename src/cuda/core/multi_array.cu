@@ -152,7 +152,7 @@ multi_array<T>::add_from(self_type& other, const Index& idx_src,
 
   // By default, this only carries out the addition on device, so we
   // first need to copy to device
-  other.copy_to_device();
+  // other.copy_to_device();
 
   if (dim() == 3) {
     dim3 gridSize(8, 16, 16);

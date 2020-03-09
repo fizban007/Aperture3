@@ -111,11 +111,11 @@ main(int argc, char* argv[]) {
     }
 
     // Inject particles
-    // if (env.params().inject_particles && step % 2 == 0)
-    //   ptc_updater.inject_ptc(
-    //       data, 4, 0.02, 0.0, 0.0,
-    //       // 1.1 * omega / env.params().omega, omega);
-    //       1.0, omega);
+    if (env.params().inject_particles && step % 2 == 0)
+      ptc_updater.inject_ptc(
+          data, 4, 0.02, 0.0, 0.0,
+          // 1.1 * omega / env.params().omega, omega);
+          1.0, omega);
 
     // Update particles (push and deposit, and handle boundary)
     ptc_updater.update_particles(data, dt, step);

@@ -731,8 +731,10 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     // timer::stamp("comm");
     // m_env.send_sub_guard_cells(data.J);
     m_env.send_add_guard_cells(data.J);
+    m_env.send_guard_cells(data.J);
     for (int i = 0; i < data.env.params().num_species; i++) {
       m_env.send_add_guard_cells(data.Rho[i]);
+      m_env.send_guard_cells(data.Rho[i]);
     }
 
     Logger::print_debug("current smoothing {} times",

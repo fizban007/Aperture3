@@ -224,6 +224,7 @@ data_exporter::copy_config_file() {
 
 void
 data_exporter::write_xmf_head(std::ofstream& fs) {
+  if (m_env.domain_info().rank != 0) return;
   fs << "<?xml version=\"1.0\" ?>" << std::endl;
   fs << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>" << std::endl;
   fs << "<Xdmf>" << std::endl;
@@ -235,6 +236,7 @@ data_exporter::write_xmf_head(std::ofstream& fs) {
 
 void
 data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
+  if (m_env.domain_info().rank != 0) return;
   // std::string dim_str;
   auto& grid = m_env.super_grid();
   auto &mesh = grid.mesh();
@@ -291,6 +293,7 @@ data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
 
 void
 data_exporter::write_xmf_step_header(std::string& buffer, double time) {
+  if (m_env.domain_info().rank != 0) return;
   // std::string dim_str;
   // auto& grid = m_env.local_grid();
   auto& grid = m_env.super_grid();
@@ -355,16 +358,19 @@ data_exporter::write_xmf_step_header(std::string& buffer, double time) {
 
 void
 data_exporter::write_xmf_step_close(std::ofstream& fs) {
+  if (m_env.domain_info().rank != 0) return;
   fs << "</Grid>" << std::endl;
 }
 
 void
 data_exporter::write_xmf_step_close(std::string& buffer) {
+  if (m_env.domain_info().rank != 0) return;
   buffer += "</Grid>\n";
 }
 
 void
 data_exporter::write_xmf_tail(std::ofstream& fs) {
+  if (m_env.domain_info().rank != 0) return;
   fs << "</Grid>" << std::endl;
   fs << "</Domain>" << std::endl;
   fs << "</Xdmf>" << std::endl;
@@ -372,6 +378,7 @@ data_exporter::write_xmf_tail(std::ofstream& fs) {
 
 void
 data_exporter::write_xmf_tail(std::string& buffer) {
+  if (m_env.domain_info().rank != 0) return;
   buffer += "</Grid>\n";
   buffer += "</Domain>\n";
   buffer += "</Xdmf>\n";
@@ -584,6 +591,7 @@ data_exporter::load_snapshot(const std::string& filename,
 void
 data_exporter::prepare_xmf_restart(uint32_t restart_step,
                                    int data_interval, float time) {
+  if (m_env.domain_info().rank != 0) return;
   boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
   boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
   boost::filesystem::remove(xmf_bak);
@@ -625,23 +633,25 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
                             double time) {
   data.copy_to_host();
 
-  if (!m_xmf.is_open()) {
+  if (!m_xmf.is_open() && m_env.domain_info().rank == 0) {
     m_xmf.open(outputDirectory + "data.xmf");
   }
   write_xmf_step_header(m_xmf_buffer, time);
 
   write_field_output(data, timestep, time);
 
-  write_xmf_step_close(m_xmf_buffer);
-  write_xmf_tail(m_xmf_buffer);
+  if (m_env.domain_info().rank == 0) {
+    write_xmf_step_close(m_xmf_buffer);
+    write_xmf_tail(m_xmf_buffer);
 
-  if (timestep == 0) {
-    write_xmf_head(m_xmf);
-  } else {
-    m_xmf.seekp(-26, std::ios_base::end);
+    if (timestep == 0) {
+      write_xmf_head(m_xmf);
+    } else {
+      m_xmf.seekp(-26, std::ios_base::end);
+    }
+    m_xmf << m_xmf_buffer;
+    m_xmf_buffer = "";
   }
-  m_xmf << m_xmf_buffer;
-  m_xmf_buffer = "";
 
   write_ptc_output(data, timestep, time);
 }
@@ -811,19 +821,21 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
 
   write_multi_array(tmp_grid_data, name, dims, offset, file);
 
-  m_xmf_buffer += fmt::format(
-      "  <Attribute Name=\"{}\" Center=\"Node\" "
-      "AttributeType=\"Scalar\">\n",
-      name);
-  m_xmf_buffer += fmt::format(
-      "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
-      "Precision=\"4\" Format=\"HDF\">\n",
-      m_dim_str);
-  m_xmf_buffer +=
-      fmt::format("      fld.{:05d}.h5:{}\n",
-                  timestep / m_env.params().data_interval, name);
-  m_xmf_buffer += "    </DataItem>\n";
-  m_xmf_buffer += "  </Attribute>\n";
+  if (m_env.domain_info().rank == 0) {
+    m_xmf_buffer += fmt::format(
+        "  <Attribute Name=\"{}\" Center=\"Node\" "
+        "AttributeType=\"Scalar\">\n",
+        name);
+    m_xmf_buffer += fmt::format(
+        "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+        "Precision=\"4\" Format=\"HDF\">\n",
+        m_dim_str);
+    m_xmf_buffer +=
+        fmt::format("      fld.{:05d}.h5:{}\n",
+                    timestep / m_env.params().data_interval, name);
+    m_xmf_buffer += "    </DataItem>\n";
+    m_xmf_buffer += "  </Attribute>\n";
+  }
 }
 
 template <typename T>
@@ -844,19 +856,21 @@ data_exporter::add_grid_output(multi_array<T>& array, Stagger stagger,
     if (dims[i] > downsample) dims[i] /= downsample;
     offset[i] = m_env.grid().mesh().offset[i] / downsample;
   }
-  m_xmf_buffer += fmt::format(
-      "  <Attribute Name=\"{}\" Center=\"Node\" "
-      "AttributeType=\"Scalar\">\n",
-      name);
-  m_xmf_buffer += fmt::format(
-      "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
-      "Precision=\"4\" Format=\"HDF\">\n",
-      m_dim_str);
-  m_xmf_buffer +=
-      fmt::format("      fld.{:05d}.h5:{}\n",
-                  timestep / m_env.params().data_interval, name);
-  m_xmf_buffer += "    </DataItem>\n";
-  m_xmf_buffer += "  </Attribute>\n";
+  if (m_env.domain_info().rank == 0) {
+    m_xmf_buffer += fmt::format(
+        "  <Attribute Name=\"{}\" Center=\"Node\" "
+        "AttributeType=\"Scalar\">\n",
+        name);
+    m_xmf_buffer += fmt::format(
+        "    <DataItem Dimensions=\"{}\" NumberType=\"Float\" "
+        "Precision=\"4\" Format=\"HDF\">\n",
+        m_dim_str);
+    m_xmf_buffer +=
+        fmt::format("      fld.{:05d}.h5:{}\n",
+                    timestep / m_env.params().data_interval, name);
+    m_xmf_buffer += "    </DataItem>\n";
+    m_xmf_buffer += "  </Attribute>\n";
+  }
 
   file.write_parallel(tmp_grid_data, dims, offset,
                       tmp_grid_data.extent(), Index(0, 0, 0), name);

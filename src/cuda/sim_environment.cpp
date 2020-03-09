@@ -102,6 +102,10 @@ sim_environment::send_add_array_guard_cells_single_dir(
     Index recv_idx(0, 0, 0);
     recv_idx[dim] = (dir == -1 ? mesh.dims[dim] - 2 * mesh.guard[dim]
                                : mesh.guard[dim]);
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+#else
+    m_recv_buffers[dim].copy_to_device();
+#endif
     array.add_from(m_recv_buffers[dim], Index(0, 0, 0), recv_idx,
                    m_recv_buffers[dim].extent());
   }
