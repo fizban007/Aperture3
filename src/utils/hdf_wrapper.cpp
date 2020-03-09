@@ -120,6 +120,12 @@ h5datatype<uint32_t>() {
 
 template <>
 hid_t
+h5datatype<int>() {
+  return H5T_NATIVE_INT;
+}
+
+template <>
+hid_t
 h5datatype<uint64_t>() {
   return H5T_NATIVE_UINT64;
 }
