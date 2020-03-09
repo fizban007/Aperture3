@@ -23,7 +23,8 @@ downsample(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int k = threadIdx.z + blockIdx.z * blockDim.z;
   if (i < dst_ext.x && j < dst_ext.y && k < dst_ext.z) {
     size_t orig_idx =
-        (i * d + offset.x) * sizeof(T) + (j * d + offset.y) * orig_data.p.pitch +
+        (i * d + offset.x) * sizeof(T) +
+        (j * d + offset.y) * orig_data.p.pitch +
         (k * d + offset.z) * orig_data.p.pitch * orig_data.p.ysize;
     size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch +
                      k * dst_data.p.pitch * dst_data.p.ysize;
@@ -42,8 +43,8 @@ downsample2d(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   int j = threadIdx.y + blockIdx.y * blockDim.y;
   if (i < dst_ext.x && j < dst_ext.y) {
-    size_t orig_idx =
-        (i * d + offset.x) * sizeof(T) + (j * d + offset.y) * orig_data.p.pitch;
+    size_t orig_idx = (i * d + offset.x) * sizeof(T) +
+                      (j * d + offset.y) * orig_data.p.pitch;
     size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch;
 
     dst_data[dst_idx] = interpolate2d(
@@ -58,12 +59,11 @@ downsample1d(pitchptr<T> orig_data, pitchptr<float> dst_data,
              int d) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i < dst_ext.x) {
-    size_t orig_idx =
-        (i * d + offset.x) * sizeof(T);
+    size_t orig_idx = (i * d + offset.x) * sizeof(T);
     size_t dst_idx = i * sizeof(T);
 
-    dst_data[dst_idx] = interpolate1d(
-        orig_data, orig_idx, st, Stagger(0b111));
+    dst_data[dst_idx] =
+        interpolate1d(orig_data, orig_idx, st, Stagger(0b111));
   }
 }
 
@@ -111,7 +111,7 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
 
   check_dimensions(other, idx_src, idx_dst, ext);
   cudaExtent cu_ext = cuda_ext(ext, T{});
-      // make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
+  // make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 
   // Here we use the convention of:
   // cudaMemcpyHostToHost = 0
@@ -182,17 +182,19 @@ multi_array<T>::alloc_mem(const Extent& ext) {
   auto size = ext.size();
   m_data_h = new T[size];
 
-  // auto extent = cuda_ext(ext, T{});
-  // cudaPitchedPtr ptr;
-  // CudaSafeCall(cudaMalloc3D(&ptr, extent));
-  // m_data_d = ptr.ptr;
-  // m_pitch = ptr.pitch;
-  CudaSafeCall(cudaMalloc(&m_data_d, size * sizeof(T)));
-  m_pitch = ext.x * sizeof(T);
-  cudaPitchedPtr ptr = make_cudaPitchedPtr(m_data_d, m_pitch, ext.x, ext.y);
+  auto extent = cuda_ext(ext, T{});
+  cudaPitchedPtr ptr;
+  CudaSafeCall(cudaMalloc3D(&ptr, extent));
+  m_data_d = ptr.ptr;
+  m_pitch = ptr.pitch;
+  // CudaSafeCall(cudaMalloc(&m_data_d, size * sizeof(T)));
+  // m_pitch = ext.x * sizeof(T);
+  // cudaPitchedPtr ptr = make_cudaPitchedPtr(m_data_d, m_pitch, ext.x,
+  // ext.y);
   Logger::print_info("pitch is {}, x is {}, y is {}, z is {}", m_pitch,
                      ptr.xsize, ptr.ysize, ext.z);
-  Logger::print_info("--- Allocated {} bytes", m_pitch * ptr.ysize * ext.z);
+  Logger::print_info("--- Allocated {} bytes",
+                     m_pitch * ptr.ysize * ext.z);
 }
 
 template <typename T>
@@ -216,23 +218,21 @@ multi_array<T>::assign_dev(const T& value) {
     // Logger::print_info("assign_dev 3d version");
     dim3 blockSize(8, 8, 8);
     // dim3 gridSize(8, 8, 8);
-    dim3 gridSize((this->m_extent.x + 7) / 8,
-                  (this->m_extent.y + 7) / 8,
-                  (this->m_extent.z + 7) / 8);
+    dim3 gridSize((m_extent.x + 7) / 8, (m_extent.y + 7) / 8,
+                  (m_extent.z + 7) / 8);
     Kernels::map_array_unary_op<T><<<gridSize, blockSize>>>(
-        p, this->m_extent, detail::Op_AssignConst<T>(value));
+        p, m_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
   } else if (m_extent.height() > 1) {
     // Logger::print_info("assign_dev 2d version");
     dim3 blockSize(32, 16);
-    dim3 gridSize((this->m_extent.x + 31) / 32,
-                  (this->m_extent.y + 15) / 16);
+    dim3 gridSize((m_extent.x + 31) / 32, (m_extent.y + 15) / 16);
     Kernels::map_array_unary_op_2d<T><<<gridSize, blockSize>>>(
-        p, this->m_extent, detail::Op_AssignConst<T>(value));
+        p, m_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
   } else if (m_extent.width() > 1) {
-    Kernels::map_array_unary_op_1d<T><<<64, 128>>>(
-        p, this->m_extent, detail::Op_AssignConst<T>(value));
+    Kernels::map_array_unary_op_1d<T>
+        <<<64, 128>>>(p, m_extent, detail::Op_AssignConst<T>(value));
     CudaCheckError();
   }
 }
@@ -251,7 +251,8 @@ multi_array<T>::copy_to_host() {
   myParms.extent = cuda_ext(m_extent, T{});
   myParms.kind = cudaMemcpyDeviceToHost;
 
-  // Logger::print_info("copy to host with dev pitch {}, host pitch {}", m_pitch,
+  // Logger::print_info("copy to host with dev pitch {}, host pitch {}",
+  // m_pitch,
   //                    sizeof(T) * m_extent.width());
   CudaSafeCall(cudaMemcpy3D(&myParms));
 }
@@ -282,8 +283,8 @@ multi_array<T>::downsample(int d, multi_array<float>& array,
     int blockSize = 512;
     int gridSize = (blockSize + ext.x - 1) / blockSize;
     Kernels::downsample1d<<<gridSize, blockSize>>>(
-        get_pitchptr(*this), get_pitchptr(array),
-        m_extent, array.extent(), offset, stagger, d);
+        get_pitchptr(*this), get_pitchptr(array), m_extent,
+        array.extent(), offset, stagger, d);
     CudaCheckError();
   } else if (ext.z == 1) {  // Use 2D version
     dim3 blockSize(32, 16);

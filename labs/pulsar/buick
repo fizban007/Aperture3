@@ -10,7 +10,7 @@ if [ ! -z $opt ] && [ $opt = "cmake" ]; then
     shift
     cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
 elif [ ! -z $opt ] && [ $opt = "build" ]; then
-    make
+    make -j 4 -s
 elif [ ! -z $opt ] && [ $opt = "clean" ]; then
     if [ -f "Makefile" ]; then
         make clean
@@ -20,7 +20,7 @@ else
     # Argument not supplied, or just followed by cmake arguments, run
     # cmake if the build dir does not contain a makefile
     if [ -f "Makefile" ]; then
-        make
+        make -j 4 -s
     else
         cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
     fi

@@ -134,13 +134,14 @@ __global__ void fill_particles(particle_data ptc, size_t number, Scalar weight,
       ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
       ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
       // ptc.E[idx] = ptc.E[idx + 1] = 1.0f;
+      Scalar theta = dev_mesh.pos(1, dev_mesh.get_c2(cell), ptc.x2[idx]);
       ptc.E[idx] = sqrt(1.0f + ptc.p1[idx] * ptc.p1[idx] +
                         ptc.p2[idx] * ptc.p2[idx] + ptc.p3[idx] * ptc.p3[idx]);
       ptc.E[idx + 1] = sqrt(1.0f + ptc.p1[idx + 1] * ptc.p1[idx + 1] +
                             ptc.p2[idx + 1] * ptc.p2[idx + 1] +
                             ptc.p3[idx + 1] * ptc.p3[idx + 1]);
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
-      ptc.weight[idx] = ptc.weight[idx + 1] = weight;
+      ptc.weight[idx] = ptc.weight[idx + 1] = weight * sin(theta);
       ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
       ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
     }

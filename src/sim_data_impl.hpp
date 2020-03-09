@@ -79,7 +79,7 @@ sim_data::sort_particles() {
   timer::stamp("ptc_sort");
   particles.sort_by_cell(env.local_grid());
   photons.sort_by_cell(env.local_grid());
-  timer::show_duration_since_stamp("Sorting particles", "us",
+  timer::show_duration_since_stamp("Sorting particles", "ms",
                                    "ptc_sort");
 }
 
@@ -114,6 +114,43 @@ sim_data::copy_to_host() {
   photon_num.copy_to_host();
   // Logger::print_debug("Sync ph_flux");
   ph_flux.copy_to_host();
+}
+
+void
+sim_data::copy_to_device() {
+  // Logger::print_debug("Sync E");
+  E.copy_to_device();
+  // Logger::print_debug("Sync E");
+  Ebg.copy_to_device();
+  // Logger::print_debug("Sync B");
+  B.copy_to_device();
+  // Logger::print_debug("Sync B");
+  Bbg.copy_to_device();
+  // Logger::print_debug("Sync J");
+  J.copy_to_device();
+  // Logger::print_debug("Sync rho");
+  for (int n = 0; n < num_species; n++)
+    Rho[n].copy_to_device();
+  // Logger::print_debug("Sync gamma");
+  for (int n = 0; n < num_species; n++)
+    gamma[n].copy_to_device();
+  // Logger::print_debug("Sync ptc_num");
+  for (int n = 0; n < num_species; n++)
+    ptc_num[n].copy_to_device();
+  // Logger::print_debug("Sync divE");
+  divE.copy_to_device();
+  // Logger::print_debug("Sync divB");
+  divB.copy_to_device();
+  // Logger::print_debug("Sync EdotB");
+  EdotB.copy_to_device();
+  // Logger::print_debug("Sync photon_produced");
+  photon_produced.copy_to_device();
+  // Logger::print_debug("Sync pair_produced");
+  pair_produced.copy_to_device();
+  // Logger::print_debug("Sync photon_num");
+  photon_num.copy_to_device();
+  // Logger::print_debug("Sync ph_flux");
+  ph_flux.copy_to_device();
 }
 
 }

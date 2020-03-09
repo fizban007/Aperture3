@@ -81,6 +81,7 @@ class data_exporter {
 
   multi_array<float> tmp_grid_data;  //!< This stores the temporary
                                      //!< downsampled data for output
+  Extent m_out_ext;
   void* tmp_ptc_data;
 };
 

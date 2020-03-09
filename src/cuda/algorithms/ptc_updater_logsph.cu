@@ -49,7 +49,7 @@ vay_push_logsph_2d(data_ptrs data, size_t num, Scalar dt,
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = states[tid];
   for (size_t idx = tid; idx < num; idx += blockDim.x * gridDim.x) {
-    user_push_2d_logsph<3>(data, idx, dt, localState);
+    user_push_2d_logsph<1>(data, idx, dt, localState);
   }
   states[tid] = localState;
 }
@@ -711,7 +711,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     if (data.particles.number() > 0) {
       // m_J1.initialize();
       // m_J2.initialize();
-      Kernels::deposit_and_move_2d_log_sph<3><<<256, 512>>>(
+      Kernels::deposit_and_move_2d_log_sph<1><<<256, 512>>>(
           data_p, data.particles.number(), mesh_ptrs, dt, step,
           m_env.is_boundary(2), m_env.is_boundary(3));
       CudaCheckError();
@@ -783,24 +783,24 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     }
     // timer::stamp("ph_update");
     // Skip empty particle array
-    if (data.photons.number() > 0) {
-      Logger::print_info(
-          "Updating {} photons in log spherical coordinates",
-          data.photons.number());
-      Kernels::move_photons<<<256, 512>>>(
-          data.photons.data(), data.photons.number(), dt,
-          m_env.is_boundary(2), m_env.is_boundary(3));
-      CudaCheckError();
-    }
-    CudaSafeCall(cudaDeviceSynchronize());
     // timer::show_duration_since_stamp("Updating photons", "us",
     //                                  "ph_update");
+    m_env.send_particles(data.particles);
   }
+  if (data.photons.number() > 0) {
+    Logger::print_info(
+        "Updating {} photons in log spherical coordinates",
+        data.photons.number());
+    Kernels::move_photons<<<256, 512>>>(
+        data.photons.data(), data.photons.number(), dt,
+        m_env.is_boundary(2), m_env.is_boundary(3));
+    CudaCheckError();
+    m_env.send_particles(data.photons);
+  }
+  CudaSafeCall(cudaDeviceSynchronize());
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
   // data.send_particles();
-  m_env.send_particles(data.particles);
-  m_env.send_particles(data.photons);
 
   apply_boundary(data, dt, step);
   timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");

@@ -40,6 +40,7 @@ struct sim_data {
   void check_dev_mesh();
   void compute_edotb();
   void copy_to_host();
+  void copy_to_device();
 
   sim_environment& env;
   vector_field<Scalar> E;

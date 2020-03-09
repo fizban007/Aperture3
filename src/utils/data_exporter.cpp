@@ -5,7 +5,7 @@
 #include "sim_params.h"
 #include "utils/mpi_helper.h"
 #include <boost/filesystem.hpp>
-#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <type_traits>
 #include <vector>
 
@@ -80,10 +80,12 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   auto& params = env.params();
   auto& mesh = m_env.local_grid().mesh();
   auto out_ext = mesh.extent_less();
+  m_out_ext = m_env.super_grid().mesh().extent_less();
   auto d = m_env.params().downsample;
   for (int i = 0; i < 3; i++) {
     if (i < m_env.local_grid().dim()) {
       out_ext[i] /= d;
+      m_out_ext[i] /= d;
     }
   }
   tmp_grid_data = multi_array<float>(out_ext);
@@ -234,17 +236,18 @@ data_exporter::write_xmf_head(std::ofstream& fs) {
 void
 data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
   // std::string dim_str;
-  auto& grid = m_env.local_grid();
-  // auto &mesh = grid.mesh();
+  auto& grid = m_env.super_grid();
+  auto &mesh = grid.mesh();
+  auto ext = mesh.extent_less();
   if (grid.dim() == 3) {
     m_dim_str =
-        fmt::format("{} {} {}", tmp_grid_data.depth(),
-                    tmp_grid_data.height(), tmp_grid_data.width());
+        fmt::format("{} {} {}", m_out_ext.depth(),
+                    m_out_ext.height(), m_out_ext.width());
   } else if (grid.dim() == 2) {
-    m_dim_str = fmt::format("{} {}", tmp_grid_data.height(),
-                            tmp_grid_data.width());
+    m_dim_str = fmt::format("{} {}", m_out_ext.height(),
+                            m_out_ext.width());
   } else if (grid.dim() == 1) {
-    m_dim_str = fmt::format("{} 1", tmp_grid_data.width());
+    m_dim_str = fmt::format("{} 1", m_out_ext.width());
   }
 
   fs << "<Grid Name=\"quadmesh\" Type=\"Uniform\">" << std::endl;
@@ -289,17 +292,20 @@ data_exporter::write_xmf_step_header(std::ofstream& fs, double time) {
 void
 data_exporter::write_xmf_step_header(std::string& buffer, double time) {
   // std::string dim_str;
-  auto& grid = m_env.local_grid();
+  // auto& grid = m_env.local_grid();
+  auto& grid = m_env.super_grid();
+  auto &mesh = grid.mesh();
+  auto ext = mesh.extent_less();
   // auto &mesh = grid.mesh();
   if (grid.dim() == 3) {
     m_dim_str =
-        fmt::format("{} {} {}", tmp_grid_data.depth(),
-                    tmp_grid_data.height(), tmp_grid_data.width());
+        fmt::format("{} {} {}", m_out_ext.depth(),
+                    m_out_ext.height(), m_out_ext.width());
   } else if (grid.dim() == 2) {
-    m_dim_str = fmt::format("{} {}", tmp_grid_data.height(),
-                            tmp_grid_data.width());
+    m_dim_str = fmt::format("{} {}", m_out_ext.height(),
+                            m_out_ext.width());
   } else if (grid.dim() == 1) {
-    m_dim_str = fmt::format("{} 1", tmp_grid_data.width());
+    m_dim_str = fmt::format("{} 1", m_out_ext.width());
   }
 
   buffer += "<Grid Name=\"quadmesh\" Type=\"Uniform\">\n";
@@ -405,13 +411,15 @@ data_exporter::save_snapshot(const std::string& filename,
       idx_dst[i] += mesh.guard[i];
       idx_src[i] += mesh.guard[i];
     }
-    if (m_env.domain_info().neighbor_left[i] == NEIGHBOR_NULL) {
+    if (m_env.domain_info().neighbor_left[i] == MPI_PROC_NULL) {
       ext[i] += mesh.guard[i];
     }
-    if (m_env.domain_info().neighbor_right[i] == NEIGHBOR_NULL) {
+    if (m_env.domain_info().neighbor_right[i] == MPI_PROC_NULL) {
       ext[i] += mesh.guard[i];
     }
   }
+
+  Logger::print_debug("ext_total is {}, idx_dst is {}, ext is {}", ext_total, idx_dst, ext);
 
   // Write to snapshot file
   datafile.write_parallel(data.E.data(0), ext_total, idx_dst, ext,
@@ -448,12 +456,6 @@ data_exporter::save_snapshot(const std::string& filename,
 
   // No need to write diagnostics, or derived quantities like current,
   // rho, density, etc.
-
-  add_ptc_output(data.particles.data(), data.particles.number(),
-                 datafile, "ptc_");
-  add_ptc_output(data.photons.data(), data.photons.number(), datafile,
-                 "ph_");
-
   // write the number of particles in each rank into the hdf5 file
   uint64_t ptc_num = data.particles.number();
   uint64_t ph_num = data.photons.number();
@@ -466,6 +468,12 @@ data_exporter::save_snapshot(const std::string& filename,
   datafile.write(time, "time");
   datafile.write(params.data_interval, "data_interval");
   datafile.write(num_ranks, "num_ranks");
+
+
+  add_ptc_output(data.particles.data(), data.particles.number(),
+                 datafile, "ptc_");
+  add_ptc_output(data.photons.data(), data.photons.number(), datafile,
+                 "ph_");
 
   datafile.close();
 }
@@ -508,13 +516,15 @@ data_exporter::load_snapshot(const std::string& filename,
       idx_src[i] += mesh.guard[i];
       idx_dst[i] += mesh.guard[i];
     }
-    if (m_env.domain_info().neighbor_left[i] == NEIGHBOR_NULL) {
+    if (m_env.domain_info().neighbor_left[i] == MPI_PROC_NULL) {
       ext[i] += mesh.guard[i];
     }
-    if (m_env.domain_info().neighbor_right[i] == NEIGHBOR_NULL) {
+    if (m_env.domain_info().neighbor_right[i] == MPI_PROC_NULL) {
       ext[i] += mesh.guard[i];
     }
   }
+
+  Logger::print_debug("idx_dst is {}, ext is {}, idx_src is {}", idx_dst, ext, idx_src);
 
   datafile.read_subset(data.E.data(0), "Ex", idx_src, ext, idx_dst);
   datafile.read_subset(data.E.data(1), "Ey", idx_src, ext, idx_dst);
@@ -539,6 +549,9 @@ data_exporter::load_snapshot(const std::string& filename,
   step = datafile.read_scalar<uint32_t>("step");
   time = datafile.read_scalar<Scalar>("time");
 
+  data.copy_to_device();
+  data.init_bg_fields();
+
   m_env.send_guard_cells(data.E);
   m_env.send_guard_cells(data.B);
   m_env.send_guard_cells(data.Ebg);
@@ -550,13 +563,22 @@ data_exporter::load_snapshot(const std::string& filename,
   datafile.read_subset(&ph_num, 1, "ph_num", rank, 1, 0);
 
   read_ptc_output(data.particles.data(), ptc_num, datafile, "ptc_");
-  read_ptc_output(data.photons.data(), ptc_num, datafile, "ph_");
+  read_ptc_output(data.photons.data(), ph_num, datafile, "ph_");
 
-  data.particles.sort_by_cell(grid);
-  data.photons.sort_by_cell(grid);
+  Logger::print_debug("Read {} particles from restart", ptc_num);
+  Logger::print_debug("Read {} photons from restart", ph_num);
+  data.particles.set_num(ptc_num);
+  data.photons.set_num(ph_num);
+  data.particles.clear_guard_cells(grid);
+  data.photons.clear_guard_cells(grid);
 
   auto data_interval = datafile.read_scalar<size_t>("data_interval");
   prepare_xmf_restart(step, data_interval, time);
+
+  datafile.close();
+
+  // data.particles.sort_by_cell(grid);
+  // data.sort_particles();
 }
 
 void
@@ -647,14 +669,14 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
   tracked[params.num_species] = ph.tracked_number();
 
   // Carry out an MPI scan to get the total number and local offset
-  bool is_empty = true;
+  // bool is_empty = true;
   for (int i = 0; i < params.num_species + 1; i++) {
     m_env.get_total_num_offset(tracked[i], total[i], offset[i]);
-    if (total[i] > 0) is_empty = false;
+    // if (total[i] > 0) is_empty = false;
   }
 
   // Skip if there is nothing to output
-  if (is_empty) return;
+  // if (is_empty) return;
 
   std::string filename =
       fmt::format("{}ptc.{:05d}.h5", outputDirectory,
@@ -755,6 +777,10 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                   datafile, timestep);
   add_grid_output(data.divB.data(), data.divB.stagger(), "divB",
                   datafile, timestep);
+  add_grid_output(data.photon_produced.data(), data.photon_produced.stagger(), "photon_produced",
+                  datafile, timestep);
+  add_grid_output(data.pair_produced.data(), data.pair_produced.stagger(), "pair_produced",
+                  datafile, timestep);
 
   datafile.close();
 }
@@ -845,6 +871,7 @@ data_exporter::add_ptc_output(Ptc& data, size_t num, H5File& file,
 
   void* data_ptr;
 
+  Logger::print_debug("num is {}, total is {}, offset is {}", num, total, offset);
 #ifdef USE_CUDA
   cudaPointerAttributes attributes;
   cudaPointerGetAttributes(&attributes, data.cell);
@@ -890,14 +917,16 @@ data_exporter::read_ptc_output(Ptc& data, size_t num, H5File& file,
   visit_struct::for_each(data, [&](const char* name, auto& ptr) {
     typedef typename std::remove_reference<decltype(*ptr)>::type x_type;
     if (is_device) {
-      cudaMemcpy(tmp_ptc_data, ptr, num * sizeof(x_type),
-                 cudaMemcpyDeviceToHost);
       data_ptr = tmp_ptc_data;
     } else {
       data_ptr = (void*)ptr;
     }
     file.read_subset((x_type*)data_ptr, num, prefix + std::string(name),
                      offset, num, 0);
+    if (is_device) {
+      cudaMemcpy(ptr, tmp_ptc_data, num * sizeof(x_type),
+                 cudaMemcpyHostToDevice);
+    }
   });
 #else
   visit_struct::for_each(data, [&](const char* name, auto& ptr) {
@@ -931,9 +960,17 @@ data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
       n_subset += 1;
     }
   }
-  file.write_parallel(
-      (T*)tmp_ptc_data, n_subset, total, offset, n_subset, 0,
-      fmt::format("{}_{}", particle_type_name(sp), name));
+
+  uint64_t sb_offset, sb_total;
+  m_env.get_total_num_offset(n_subset, sb_total, sb_offset);
+  // Logger::print_debug("n_subset is {}, sb_total is {}, sb_offset is {}", n_subset,
+  //                     sb_total, sb_offset);
+
+  if (sb_total > 0) {
+    file.write_parallel(
+        (T*)tmp_ptc_data, n_subset, sb_total, sb_offset, n_subset, 0,
+        fmt::format("{}_{}", particle_type_name(sp), name));
+  }
 }
 
 }  // namespace Aperture

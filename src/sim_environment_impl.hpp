@@ -321,7 +321,7 @@ sim_environment::send_add_guard_cells(vector_field<Scalar>& field) {
 template <typename T>
 void
 sim_environment::send_particles(T& ptc) {
-  Logger::print_info("Sending particles");
+  // Logger::print_info("Sending particles");
   auto& mesh = m_grid->mesh();
   auto& buffers = ptc_buffers(ptc);
   auto buf_ptrs = ptc_buffer_ptrs(ptc);
@@ -406,10 +406,10 @@ sim_environment::send_particles(T& ptc) {
   // Copy the central recv buffer into the main array
   ptc.copy_from(buffers[central], buffers[central].number(), 0,
                 ptc.number());
-  Logger::print_debug(
-      "Communication resulted in {} ptc in total, ptc has {} particles "
-      "now",
-      buffers[central].number(), ptc.number());
+  // Logger::print_debug(
+  //     "Communication resulted in {} ptc in total, ptc has {} particles "
+  //     "now",
+  //     buffers[central].number(), ptc.number());
   buffers[central].set_num(0);
 }
 
