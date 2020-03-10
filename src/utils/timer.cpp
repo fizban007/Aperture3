@@ -54,6 +54,7 @@ timer::show_duration_since_stamp(const std::string& routine_name,
 float
 timer::get_duration_since_stamp(const std::string& unit,
                                 const std::string& stamp_name) {
+  stamp_depth -= 1;
   t_now = high_resolution_clock::now();
   if (unit == "millisecond" || unit == "ms") {
     auto dur =
@@ -71,5 +72,4 @@ timer::get_duration_since_stamp(const std::string& unit,
         t_now - t_stamps[stamp_name]);
     return dur.count();
   }
-  stamp_depth -= 1;
 }

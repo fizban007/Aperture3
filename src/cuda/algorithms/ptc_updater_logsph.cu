@@ -805,7 +805,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
   // data.send_particles();
 
   apply_boundary(data, dt, step);
-  timer::show_duration_since_stamp("Ptc update", "us", "ptc_update");
+  timer::show_duration_since_stamp("Ptc update", "ms", "ptc_update");
 }
 
 void
