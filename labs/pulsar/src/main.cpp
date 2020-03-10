@@ -46,12 +46,12 @@ main(int argc, char* argv[]) {
     Scalar B0 = env.params().B0;
     Logger::print_debug("B0 in main is {}", B0);
     // auto& mesh = env.grid().mesh();
-    data.Bbg.initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    data.init_bg_B_field(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
       Scalar r = exp(x1);
       return 2.0 * B0 * cos(x2) / (r * r * r);
       // return B0 / (r * r);
     });
-    data.Bbg.initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
+    data.init_bg_B_field(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
       Scalar r = exp(x1);
       return B0 * sin(x2) / (r * r * r);
       // return 0.0;

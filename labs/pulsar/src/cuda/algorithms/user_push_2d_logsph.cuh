@@ -69,13 +69,11 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
       q_over_m;
   Scalar B1 =
       alpha *
-      (interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
-       interp(data.Bbg1, old_x1, old_x2, c1, c2, Stagger(0b001))) *
+      interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
       q_over_m;
   Scalar B2 =
       alpha *
-      (interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
-       interp(data.Bbg2, old_x1, old_x2, c1, c2, Stagger(0b010))) *
+      interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
       q_over_m;
   Scalar B3 =
       alpha *
