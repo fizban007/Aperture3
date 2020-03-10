@@ -18,7 +18,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 
-#include "cuda/radiation/user_radiative_functions.cuh"
+#include "cuda/radiation/user_radiative_functions.cu"
 
 namespace Aperture {
 
