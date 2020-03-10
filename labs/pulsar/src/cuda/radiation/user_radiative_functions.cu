@@ -70,8 +70,8 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar gamma = ptc.E[tid];
   // Scalar pi = std::sqrt(gamma * gamma - 1.0f);
   Scalar pi = std::sqrt(p1 * p1 + p2 * p2 + p3 * p3);
-  // Scalar r = std::exp(dev_mesh.pos(0, c1, x1));
-  // Scalar theta = dev_mesh.pos(1, c2, x2);
+  Scalar r = std::exp(dev_mesh.pos(0, c1, x1));
+  Scalar theta = dev_mesh.pos(1, c2, x2);
   // Scalar u = rng();
 
   // Energy of the photon emitted

@@ -703,7 +703,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       CudaCheckError();
     }
     CudaSafeCall(cudaDeviceSynchronize());
-    timer::show_duration_since_stamp("Pushing particles", "us",
+    timer::show_duration_since_stamp("Pushing particles", "ms",
                                      "ptc_push");
 
     timer::stamp("ptc_deposit");
@@ -720,7 +720,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       // CudaCheckError();
     }
     CudaSafeCall(cudaDeviceSynchronize());
-    timer::show_duration_since_stamp("Depositing particles", "us",
+    timer::show_duration_since_stamp("Depositing particles", "ms",
                                      "ptc_deposit");
 
     Kernels::process_j<<<dim3(32, 32), dim3(32, 32)>>>(data_p,
