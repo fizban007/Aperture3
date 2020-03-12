@@ -475,7 +475,7 @@ data_exporter::save_snapshot(const std::string& filename,
   datafile.write(time, "time");
   datafile.write(params.data_interval, "data_interval");
   datafile.write(num_ranks, "num_ranks");
-
+  datafile.write(m_output_num, "output_num");
 
   add_ptc_output(data.particles.data(), data.particles.number(),
                  datafile, "ptc_");
@@ -555,6 +555,7 @@ data_exporter::load_snapshot(const std::string& filename,
 
   step = datafile.read_scalar<uint32_t>("step");
   time = datafile.read_scalar<Scalar>("time");
+  m_output_num = datafile.read_scalar<int>("output_num");
 
   data.copy_to_device();
   data.init_bg_fields();
@@ -654,6 +655,7 @@ data_exporter::write_output(sim_data& data, uint32_t timestep,
   }
 
   write_ptc_output(data, timestep, time);
+  m_output_num += 1;
 }
 
 void
@@ -690,7 +692,8 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
 
   std::string filename =
       fmt::format("{}ptc.{:05d}.h5", outputDirectory,
-                  timestep / m_env.params().data_interval);
+                  // timestep / m_env.params().data_interval);
+                  m_output_num);
   H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
   auto& mesh = m_env.mesh();
@@ -753,7 +756,8 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                                   double time) {
   std::string filename =
       fmt::format("{}fld.{:05d}.h5", outputDirectory,
-                  timestep / m_env.params().data_interval);
+                  // timestep / m_env.params().data_interval);
+                  m_output_num);
   H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
   // user_write_field_output(data, *this, timestep, time, datafile);
