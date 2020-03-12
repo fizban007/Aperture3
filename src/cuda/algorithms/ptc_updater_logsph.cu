@@ -44,6 +44,7 @@ logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
 }
 
 __global__ void
+__launch_bounds__(256, 4)
 vay_push_logsph_2d(data_ptrs data, size_t num, Scalar dt,
                    curandState *states) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -132,7 +133,7 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
 
 template <int N>
 __global__ void
-__launch_bounds__(512, 4)
+__launch_bounds__(256, 4)
     deposit_and_move_2d_log_sph(data_ptrs data, size_t num,
                                 mesh_ptrs_log_sph mesh_ptrs, Scalar dt,
                                 uint32_t step, bool axis0, bool axis1) {
@@ -697,7 +698,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       Logger::print_info(
           "Updating {} particles in log spherical coordinates",
           data.particles.number());
-      Kernels::vay_push_logsph_2d<<<256, 512>>>(
+      Kernels::vay_push_logsph_2d<<<512, 256>>>(
           data_p, data.particles.number(), dt,
           (curandState *)data.d_rand_states);
       CudaCheckError();
@@ -711,7 +712,7 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     if (data.particles.number() > 0) {
       // m_J1.initialize();
       // m_J2.initialize();
-      Kernels::deposit_and_move_2d_log_sph<1><<<256, 512>>>(
+      Kernels::deposit_and_move_2d_log_sph<1><<<512, 256>>>(
           data_p, data.particles.number(), mesh_ptrs, dt, step,
           m_env.is_boundary(2), m_env.is_boundary(3));
       CudaCheckError();
@@ -752,17 +753,17 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
       CudaCheckError();
 
       Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J.data(1)), get_pitchptr(m_tmp_j2),
+          get_pitchptr(data.J.data(1)), get_pitchptr(m_tmp_j1),
           mesh_ptrs.A2_e, m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
-      data.J.data(1).copy_from(m_tmp_j2);
+      data.J.data(1).copy_from(m_tmp_j1);
       CudaCheckError();
 
       Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
-          get_pitchptr(data.J.data(2)), get_pitchptr(m_tmp_j2),
+          get_pitchptr(data.J.data(2)), get_pitchptr(m_tmp_j1),
           mesh_ptrs.A3_e, m_env.is_boundary(0), m_env.is_boundary(1),
           m_env.is_boundary(2), m_env.is_boundary(3));
-      data.J.data(2).copy_from(m_tmp_j2);
+      data.J.data(2).copy_from(m_tmp_j1);
       CudaCheckError();
 
       if ((step + 1) % data.env.params().data_interval == 0) {
