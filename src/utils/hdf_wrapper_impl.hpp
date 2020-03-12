@@ -281,7 +281,8 @@ void
 H5File::read_subset(T* array, size_t array_size,
                     const std::string& name, size_t idx_src, size_t len,
                     size_t idx_dst) {
-  hsize_t dims[3], array_dims[1];
+  hsize_t dims[1] = {0};
+  hsize_t array_dims[1] = {0};
   // dims[i] = ext_total[ext_total.dim() - 1 - i];
   array_dims[0] = array_size;
 
@@ -292,8 +293,8 @@ H5File::read_subset(T* array, size_t array_size,
 
   // Logger::print_debug("reading subset, dims[0] is {}", dims[0]);
   if (dims[0] == 0) {
-    H5Dclose(dataset);
     H5Sclose(dataspace);
+    H5Dclose(dataset);
     return;
   }
 
