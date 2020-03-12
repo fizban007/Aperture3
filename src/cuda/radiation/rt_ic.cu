@@ -150,7 +150,7 @@ gen_photon_e(Scalar gamma, curandState* state) {
   }
   // printf("b: %d, u: %f, l: %f, h: %f, bb: %f, result: %f\n", b, u, l, h, bb, result);
 
-  return std::max(std::min(result * gamma, gamma - 1.01), 0.0);
+  return max(min(result * gamma, gamma - 1.01), 0.0);
 }
 
 __device__ Scalar
@@ -467,7 +467,7 @@ inverse_compton::binary_search(float u, int n,
   } else {
     v2 = v;
     v1 = (b >= 0 ? array(b, n) : v);
-    return std::max(b, 0);
+    return max(b, 0);
   }
 }
 
