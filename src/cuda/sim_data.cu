@@ -194,7 +194,8 @@ void sim_data::initialize(sim_environment &env) {
 
   int seed = env.params().random_seed;
 
-  CudaSafeCall(cudaMalloc(&d_rand_states, 1024 * 512 * sizeof(curandState)));
+  // CudaSafeCall(cudaMalloc(&d_rand_states, 1024 * 512 * sizeof(curandState)));
+  CudaSafeCall(cudaMallocManaged(&d_rand_states, 1024 * 512 * sizeof(curandState)));
   init_rand_states((curandState *)d_rand_states, seed, 1024, 512);
   rand_state_size = sizeof(curandState);
 }
