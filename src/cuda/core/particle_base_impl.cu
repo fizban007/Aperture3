@@ -414,6 +414,7 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
                            m_index);
 
     CudaSafeCall(cudaDeviceSynchronize());
+
     int zone_offset = 0;
     if (mesh.dim() == 2)
       zone_offset = 9;
@@ -426,6 +427,8 @@ particle_base<ParticleClass>::copy_to_comm_buffers(
       buffers[i].set_num(m_zone_buffer_num[i + zone_offset]);
     }
     copy_ptc_to_buffers(m_data, m_number, m_index, buf_ptrs);
+
+    CudaSafeCall(cudaDeviceSynchronize());
   }
 }
 
