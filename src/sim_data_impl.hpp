@@ -81,6 +81,11 @@ sim_data::sort_particles() {
   photons.sort_by_cell(env.local_grid());
   timer::show_duration_since_stamp("Sorting particles", "ms",
                                    "ptc_sort");
+  uint64_t ptc_total, ptc_offset;
+  uint64_t ph_total, ph_offset;
+  env.get_total_num_offset(particles.number(), ptc_total, ptc_offset);
+  env.get_total_num_offset(photons.number(), ph_total, ph_offset);
+  Logger::print_info("There are {} particles and {} photons in total", ptc_total, ph_total);
 }
 
 void
