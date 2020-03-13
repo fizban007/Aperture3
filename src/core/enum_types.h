@@ -19,7 +19,7 @@ enum class FieldNormalization : unsigned char {
   volume
 };
 
-/// Particle types 
+/// Particle types
 enum class ParticleType : unsigned char { electron = 0, positron, ion };
 
 inline std::string particle_type_name(int type) {
@@ -29,6 +29,8 @@ inline std::string particle_type_name(int type) {
     return "positron";
   } else if (type == 2) {
     return "ion";
+  } else if (type == 3) {
+    return "photon";
   } else {
     return "unknown";
   }

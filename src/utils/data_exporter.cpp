@@ -702,9 +702,9 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
 
   auto& mesh = m_env.mesh();
   for (int i = 0; i <= params.num_species; i++) {
-    add_tracked_ptc_output<uint32_t>(
+    add_tracked_ptc_output<uint64_t>(
         data, i, "id", total[i], offset[i],
-        [&mesh](auto& data, uint64_t n, uint64_t nsb, uint32_t* p) {
+        [&mesh](auto& data, uint64_t n, uint64_t nsb, uint64_t* p) {
           p[nsb] = data.id[n];
         },
         datafile);
