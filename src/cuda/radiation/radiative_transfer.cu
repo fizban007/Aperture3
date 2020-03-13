@@ -85,6 +85,12 @@ produce_photons(data_ptrs data, size_t ptc_num, size_t ph_num,
       size_t offset = ph_num + start_pos + pos_in_block;
 
       emit_photon(data, tid, offset, rng);
+
+      float u = rng();
+      if (u < dev_params.track_percent) {
+        data.photons.flag[offset] = bit_or(PhotonFlag::tracked);
+        data.photons.id[offset] = dev_rank + atomicAdd(&dev_ph_id, 1);
+      }
     }
   }
 }
@@ -121,6 +127,7 @@ count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
       Scalar w = data.photons.weight[tid];
 
       atomicAdd(&data.pair_produced(c1, c2, c3), w);
+
     }
   }
 
@@ -157,6 +164,14 @@ produce_pairs(data_ptrs data, size_t ph_num, size_t ptc_num,
       }
 
       produce_pair(data, tid, offset, rng);
+
+      float u = rng();
+      if (u < dev_params.track_percent) {
+        data.particles.id[offset] = dev_rank + atomicAdd(&dev_ptc_id, 1);
+        data.particles.id[offset + 1] = dev_rank + atomicAdd(&dev_ptc_id, 1);
+        set_bit(data.particles.flag[offset], ParticleFlag::tracked);
+        set_bit(data.particles.flag[offset + 1], ParticleFlag::tracked);
+      }
     }
   }
 }

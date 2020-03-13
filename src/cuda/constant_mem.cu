@@ -42,6 +42,7 @@ init_dev_masses(const float masses[8]) {
 void
 init_dev_rank(int rank) {
   uint64_t r = rank;
+  r <<= 32;
   CudaSafeCall(cudaMemcpyToSymbol(dev_rank, (void*)&r, sizeof(uint64_t)));
 }
 

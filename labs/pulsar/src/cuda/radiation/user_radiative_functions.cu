@@ -128,6 +128,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   photons.weight[offset] = ptc.weight[tid];
   photons.path_left[offset] = 0.0;
   photons.cell[offset] = ptc.cell[tid];
+
 }
 
 __device__ bool
@@ -210,13 +211,14 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   assert(ptc.cell[offset_e] == MAX_CELL);
   assert(ptc.cell[offset_p] == MAX_CELL);
 #endif
-  // TODO: track photons
+
+  // float u = rng();
   ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
   ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
   ptc.flag[offset_e] = set_ptc_type_flag(
-      bit_or(ParticleFlag::secondary), ParticleType::electron);
+           bit_or(ParticleFlag::secondary), ParticleType::electron);
   ptc.flag[offset_p] = set_ptc_type_flag(
-      bit_or(ParticleFlag::secondary), ParticleType::positron);
+           bit_or(ParticleFlag::secondary), ParticleType::positron);
 
   // Set this photon to be empty
   photons.cell[tid] = MAX_CELL;

@@ -386,8 +386,8 @@ inject_ptc(data_ptrs data, size_t num, int inj_per_cell, Scalar p1,
                : bit_or(ParticleFlag::primary)),
           p_type);
       if (u < dev_params.track_percent) {
-        ptc.id[offset + n * 2] = atomicAdd(&dev_ptc_id, 1);
-        ptc.id[offset + n * 2 + 1] = atomicAdd(&dev_ptc_id, 1);
+        ptc.id[offset + n * 2] = dev_rank + atomicAdd(&dev_ptc_id, 1);
+        ptc.id[offset + n * 2 + 1] = dev_rank + atomicAdd(&dev_ptc_id, 1);
       }
     }
   }
