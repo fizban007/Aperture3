@@ -144,6 +144,14 @@ __global__ void fill_particles(particle_data ptc, size_t number, Scalar weight,
       ptc.weight[idx] = ptc.weight[idx + 1] = weight * sin(theta);
       ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
       ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
+
+      u = rng();
+      if (u < dev_params.track_percent) {
+        set_bit(ptc.flag[idx], ParticleFlag::tracked);
+        set_bit(ptc.flag[idx + 1], ParticleFlag::tracked);
+        ptc.id[idx] = dev_rank + atomicAdd(&dev_ptc_id, 1);
+        ptc.id[idx + 1] = dev_rank + atomicAdd(&dev_ptc_id, 1);
+      }
     }
   }
 }
