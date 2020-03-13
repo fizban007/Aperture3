@@ -114,13 +114,6 @@ count_pairs_produced(data_ptrs data, size_t number, int *pair_count,
     //   }
 
     if (check_produce_pair(data, tid, rng)) {
-      //     Scalar rho = max(std::abs(rho1(c1, c2) + rho0(c1, c2)),
-      //     0.0001f); Scalar N = rho1(c1, c2) - rho0(c1, c2); Scalar
-      //     multiplicity = N / rho;
-      //     // if (multiplicity > 20.0f) {
-      //     //   photons.cell[tid] = MAX_CELL;
-      //     //   continue;
-      //     // }
       pair_pos[tid] = atomicAdd(&pairsProduced, 1) + 1;
       int c1 = dev_mesh.get_c1(cell);
       int c2 = dev_mesh.get_c2(cell);

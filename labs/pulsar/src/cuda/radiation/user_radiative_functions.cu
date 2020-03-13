@@ -153,7 +153,7 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   Scalar rho = max(
       std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
       0.0001f);
-  Scalar N = data.Rho[0](c1, c2) - data.Rho[1](c1, c2);
+  Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
   Scalar multiplicity = N / rho;
   if (multiplicity > 50.0f) {
     photons.cell[tid] = MAX_CELL;

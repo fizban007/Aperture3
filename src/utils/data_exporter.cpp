@@ -721,7 +721,7 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
         [&mesh](auto& data, uint64_t n, uint64_t nsb, float* p) {
           auto cell = data.cell[n];
           auto x = data.x2[n];
-          p[nsb] = mesh.pos(0, mesh.get_c2(cell), x);
+          p[nsb] = mesh.pos(1, mesh.get_c2(cell), x);
         },
         datafile);
     add_tracked_ptc_output<float>(
@@ -729,7 +729,7 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
         [&mesh](auto& data, uint64_t n, uint64_t nsb, float* p) {
           auto cell = data.cell[n];
           auto x = data.x3[n];
-          p[nsb] = mesh.pos(0, mesh.get_c3(cell), x);
+          p[nsb] = mesh.pos(2, mesh.get_c3(cell), x);
         },
         datafile);
     add_tracked_ptc_output<float>(
