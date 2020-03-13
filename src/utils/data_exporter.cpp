@@ -701,7 +701,7 @@ data_exporter::write_ptc_output(sim_data& data, uint32_t timestep,
   H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
   auto& mesh = m_env.mesh();
-  for (int i = 0; i < params.num_species; i++) {
+  for (int i = 0; i <= params.num_species; i++) {
     add_tracked_ptc_output<uint32_t>(
         data, i, "id", total[i], offset[i],
         [&mesh](auto& data, uint64_t n, uint64_t nsb, uint32_t* p) {
@@ -988,11 +988,11 @@ data_exporter::add_tracked_ptc_output(sim_data& data, int sp,
   // Logger::print_debug("n_subset is {}, sb_total is {}, sb_offset is {}", n_subset,
   //                     sb_total, sb_offset);
 
-  if (sb_total > 0) {
-    file.write_parallel(
-        (T*)tmp_ptc_data, n_subset, sb_total, sb_offset, n_subset, 0,
-        fmt::format("{}_{}", particle_type_name(sp), name));
-  }
+  // if (sb_total > 0) {
+  file.write_parallel(
+      (T*)tmp_ptc_data, n_subset, sb_total, sb_offset, n_subset, 0,
+      fmt::format("{}_{}", particle_type_name(sp), name));
+  // }
 }
 
 }  // namespace Aperture
