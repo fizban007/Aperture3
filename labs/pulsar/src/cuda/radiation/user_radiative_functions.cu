@@ -91,8 +91,8 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
 
   Interpolator2D<Spline::spline_t<1>> interp;
   Scalar B1 = interp(data.B1, x1, x2, c1, c2, Stagger(0b001));
-  Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b001));
-  Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b001));
+  Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
+  Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
 
   //if (Eph < 2.1f) return;
@@ -163,11 +163,11 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   // return (photons.path_left[tid] <= 0.0f);
   Interpolator2D<Spline::spline_t<1>> interp;
   Scalar B1 = interp(data.B1, x1, x2, c1, c2, Stagger(0b001));
-  Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b001));
-  Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b001));
+  Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
+  Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
   Scalar cth = (B1 * p1 + B2 * p2 + B3 * p3) / (B * Eph);
-  Scalar chi = Eph * B / dev_params.BQ * sqrt(1.0 - cth * cth);
+  Scalar chi = Eph * B * sqrt(1.0 - cth * cth) / dev_params.BQ;
   return chi > 0.12;
 }
 
