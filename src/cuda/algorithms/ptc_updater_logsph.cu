@@ -329,7 +329,7 @@ inject_ptc(data_ptrs data, size_t num, int inj_per_cell, Scalar p1,
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
     Scalar sin_theta = std::sin(dev_mesh.pos(1, i, 0.5f));
     if (dev_params.q_e * dens >
-        1.0f * square(1.0f / dev_mesh.delta[1]) * sin_theta)
+        4.0f * square(1.0f / dev_mesh.delta[1]) * sin_theta)
       continue;
     // Scalar Er = data.E1(inject_i, i);
     // Scalar n_inj =

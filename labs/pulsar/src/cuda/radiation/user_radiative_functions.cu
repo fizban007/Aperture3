@@ -50,7 +50,7 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   // if (u <= rate && Eph > 1.0f) {
   //   printf("r is %f, theta is %f, gamma is %f, rho_c is %f, Eph is %f\n", r, theta, gamma, rc, Eph);
   // }
-  return (u < rate && Eph > 1.0f);
+  return (u < rate && Eph > 2.1f);
 }
 
 __device__ void
@@ -80,7 +80,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // if (tid < 1000) {
   //   printf("gamma is %f, Eph is %f\n", gamma, Eph);
   // }
-  // if (Eph < 2.1f) return;
+   if (Eph < 2.1f) return;
 
   Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
   // gamma = (gamma - std::abs(Eph));
@@ -95,7 +95,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b001));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
 
-  if (Eph < 2.1f) return;
+  //if (Eph < 2.1f) return;
   if (Eph * B / dev_params.BQ < 2.1f && p1 > 0.0f) return;
   // Do not track photons that can't convert
   // Scalar lph = min(
