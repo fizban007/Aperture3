@@ -372,6 +372,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
       data_p, mesh_ptrs, dt);
   CudaCheckError();
 
+  CudaSafeCall(cudaDeviceSynchronize());
   // Communicate the new B values to guard cells
   m_env.send_guard_cells(data.B);
   // m_env.send_guard_cells(data.J);
@@ -381,6 +382,7 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
       data_p, mesh_ptrs, dt);
   CudaCheckError();
 
+  CudaSafeCall(cudaDeviceSynchronize());
   // Communicate the new E values to guard cells
   m_env.send_guard_cells(data.E);
 
