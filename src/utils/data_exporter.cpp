@@ -840,7 +840,8 @@ data_exporter::add_grid_output(sim_data& data, const std::string& name,
         m_dim_str);
     m_xmf_buffer +=
         fmt::format("      fld.{:05d}.h5:{}\n",
-                    timestep / m_env.params().data_interval, name);
+                    // timestep / m_env.params().data_interval, name);
+                    m_output_num, name);
     m_xmf_buffer += "    </DataItem>\n";
     m_xmf_buffer += "  </Attribute>\n";
   }
@@ -875,7 +876,8 @@ data_exporter::add_grid_output(multi_array<T>& array, Stagger stagger,
         m_dim_str);
     m_xmf_buffer +=
         fmt::format("      fld.{:05d}.h5:{}\n",
-                    timestep / m_env.params().data_interval, name);
+                    // timestep / m_env.params().data_interval, name);
+                    m_output_num, name);
     m_xmf_buffer += "    </DataItem>\n";
     m_xmf_buffer += "  </Attribute>\n";
   }
