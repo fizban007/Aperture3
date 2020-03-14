@@ -15,8 +15,9 @@ namespace Kernels {
 
 __device__ Scalar
 beta_phi(Scalar r, Scalar theta) {
-  return -0.4f * dev_params.compactness * dev_params.omega *
-         std::sin(theta) / (r * r);
+  // return -0.4f * dev_params.compactness * dev_params.omega *
+  //        std::sin(theta) / (r * r);
+  return 0.0f;
 }
 
 __device__ Scalar
