@@ -3,8 +3,8 @@
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
 #include "cuda/grids/grid_log_sph_ptrs.h"
-#include "cuda/ptr_util.h"
 #include "cuda/utils/pitchptr.h"
+#include "grids/grid_log_sph.h"
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/timer.h"
@@ -27,18 +27,14 @@ alpha_gr(Scalar r) {
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                 pitchptr<Scalar> j1, pitchptr<Scalar> j2,
-                 pitchptr<Scalar> j3, mesh_ptrs_log_sph mesh_ptrs,
-                 Scalar dt) {
+compute_e_update_logsph(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs,
+                        Scalar dt) {
   // Load position parameters
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
-  size_t globalOffset = e1.compute_offset(n1, n2);
+  size_t globalOffset = data.E1.compute_offset(n1, n2);
 
   Scalar r = std::exp(dev_mesh.pos(0, n1, true));
   Scalar theta = dev_mesh.pos(1, n2, true);
@@ -50,125 +46,131 @@ compute_e_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
   if (std::abs(dev_mesh.pos(1, n2, true) - CONST_PI) < 1.0e-5) {
-    e1[globalOffset] += dt * (-4.0f * b3[globalOffset] * alpha_gr(r0) /
-                                  (dev_mesh.delta[1] * r0) -
-                              // alpha_gr(r0) * j1[globalOffset]);
-                              j1[globalOffset]);
-  } else {
-    e1[globalOffset] +=
-        // -dt * j1[globalOffset];
+    data.E1[globalOffset] +=
         dt *
-        ((b3(n1, n2 + 1) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2 + 1) -
-          b3(n1, n2) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2)) /
-             mesh_ptrs.A1_e(n1, n2) -
-         // alpha_gr(r0) * j1(n1, n2));
-         j1(n1, n2));
+        (-4.0f * (data.B3[globalOffset] - data.Bbg3[globalOffset]) *
+             alpha_gr(r0) / (dev_mesh.delta[1] * r0) -
+         // alpha_gr(r0) * j1[globalOffset]);
+         data.J1[globalOffset]);
+  } else {
+    data.E1[globalOffset] +=
+        // -dt * j1[globalOffset];
+        dt * (((data.B3(n1, n2 + 1) - data.Bbg3(n1, n2 + 1)) *
+                   alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2 + 1) -
+               (data.B3(n1, n2) - data.Bbg3(n1, n2)) * alpha_gr(r0) *
+                   mesh_ptrs.l3_b(n1, n2)) /
+                  mesh_ptrs.A1_e(n1, n2) -
+              // alpha_gr(r0) * j1(n1, n2));
+              data.J1(n1, n2));
   }
   // (Curl u)_2 = d3u1 - d1u3
-  e2[globalOffset] +=
+  data.E2[globalOffset] +=
       // -dt * j2[globalOffset];
-      dt *
-      ((b3(n1, n2) * alpha_gr(r0) * mesh_ptrs.l3_b(n1, n2) -
-        b3(n1 + 1, n2) * alpha_gr(r1) * mesh_ptrs.l3_b(n1 + 1, n2)) /
-           mesh_ptrs.A2_e(n1, n2) -
-       // alpha_gr(r) * j2(n1, n2));
-       j2(n1, n2));
+      dt * (((data.B3(n1, n2) - data.Bbg3(n1, n2)) * alpha_gr(r0) *
+                 mesh_ptrs.l3_b(n1, n2) -
+             (data.B3(n1 + 1, n2) - data.Bbg3(n1 + 1, n2)) *
+                 alpha_gr(r1) * mesh_ptrs.l3_b(n1 + 1, n2)) /
+                mesh_ptrs.A2_e(n1, n2) -
+            // alpha_gr(r) * j2(n1, n2));
+            data.J2(n1, n2));
 
   // (Curl u)_3 = d1u2 - d2u1
-  e3[globalOffset] +=
+  data.E3[globalOffset] +=
       // -dt * j3[globalOffset];
-      dt * ((b2(n1 + 1, n2) * alpha_gr(r1) *
-                 // e1(n1 + 1, n2) * beta_phi(r1, theta)) *
-                 mesh_ptrs.l2_b(n1 + 1, n2) -
-             b2(n1, n2) * alpha_gr(r0) *
-                 // - e1(n1, n2) * beta_phi(r0, theta)) *
-                 mesh_ptrs.l2_b(n1, n2) +
-             b1(n1, n2) * alpha_gr(r) *
-                 // + e2(n1, n2) * beta_phi(r, theta0)) *
-                 mesh_ptrs.l1_b(n1, n2) -
-             b1(n1, n2 + 1) * alpha_gr(r) *
-                 // e2(n1, n2 + 1) * beta_phi(r, theta0 +
-                 // dev_mesh.delta[1])) *
-                 mesh_ptrs.l1_b(n1, n2 + 1)) /
-                mesh_ptrs.A3_e(n1, n2) -
-            // alpha_gr(r) * j3(n1, n2) + beta * rho);
-            // j3(n1, n2) + beta * rho);
-            j3(n1, n2));
+      dt *
+      (((data.B2(n1 + 1, n2) - data.Bbg2(n1 + 1, n2)) * alpha_gr(r1) *
+            // e1(n1 + 1, n2) * beta_phi(r1, theta)) *
+            mesh_ptrs.l2_b(n1 + 1, n2) -
+        (data.B2(n1, n2) - data.Bbg2(n1, n2)) * alpha_gr(r0) *
+            // - e1(n1, n2) * beta_phi(r0, theta)) *
+            mesh_ptrs.l2_b(n1, n2) +
+        (data.B1(n1, n2) - data.Bbg1(n1, n2)) * alpha_gr(r) *
+            // + e2(n1, n2) * beta_phi(r, theta0)) *
+            mesh_ptrs.l1_b(n1, n2) -
+        (data.B1(n1, n2 + 1) - data.Bbg1(n1, n2 + 1)) * alpha_gr(r) *
+            // e2(n1, n2 + 1) * beta_phi(r, theta0 +
+            // dev_mesh.delta[1])) *
+            mesh_ptrs.l1_b(n1, n2 + 1)) /
+           mesh_ptrs.A3_e(n1, n2) -
+       // alpha_gr(r) * j3(n1, n2) + beta * rho);
+       // j3(n1, n2) + beta * rho);
+       data.J3(n1, n2));
 
   __syncthreads();
   // Extra work for the axis
   if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) <
       1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
-    globalOffset = e1.compute_offset(n1, n2);
+    globalOffset = data.E1.compute_offset(n1, n2);
 
-    e3[globalOffset] = 0.0f;
+    data.E3[globalOffset] = data.Ebg3[globalOffset];
 
-    e1[globalOffset] += dt * (4.0f * b3(n1, n2 + 1) * alpha_gr(r0) /
-                                  (dev_mesh.delta[1] * r0) -
-                              // alpha_gr(r0) * j1[globalOffset]);
-                              j1[globalOffset]);
+    data.E1[globalOffset] +=
+        dt * (4.0f * (data.B3(n1, n2 + 1) - data.Bbg3(n1, n2 + 1)) *
+                  alpha_gr(r0) / (dev_mesh.delta[1] * r0) -
+              // alpha_gr(r0) * j1[globalOffset]);
+              data.J1[globalOffset]);
   }
 }
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                 mesh_ptrs_log_sph mesh_ptrs, Scalar dt) {
+compute_b_update_logsph(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs,
+                        Scalar dt) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   // size_t globalOffset = n2 * e1.pitch + n1 * sizeof(Scalar);
-  size_t globalOffset = e1.compute_offset(n1, n2);
+  size_t globalOffset = data.E1.compute_offset(n1, n2);
 
   Scalar r1 = std::exp(dev_mesh.pos(0, n1, 1));
   Scalar r0 = std::exp(dev_mesh.pos(0, n1 - 1, 1));
   Scalar r = std::exp(dev_mesh.pos(0, n1, 0));
   // Do the actual computation here
   // (Curl u)_1 = d2u3 - d3u2
-  b1[globalOffset] +=
+  data.B1[globalOffset] +=
       -dt *
-      (e3(n1, n2) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2) -
-       e3(n1, n2 - 1) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2 - 1)) /
+      ((data.E3(n1, n2) - data.Ebg3(n1, n2)) * alpha_gr(r1) *
+           mesh_ptrs.l3_e(n1, n2) -
+       (data.E3(n1, n2 - 1) - data.Ebg3(n1, n2 - 1)) * alpha_gr(r1) *
+           mesh_ptrs.l3_e(n1, n2 - 1)) /
       mesh_ptrs.A1_b(n1, n2);
 
   // (Curl u)_2 = d3u1 - d1u3
-  b2[globalOffset] +=
+  data.B2[globalOffset] +=
       -dt *
-      (e3(n1 - 1, n2) * alpha_gr(r0) * mesh_ptrs.l3_e(n1 - 1, n2) -
-       e3(n1, n2) * alpha_gr(r1) * mesh_ptrs.l3_e(n1, n2)) /
+      ((data.E3(n1 - 1, n2) - data.Ebg3(n1 - 1, n2)) * alpha_gr(r0) *
+           mesh_ptrs.l3_e(n1 - 1, n2) -
+       (data.E3(n1, n2) - data.Ebg3(n1, n2)) * alpha_gr(r1) *
+           mesh_ptrs.l3_e(n1, n2)) /
       mesh_ptrs.A2_b(n1, n2);
 
   // (Curl u)_3 = d1u2 - d2u1
-  b3[globalOffset] +=
-      -dt * (((e2(n1, n2) * alpha_gr(r1) +
-               // (b1(n1, n2) + dev_bg_fields.B1(n1, n2)) * beta_phi(r1,
-               // dev_mesh.pos(1, n2, 0))) *
-               dev_bg_fields.B1(n1, n2) *
-                   beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
-                  mesh_ptrs.l2_e(n1, n2) -
-              (e2(n1 - 1, n2) * alpha_gr(r0) +
-               // (b1(n1 - 1, n2) + dev_bg_fields.B1(n1 - 1, n2)) *
-               // beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
-               dev_bg_fields.B1(n1 - 1, n2) *
-                   beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
-                  mesh_ptrs.l2_e(n1 - 1, n2) +
-              (e1(n1, n2 - 1) * alpha_gr(r) -
-               // (b2(n1, n2 - 1) + dev_bg_fields.B2(n1, n2 - 1)) *
-               // beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
-               dev_bg_fields.B2(n1, n2 - 1) *
-                   beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
-                  mesh_ptrs.l1_e(n1, n2 - 1) -
-              (e1(n1, n2) * alpha_gr(r) -
-               // (b2(n1, n2) + dev_bg_fields.B2(n1, n2)) * beta_phi(r,
-               // dev_mesh.pos(1, n2, 1))) *
-               dev_bg_fields.B2(n1, n2) *
-                   beta_phi(r, dev_mesh.pos(1, n2, 1))) *
-                  mesh_ptrs.l1_e(n1, n2)) /
-             mesh_ptrs.A3_b(n1, n2));
+  data.B3[globalOffset] +=
+      -dt *
+      ((((data.E2(n1, n2) - data.Ebg2(n1, n2)) * alpha_gr(r1) +
+         // (b1(n1, n2) + dev_bg_fields.B1(n1, n2)) * beta_phi(r1,
+         // dev_mesh.pos(1, n2, 0))) *
+         data.Bbg1(n1, n2) * beta_phi(r1, dev_mesh.pos(1, n2, 0))) *
+            mesh_ptrs.l2_e(n1, n2) -
+        ((data.E2(n1 - 1, n2) - data.Ebg2(n1 - 1, n2)) * alpha_gr(r0) +
+         // (b1(n1 - 1, n2) + dev_bg_fields.B1(n1 - 1, n2)) *
+         // beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
+         data.Bbg1(n1 - 1, n2) * beta_phi(r0, dev_mesh.pos(1, n2, 0))) *
+            mesh_ptrs.l2_e(n1 - 1, n2) +
+        ((data.E1(n1, n2 - 1) - data.Ebg1(n1, n2 - 1)) * alpha_gr(r) -
+         // (b2(n1, n2 - 1) + dev_bg_fields.B2(n1, n2 - 1)) *
+         // beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
+         data.Bbg2(n1, n2 - 1) *
+             beta_phi(r, dev_mesh.pos(1, n2 - 1, 1))) *
+            mesh_ptrs.l1_e(n1, n2 - 1) -
+        ((data.E1(n1, n2) - data.Ebg1(n1, n2)) * alpha_gr(r) -
+         // (b2(n1, n2) + dev_bg_fields.B2(n1, n2)) * beta_phi(r,
+         // dev_mesh.pos(1, n2, 1))) *
+         data.Bbg2(n1, n2) * beta_phi(r, dev_mesh.pos(1, n2, 1))) *
+            mesh_ptrs.l1_e(n1, n2)) /
+       mesh_ptrs.A3_b(n1, n2));
 
   __syncthreads();
 
@@ -176,74 +178,79 @@ compute_b_update(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
   if (std::abs(dev_mesh.pos(1, n2, true) - dev_mesh.delta[1]) <
       1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
-    globalOffset = b2.compute_offset(n1, n2);
+    globalOffset = data.B2.compute_offset(n1, n2);
 
-    b2[globalOffset] = 0.0f;
+    data.B2[globalOffset] = data.Bbg2[globalOffset];
   }
 }
 
 // template <int DIM1, int DIM2>
 __global__ void
-compute_divs(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-             pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-             pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-             pitchptr<Scalar> divE, pitchptr<Scalar> divB,
-             mesh_ptrs_log_sph mesh_ptrs) {
+compute_divs_logsph(data_ptrs data, mesh_ptrs_log_sph mesh_ptrs) {
   int t1 = blockIdx.x, t2 = blockIdx.y;
   int c1 = threadIdx.x, c2 = threadIdx.y;
   int n1 = dev_mesh.guard[0] + t1 * blockDim.x + c1;
   int n2 = dev_mesh.guard[1] + t2 * blockDim.y + c2;
   // size_t globalOffset = n2 * divE.pitch + n1 * sizeof(Scalar);
-  size_t globalOffset = divE.compute_offset(n1, n2);
+  size_t globalOffset = data.divE.compute_offset(n1, n2);
 
   // if (n1 > dev_mesh.guard[0] + 1) {
   if (dev_mesh.pos(0, n1, 1) > dev_mesh.delta[0]) {
-    divE[globalOffset] =
-        (e1(n1 + 1, n2) * mesh_ptrs.A1_e(n1 + 1, n2) -
-         e1(n1, n2) * mesh_ptrs.A1_e(n1, n2) +
-         e2(n1, n2 + 1) * mesh_ptrs.A2_e(n1, n2 + 1) -
-         e2(n1, n2) * mesh_ptrs.A2_e(n1, n2)) /
+    data.divE[globalOffset] =
+        ((data.E1(n1 + 1, n2) - data.Ebg1(n1 + 1, n2)) *
+             mesh_ptrs.A1_e(n1 + 1, n2) -
+         (data.E1(n1, n2) - data.Ebg1(n1, n2)) *
+             mesh_ptrs.A1_e(n1, n2) +
+         (data.E2(n1, n2 + 1) - data.Ebg2(n1, n2 + 1)) *
+             mesh_ptrs.A2_e(n1, n2 + 1) -
+         (data.E2(n1, n2) - data.Ebg2(n1, n2)) *
+             mesh_ptrs.A2_e(n1, n2)) /
         (mesh_ptrs.dV(n1, n2) * dev_mesh.delta[0] * dev_mesh.delta[1]);
 
     // if (n2 == dev_mesh.dims[1] - dev_mesh.guard[1] - 1) {
     if (std::abs(dev_mesh.pos(1, n2, 1) - dev_mesh.sizes[1] +
                  dev_mesh.lower[1]) < 1.0e-5) {
-      divE[globalOffset] =
-          (e1(n1 + 1, n2) * mesh_ptrs.A1_e(n1 + 1, n2) -
-           e1(n1, n2) * mesh_ptrs.A1_e(n1, n2) -
+      data.divE[globalOffset] =
+          ((data.E1(n1 + 1, n2) - data.Ebg1(n1 + 1, n2)) *
+               mesh_ptrs.A1_e(n1 + 1, n2) -
+           (data.E1(n1, n2) - data.Ebg1(n1, n2)) *
+               mesh_ptrs.A1_e(n1, n2) -
            // e2(n1, n2 + 1) *
            //     mesh_ptrs.A2_e(n1, n2 + 1) -
-           2.0 * e2(n1, n2) * mesh_ptrs.A2_e(n1, n2)) /
+           2.0 * (data.E2(n1, n2) - data.Ebg2(n1, n2)) *
+               mesh_ptrs.A2_e(n1, n2)) /
           (mesh_ptrs.dV(n1, n2) * dev_mesh.delta[0] *
            dev_mesh.delta[1]);
     }
   }
-  divB[globalOffset] =
-      (b1(n1, n2) * mesh_ptrs.A1_b(n1, n2) -
-       b1(n1 - 1, n2) * mesh_ptrs.A1_b(n1 - 1, n2) +
-       b2(n1, n2) * mesh_ptrs.A2_b(n1, n2) -
-       b2(n1, n2 - 1) * mesh_ptrs.A2_b(n1, n2 - 1)) /
+  data.divB[globalOffset] =
+      ((data.B1(n1, n2) - data.Bbg1(n1, n2)) * mesh_ptrs.A1_b(n1, n2) -
+       (data.B1(n1 - 1, n2) - data.Bbg1(n1 - 1, n2)) *
+           mesh_ptrs.A1_b(n1 - 1, n2) +
+       (data.B2(n1, n2) - data.Bbg2(n1, n2)) * mesh_ptrs.A2_b(n1, n2) -
+       (data.B2(n1, n2 - 1) - data.Bbg2(n1, n2 - 1)) *
+           mesh_ptrs.A2_b(n1, n2 - 1)) /
       (mesh_ptrs.dV(n1, n2) * dev_mesh.delta[0] * dev_mesh.delta[1]);
 
   __syncthreads();
 
   if (std::abs(dev_mesh.pos(1, n2, 1)) - dev_mesh.delta[1] < 1.0e-5) {
     n2 = dev_mesh.guard[1] - 1;
-    globalOffset = e1.compute_offset(n1, n2);
+    globalOffset = data.E1.compute_offset(n1, n2);
 
-    divE[globalOffset] =
-        (e1(n1 + 1, n2) * mesh_ptrs.A1_e(n1 + 1, n2) -
-         e1(n1, n2) * mesh_ptrs.A1_e(n1, n2) +
-         2.0f * e2(n1, n2 + 1) * mesh_ptrs.A2_e(n1, n2 + 1)) /
+    data.divE[globalOffset] =
+        ((data.E1(n1 + 1, n2) - data.Ebg1(n1 + 1, n2)) *
+             mesh_ptrs.A1_e(n1 + 1, n2) -
+         (data.E1(n1, n2) - data.Ebg1(n1, n2)) *
+             mesh_ptrs.A1_e(n1, n2) +
+         2.0f * (data.E2(n1, n2 + 1) - data.Ebg2(n1, n2 + 1)) *
+             mesh_ptrs.A2_e(n1, n2 + 1)) /
         (mesh_ptrs.dV(n1, n2) * dev_mesh.delta[0] * dev_mesh.delta[1]);
   }
 }
 
 __global__ void
-stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3,
-                 Scalar omega) {
+stellar_boundary(data_ptrs data, Scalar omega) {
   for (int j = blockIdx.x * blockDim.x + threadIdx.x;
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     Scalar theta_s = dev_mesh.pos(1, j, true);
@@ -252,78 +259,93 @@ stellar_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
     for (int i = 0; i < dev_mesh.guard[0]; i++) {
       Scalar r_s = std::exp(dev_mesh.pos(0, i, true));
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
-      // Scalar omega_LT = 0.4f * omega * dev_params.compactness;
+
       Scalar coef = 0.0f;
       if (theta < 0.3f * CONST_PI && theta > 0.05f * CONST_PI)
         coef = 1.0f;
       else if (theta > 0.7f * CONST_PI && theta < 0.95f * CONST_PI)
         coef = -1.0f;
-      //coef = -(theta - 0.5f * CONST_PI) * 2.0f / CONST_PI;
-      b1(i, j) = 0.0f;
-      e3(i, j) = 0.0f;
-      // e2(i, j) = -omega * cube(std::cos(theta)) * std::sin(theta) * r_s * dev_bg_fields.B1(i, j);
-      // e1(i, j) = omega * cube(std::cos(theta)) * std::sin(theta_s) * r * dev_bg_fields.B2(i, j);
-      e2(i, j) = -omega * coef * std::sin(theta) * r_s * dev_bg_fields.B1(i, j);
-      e1(i, j) = omega * coef * std::sin(theta_s) * r * dev_bg_fields.B2(i, j);
-      b2(i, j) = 0.0f;
-      b3(i, j) = 0.0f;
+
+      data.B1(i, j) = data.Bbg1(i, j);
+      data.B3(i, j) = data.Bbg3(i, j);
+      data.E2(i, j) = -omega * std::sin(theta) *
+                          data.Bbg1(i, j) / alpha_gr(r_s) / r_s / r_s +
+                      data.Ebg2(i, j);
+      data.E1(i, j) = omega * std::sin(theta_s) *
+                          data.Bbg2(i, j) / alpha_gr(r_s) / r / r +
+                      data.Ebg1(i, j);
+      data.B2(i, j) = data.Bbg2(i, j);
+      data.B3(i, j) = data.Bbg3(i, j);
     }
   }
 }
 
 __global__ void
-axis_boundary_lower(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                    pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
+axis_boundary_lower(data_ptrs data) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
-    e3(i, dev_mesh.guard[1] - 1) = 0.0f;
+    data.E3(i, dev_mesh.guard[1] - 1) =
+        data.Ebg3(i, dev_mesh.guard[1] - 1);
     // e3(i, dev_mesh.guard[1]) = 0.0f;
-    e2(i, dev_mesh.guard[1] - 1) = -e2(i, dev_mesh.guard[1]);
+    data.E2(i, dev_mesh.guard[1] - 1) =
+        -(data.E2(i, dev_mesh.guard[1]) -
+          data.Ebg2(i, dev_mesh.guard[1])) +
+        data.Ebg2(i, dev_mesh.guard[1] - 1);
     // e2(i, dev_mesh.guard[1] - 1) = e2(i, dev_mesh.guard[1]) = 0.0f;
 
-    b3(i, dev_mesh.guard[1] - 1) = b3(i, dev_mesh.guard[1]) = 0.0f;
-    b2(i, dev_mesh.guard[1] - 1) = 0.0f;
-    b1(i, dev_mesh.guard[1] - 1) = b1(i, dev_mesh.guard[1]);
+    data.B3(i, dev_mesh.guard[1] - 1) =
+        data.Bbg3(i, dev_mesh.guard[1] - 1);
+    data.B3(i, dev_mesh.guard[1]) = data.Bbg3(i, dev_mesh.guard[1]);
+    data.B2(i, dev_mesh.guard[1] - 1) =
+        data.Bbg2(i, dev_mesh.guard[1] - 1);
+    data.B1(i, dev_mesh.guard[1] - 1) =
+        (data.B1(i, dev_mesh.guard[1]) -
+         data.Bbg1(i, dev_mesh.guard[1])) +
+        data.Bbg1(i, dev_mesh.guard[1] - 1);
   }
 }
 
 __global__ void
-axis_boundary_upper(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                    pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                    pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
+axis_boundary_upper(data_ptrs data) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x;
        i < dev_mesh.dims[0]; i += blockDim.x * gridDim.x) {
     int j_last = dev_mesh.dims[1] - dev_mesh.guard[1];
-    e3(i, j_last - 1) = 0.0f;
-    e2(i, j_last) = -e2(i, j_last - 1);
+    data.E3(i, j_last - 1) = data.Ebg3(i, j_last - 1);
+    data.E2(i, j_last) =
+        -(data.E2(i, j_last - 1) - data.Ebg2(i, j_last - 1)) +
+        data.Ebg2(i, j_last);
     // e2(i, j_last) = e2(i, j_last - 1) = 0.0f;
 
-    b3(i, j_last) = b3(i, j_last - 1) = 0.0f;
-    b2(i, j_last - 1) = 0.0f;
-    b1(i, j_last) = b1(i, j_last - 1);
+    data.B3(i, j_last) = data.Bbg3(i, j_last);
+    data.B3(i, j_last - 1) = data.Bbg3(i, j_last - 1);
+    data.B2(i, j_last - 1) = data.Bbg2(i, j_last - 1);
+    data.B1(i, j_last) =
+        (data.B1(i, j_last - 1) - data.Bbg1(i, j_last - 1)) +
+        data.Bbg1(i, j_last);
   }
 }
 
 __global__ void
-outflow_boundary(pitchptr<Scalar> e1, pitchptr<Scalar> e2,
-                 pitchptr<Scalar> e3, pitchptr<Scalar> b1,
-                 pitchptr<Scalar> b2, pitchptr<Scalar> b3) {
+outflow_boundary_sph(data_ptrs data) {
   for (int j = blockIdx.x * blockDim.x + threadIdx.x;
        j < dev_mesh.dims[1]; j += blockDim.x * gridDim.x) {
     for (int i = 0; i < dev_params.damping_length; i++) {
       int n1 = dev_mesh.dims[0] - dev_params.damping_length + i;
       // size_t offset = j * e1.pitch + n1 * sizeof(Scalar);
-      size_t offset = e1.compute_offset(n1, j);
+      size_t offset = data.E1.compute_offset(n1, j);
       Scalar lambda =
           1.0f - dev_params.damping_coef *
                      square((Scalar)i / dev_params.damping_length);
-      e1[offset] *= lambda;
-      e2[offset] *= lambda;
-      e3[offset] *= lambda;
+      data.E1[offset] = lambda * (data.E1[offset] - data.Ebg1[offset]) +
+                        data.Ebg1[offset];
+      data.E2[offset] = lambda * (data.E2[offset] - data.Ebg2[offset]) +
+                        data.Ebg2[offset];
+      data.E3[offset] = lambda * (data.E3[offset] - data.Ebg3[offset]) +
+                        data.Ebg3[offset];
       // b1[offset] *= lambda;
       // b2[offset] *= lambda;
-      b3[offset] *= lambda;
+      data.B3[offset] = lambda * (data.B3[offset] - data.Bbg3[offset]) +
+                        data.Bbg3[offset];
     }
   }
 }
@@ -342,46 +364,37 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   if (data.env.grid().dim() != 2) return;
   timer::stamp("field_update");
 
-  // First communicate to get the E field guard cells
-  // data.env.get_sub_guard_cells(data.E);
+  // Assume E field guard cells are already in place
 
   Grid_LogSph &grid = *dynamic_cast<Grid_LogSph *>(&m_env.local_grid());
   auto mesh_ptrs = get_mesh_ptrs(grid);
   auto &mesh = grid.mesh();
+  auto data_p = get_data_ptrs(data);
 
   dim3 blockSize(32, 16);
   dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
   // Update B
-  Kernels::compute_b_update<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-      mesh_ptrs, dt);
+  Kernels::compute_b_update_logsph<<<gridSize, blockSize>>>(
+      data_p, mesh_ptrs, dt);
   CudaCheckError();
 
+  CudaSafeCall(cudaDeviceSynchronize());
   // Communicate the new B values to guard cells
-  // data.env.get_sub_guard_cells(data.B);
-  // data.env.get_sub_guard_cells(data.J);
+  m_env.send_guard_cells(data.B);
+  // m_env.send_guard_cells(data.J);
 
   // Update E
-  Kernels::compute_e_update<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-      get_pitchptr(data.J.data(0)), get_pitchptr(data.J.data(1)),
-      get_pitchptr(data.J.data(2)), mesh_ptrs, dt);
+  Kernels::compute_e_update_logsph<<<gridSize, blockSize>>>(
+      data_p, mesh_ptrs, dt);
   CudaCheckError();
 
+  CudaSafeCall(cudaDeviceSynchronize());
   // Communicate the new E values to guard cells
-  // data.env.get_sub_guard_cells(data.E);
+  m_env.send_guard_cells(data.E);
 
-  // Update B
-  Kernels::compute_divs<<<gridSize, blockSize>>>(
-      get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-      get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-      get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-      get_pitchptr(data.divE.data()), get_pitchptr(data.divB.data()),
-      mesh_ptrs);
+  // Compute divergences
+  Kernels::compute_divs_logsph<<<gridSize, blockSize>>>(data_p,
+                                                        mesh_ptrs);
   CudaCheckError();
   data.compute_edotb();
 
@@ -396,38 +409,25 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
 void
 field_solver_logsph::apply_boundary(sim_data &data, double omega,
                                     double time) {
-  // int dev_id = data.dev_id;
-  // CudaSafeCall(cudaSetDevice(dev_id));
+  auto data_p = get_data_ptrs(data);
+
   if (data.env.is_boundary(BoundaryPos::lower0)) {
-    Kernels::stellar_boundary<<<32, 256>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)),
-        omega);
+    Kernels::stellar_boundary<<<32, 256>>>(data_p, omega);
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::upper0)) {
-    Kernels::outflow_boundary<<<32, 256>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
+    Kernels::outflow_boundary_sph<<<32, 256>>>(data_p);
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::lower1)) {
-    Kernels::axis_boundary_lower<<<32, 256>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
+    Kernels::axis_boundary_lower<<<32, 256>>>(data_p);
     CudaCheckError();
   }
 
   if (data.env.is_boundary(BoundaryPos::upper1)) {
-    Kernels::axis_boundary_upper<<<32, 256>>>(
-        get_pitchptr(data.E.data(0)), get_pitchptr(data.E.data(1)),
-        get_pitchptr(data.E.data(2)), get_pitchptr(data.B.data(0)),
-        get_pitchptr(data.B.data(1)), get_pitchptr(data.B.data(2)));
+    Kernels::axis_boundary_upper<<<32, 256>>>(data_p);
     CudaCheckError();
   }
   // Logger::print_info("omega is {}", omega);
