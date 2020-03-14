@@ -115,8 +115,9 @@ __global__ void check_dev_mesh() {
   printf("%f %f\n", dev_mesh.lower[0], dev_mesh.lower[1]);
 }
 
+template <typename WeightFunc>
 __global__ void fill_particles(particle_data ptc, size_t number, Scalar weight,
-                               int multiplicity, curandState *states) {
+                               int multiplicity, curandState *states, WeightFunc wf) {
   int tid = blockIdx.x * blockDim.x + threadIdx.x;
   CudaRng rng(&states[tid]);
   for (uint32_t cell = tid; cell < dev_mesh.size();
@@ -134,13 +135,17 @@ __global__ void fill_particles(particle_data ptc, size_t number, Scalar weight,
       ptc.p2[idx] = ptc.p2[idx + 1] = 0.0f;
       ptc.p3[idx] = ptc.p3[idx + 1] = 0.0f;
       // ptc.E[idx] = ptc.E[idx + 1] = 1.0f;
+      Scalar x1 = dev_mesh.pos(0, dev_mesh.get_c1(cell), ptc.x1[idx]);
+      Scalar x2 = dev_mesh.pos(1, dev_mesh.get_c2(cell), ptc.x2[idx]);
+      Scalar x3 = dev_mesh.pos(2, dev_mesh.get_c3(cell), ptc.x3[idx]);
+
       ptc.E[idx] = sqrt(1.0f + ptc.p1[idx] * ptc.p1[idx] +
                         ptc.p2[idx] * ptc.p2[idx] + ptc.p3[idx] * ptc.p3[idx]);
       ptc.E[idx + 1] = sqrt(1.0f + ptc.p1[idx + 1] * ptc.p1[idx + 1] +
                             ptc.p2[idx + 1] * ptc.p2[idx + 1] +
                             ptc.p3[idx + 1] * ptc.p3[idx + 1]);
       ptc.cell[idx] = ptc.cell[idx + 1] = cell;
-      ptc.weight[idx] = ptc.weight[idx + 1] = weight;
+      ptc.weight[idx] = ptc.weight[idx + 1] = weight * wf(x1, x2, x3);
       ptc.flag[idx] = set_ptc_type_flag(0, ParticleType::electron);
       ptc.flag[idx + 1] = set_ptc_type_flag(0, ParticleType::positron);
 
@@ -264,9 +269,19 @@ void sim_data::fill_multiplicity(Scalar weight, int multiplicity) {
   int num_cells = env.mesh().size();
   int blockSize = 512;
   int gridSize = std::min((num_cells + blockSize - 1) / blockSize, 512);
-  Kernels::fill_particles<<<gridSize, blockSize>>>(
-      particles.data(), particles.number(), weight, multiplicity,
-      (curandState *)d_rand_states);
+  if (env.params().coord_system == "LogSpherical") {
+    Kernels::fill_particles<<<gridSize, blockSize>>>(
+        particles.data(), particles.number(), weight, multiplicity,
+        (curandState *)d_rand_states, [] __device__ (Scalar x1, Scalar x2, Scalar x3) {
+          return sin(x2);
+        });
+  } else {
+    Kernels::fill_particles<<<gridSize, blockSize>>>(
+        particles.data(), particles.number(), weight, multiplicity,
+        (curandState *)d_rand_states, [] __device__ (Scalar x1, Scalar x2, Scalar x3) {
+          return 1.0f;
+        });
+  }
   // cudaDeviceSynchronize();
   CudaCheckError();
 

@@ -12,10 +12,10 @@ namespace Aperture {
 
 namespace Kernels {
 
+template <int N>
 __device__ __forceinline__ void
 user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
                     curandState& state) {
-  // printf("Magnetar!\n");
   auto& ptc = data.particles;
 
   auto c = ptc.cell[idx];
@@ -29,7 +29,7 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
   }
 
   // Load particle quantities
-  Interpolator2D<spline_t> interp;
+  Interpolator2D<Spline::spline_t<N>> interp;
   auto flag = ptc.flag[idx];
   int sp = get_ptc_type(flag);
   auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
@@ -46,40 +46,23 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
     // p1 = p2 = p3 = 0.0f;
   }
   Scalar E1 =
-      (interp(data.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
-      // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
-      //        Stagger(0b110))) *
+      interp(data.E1, old_x1, old_x2, c1, c2, Stagger(0b110)) *
       q_over_m;
   Scalar E2 =
-      (interp(data.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
-      // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
-      //        Stagger(0b101))) *
+      interp(data.E2, old_x1, old_x2, c1, c2, Stagger(0b101)) *
       q_over_m;
   Scalar E3 =
-      (interp(data.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
-      // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
-      //        Stagger(0b011))) *
+      interp(data.E3, old_x1, old_x2, c1, c2, Stagger(0b011)) *
       q_over_m;
   Scalar B1 =
-      (interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
-       interp(data.Bbg1, old_x1, old_x2, c1, c2, Stagger(0b001))) *
+      interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
       q_over_m;
   Scalar B2 =
-      (interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
-       interp(data.Bbg2, old_x1, old_x2, c1, c2, Stagger(0b010))) *
+      interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
       q_over_m;
   Scalar B3 =
-      (interp(data.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
-      // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
-      //        Stagger(0b100))) *
+      interp(data.B3, old_x1, old_x2, c1, c2, Stagger(0b100)) *
       q_over_m;
-
-  // printf("B1 = %f, B2 = %f, B3 = %f\n", B1, B2, B3);
-  // printf("E1 = %f, E2 = %f, E3 = %f\n", E1, E2, E3);
-  // printf("B cell is %f\n", *ptrAddr(fields.B1, c1*sizeof(Scalar)
-  // + c2*fields.B1.pitch)); printf("q over m is %f\n", q_over_m);
-  // printf("gamma before is %f\n", gamma);
-  // printf("p is (%f, %f, %f), gamma is %f\n", p1, p2, p3, gamma);
 
   // step 0: Grab E & M fields at the particle position
   gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);

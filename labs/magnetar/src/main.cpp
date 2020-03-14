@@ -10,11 +10,13 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 #include <random>
+#include <cuda_runtime.h>
+#include "cuda/cudaUtility.h"
 
 using namespace Aperture;
 
 int
-main(int argc, char *argv[]) {
+main(int argc, char* argv[]) {
   uint32_t start_step = 0;
   uint32_t step = start_step;
   float start_time = 0.0;
@@ -22,6 +24,7 @@ main(int argc, char *argv[]) {
 
   // Construct the simulation environment
   sim_environment env(&argc, &argv);
+  auto& params = env.params();
 
   // Allocate simulation data
   sim_data data(env);
@@ -29,39 +32,16 @@ main(int argc, char *argv[]) {
   // Initialize data exporter
   data_exporter exporter(env, start_step);
 
-  if (env.params().is_restart) {
+  if (params.is_restart) {
     Logger::print_info("This is a restart");
-    exporter.load_from_snapshot(data, start_step, start_time);
-    exporter.prepare_xmf_restart(step, env.params().data_interval,
-                                 start_time);
+    exporter.load_snapshot(params.restart_file, data, start_step,
+                           start_time);
     step = start_step + 1;
     time = start_time + env.params().delta_t;
-    // data.fill_multiplicity(1.0, 1);
-    // for (int j = 100; j < data.grid[0]->mesh().dims[1] - 99; j++) {
-    //   Scalar th = data.grid[0]->mesh().pos(1, j, 0.5f);
-    //   // Scalar p = 10.0;
-    //   // Scalar pp1 = 2.0 * p * cos(th);
-    //   // Scalar pp2 = p * sin(th);
-    //   // Scalar rot = 1.0;
-    //   // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
-    //   // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
-    //   data.particles[0].append(
-    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-    //       // std::abs(p) * 0.1 * sin(th) *
-    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
-    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
-    //       200 + 1540 * j, ParticleType::electron, std::sin(th));
-    //   data.particles[0].append(
-    //       {0.5, 0.5, 0.0}, {0.0, 0.0, 0.0},
-    //       // std::abs(p) * 0.1 * sin(th) *
-    //       //     std::exp(data.grid[0]->mesh().pos(0, 200, 0.5f))},
-    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
-    //       200 + 1540 * j, ParticleType::positron, std::sin(th));
-    // }
-  } else {
-    exporter.copy_config_file();
-    exporter.write_grid();
 
+    cudaDeviceSynchronize();
+    CudaCheckError();
+  } else {
     // Setup initial conditions
     Scalar B0 = env.params().B0;
     Logger::print_debug("B0 in main is {}", B0);
@@ -76,43 +56,11 @@ main(int argc, char *argv[]) {
       return B0 * sin(x2) / (r * r * r);
       // return 0.0;
     });
-    data.init_bg_B_field(
-        2, [B0](Scalar x1, Scalar x2, Scalar x3) { return 0.0; });
     data.init_bg_fields();
 
-    // data.E[0].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
-    //   Scalar r = exp(x1);
-    //   return 0.1 * sin(x2) * r * B0 * sin(x2) / (r * r * r);
-    // });
-    // data.E[0].initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
-    //   Scalar r = exp(x1);
-    //   return -0.1 * sin(x2) * r * 2.0 * B0 * cos(x2) / (r * r * r);
-    // });
-    // data.E[1].initialize(0, [B0](Scalar x1, Scalar x2, Scalar x3) {
-    //   Scalar r = exp(x1);
-    //   return 0.1 * sin(x2) * r * B0 * sin(x2) / (r * r * r);
-    // });
-    // data.E[1].initialize(1, [B0](Scalar x1, Scalar x2, Scalar x3) {
-    //   Scalar r = exp(x1);
-    //   return -0.1 * sin(x2) * r * 2.0 * B0 * cos(x2) / (r * r * r);
-    // });
-    // auto& mesh = env.local_grid().mesh();
-    // for (int j = 3; j < mesh.dims[1] - 2; j++) {
-      // Scalar th = mesh.pos(1, j, 0.5f);
-    // Scalar p = 100.0;
-    // // Scalar pp1 = 2.0 * p * cos(th);
-    // // Scalar pp2 = p * sin(th);
-    // // Scalar rot = 1.0;
-    // // Scalar pr1 = pp1 * cos(rot) - pp2 * sin(rot);
-    // // Scalar pr2 = pp1 * sin(rot) + pp2 * cos(rot);
-    // int N = 10000;
-    // for (int i = 0; i < N; i++) {
-    //   data.particles.append(
-    //       {0.5, 0.5, 0.0}, {p, 0.0, 0.0},
-    //       // 200 + 516 * 100, ParticleType::electron, 1.0);
-    //       120 + 516 * 100, ParticleType::electron, 1.0);
-    // }
+    data.fill_multiplicity(1.0, 5);
   }
+
   // Initialize the field solver
   field_solver_logsph field_solver(env);
 
@@ -131,31 +79,17 @@ main(int argc, char *argv[]) {
     double dt = env.params().delta_t;
     time = start_time + (step - start_step) * dt;
 
-    // Scalar omega = 0.0;
-    // Scalar atm_time = 0.0;
-    // Scalar acc_time = 1.0;
-    // Scalar twist_time = 28.0;
-    // if (time <= atm_time) {
-    //   omega = 0.0;
-    // } else if (time <= atm_time + acc_time) {
-    //   omega = env.params().omega * ((time - atm_time) / twist_time);
-    // } else if (time <= atm_time + acc_time + twist_time) {
-    //   // omega = env.params().omega *
-    //   //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
-    //   omega = env.params().omega * ((time - atm_time - acc_time) / twist_time);
-    // } else if (time <= atm_time + acc_time) {
-    //   omega = env.params().omega * ((time - atm_time) / twist_time);
-    // } else {
-    //   omega = 0.0;
-    // }
     Scalar omega = 0.0;
-    Scalar sp_time = 20.0;
-    if (time <= sp_time) {
-      omega = env.params().omega * (time / sp_time);
-    } else if (time <= sp_time * 2.0) {
-      omega = env.params().omega * (1.0 - (time - sp_time) / sp_time);
-    } else {
+    Scalar atm_time = 0.0;
+    Scalar sp_time = 10.0;
+    if (time <= atm_time) {
       omega = 0.0;
+    } else if (time <= atm_time + sp_time) {
+      // omega = env.params().omega *
+      //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
+      omega = env.params().omega * ((time - atm_time) / sp_time);
+    } else {
+      omega = env.params().omega;
     }
     Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
                        step, time, omega);
@@ -172,15 +106,14 @@ main(int argc, char *argv[]) {
       data.photon_produced.initialize();
       data.pair_produced.initialize();
       data.EdotB.initialize();
-      data.ph_flux.assign_dev(0.0f);
 
       Logger::print_info("Finished output!");
     }
 
     // Inject particles
-    if (env.params().inject_particles && step % 5 == 0)
+    if (env.params().inject_particles && step % 1 == 0)
       ptc_updater.inject_ptc(
-          data, 1, 0.1, 0.0, 0.0,
+          data, 4, 0.01, 0.0, 0.0,
           // 1.1 * omega / env.params().omega, omega);
           1.0, omega);
 
@@ -203,14 +136,13 @@ main(int argc, char *argv[]) {
       data.sort_particles();
     }
 
-    // if (step % env.params().snapshot_interval == 0 && step > 0) {
-    //   timer::stamp();
-    //   exporter.write_snapshot(env, data, step, time);
-    //   auto t_snapshot = timer::get_duration_since_stamp("ms");
-    //   Logger::print_info("Snapshot took {}ms", t_snapshot);
-    // }
-
-    // time += dt;
+    if (step % env.params().snapshot_interval == 0 && step > 0) {
+      timer::stamp();
+      exporter.save_snapshot(params.data_dir + "snapshot.h5", data,
+                             step, time);
+      auto t_snapshot = timer::get_duration_since_stamp("ms");
+      Logger::print_info("Snapshot took {}ms", t_snapshot);
+    }
   }
   return 0;
 }
