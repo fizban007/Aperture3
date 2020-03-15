@@ -470,7 +470,7 @@ sim_environment::gather_array_to_root(multi_array<T> &array) {
   multi_array<T> tmp_array(array.extent());
   auto result =
       MPI_Reduce(array.host_ptr(), tmp_array.host_ptr(), array.size(),
-                 MPI_Helper::get_mpi_datatype(Scalar{}), MPI_SUM, 0,
+                 MPI_Helper::get_mpi_datatype(T{}), MPI_SUM, 0,
                  MPI_COMM_WORLD);
   if (m_domain_info.rank == 0) {
     array.copy_from(tmp_array, Index(0, 0, 0), Index(0, 0, 0), array.extent(), 0);
