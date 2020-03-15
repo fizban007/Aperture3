@@ -463,8 +463,9 @@ sim_environment::get_total_num_offset(uint64_t num, uint64_t &total, uint64_t &o
   MPI_Helper::handle_mpi_error(status, m_domain_info.rank);
 }
 
+template <typename T>
 void
-sim_environment::gather_array_to_root(multi_array<Scalar> &array) {
+sim_environment::gather_array_to_root(multi_array<T> &array) {
   multi_array<Scalar> tmp_array(array.extent());
   auto result =
       MPI_Reduce(array.host_ptr(), tmp_array.host_ptr(), array.size(),
@@ -514,6 +515,9 @@ sim_environment::ptc_buffer_ptrs(const photons_t& ptc) {
 template void sim_environment::send_particles(particles_t& ptc);
 
 template void sim_environment::send_particles(photons_t& ptc);
+
+template void sim_environment::gather_array_to_root(multi_array<float> &array);
+template void sim_environment::gather_array_to_root(multi_array<double> &array);
 
 }  // namespace Aperture
 
