@@ -57,10 +57,15 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar B1 = interp(data.B1, x1, x2, c1, c2, Stagger(0b001));
   Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
-  Scalar b = sqrt(B1 * B1 + B2 * B2 + B3 * B3) / dev_params.BQ;
+  Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
+  Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
+  Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
+  float u = rng();
 
   Scalar Eph = gamma *
-               (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * b));
+            (g - std::abs(p_mag_signed) * u) *
+      (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ));
   if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
   Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
   // gamma = (gamma - std::abs(Eph));
@@ -105,15 +110,15 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
     return false;
   }
 
-  Scalar rho = max(
-      std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
-      0.0001f);
-  Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
-  Scalar multiplicity = N / rho;
-  if (multiplicity > 50.0f) {
-    photons.cell[tid] = MAX_CELL;
-    return false;
-  }
+  // Scalar rho = max(
+  //     std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
+  //     0.0001f);
+  // Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
+  // Scalar multiplicity = N / rho;
+  // if (multiplicity > 50.0f) {
+  //   photons.cell[tid] = MAX_CELL;
+  //   return false;
+  // }
   return (photons.path_left[tid] <= 0.0f);
 }
 

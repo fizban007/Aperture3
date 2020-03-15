@@ -82,9 +82,9 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
   // Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3) / q_over_m;
   // Scalar pitch_angle = pdotB / (p * B_sqrt);
   if (dev_params.rad_cooling_on) {
-    // sync_kill_perp(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3,
-    //                q_over_m);
-    sync_cooling(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3, q_over_m);
+    sync_kill_perp(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3,
+                   q_over_m);
+    // sync_cooling(p1, p2, p3, gamma, B1, B2, B3, E1, E2, E3, q_over_m);
   }
 
   if (sp != (int)ParticleType::ion) {
@@ -102,9 +102,9 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
     // printf("gamma_thr_B is %f, gamma is %f\n",
     //        gamma_thr_B, gamma);
     // if (gamma_thr_B > 3.0f && gamma > gamma_thr_B) {
-    if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B &&
-        B > 0.5f * dev_params.BQ) {
-      // if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B) {
+    // if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B &&
+    //     B > 0.5f * dev_params.BQ) {
+    if (Eph > dev_params.E_ph_min && gamma > gamma_thr_B) {
       // flag = flag |= bit_or(ParticleFlag::emit_photon);
       ptc.flag[idx] = (flag | bit_or(ParticleFlag::emit_photon));
     } else if (dev_params.rad_cooling_on) {

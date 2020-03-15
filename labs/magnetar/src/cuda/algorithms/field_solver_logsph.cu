@@ -269,11 +269,11 @@ stellar_boundary(data_ptrs data, Scalar omega) {
 
       data.B1(i, j) = data.Bbg1(i, j);
       data.B3(i, j) = data.Bbg3(i, j);
-      data.E2(i, j) = -omega * std::sin(theta) *
-                          data.Bbg1(i, j) / alpha_gr(r_s) / r_s / r_s +
+      data.E2(i, j) = -omega * coef * std::sin(theta) *
+                          data.Bbg1(i, j) +
                       data.Ebg2(i, j);
-      data.E1(i, j) = omega * std::sin(theta_s) *
-                          data.Bbg2(i, j) / alpha_gr(r_s) / r / r +
+      data.E1(i, j) = omega * coef * std::sin(theta_s) *
+                          data.Bbg2(i, j) +
                       data.Ebg1(i, j);
       data.B2(i, j) = data.Bbg2(i, j);
       data.B3(i, j) = data.Bbg3(i, j);

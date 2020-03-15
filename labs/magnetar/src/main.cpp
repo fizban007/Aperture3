@@ -58,7 +58,7 @@ main(int argc, char* argv[]) {
     });
     data.init_bg_fields();
 
-    data.fill_multiplicity(1.0, 5);
+    data.fill_multiplicity(1.0, 3);
   }
 
   // Initialize the field solver
@@ -80,16 +80,13 @@ main(int argc, char* argv[]) {
     time = start_time + (step - start_step) * dt;
 
     Scalar omega = 0.0;
-    Scalar atm_time = 0.0;
     Scalar sp_time = 10.0;
-    if (time <= atm_time) {
-      omega = 0.0;
-    } else if (time <= atm_time + sp_time) {
-      // omega = env.params().omega *
-      //         square(std::sin(CONST_PI * 0.5 * (time / 10.0)));
-      omega = env.params().omega * ((time - atm_time) / sp_time);
+    if (time <= sp_time) {
+      omega = env.params().omega * (time / sp_time);
+    } else if (time <= sp_time * 2.0) {
+      omega = env.params().omega * (1.0 - (time - sp_time) / sp_time);
     } else {
-      omega = env.params().omega;
+      omega = 0.0;
     }
     Logger::print_info("=== At timestep {}, time = {}, omega = {} ===",
                        step, time, omega);
@@ -111,9 +108,9 @@ main(int argc, char* argv[]) {
     }
 
     // Inject particles
-    if (env.params().inject_particles && step % 1 == 0)
+    if (env.params().inject_particles && step % 2 == 0)
       ptc_updater.inject_ptc(
-          data, 4, 0.01, 0.0, 0.0,
+          data, 2, 0.02, 0.0, 0.0,
           // 1.1 * omega / env.params().omega, omega);
           1.0, omega);
 

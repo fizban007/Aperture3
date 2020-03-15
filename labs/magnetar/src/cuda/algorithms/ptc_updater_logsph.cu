@@ -328,9 +328,9 @@ inject_ptc(data_ptrs data, size_t num, int inj_per_cell, Scalar p1,
     //          0.4 * square(1.0f / dev_mesh.delta[1]) *
     //              std::sin(dev_mesh.pos(1, i, 0.5f)));
     Scalar sin_theta = std::sin(dev_mesh.pos(1, i, 0.5f));
-    if (dev_params.q_e * dens >
-        1.5f * square(1.0f / dev_mesh.delta[1]) * sin_theta)
-      continue;
+    // if (dev_params.q_e * dens >
+    //     1.5f * square(1.0f / dev_mesh.delta[1]) * sin_theta)
+    //   continue;
     // Scalar Er = data.E1(inject_i, i);
     // Scalar n_inj =
     //     0.2 * std::abs(Er) / (dev_mesh.delta[0] * dev_params.q_e);
@@ -341,8 +341,8 @@ inject_ptc(data_ptrs data, size_t num, int inj_per_cell, Scalar p1,
       // Scalar vphi = (omega - omega_LT) * r * sin(theta);
       // Scalar vphi = omega * r * sin(theta);
       Scalar vphi = 0.0f;
-      // Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
-      Scalar w_ptc = w * sin(theta);
+      Scalar w_ptc = w * sin(theta) * std::abs(cos(theta));
+      // Scalar w_ptc = w * sin(theta);
       // Scalar gamma = 1.0f / std::sqrt(1.0f - vphi * vphi);
       Scalar gamma = std::sqrt(1.0 + p1 * p1 + vphi * vphi);
       float u = curand_uniform(&localState);
