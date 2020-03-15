@@ -15,7 +15,7 @@ typedef float Pos_t;
 #else
 typedef double Scalar;
 typedef double Mom_t;
-typedef double Pos_t;
+typedef float Pos_t;
 #endif
 
 typedef std::size_t Index_t;

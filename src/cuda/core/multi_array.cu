@@ -113,6 +113,23 @@ multi_array<T>::copy_from(self_type& other, const Index& idx_src,
   cudaExtent cu_ext = cuda_ext(ext, T{});
   // make_cudaExtent(ext.x * sizeof(T), ext.y, ext.z);
 
+  if (type == 0) {
+    for (int k = 0; k < ext.z; k++) {
+      for (int j = 0; j < ext.y; j++) {
+        size_t jk_src = (idx_src.y + j +
+                         (idx_src.z + k) * other.m_extent.height()) *
+                        other.m_extent.width();
+        size_t jk_dst =
+            (idx_dst.y + j + (idx_dst.z + k) * m_extent.height()) *
+            m_extent.width();
+        for (int i = 0; i < ext.x; i++) {
+          m_data_h[idx_dst.x + jk_dst + i] =
+              other.m_data_h[idx_src.x + jk_src + i];
+          // m_data_h
+        }
+      }
+    }
+  }
   // Here we use the convention of:
   // cudaMemcpyHostToHost = 0
   // cudaMemcpyHostToDevice = 1

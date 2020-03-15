@@ -27,11 +27,12 @@ sim_environment::sim_environment(int* argc, char*** argv)
     }
   }
 
-  if (sizeof(Scalar) == 4) {
-    m_scalar_type = MPI_FLOAT;
-  } else if (sizeof(Scalar) == 8) {
-    m_scalar_type = MPI_DOUBLE;
-  }
+  // if (sizeof(Scalar) == 4) {
+  //   m_scalar_type = MPI_FLOAT;
+  // } else if (sizeof(Scalar) == 8) {
+  //   m_scalar_type = MPI_DOUBLE;
+  // }
+  m_scalar_type = MPI_Helper::get_mpi_datatype(Scalar{});
 
   m_world = MPI_COMM_WORLD;
   MPI_Comm_rank(m_world, &m_domain_info.rank);
