@@ -46,6 +46,7 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
   exporter.add_grid_output(data.pair_produced.data(), data.pair_produced.stagger(), "pair_produced",
                   file, timestep);
   // exporter.add_array_output(data.ph_flux, "ph_flux", file, timestep);
+  data.env.gather_array_to_root(data.ph_flux);
   file.write(data.ph_flux, "ph_flux");
 }
 

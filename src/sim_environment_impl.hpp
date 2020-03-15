@@ -463,6 +463,18 @@ sim_environment::get_total_num_offset(uint64_t num, uint64_t &total, uint64_t &o
   MPI_Helper::handle_mpi_error(status, m_domain_info.rank);
 }
 
+void
+sim_environment::gather_array_to_root(multi_array<Scalar> &array) {
+  multi_array<Scalar> tmp_array(array.extent());
+  auto result =
+      MPI_Reduce(array.host_ptr(), tmp_array.host_ptr(), array.size(),
+                 MPI_Helper::get_mpi_datatype(Scalar{}), MPI_SUM, 0,
+                 MPI_COMM_WORLD);
+  if (m_domain_info.rank == 0) {
+    array.copy_from(tmp_array, Index(0, 0, 0), Index(0, 0, 0), array.extent(), 0);
+  }
+}
+
 template <>
 std::vector<typename particles_t::base_class>&
 sim_environment::ptc_buffers(const particles_t& ptc) {
