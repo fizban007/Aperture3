@@ -63,16 +63,17 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
   float u = rng();
 
-  Scalar Eph = gamma *
+  Scalar Eph = std::abs(gamma *
             (g - std::abs(p_mag_signed) * u) *
-      (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ));
+      (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
   if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
   Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
   // gamma = (gamma - std::abs(Eph));
   ptc.p1[tid] = p1 * pf / pi;
   ptc.p2[tid] = p2 * pf / pi;
   ptc.p3[tid] = p3 * pf / pi;
-  ptc.E[tid] = gamma - Eph;
+  ptc.E[tid] = std::sqrt(1.0 + ptc.p1[tid] * ptc.p1[tid] +
+                         ptc.p2[tid] * ptc.p2[tid] + ptc.p3[tid] * ptc.p3[tid]);
 
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above

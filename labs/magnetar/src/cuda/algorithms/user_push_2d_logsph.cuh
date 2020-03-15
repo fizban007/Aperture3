@@ -116,7 +116,7 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
       Scalar y = (B / dev_params.BQ) /
                  (dev_params.star_kT * (g - p_mag_signed * mu));
       // printf("g is %f, y is %f\n", g, y);
-      if (y < 20.0f) {
+      if (y < 20.0f && y > 0.0f) {
         // printf("y is %f\n", y);
         Scalar coef = dev_params.res_drag_coef * y * y * y /
                       (r * r * (std::exp(y) - 1.0f));
