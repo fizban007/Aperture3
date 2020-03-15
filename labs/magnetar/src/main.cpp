@@ -19,8 +19,8 @@ int
 main(int argc, char* argv[]) {
   uint32_t start_step = 0;
   uint32_t step = start_step;
-  float start_time = 0.0;
-  float time = start_time;
+  Scalar start_time = 0.0;
+  Scalar time = start_time;
 
   // Construct the simulation environment
   sim_environment env(&argc, &argv);

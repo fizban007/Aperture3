@@ -13,6 +13,8 @@
 #include <cuda_runtime.h>
 #endif
 
+#include "utils/user_data_output.hpp"
+
 #include "visit_struct/visit_struct.hpp"
 
 #define ADD_GRID_OUTPUT(exporter, input, name, func, file, step)       \
@@ -764,41 +766,7 @@ data_exporter::write_field_output(sim_data& data, uint32_t timestep,
                   m_output_num);
   H5File datafile = hdf_create(filename, H5CreateMode::trunc_parallel);
 
-  // user_write_field_output(data, *this, timestep, time, datafile);
-  add_grid_output(data.E.data(0), data.E.stagger(0), "E1", datafile,
-                  timestep);
-  add_grid_output(data.E.data(1), data.E.stagger(1), "E2", datafile,
-                  timestep);
-  add_grid_output(data.E.data(2), data.E.stagger(2), "E3", datafile,
-                  timestep);
-  add_grid_output(data.B.data(0), data.B.stagger(0), "B1", datafile,
-                  timestep);
-  add_grid_output(data.B.data(1), data.B.stagger(1), "B2", datafile,
-                  timestep);
-  add_grid_output(data.B.data(2), data.B.stagger(2), "B3", datafile,
-                  timestep);
-  add_grid_output(data.J.data(0), data.J.stagger(0), "J1", datafile,
-                  timestep);
-  add_grid_output(data.J.data(1), data.J.stagger(1), "J2", datafile,
-                  timestep);
-  add_grid_output(data.J.data(2), data.J.stagger(2), "J3", datafile,
-                  timestep);
-  add_grid_output(data.Rho[0].data(), data.Rho[0].stagger(), "Rho_e",
-                  datafile, timestep);
-  add_grid_output(data.Rho[1].data(), data.Rho[1].stagger(), "Rho_p",
-                  datafile, timestep);
-  if (data.env.params().num_species > 2) {
-    add_grid_output(data.Rho[2].data(), data.Rho[2].stagger(), "Rho_i",
-                    datafile, timestep);
-  }
-  add_grid_output(data.divE.data(), data.divE.stagger(), "divE",
-                  datafile, timestep);
-  add_grid_output(data.divB.data(), data.divB.stagger(), "divB",
-                  datafile, timestep);
-  add_grid_output(data.photon_produced.data(), data.photon_produced.stagger(), "photon_produced",
-                  datafile, timestep);
-  add_grid_output(data.pair_produced.data(), data.pair_produced.stagger(), "pair_produced",
-                  datafile, timestep);
+  user_write_field_output(data, *this, timestep, time, datafile);
 
   datafile.close();
 }

@@ -38,7 +38,7 @@ sim_data::sim_data(sim_environment& e)
   J.set_field_type(FieldType::E);
   J.initialize();
 
-  ph_flux = multi_array<Scalar>(Extent(200, 256));
+  ph_flux = multi_array<float>(Extent(200, 256));
   ph_flux.assign_dev(0.0f);
   ph_flux.copy_to_host();
 
