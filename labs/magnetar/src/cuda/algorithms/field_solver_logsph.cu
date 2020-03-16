@@ -380,19 +380,24 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   CudaCheckError();
 
   CudaSafeCall(cudaDeviceSynchronize());
+  Logger::print_debug(">>> Finished B update, sending B");
   // Communicate the new B values to guard cells
   m_env.send_guard_cells(data.B);
   // m_env.send_guard_cells(data.J);
 
+  Logger::print_debug(">>> Finished sending B");
   // Update E
   Kernels::compute_e_update_logsph<<<gridSize, blockSize>>>(
       data_p, mesh_ptrs, dt);
   CudaCheckError();
 
   CudaSafeCall(cudaDeviceSynchronize());
+  Logger::print_debug(">>> Finished E update, sending E");
+
   // Communicate the new E values to guard cells
   m_env.send_guard_cells(data.E);
 
+  Logger::print_debug(">>> Finished sending E");
   // Compute divergences
   Kernels::compute_divs_logsph<<<gridSize, blockSize>>>(data_p,
                                                         mesh_ptrs);
