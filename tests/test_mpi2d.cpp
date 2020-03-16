@@ -38,7 +38,7 @@ main(int argc, char* argv[]) {
   }
 
   auto& mesh = env.local_grid().mesh();
-  multi_array<float> v(mesh.extent());
+  multi_array<Scalar> v(mesh.extent());
   v.assign_dev(env.domain_info().rank);
   env.send_array_guard_cells(v);
   v.copy_to_host();
@@ -56,7 +56,9 @@ main(int argc, char* argv[]) {
     }
   }
 
-  env.send_add_array_guard_cells(v);
+  // env.send_add_array_guard_cells(v);
+  env.send_add_array_guard_cells_single_dir(v, 0, -1);
+  env.send_add_array_guard_cells_single_dir(v, 0, 1);
 
   v.copy_to_host();
 

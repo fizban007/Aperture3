@@ -41,16 +41,16 @@ sim_environment::send_array_guard_cells_single_dir(
   auto recv_ptr = m_recv_buffers[dim].host_ptr();
 #endif
 
-  // MPI_Sendrecv(send_ptr, m_send_buffers[dim].size(), m_scalar_type,
-  //              dest, 0, recv_ptr, m_recv_buffers[dim].size(),
-  //              m_scalar_type, origin, 0, m_cart, &status);
-  MPI_Request req_send, req_recv;
+  MPI_Sendrecv(send_ptr, m_send_buffers[dim].size(), m_scalar_type,
+               dest, 0, recv_ptr, m_recv_buffers[dim].size(),
+               m_scalar_type, origin, 0, m_cart, &status);
+  // MPI_Request req_send, req_recv;
 
-  MPI_Irecv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type, origin,
-            0, m_cart, &req_recv);
-  MPI_Isend(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
-            0, m_cart, &req_send);
-  MPI_Wait(&req_recv, &status);
+  // MPI_Irecv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type, origin,
+  //           0, m_world, &req_recv);
+  // MPI_Isend(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
+  //           0, m_world, &req_send);
+  // MPI_Wait(&req_recv, &status);
 
   if (origin != MPI_PROC_NULL) {
     Index recv_idx(0, 0, 0);
@@ -101,25 +101,24 @@ sim_environment::send_add_array_guard_cells_single_dir(
   auto recv_ptr = m_recv_buffers[dim].host_ptr();
 #endif
 
-  // MPI_Sendrecv(send_ptr,
-  //              m_send_buffers[dim].size(), m_scalar_type, dest, 0,
-  //              recv_ptr,
-  //              m_recv_buffers[dim].size(), m_scalar_type, origin, 0,
-  //              m_cart, &status);
-  MPI_Request req_send, req_recv;
+  MPI_Sendrecv(send_ptr,
+               m_send_buffers[dim].size(), m_scalar_type, dest, 0,
+               recv_ptr,
+               m_recv_buffers[dim].size(), m_scalar_type, origin, 0,
+               m_cart, &status);
+  // MPI_Request req_send, req_recv;
 
   // if (status.MPI_SOURCE != MPI_PROC_NULL) {
-  MPI_Irecv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type, origin,
-            0, m_cart, &req_recv);
-  MPI_Isend(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
-            0, m_cart, &req_send);
-  MPI_Wait(&req_recv, &status);
+  // MPI_Irecv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type, origin,
+  //           0, m_world, &req_recv);
+  // MPI_Isend(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
+  //           0, m_world, &req_send);
+  // MPI_Wait(&req_recv, &status);
   if (origin != MPI_PROC_NULL) {
     Index recv_idx(0, 0, 0);
     recv_idx[dim] = (dir == -1 ? mesh.dims[dim] - 2 * mesh.guard[dim]
                                : mesh.guard[dim]);
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-#else
+#if !defined(MPIX_CUDA_AWARE_SUPPORT) || !MPIX_CUDA_AWARE_SUPPORT
     m_recv_buffers[dim].copy_to_device();
 #endif
     array.add_from(m_recv_buffers[dim], Index(0, 0, 0), recv_idx,
