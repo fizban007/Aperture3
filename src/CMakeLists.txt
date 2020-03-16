@@ -31,7 +31,7 @@ set(Aperture_src
   "utils/hdf_wrapper.cpp"
   # "utils/mpi_comm.cpp"
   "utils/memory.cpp"
-  "utils/filesystem.cpp"
+  # "utils/filesystem.cpp"
   "utils/data_exporter.cpp"
   "core/grid.cpp"
   "grids/grid_log_sph.cpp"

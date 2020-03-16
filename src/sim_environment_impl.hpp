@@ -429,10 +429,10 @@ sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
       [&](const char* name, auto& u, auto& v) {
         MPI_Irecv((void*)(v + recv_offset), recv_buffer.size(),
                   MPI_Helper::get_mpi_datatype(v[0]), src, tag,
-                  m_world, recv_req);
+                  m_cart, recv_req);
         MPI_Isend((void*)u, num_send,
                   MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
-                  m_world, send_req);
+                  m_cart, send_req);
         // MPI_Sendrecv((void*)u, num_send,
         //              MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
         //              (void*)(v + recv_offset), recv_buffer.size(),

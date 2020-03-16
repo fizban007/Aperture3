@@ -262,9 +262,9 @@ stellar_boundary(data_ptrs data, Scalar omega) {
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
 
       Scalar coef = 0.0f;
-      if (theta < 0.3f * CONST_PI && theta > 0.05f * CONST_PI)
+      if (theta < 0.2f * CONST_PI && theta > 0.06f * CONST_PI)
         coef = 1.0f;
-      else if (theta > 0.7f * CONST_PI && theta < 0.95f * CONST_PI)
+      else if (theta > 0.8f * CONST_PI && theta < 0.94f * CONST_PI)
         coef = -1.0f;
 
       data.B1(i, j) = data.Bbg1(i, j);
@@ -380,24 +380,20 @@ field_solver_logsph::update_fields(sim_data &data, double dt,
   CudaCheckError();
 
   CudaSafeCall(cudaDeviceSynchronize());
-  Logger::print_debug(">>> Finished B update, sending B");
   // Communicate the new B values to guard cells
   m_env.send_guard_cells(data.B);
   // m_env.send_guard_cells(data.J);
 
-  Logger::print_debug(">>> Finished sending B");
   // Update E
   Kernels::compute_e_update_logsph<<<gridSize, blockSize>>>(
       data_p, mesh_ptrs, dt);
   CudaCheckError();
 
   CudaSafeCall(cudaDeviceSynchronize());
-  Logger::print_debug(">>> Finished E update, sending E");
 
   // Communicate the new E values to guard cells
   m_env.send_guard_cells(data.E);
 
-  Logger::print_debug(">>> Finished sending E");
   // Compute divergences
   Kernels::compute_divs_logsph<<<gridSize, blockSize>>>(data_p,
                                                         mesh_ptrs);
