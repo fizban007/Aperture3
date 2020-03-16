@@ -427,23 +427,28 @@ sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
   visit_struct::for_each(
       send_buffer.data(), recv_buffer.data(),
       [&](const char* name, auto& u, auto& v) {
-        // MPI_Irecv((void*)(v + recv_offset), recv_buffer.size(),
-        //           MPI_Helper::get_mpi_datatype(v[0]), src, tag,
-        //           m_world, recv_req);
-        // MPI_Isend((void*)u, num_send,
-        //           MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
-        //           m_world, send_req);
-        MPI_Sendrecv((void*)u, num_send,
-                     MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
-                     (void*)(v + recv_offset), recv_buffer.size(),
-                     MPI_Helper::get_mpi_datatype(v[0]), src, tag,
-                     m_world, recv_stat);
-        // MPI_Wait(recv_req, recv_stat);
-        if (strcmp(name, "cell") == 0) {
-          // Logger::print_debug("Send count is {}, send cell[0] is {}",
-          //                     num_send, u[0]);
-          MPI_Get_count(recv_stat, MPI_Helper::get_mpi_datatype(v[0]),
-                        &num_recv);
+        if (src != MPI_PROC_NULL) {
+          MPI_Recv((void*)(v + recv_offset), recv_buffer.size(),
+                   MPI_Helper::get_mpi_datatype(v[0]), src, tag,
+                   m_cart, recv_stat);
+          if (strcmp(name, "cell") == 0) {
+            // Logger::print_debug("Send count is {}, send cell[0] is
+            // {}",
+            //                     num_send, u[0]);
+            MPI_Get_count(recv_stat, MPI_Helper::get_mpi_datatype(v[0]),
+                          &num_recv);
+          }
+        }
+        if (dest != MPI_PROC_NULL) {
+          MPI_Send((void*)u, num_send,
+                   MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
+                   m_cart);
+          // MPI_Sendrecv((void*)u, num_send,
+          //              MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
+          //              (void*)(v + recv_offset), recv_buffer.size(),
+          //              MPI_Helper::get_mpi_datatype(v[0]), src, tag,
+          //              m_world, recv_stat);
+          // MPI_Wait(recv_req, recv_stat);
         }
       });
   recv_buffer.set_num(recv_offset + num_recv);

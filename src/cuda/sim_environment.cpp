@@ -31,7 +31,7 @@ sim_environment::send_array_guard_cells_single_dir(
 #else
                                 (int)cudaMemcpyDeviceToHost
 #endif
-                                );
+  );
 
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
   auto send_ptr = m_send_buffers[dim].dev_ptr();
@@ -41,11 +41,14 @@ sim_environment::send_array_guard_cells_single_dir(
   auto recv_ptr = m_recv_buffers[dim].host_ptr();
 #endif
 
-  MPI_Sendrecv(send_ptr, m_send_buffers[dim].size(), m_scalar_type,
-               dest, 0, recv_ptr, m_recv_buffers[dim].size(),
-               m_scalar_type, origin, 0, m_cart, &status);
+  // MPI_Sendrecv(send_ptr, m_send_buffers[dim].size(), m_scalar_type,
+  //              dest, 0, recv_ptr, m_recv_buffers[dim].size(),
+  //              m_scalar_type, origin, 0, m_cart, &status);
 
-  if (status.MPI_SOURCE != MPI_PROC_NULL) {
+  if (origin != MPI_PROC_NULL) {
+    MPI_Recv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type,
+             origin, 0, m_cart, &status);
+
     Index recv_idx(0, 0, 0);
     recv_idx[dim] = (dir == -1 ? mesh.dims[dim] - mesh.guard[dim] : 0);
     array.copy_from(m_recv_buffers[dim], Index(0, 0, 0), recv_idx,
@@ -55,7 +58,11 @@ sim_environment::send_array_guard_cells_single_dir(
 #else
                     (int)cudaMemcpyHostToDevice
 #endif
-                    );
+    );
+  }
+  if (dest != MPI_PROC_NULL) {
+    MPI_Send(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
+             0, m_cart);
   }
 }
 
@@ -82,7 +89,7 @@ sim_environment::send_add_array_guard_cells_single_dir(
 #else
                                 (int)cudaMemcpyDeviceToHost
 #endif
-                                );
+  );
 
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
   auto send_ptr = m_send_buffers[dim].dev_ptr();
@@ -92,13 +99,17 @@ sim_environment::send_add_array_guard_cells_single_dir(
   auto recv_ptr = m_recv_buffers[dim].host_ptr();
 #endif
 
-  MPI_Sendrecv(send_ptr,
-               m_send_buffers[dim].size(), m_scalar_type, dest, 0,
-               recv_ptr,
-               m_recv_buffers[dim].size(), m_scalar_type, origin, 0,
-               m_cart, &status);
+  // MPI_Sendrecv(send_ptr,
+  //              m_send_buffers[dim].size(), m_scalar_type, dest, 0,
+  //              recv_ptr,
+  //              m_recv_buffers[dim].size(), m_scalar_type, origin, 0,
+  //              m_cart, &status);
 
-  if (status.MPI_SOURCE != MPI_PROC_NULL) {
+  // if (status.MPI_SOURCE != MPI_PROC_NULL) {
+  if (origin != MPI_PROC_NULL) {
+    MPI_Recv(recv_ptr, m_recv_buffers[dim].size(), m_scalar_type,
+             origin, 0, m_cart, &status);
+
     Index recv_idx(0, 0, 0);
     recv_idx[dim] = (dir == -1 ? mesh.dims[dim] - 2 * mesh.guard[dim]
                                : mesh.guard[dim]);
@@ -108,6 +119,10 @@ sim_environment::send_add_array_guard_cells_single_dir(
 #endif
     array.add_from(m_recv_buffers[dim], Index(0, 0, 0), recv_idx,
                    m_recv_buffers[dim].extent());
+  }
+  if (dest != MPI_PROC_NULL) {
+    MPI_Send(send_ptr, m_send_buffers[dim].size(), m_scalar_type, dest,
+             0, m_cart);
   }
 }
 
