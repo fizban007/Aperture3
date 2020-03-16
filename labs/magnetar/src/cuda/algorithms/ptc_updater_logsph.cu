@@ -788,8 +788,8 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
     // Skip empty particle array
     // timer::show_duration_since_stamp("Updating photons", "us",
     //                                  "ph_update");
-    m_env.send_particles(data.particles);
   }
+  m_env.send_particles(data.particles);
   if (data.photons.number() > 0) {
     Logger::print_info(
         "Updating {} photons in log spherical coordinates",
@@ -798,8 +798,8 @@ ptc_updater_logsph::update_particles(sim_data &data, double dt,
         data.photons.data(), data.photons.number(), dt,
         m_env.is_boundary(2), m_env.is_boundary(3));
     CudaCheckError();
-    m_env.send_particles(data.photons);
   }
+  m_env.send_particles(data.photons);
   CudaSafeCall(cudaDeviceSynchronize());
   // timer::show_duration_since_stamp("Sending guard cells", "us",
   // "comm");
