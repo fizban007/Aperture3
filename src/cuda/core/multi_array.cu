@@ -26,7 +26,7 @@ downsample(pitchptr<T> orig_data, pitchptr<float> dst_data,
         (i * d + offset.x) * sizeof(T) +
         (j * d + offset.y) * orig_data.p.pitch +
         (k * d + offset.z) * orig_data.p.pitch * orig_data.p.ysize;
-    size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch +
+    size_t dst_idx = i * sizeof(float) + j * dst_data.p.pitch +
                      k * dst_data.p.pitch * dst_data.p.ysize;
 
     dst_data[dst_idx] =
@@ -45,7 +45,7 @@ downsample2d(pitchptr<T> orig_data, pitchptr<float> dst_data,
   if (i < dst_ext.x && j < dst_ext.y) {
     size_t orig_idx = (i * d + offset.x) * sizeof(T) +
                       (j * d + offset.y) * orig_data.p.pitch;
-    size_t dst_idx = i * sizeof(T) + j * dst_data.p.pitch;
+    size_t dst_idx = i * sizeof(float) + j * dst_data.p.pitch;
 
     dst_data[dst_idx] = interpolate2d(
         orig_data, orig_idx, st, Stagger(0b111), orig_data.p.pitch);
@@ -60,7 +60,7 @@ downsample1d(pitchptr<T> orig_data, pitchptr<float> dst_data,
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i < dst_ext.x) {
     size_t orig_idx = (i * d + offset.x) * sizeof(T);
-    size_t dst_idx = i * sizeof(T);
+    size_t dst_idx = i * sizeof(float);
 
     dst_data[dst_idx] =
         interpolate1d(orig_data, orig_idx, st, Stagger(0b111));

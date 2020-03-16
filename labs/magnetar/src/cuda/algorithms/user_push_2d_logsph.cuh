@@ -157,7 +157,7 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
             (g - std::abs(p_mag_signed) * u) *
             (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
         // if (p1 > 0.0f && (Eph < 2.0f || B < 0.1 * dev_params.BQ)) {
-        if (p1 > 0.0f && Eph < 2.0f) {
+        if (p1 > 0.0f && gamma > 1.5f && Eph < 2.0f) {
           Eph = std::log(std::abs(Eph)) / std::log(10.0f);
           if (Eph > 2.0f) Eph = 2.0f;
           if (Eph < -6.0f) Eph = -6.0f;
