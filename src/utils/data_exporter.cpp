@@ -170,8 +170,8 @@ data_exporter::write_grid() {
                        total_ext.y, total_ext.z);
     Index offset(mesh.offset[0] / downsample,
                  mesh.offset[1] / downsample, 0);
-    Logger::print_info("offset is {}x{}x{}", offset.x, offset.y,
-                       offset.z);
+    Logger::print_debug_all("offset is {}x{}x{}", offset.x, offset.y,
+                            offset.z);
     // write_multi_array(x1_array, "x1", total_ext, offset, datafile);
     // write_multi_array(x2_array, "x2", total_ext, offset, datafile);
     meshfile.write_parallel(x1_array, total_ext, offset, out_ext,

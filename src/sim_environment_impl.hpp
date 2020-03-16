@@ -280,23 +280,35 @@ sim_environment::send_guard_cells(vector_field<Scalar>& field) {
 
 void
 sim_environment::send_array_guard_cells(multi_array<Scalar>& array) {
-  send_array_guard_cells_single_dir(array, 0, -1);
-  send_array_guard_cells_single_dir(array, 0, 1);
-  send_array_guard_cells_single_dir(array, 1, -1);
-  send_array_guard_cells_single_dir(array, 1, 1);
-  send_array_guard_cells_single_dir(array, 2, -1);
-  send_array_guard_cells_single_dir(array, 2, 1);
+  if (m_domain_info.cart_dims[0] > 1 || m_domain_info.is_periodic[0]) {
+    send_array_guard_cells_single_dir(array, 0, -1);
+    send_array_guard_cells_single_dir(array, 0, 1);
+  }
+  if (m_domain_info.cart_dims[1] > 1 || m_domain_info.is_periodic[1]) {
+    send_array_guard_cells_single_dir(array, 1, -1);
+    send_array_guard_cells_single_dir(array, 1, 1);
+  }
+  if (m_domain_info.cart_dims[2] > 1 || m_domain_info.is_periodic[2]) {
+    send_array_guard_cells_single_dir(array, 2, -1);
+    send_array_guard_cells_single_dir(array, 2, 1);
+  }
 }
 
 void
 sim_environment::send_add_array_guard_cells(
     multi_array<Scalar>& array) {
-  send_add_array_guard_cells_single_dir(array, 0, -1);
-  send_add_array_guard_cells_single_dir(array, 0, 1);
-  send_add_array_guard_cells_single_dir(array, 1, -1);
-  send_add_array_guard_cells_single_dir(array, 1, 1);
-  send_add_array_guard_cells_single_dir(array, 2, -1);
-  send_add_array_guard_cells_single_dir(array, 2, 1);
+  if (m_domain_info.cart_dims[0] > 1 || m_domain_info.is_periodic[0]) {
+    send_add_array_guard_cells_single_dir(array, 0, -1);
+    send_add_array_guard_cells_single_dir(array, 0, 1);
+  }
+  if (m_domain_info.cart_dims[1] > 1 || m_domain_info.is_periodic[1]) {
+    send_add_array_guard_cells_single_dir(array, 1, -1);
+    send_add_array_guard_cells_single_dir(array, 1, 1);
+  }
+  if (m_domain_info.cart_dims[2] > 1 || m_domain_info.is_periodic[2]) {
+    send_add_array_guard_cells_single_dir(array, 2, -1);
+    send_add_array_guard_cells_single_dir(array, 2, 1);
+  }
   // if (m_grid->dim() >= 2) {
   //   send_add_array_guard_cells_y(array, -1);
   //   send_add_array_guard_cells_y(array, 1);
