@@ -44,7 +44,9 @@ user_write_field_output(sim_data& data, data_exporter& exporter,
   exporter.add_grid_output(data.photon_produced.data(), data.photon_produced.stagger(), "photon_produced",
                   file, timestep);
   exporter.add_grid_output(data.pair_produced.data(), data.pair_produced.stagger(), "pair_produced",
-                  file, timestep);
+                           file, timestep);
+  exporter.add_grid_output(data.EdotB.data(), data.EdotB.stagger(), "EdotB_avg",
+                           file, timestep);
   // exporter.add_array_output(data.ph_flux, "ph_flux", file, timestep);
   //Logger::print_debug("before gather");
   data.env.gather_array_to_root(data.ph_flux);
