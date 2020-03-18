@@ -367,6 +367,7 @@ void field_solver_logsph::update_fields(sim_data &data, double dt,
   Kernels::compute_divs_logsph<<<gridSize, blockSize>>>(data_p, mesh_ptrs);
   CudaCheckError();
   data.compute_edotb();
+  m_env.send_guard_cells(data.EdotB);
 
   CudaSafeCall(cudaDeviceSynchronize());
   timer::show_duration_since_stamp("Field update", "us", "field_update");
