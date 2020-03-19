@@ -170,9 +170,11 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
   MPI_Cart_coords(m_cart, m_domain_info.rank, 3,
                   m_domain_info.cart_coord);
 
-  Logger::print_info("Domain created with dimensions {} x {} x {}",
-                     dimx, dimy, dimz);
-  Logger::print_info("Rank {} has coords {}, {}, {}",
+  Logger::print_debug_all("Domain created with dimensions {} x {} x {}",
+                          m_domain_info.cart_dims[0],
+                          m_domain_info.cart_dims[1],
+                          m_domain_info.cart_dims[2]);
+  Logger::print_debug_all("Rank {} has coords {}, {}, {}",
                      m_domain_info.rank, m_domain_info.cart_coord[0],
                      m_domain_info.cart_coord[1],
                      m_domain_info.cart_coord[2]);
@@ -197,6 +199,9 @@ sim_environment::setup_domain(int dimx, int dimy, int dimz) {
   m_domain_info.neighbor_right[1] = yright;
   if (yleft < 0) m_domain_info.is_boundary[2] = true;
   if (yright < 0) m_domain_info.is_boundary[3] = true;
+  Logger::print_debug_all("the left neighbor of rank {} is {}, MPI_PROC_NULL is {}",
+                          m_domain_info.rank, m_domain_info.neighbor_left[1],
+                          MPI_PROC_NULL);
 
   MPI_Cart_shift(m_cart, 2, -1, &rank, &zleft);
   MPI_Cart_shift(m_cart, 2, 1, &rank, &zright);
@@ -280,43 +285,23 @@ sim_environment::send_guard_cells(vector_field<Scalar>& field) {
 
 void
 sim_environment::send_array_guard_cells(multi_array<Scalar>& array) {
-  if (m_domain_info.cart_dims[0] > 1 || m_domain_info.is_periodic[0]) {
-    send_array_guard_cells_single_dir(array, 0, -1);
-    send_array_guard_cells_single_dir(array, 0, 1);
-  }
-  if (m_domain_info.cart_dims[1] > 1 || m_domain_info.is_periodic[1]) {
-    send_array_guard_cells_single_dir(array, 1, -1);
-    send_array_guard_cells_single_dir(array, 1, 1);
-  }
-  if (m_domain_info.cart_dims[2] > 1 || m_domain_info.is_periodic[2]) {
-    send_array_guard_cells_single_dir(array, 2, -1);
-    send_array_guard_cells_single_dir(array, 2, 1);
-  }
+  send_array_guard_cells_single_dir(array, 0, -1);
+  send_array_guard_cells_single_dir(array, 0, 1);
+  send_array_guard_cells_single_dir(array, 1, -1);
+  send_array_guard_cells_single_dir(array, 1, 1);
+  send_array_guard_cells_single_dir(array, 2, -1);
+  send_array_guard_cells_single_dir(array, 2, 1);
 }
 
 void
 sim_environment::send_add_array_guard_cells(
     multi_array<Scalar>& array) {
-  if (m_domain_info.cart_dims[0] > 1 || m_domain_info.is_periodic[0]) {
-    send_add_array_guard_cells_single_dir(array, 0, -1);
-    send_add_array_guard_cells_single_dir(array, 0, 1);
-  }
-  if (m_domain_info.cart_dims[1] > 1 || m_domain_info.is_periodic[1]) {
-    send_add_array_guard_cells_single_dir(array, 1, -1);
-    send_add_array_guard_cells_single_dir(array, 1, 1);
-  }
-  if (m_domain_info.cart_dims[2] > 1 || m_domain_info.is_periodic[2]) {
-    send_add_array_guard_cells_single_dir(array, 2, -1);
-    send_add_array_guard_cells_single_dir(array, 2, 1);
-  }
-  // if (m_grid->dim() >= 2) {
-  //   send_add_array_guard_cells_y(array, -1);
-  //   send_add_array_guard_cells_y(array, 1);
-  // }
-  // if (m_grid->dim() >= 3) {
-  //   send_add_array_guard_cells_z(array, -1);
-  //   send_add_array_guard_cells_z(array, 1);
-  // }
+  send_add_array_guard_cells_single_dir(array, 0, -1);
+  send_add_array_guard_cells_single_dir(array, 0, 1);
+  send_add_array_guard_cells_single_dir(array, 1, -1);
+  send_add_array_guard_cells_single_dir(array, 1, 1);
+  send_add_array_guard_cells_single_dir(array, 2, -1);
+  send_add_array_guard_cells_single_dir(array, 2, 1);
 }
 
 void
@@ -439,18 +424,18 @@ sim_environment::send_particle_array(T& send_buffer, T& recv_buffer,
   visit_struct::for_each(
       send_buffer.data(), recv_buffer.data(),
       [&](const char* name, auto& u, auto& v) {
-        MPI_Irecv((void*)(v + recv_offset), recv_buffer.size(),
-                  MPI_Helper::get_mpi_datatype(v[0]), src, tag,
-                  m_cart, recv_req);
-        MPI_Isend((void*)u, num_send,
-                  MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
-                  m_cart, send_req);
-        // MPI_Sendrecv((void*)u, num_send,
-        //              MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
-        //              (void*)(v + recv_offset), recv_buffer.size(),
-        //              MPI_Helper::get_mpi_datatype(v[0]), src, tag,
-        //              m_world, recv_stat);
-        MPI_Wait(recv_req, recv_stat);
+        // MPI_Irecv((void*)(v + recv_offset), recv_buffer.size(),
+        //           MPI_Helper::get_mpi_datatype(v[0]), src, tag,
+        //           m_cart, recv_req);
+        // MPI_Isend((void*)u, num_send,
+        //           MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
+        //           m_cart, send_req);
+        MPI_Sendrecv((void*)u, num_send,
+                     MPI_Helper::get_mpi_datatype(u[0]), dest, tag,
+                     (void*)(v + recv_offset), recv_buffer.size(),
+                     MPI_Helper::get_mpi_datatype(v[0]), src, tag,
+                     m_world, recv_stat);
+        // MPI_Wait(recv_req, recv_stat);
         if (strcmp(name, "cell") == 0 && src != MPI_PROC_NULL) {
           // Logger::print_debug("Send count is {}, send cell[0] is {}",
           //                     num_send, u[0]);

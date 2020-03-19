@@ -160,6 +160,7 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   // auto p3 = data.photons.p3[tid];
   // auto Eph = data.photons.E[tid];
   Scalar theta = dev_mesh.pos(1, c2, x2);
+  Scalar r = exp(dev_mesh.pos(0, c1, x1));
   // Do not care about photons in the first and last theta cell
   if (theta < dev_mesh.delta[1] ||
       theta > CONST_PI - dev_mesh.delta[1]) {
@@ -170,12 +171,14 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   // Scalar rho = max(
   //     std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
   //     0.0001f);
-  // Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
+  Scalar N = dev_params.q_e * std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
   // Scalar multiplicity = N / rho;
-  // if (multiplicity > 50.0f) {
-  //   photons.cell[tid] = MAX_CELL;
-  //   return false;
-  // }
+  // if (multiplicity > 100.0f) {
+  if (N > 2.0f * square(1.0f / dev_mesh.delta[1] / r) * sin(theta)) {
+    // Multiplicity already too high, kill photon but do not make a pair
+    photons.cell[tid] = MAX_CELL;
+    return false;
+  }
   return (photons.path_left[tid] <= 0.0f);
 }
 
