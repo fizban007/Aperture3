@@ -153,7 +153,7 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   uint32_t cell = photons.cell[tid];
   int c1 = dev_mesh.get_c1(cell);
   int c2 = dev_mesh.get_c2(cell);
-  // auto x1 = data.photons.x1[tid];
+  auto x1 = data.photons.x1[tid];
   auto x2 = data.photons.x2[tid];
   // auto p1 = data.photons.p1[tid];
   // auto p2 = data.photons.p2[tid];
