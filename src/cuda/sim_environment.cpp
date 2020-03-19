@@ -167,12 +167,14 @@ sim_environment::setup_device() {
   // Poll the system to detect how many GPUs are on the node
   int n_devices;
   cudaGetDeviceCount(&n_devices);
+  Logger::print_debug("{} usable CUDA devices found", n_devices);
   if (n_devices <= 0) {
     Logger::err("No usable Cuda device found!!");
     exit(1);
   }
   m_dev_id = m_domain_info.rank % n_devices;
   cudaSetDevice(m_dev_id);
+  Logger::print_debug("Rank {} is using device #{}", m_domain_info.rank, m_dev_id);
 }
 
 }  // namespace Aperture

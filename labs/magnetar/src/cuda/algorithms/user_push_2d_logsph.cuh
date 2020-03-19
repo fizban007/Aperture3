@@ -128,6 +128,14 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
         p1 += dt * B1 * D / B;
         p2 += dt * B2 * D / B;
         p3 += dt * B3 * D / B;
+        if (p1 != p1 || p2 != p2 || p3 != p3) {
+            printf(
+                "NaN detected in resonant cooling! p1 is %f, p2 is %f, p3 is %f, gamma "
+                "is %f\n",
+                p1, p2, p3, gamma);
+            asm("trap;");
+            // p1 = p2 = p3 = 0.0f;
+        }
         // printf("drag on p1 is %f\n", dt * B1 * D / B);
         gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
 

@@ -243,9 +243,9 @@ __global__ void stellar_boundary(data_ptrs data, Scalar omega) {
       Scalar r = std::exp(dev_mesh.pos(0, i, false));
 
       Scalar coef = 0.0f;
-      if (theta < 0.2f * CONST_PI && theta > 0.06f * CONST_PI)
+      if (theta < 0.22f * CONST_PI && theta > 0.06f * CONST_PI)
         coef = 1.0f;
-      else if (theta > 0.8f * CONST_PI && theta < 0.94f * CONST_PI)
+      else if (theta > 0.78f * CONST_PI && theta < 0.94f * CONST_PI)
         coef = -1.0f;
 
       data.B1(i, j) = data.Bbg1(i, j);
