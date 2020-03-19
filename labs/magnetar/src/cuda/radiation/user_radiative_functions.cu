@@ -47,9 +47,9 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   auto x2 = ptc.x2[tid];
   auto c1 = dev_mesh.get_c1(c);
   auto c2 = dev_mesh.get_c2(c);
-  Scalar r = exp(dev_mesh.pos(0, c1, x1));
-  Scalar theta = dev_mesh.pos(1, c2, x2);
+  // Scalar gamma = sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
   Scalar gamma = ptc.E[tid];
+  // Scalar pi = std::sqrt(gamma * gamma - 1.0f);
   Scalar pi = std::sqrt(p1 * p1 + p2 * p2 + p3 * p3);
   // Scalar u = rng();
 
@@ -61,90 +61,42 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
   Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
   Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
-  Scalar mu = std::abs(B1 / B);
-  Scalar y = (B / dev_params.BQ) /
-             (dev_params.star_kT * (g - p_mag_signed * mu));
-  if (y < 20.0f && y > 0.0f) {
-    Scalar coef = dev_params.res_drag_coef * y * y * y /
-                  (r * r * (std::exp(y) - 1.0f));
-    Scalar Ndot = std::abs(coef * (1.0f - p_mag_signed * mu / g));
-    float theta_p = CONST_PI * rng();
-    float u = cos(theta_p);
+  float u = rng();
 
-    // The abs is not necessary?
-    Scalar Eph = std::abs(
-        gamma * (g - std::abs(p_mag_signed) * u) *
-        (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
-    if (Eph < 2.1f) {
-      // Treat this as hard X-ray emission
-        Scalar angle =
-            acos(sgn(pdotB) * (B1 * cos(theta) - B2 * sin(theta)) / B);
-        float phi_p = 2.0f * CONST_PI * rng();
-        Scalar cos_angle =
-            std::cos(angle) * std::cos(theta_p) +
-            std::sin(angle) * std::sin(theta_p) * std::cos(phi_p);
-        angle = std::acos(cos_angle);
-        auto& ph_flux = data.ph_flux;
-        if (p1 > 0.0f && gamma > 1.5f) {
-          Eph = std::log(std::abs(Eph)) / std::log(10.0f);
-          if (Eph < -6.0f) Eph = -6.0f;
-          int n0 = ((Eph + 6.0f) / 8.1f * (ph_flux.p.xsize - 1));
-          if (n0 < 0) n0 = 0;
-          if (n0 >= ph_flux.p.xsize) n0 = ph_flux.p.xsize - 1;
-          int n1 = (std::abs(angle) / (CONST_PI + 1.0e-5)) *
-                   (ph_flux.p.ysize - 1);
-          if (n1 < 0) n1 = 0;
-          if (n1 >= ph_flux.p.ysize) n1 = ph_flux.p.ysize - 1;
-          auto w = ptc.weight[tid];
-          atomicAdd(&ph_flux(n0, n1), Ndot * dev_params.delta_t * w);
-          // printf("n0 is %d, n1 is %d, Ndot is %f, ph_flux is %f\n",
-          // n0,
-          //        n1, Ndot, ph_flux(n0, n1));
-        }
-      Scalar pf = std::sqrt(square(max(gamma - Eph * Ndot, 1.1f)) - 1.0f);
-      ptc.p1[tid] = p1 * pf / pi;
-      ptc.p2[tid] = p2 * pf / pi;
-      ptc.p3[tid] = p3 * pf / pi;
-      ptc.E[tid] = std::sqrt(1.0 + ptc.p1[tid] * ptc.p1[tid] +
-                             ptc.p2[tid] * ptc.p2[tid] +
-                             ptc.p3[tid] * ptc.p3[tid]);
-    } else {
-      // Treat this as a discrete photon emission
-      if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
-      float v = rng();
-      if (v < Ndot * dev_params.delta_t) {
-        Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
-        // gamma = (gamma - std::abs(Eph));
-        ptc.p1[tid] = p1 * pf / pi;
-        ptc.p2[tid] = p2 * pf / pi;
-        ptc.p3[tid] = p3 * pf / pi;
-        ptc.E[tid] = std::sqrt(1.0 + ptc.p1[tid] * ptc.p1[tid] +
-                               ptc.p2[tid] * ptc.p2[tid] +
-                               ptc.p3[tid] * ptc.p3[tid]);
-        if (ptc.E[tid] != ptc.E[tid]) {
-          printf(
-              "NaN detected in photon emission! p1 is %f, p2 is %f, p3 "
-              "is "
-              "%f, gamma "
-              "is %f\n",
-              p1, p2, p3, gamma);
-          asm("trap;");
-          // p1 = p2 = p3 = 0.0f;
-        }
-
-        photons.x1[offset] = ptc.x1[tid];
-        photons.x2[offset] = ptc.x2[tid];
-        photons.x3[offset] = ptc.x3[tid];
-        photons.p1[offset] = Eph * p1 / pi;
-        photons.p2[offset] = Eph * p2 / pi;
-        photons.p3[offset] = Eph * p3 / pi;
-        photons.E[offset] = Eph;
-        photons.weight[offset] = ptc.weight[tid];
-        photons.path_left[offset] = dev_params.photon_path;
-        photons.cell[offset] = ptc.cell[tid];
-      }
-    }
+  Scalar Eph = std::abs(gamma *
+            (g - std::abs(p_mag_signed) * u) *
+      (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
+  if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
+  Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
+  // gamma = (gamma - std::abs(Eph));
+  ptc.p1[tid] = p1 * pf / pi;
+  ptc.p2[tid] = p2 * pf / pi;
+  ptc.p3[tid] = p3 * pf / pi;
+  ptc.E[tid] = std::sqrt(1.0 + ptc.p1[tid] * ptc.p1[tid] +
+                         ptc.p2[tid] * ptc.p2[tid] + ptc.p3[tid] * ptc.p3[tid]);
+  if (ptc.E[tid] != ptc.E[tid]) {
+    printf(
+        "NaN detected in photon emission! p1 is %f, p2 is %f, p3 is %f, gamma "
+        "is %f\n",
+        p1, p2, p3, gamma);
+    asm("trap;");
+    // p1 = p2 = p3 = 0.0f;
   }
+
+  // If photon energy is too low, do not track it, but still
+  // subtract its energy as done above
+  if (Eph < dev_params.E_ph_min) return;
+
+  photons.x1[offset] = ptc.x1[tid];
+  photons.x2[offset] = ptc.x2[tid];
+  photons.x3[offset] = ptc.x3[tid];
+  photons.p1[offset] = Eph * p1 / pi;
+  photons.p2[offset] = Eph * p2 / pi;
+  photons.p3[offset] = Eph * p3 / pi;
+  photons.E[offset] = Eph;
+  photons.weight[offset] = ptc.weight[tid];
+  photons.path_left[offset] = dev_params.photon_path;
+  photons.cell[offset] = ptc.cell[tid];
 }
 
 __device__ bool
