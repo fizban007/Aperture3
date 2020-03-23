@@ -5,7 +5,6 @@ import numpy as np
 import pytoml
 from pathlib import Path
 import os
-import glob
 import re
 
 
@@ -18,7 +17,7 @@ class Data:
         self._path = path
 
         # Load mesh file
-        self._meshfile = os.path.join(path, "mesh.h5")
+        self._meshfile = os.path.join(path, "grid.h5")
 
         # Generate a list of output steps
         num_re = re.compile(r"\d+")
