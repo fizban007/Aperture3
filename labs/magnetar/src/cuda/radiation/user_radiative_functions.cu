@@ -121,12 +121,11 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   int c2 = dev_mesh.get_c2(cell);
   auto x1 = data.photons.x1[tid];
   auto x2 = data.photons.x2[tid];
-  // auto p1 = data.photons.p1[tid];
-  // auto p2 = data.photons.p2[tid];
-  // auto p3 = data.photons.p3[tid];
-  // auto Eph = data.photons.E[tid];
+  auto p1 = data.photons.p1[tid];
+  auto p2 = data.photons.p2[tid];
+  auto p3 = data.photons.p3[tid];
+  auto Eph = data.photons.E[tid];
   Scalar theta = dev_mesh.pos(1, c2, x2);
-  Scalar r = exp(dev_mesh.pos(0, c1, x1));
   // Do not care about photons in the first and last theta cell
   if (theta < dev_mesh.delta[1] ||
       theta > CONST_PI - dev_mesh.delta[1]) {
@@ -134,18 +133,24 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
     return false;
   }
 
-  // Scalar rho = max(
-  //     std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
-  //     0.0001f);
-  Scalar N = dev_params.q_e * std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
-  // Scalar multiplicity = N / rho;
-  // if (multiplicity > 100.0f) {
-  if (N > 2.0f * square(1.0f / dev_mesh.delta[1] / r) * sin(theta)) {
-    // Multiplicity already too high, kill photon but do not make a pair
+  Scalar rho = max(
+      std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
+      0.0001f);
+  Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
+  Scalar multiplicity = N / rho;
+  if (multiplicity > 50.0f) {
     photons.cell[tid] = MAX_CELL;
     return false;
   }
-  return (photons.path_left[tid] <= 0.0f);
+  // return (photons.path_left[tid] <= 0.0f);
+  Interpolator2D<Spline::spline_t<1>> interp;
+  Scalar B1 = interp(data.B1, x1, x2, c1, c2, Stagger(0b001));
+  Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
+  Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
+  Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  Scalar cth = (B1 * p1 + B2 * p2 + B3 * p3) / (B * Eph);
+  Scalar chi = Eph * B * sqrt(1.0 - cth * cth) / dev_params.BQ;
+  return chi > 0.12;
 }
 
 __device__ void
