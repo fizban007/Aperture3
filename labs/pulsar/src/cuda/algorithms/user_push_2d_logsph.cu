@@ -1,9 +1,9 @@
 #ifndef _USER_PUSH_2D_LOGSPH_CUH_
 #define _USER_PUSH_2D_LOGSPH_CUH_
 
-#include "cuda/algorithms/gravity.cuh"
-#include "cuda/algorithms/sync_cooling.cuh"
-#include "cuda/algorithms/vay_push.cuh"
+#include "cuda/algorithms/gravity.cu"
+#include "cuda/algorithms/sync_cooling.cu"
+#include "cuda/algorithms/vay_push.cu"
 #include "cuda/constant_mem.h"
 #include "cuda/data_ptrs.h"
 

@@ -1,5 +1,5 @@
 #include "algorithms/ptc_updater_logsph.h"
-#include "cuda/algorithms/ptc_updater_helper.cuh"
+#include "cuda/algorithms/ptc_updater_helper.cu"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
@@ -13,7 +13,7 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 
-#include "cuda/algorithms/user_push_2d_logsph.cuh"
+#include "cuda/algorithms/user_push_2d_logsph.cu"
 
 namespace Aperture {
 

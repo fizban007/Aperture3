@@ -1,7 +1,7 @@
 #include "algorithms/ptc_updater.h"
 #include "core/constant_defs.h"
 #include "core/typedefs.h"
-#include "cuda/algorithms/ptc_updater_helper.cuh"
+#include "cuda/algorithms/ptc_updater_helper.cu"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
@@ -11,8 +11,8 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 
-#include "sync_cooling.cuh"
-#include "vay_push.cuh"
+#include "sync_cooling.cu"
+#include "vay_push.cu"
 
 namespace Aperture {
 

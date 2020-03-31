@@ -1,5 +1,5 @@
 #include "algorithms/ptc_updater_logsph.h"
-#include "cuda/algorithms/ptc_updater_helper.cuh"
+#include "cuda/algorithms/ptc_updater_helper.cu"
 #include "cuda/constant_mem.h"
 #include "cuda/cudaUtility.h"
 #include "cuda/data_ptrs.h"
@@ -13,7 +13,7 @@
 #include "utils/timer.h"
 #include "utils/util_functions.h"
 
-#include "cuda/algorithms/user_push_2d_logsph.cuh"
+#include "cuda/algorithms/user_push_2d_logsph.cu"
 
 namespace Aperture {
 
@@ -22,26 +22,6 @@ namespace Kernels {
 __device__ Scalar beta_phi(Scalar r, Scalar theta);
 
 __device__ Scalar alpha_gr(Scalar r);
-
-HD_INLINE void
-cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
-            Scalar x3) {
-  Scalar v1n = v1, v2n = v2, v3n = v3;
-  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
-  v1 = v1n * s2 * c3 + v2n * s2 * s3 + v3n * c2;
-  v2 = v1n * c2 * c3 + v2n * c2 * s3 - v3n * s2;
-  v3 = -v1n * s3 + v2n * c3;
-}
-
-HD_INLINE void
-logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
-            Scalar x3) {
-  Scalar v1n = v1, v2n = v2, v3n = v3;
-  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
-  v1 = v1n * s2 * c3 + v2n * c2 * c3 - v3n * s3;
-  v2 = v1n * s2 * s3 + v2n * c2 * s3 + v3n * c3;
-  v3 = v1n * c2 - v2n * s2;
-}
 
 __global__ void
 __launch_bounds__(256, 4)

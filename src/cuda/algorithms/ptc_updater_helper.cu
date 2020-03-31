@@ -40,6 +40,26 @@ movement2d(Scalar sx0, Scalar sx1, Scalar sy0, Scalar sy1) {
   return (sy1 - sy0) * 0.5f * (sx0 + sx1);
 }
 
+HD_INLINE void
+cart2logsph(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
+            Scalar x3) {
+  Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
+  v1 = v1n * s2 * c3 + v2n * s2 * s3 + v3n * c2;
+  v2 = v1n * c2 * c3 + v2n * c2 * s3 - v3n * s2;
+  v3 = -v1n * s3 + v2n * c3;
+}
+
+HD_INLINE void
+logsph2cart(Scalar &v1, Scalar &v2, Scalar &v3, Scalar x1, Scalar x2,
+            Scalar x3) {
+  Scalar v1n = v1, v2n = v2, v3n = v3;
+  Scalar c2 = cos(x2), s2 = sin(x2), c3 = cos(x3), s3 = sin(x3);
+  v1 = v1n * s2 * c3 + v2n * c2 * c3 - v3n * s3;
+  v2 = v1n * s2 * s3 + v2n * c2 * s3 + v3n * c3;
+  v3 = v1n * c2 - v2n * s2;
+}
+
 // union float2UllUnion {
 //   // double d;
 //   float2 f;

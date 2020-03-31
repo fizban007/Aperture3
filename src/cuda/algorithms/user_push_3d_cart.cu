@@ -3,9 +3,9 @@
 
 #include "cuda/constant_mem.h"
 #include "cuda/data_ptrs.h"
-#include "gravity.cuh"
-#include "sync_cooling.cuh"
-#include "vay_push.cuh"
+#include "gravity.cu"
+#include "sync_cooling.cu"
+#include "vay_push.cu"
 
 namespace Aperture {
 

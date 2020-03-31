@@ -1,11 +1,11 @@
-#ifndef _USER_PUSH_2D_LOGSPH_CUH_
-#define _USER_PUSH_2D_LOGSPH_CUH_
+#ifndef __USER_PUSH_2D_CART_H__
+#define __USER_PUSH_2D_CART_H__
 
 #include "cuda/constant_mem.h"
 #include "cuda/data_ptrs.h"
-#include "gravity.cuh"
-#include "sync_cooling.cuh"
-#include "vay_push.cuh"
+#include "gravity.cu"
+#include "sync_cooling.cu"
+#include "vay_push.cu"
 
 namespace Aperture {
 
@@ -13,7 +13,8 @@ namespace Kernels {
 
 template <int N>
 __device__ __forceinline__ void
-user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) {
+user_push_2d_cart(data_ptrs& data, size_t idx, Scalar dt,
+                  curandState& state) {
   auto& ptc = data.particles;
 
   auto c = ptc.cell[idx];
@@ -33,8 +34,6 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) 
   auto old_x1 = ptc.x1[idx], old_x2 = ptc.x2[idx];
   auto p1 = ptc.p1[idx], p2 = ptc.p2[idx], p3 = ptc.p3[idx],
        gamma = ptc.E[idx];
-  Scalar r = std::exp(dev_mesh.pos(0, c1, old_x1));
-  Scalar alpha = alpha_gr(r);
   Scalar q_over_m = dt * 0.5f * dev_charges[sp] / dev_masses[sp];
   if (p1 != p1 || p2 != p2 || p3 != p3) {
     printf(
@@ -49,33 +48,29 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) 
   gamma = std::sqrt(1.0f + p1 * p1 + p2 * p2 + p3 * p3);
   if (!check_bit(flag, ParticleFlag::ignore_EM)) {
     Scalar E1 =
-        alpha *
         (interp(data.E1, old_x1, old_x2, c1, c2, Stagger(0b110))) *
         // interp(dev_bg_fields.E1, old_x1, old_x2, c1, c2,
         //        Stagger(0b110))) *
         q_over_m;
     Scalar E2 =
-        alpha *
         (interp(data.E2, old_x1, old_x2, c1, c2, Stagger(0b101))) *
         // interp(dev_bg_fields.E2, old_x1, old_x2, c1, c2,
         //        Stagger(0b101))) *
         q_over_m;
     Scalar E3 =
-        alpha *
         (interp(data.E3, old_x1, old_x2, c1, c2, Stagger(0b011))) *
         // interp(dev_bg_fields.E3, old_x1, old_x2, c1, c2,
         //        Stagger(0b011))) *
         q_over_m;
     Scalar B1 =
-        alpha *
-        interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) *
+        (interp(data.B1, old_x1, old_x2, c1, c2, Stagger(0b001)) +
+         interp(data.Bbg1, old_x1, old_x2, c1, c2, Stagger(0b001))) *
         q_over_m;
     Scalar B2 =
-        alpha *
-        interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) *
+        (interp(data.B2, old_x1, old_x2, c1, c2, Stagger(0b010)) +
+         interp(data.Bbg2, old_x1, old_x2, c1, c2, Stagger(0b010))) *
         q_over_m;
     Scalar B3 =
-        alpha *
         (interp(data.B3, old_x1, old_x2, c1, c2, Stagger(0b100))) *
         // interp(dev_bg_fields.B3, old_x1, old_x2, c1, c2,
         //        Stagger(0b100))) *
@@ -89,7 +84,6 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) 
     // printf("p is (%f, %f, %f), gamma is %f\n", p1, p2, p3, gamma);
     vay_push(p1, p2, p3, gamma, E1, E2, E3, B1, B2, B3, q_over_m, dt);
 
-    gravity(p1, p2, p3, gamma, r, sp, dt);
     // printf("p after is (%f, %f, %f), gamma is %f, inv_gamma2 is %f,
     // %d\n", p1, p2, p3,
     //        gamma, inv_gamma2, dev_params.gravity_on);
@@ -112,8 +106,9 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt, curandState& state) 
     ptc.E[idx] = gamma;
   }
 }
+
 }  // namespace Kernels
 
 }  // namespace Aperture
 
-#endif  // _USER_PUSH_2D_LOGSPH_CUH_
+#endif
