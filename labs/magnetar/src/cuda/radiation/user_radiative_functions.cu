@@ -59,19 +59,33 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
   Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
+  B1 /= B;
+  B2 /= B;
+  B3 /= B;
   Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
   Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
-  float u = rng();
+  Scalar beta = std::abs(p_mag_signed) / g;
+  float theta_p = CONST_PI * rng();
+  Scalar u = cos(theta_p);
+  Scalar phi_p = 2.0f * CONST_PI * rng();
+  Scalar cphi = cos(phi_p);
+  Scalar sphi = sin(phi_p);
 
-  Scalar Eph = std::abs(gamma *
-            (g - std::abs(p_mag_signed) * u) *
+  Scalar Eph = std::abs(g *
+            (1.0f + beta * u) *
       (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
   if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
-  Scalar pf = std::sqrt(square(gamma - Eph) - 1.0f);
+  // Lorentz transform u to the lab frame
+  u = (u + beta) / (1 + beta * u);
+
+  Scalar ph1, ph2, ph3;
+  ph1 = (B1 * u - (B3 * B3 + B2 * B2) * sphi) * Eph;
+  ph2 = (B2 * u + B3 * cphi + B1 * B2 * sphi) * Eph;
+  ph3 = (B3 * u - B2 * cphi + B1 * B3 * sphi) * Eph;
   // gamma = (gamma - std::abs(Eph));
-  ptc.p1[tid] = p1 * pf / pi;
-  ptc.p2[tid] = p2 * pf / pi;
-  ptc.p3[tid] = p3 * pf / pi;
+  ptc.p1[tid] = p1 - ph1;
+  ptc.p2[tid] = p2 - ph2;
+  ptc.p3[tid] = p3 - ph3;
   ptc.E[tid] = std::sqrt(1.0 + ptc.p1[tid] * ptc.p1[tid] +
                          ptc.p2[tid] * ptc.p2[tid] + ptc.p3[tid] * ptc.p3[tid]);
   if (ptc.E[tid] != ptc.E[tid]) {
@@ -85,14 +99,14 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
 
   // If photon energy is too low, do not track it, but still
   // subtract its energy as done above
-  if (Eph < dev_params.E_ph_min) return;
+  if (Eph < 2.0f) return;
 
   photons.x1[offset] = ptc.x1[tid];
   photons.x2[offset] = ptc.x2[tid];
   photons.x3[offset] = ptc.x3[tid];
-  photons.p1[offset] = Eph * p1 / pi;
-  photons.p2[offset] = Eph * p2 / pi;
-  photons.p3[offset] = Eph * p3 / pi;
+  photons.p1[offset] = ph1;
+  photons.p2[offset] = ph2;
+  photons.p3[offset] = ph3;
   photons.E[offset] = Eph;
   photons.weight[offset] = ptc.weight[tid];
   photons.path_left[offset] = dev_params.photon_path;
