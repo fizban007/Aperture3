@@ -19,13 +19,13 @@ __device__ Scalar rho_c(Scalar r, Scalar theta) {
   Scalar c = std::cos(theta);
   Scalar c2 = c * c;
   Scalar s = std::sin(theta);
-  if (std::abs(s) < 1.0e-5) return 1.0e10;
+  if (std::abs(s) < 1.0e-5)
+    return 1.0e10;
   return r * std::pow(1.0f + 3.0f * c2, 1.5) / (3.0f * s * (1.0f + c2));
 }
 
-__device__ bool
-check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
-  auto& ptc = data.particles;
+__device__ bool check_emit_photon(data_ptrs &data, uint32_t tid, CudaRng &rng) {
+  auto &ptc = data.particles;
   bool emit = check_bit(ptc.flag[tid], ParticleFlag::emit_photon);
 
   if (emit) {
@@ -34,10 +34,10 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   return emit;
 }
 
-__device__ void
-emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
-  auto& ptc = data.particles;
-  auto& photons = data.photons;
+__device__ void emit_photon(data_ptrs &data, uint32_t tid, int offset,
+                            CudaRng &rng) {
+  auto &ptc = data.particles;
+  auto &photons = data.photons;
 
   auto c = ptc.cell[tid];
   Scalar p1 = ptc.p1[tid];
@@ -58,30 +58,36 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
-  Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
-  B1 /= B;
-  B2 /= B;
-  B3 /= B;
-  Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
-  Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
-  Scalar beta = std::abs(p_mag_signed) / g;
+  Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
+  Scalar pB1 = p1 / p;
+  Scalar pB2 = p2 / p;
+  Scalar pB3 = p3 / p;
+
+  Scalar beta = std::abs(p) / gamma;
   float theta_p = CONST_PI * rng();
   Scalar u = cos(theta_p);
   Scalar phi_p = 2.0f * CONST_PI * rng();
   Scalar cphi = cos(phi_p);
   Scalar sphi = sin(phi_p);
 
-  Scalar Eph = std::abs(g *
-            (1.0f + beta * u) *
-      (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
-  if (Eph > gamma - 1.0f) Eph = gamma - 1.1f;
+  Scalar Eph =
+      std::abs(gamma * (1.0f + beta * u) *
+               (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
+  // If photon energy is too low, do not track it, but still
+  // subtract its energy as done above
+  // if (Eph < dev_params.E_ph_min) return;
+  if (Eph * B / dev_params.BQ < 2.1f && p1 > 0.0f)
+    return;
+
+  if (Eph > gamma - 1.0f)
+    Eph = gamma - 1.1f;
   // Lorentz transform u to the lab frame
   u = (u + beta) / (1 + beta * u);
 
   Scalar ph1, ph2, ph3;
-  ph1 = (B1 * u - (B3 * B3 + B2 * B2) * sphi) * Eph;
-  ph2 = (B2 * u + B3 * cphi + B1 * B2 * sphi) * Eph;
-  ph3 = (B3 * u - B2 * cphi + B1 * B3 * sphi) * Eph;
+  ph1 = (pB1 * u - (pB3 * pB3 + pB2 * pB2) * sphi) * Eph;
+  ph2 = (pB2 * u + pB3 * cphi + pB1 * pB2 * sphi) * Eph;
+  ph3 = (pB3 * u - pB2 * cphi + pB1 * pB3 * sphi) * Eph;
   // gamma = (gamma - std::abs(Eph));
   ptc.p1[tid] = p1 - ph1;
   ptc.p2[tid] = p2 - ph2;
@@ -97,10 +103,6 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
     // p1 = p2 = p3 = 0.0f;
   }
 
-  // If photon energy is too low, do not track it, but still
-  // subtract its energy as done above
-  if (Eph < 2.0f) return;
-
   photons.x1[offset] = ptc.x1[tid];
   photons.x2[offset] = ptc.x2[tid];
   photons.x3[offset] = ptc.x3[tid];
@@ -113,9 +115,9 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   photons.cell[offset] = ptc.cell[tid];
 }
 
-__device__ bool
-check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
-  auto& photons = data.photons;
+__device__ bool check_produce_pair(data_ptrs &data, uint32_t tid,
+                                   CudaRng &rng) {
+  auto &photons = data.photons;
   uint32_t cell = photons.cell[tid];
   int c1 = dev_mesh.get_c1(cell);
   int c2 = dev_mesh.get_c2(cell);
@@ -127,43 +129,45 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   auto Eph = data.photons.E[tid];
   Scalar theta = dev_mesh.pos(1, c2, x2);
   // Do not care about photons in the first and last theta cell
-  if (theta < dev_mesh.delta[1] ||
-      theta > CONST_PI - dev_mesh.delta[1]) {
+  if (theta < dev_mesh.delta[1] || theta > CONST_PI - dev_mesh.delta[1]) {
     photons.cell[tid] = MAX_CELL;
     return false;
   }
 
-  Scalar rho = max(
-      std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
-      0.0001f);
-  Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
-  Scalar multiplicity = N / rho;
-  if (multiplicity > 50.0f) {
-    photons.cell[tid] = MAX_CELL;
-    return false;
-  }
+  // Scalar rho = max(
+  //     std::abs(data.Rho[0](c1, c2) + data.Rho[1](c1, c2)),
+  //     0.0001f);
+  // Scalar N = std::abs(data.Rho[0](c1, c2)) + std::abs(data.Rho[1](c1, c2));
+  // Scalar multiplicity = N / rho;
+  // if (multiplicity > 50.0f) {
+  //   photons.cell[tid] = MAX_CELL;
+  //   return false;
+  // }
   // return (photons.path_left[tid] <= 0.0f);
   Interpolator2D<Spline::spline_t<1>> interp;
   Scalar B1 = interp(data.B1, x1, x2, c1, c2, Stagger(0b001));
   Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
+  if (Eph * B / dev_params.BQ < 2.0f && p1 > 0.0f)
+    photons.cell[tid] = MAX_CELL;
+
   Scalar cth = (B1 * p1 + B2 * p2 + B3 * p3) / (B * Eph);
   Scalar chi = Eph * B * sqrt(1.0 - cth * cth) / dev_params.BQ;
   return chi > 0.12;
 }
 
-__device__ void
-produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
-             CudaRng& rng) {
-  auto& ptc = data.particles;
-  auto& photons = data.photons;
+__device__ void produce_pair(data_ptrs &data, uint32_t tid, uint32_t offset,
+                             CudaRng &rng) {
+  auto &ptc = data.particles;
+  auto &photons = data.photons;
 
   Scalar p1 = photons.p1[tid];
   Scalar p2 = photons.p2[tid];
   Scalar p3 = photons.p3[tid];
   Scalar E_ph2 = p1 * p1 + p2 * p2 + p3 * p3;
-  if (E_ph2 <= 4.01f) E_ph2 = 4.01f;
+  if (E_ph2 <= 4.01f)
+    E_ph2 = 4.01f;
 
   Scalar ratio = std::sqrt(0.25f - 1.0f / E_ph2);
   Scalar gamma = sqrt(1.0f + ratio * ratio * E_ph2);
@@ -197,27 +201,25 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   // float u = rng();
   ptc.weight[offset_e] = ptc.weight[offset_p] = photons.weight[tid];
   ptc.cell[offset_e] = ptc.cell[offset_p] = photons.cell[tid];
-  ptc.flag[offset_e] = set_ptc_type_flag(
-           bit_or(ParticleFlag::secondary), ParticleType::electron);
-  ptc.flag[offset_p] = set_ptc_type_flag(
-           bit_or(ParticleFlag::secondary), ParticleType::positron);
+  ptc.flag[offset_e] = set_ptc_type_flag(bit_or(ParticleFlag::secondary),
+                                         ParticleType::electron);
+  ptc.flag[offset_p] = set_ptc_type_flag(bit_or(ParticleFlag::secondary),
+                                         ParticleType::positron);
 
   // Set this photon to be empty
   photons.cell[tid] = MAX_CELL;
 }
 
-}  // namespace Kernels
+} // namespace Kernels
 
-void
-user_rt_init(sim_environment& env) {
+void user_rt_init(sim_environment &env) {
   // Copy the mesh pointer to device memory
-  Grid_LogSph* grid = dynamic_cast<Grid_LogSph*>(&env.local_grid());
+  Grid_LogSph *grid = dynamic_cast<Grid_LogSph *>(&env.local_grid());
   auto ptrs = get_mesh_ptrs(*grid);
-  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_mesh_ptrs_log_sph,
-                                  (void*)&ptrs,
+  CudaSafeCall(cudaMemcpyToSymbol(Kernels::dev_mesh_ptrs_log_sph, (void *)&ptrs,
                                   sizeof(mesh_ptrs_log_sph)));
 }
 
-}  // namespace Aperture
+} // namespace Aperture
 
-#endif  // _USER_RADIATIVE_FUNCTIONS_H_
+#endif // _USER_RADIATIVE_FUNCTIONS_H_

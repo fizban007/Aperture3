@@ -88,28 +88,40 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
     B1 /= q_over_m;
     B2 /= q_over_m;
     B3 /= q_over_m;
-    Scalar pdotB = (p1 * B1 + p2 * B2 + p3 * B3);
+    Scalar p = sqrt(p1 * p1 + p2 * p2 + p3 * p3);
     Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
-    B1 /= sgn(pdotB) * B;
-    B2 /= sgn(pdotB) * B;
-    B3 /= sgn(pdotB) * B;
+    // B1 /= sgn(pdotB) * B;
+    // B2 /= sgn(pdotB) * B;
+    // B3 /= sgn(pdotB) * B;
+    Scalar pB1 = p1 / p;
+    Scalar pB2 = p2 / p;
+    Scalar pB3 = p3 / p;
     Scalar theta = dev_mesh.pos(1, c2, old_x2);
-    Scalar mu = std::abs(B1);
-    Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
-    Scalar g = sqrt(1.0f + p_mag_signed * p_mag_signed);
-    Scalar beta = sqrt(1.0f - 1.0f / (g * g));
-    Scalar y = (B / dev_params.BQ) /
-               (dev_params.star_kT * (g - p_mag_signed * mu));
+
+    Scalar mu = std::abs(p1 / p);
+    // Scalar p_mag_signed = sgn(pdotB) * sgn(B1) * std::abs(pdotB) / B;
+    Scalar p_mag_signed = sgn(p1) * p;
+    Scalar beta = sqrt(1.0f - 1.0f / (gamma * gamma));
+    Scalar y = std::abs((B / dev_params.BQ) /
+               (dev_params.star_kT * (gamma - p_mag_signed * mu)));
+    if (idx == 0) {
+      printf("y is %f, ", y);
+    }
     if (y < 20.0f && y > 0.0f) {
       Scalar coef = dev_params.res_drag_coef * square(dev_params.star_kT) * y * y /
                     (r * r * (std::exp(y) - 1.0f));
-      Scalar Nph = std::abs(coef / g) * dt;
+      Scalar Nph = std::abs(coef / gamma) * dt;
       Scalar Eph = min(
           gamma - 1.0f,
           gamma * (1.0f -
                    1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
+      Scalar Eres = (B / dev_params.BQ) / (gamma - p_mag_signed * mu);
+      if (idx == 0) {
+        printf("Nph is %f, Eph is %f, Eres is %f\n", Nph, Eph, Eres);
+        printf("r is %f, theta is %f, gamma is %f, p_par is %f", r, theta, gamma, p_mag_signed);
+      }
       // Do not allow the particle to lose too much energy
-      if (Eph * Nph > gamma - 1.0f) Nph = (gamma - 1.0f) / Eph;
+      if (Eph * Nph > gamma + Eres * Nph - 1.0f) Nph = (gamma + Eres * Nph - 1.0f) / Eph;
 
       // if (Eph > dev_params.E_ph_min) {
       if (Eph > 2.0f) {
@@ -134,25 +146,27 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
         Scalar cphi = cos(phi_p);
         Scalar sphi = sin(phi_p);
 
-        Eph = g * (1.0f + std::abs(beta) * u) *
+        Eph = gamma * (1.0f + std::abs(beta) * u) *
               (1.0f - 1.0f / sqrt(1.0f + 2.0f * B / dev_params.BQ));
 
         // Lorentz transform u to the lab frame
         u = (u + beta) / (1 + beta * u);
 
         Scalar ph1, ph2, ph3;
-        ph1 = (B1 * u - (B3 * B3 + B2 * B2) * sphi);
-        ph2 = (B2 * u + B3 * cphi + B1 * B2 * sphi);
-        ph3 = (B3 * u - B2 * cphi + B1 * B3 * sphi);
+        ph1 = (pB1 * u - (pB3 * pB3 + pB2 * pB2) * sphi);
+        ph2 = (pB2 * u + pB3 * cphi + pB1 * pB2 * sphi);
+        ph3 = (pB3 * u - pB2 * cphi + pB1 * pB3 * sphi);
+        p1 += Eres * Nph * mu;
+        p2 += Eres * Nph * sgn(B1) * sqrt(1.0 - mu * mu);
         p1 -= ph1 * Eph * Nph;
         p2 -= ph2 * Eph * Nph;
         p3 -= ph3 * Eph * Nph;
 
         auto& ph_flux = data.ph_flux;
         // Compute the theta of the photon outgoing direction
-        logsph2cart(ph1, ph2, ph3, r, theta, phi);
-        theta_p = acos(ph3);
-        if (p1 > 0.0f && gamma > 1.5f) {
+        if (p1 > 0.0f && gamma > 3.5f) {
+          logsph2cart(ph1, ph2, ph3, r, theta, phi);
+          theta_p = acos(ph3);
           Eph = std::log(std::abs(Eph)) / std::log(10.0f);
           if (Eph > 2.0f) Eph = 2.0f;
           if (Eph < -6.0f) Eph = -6.0f;
@@ -170,6 +184,10 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
           //        n1, Ndot, ph_flux(n0, n1));
         }
       }
+    }
+
+    if (idx == 0) {
+      printf("\n");
     }
   }
   ptc.p1[idx] = p1;
