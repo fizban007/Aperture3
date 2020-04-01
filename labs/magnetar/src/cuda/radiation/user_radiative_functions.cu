@@ -1,6 +1,7 @@
 #ifndef _USER_RADIATIVE_FUNCTIONS_H_
 #define _USER_RADIATIVE_FUNCTIONS_H_
 
+#include "cuda/algorithms/ptc_updater_helper.cu"
 #include "cuda/constant_mem.h"
 #include "cuda/cudarng.h"
 #include "cuda/data_ptrs.h"
@@ -73,11 +74,6 @@ __device__ void emit_photon(data_ptrs &data, uint32_t tid, int offset,
   Scalar Eph =
       std::abs(gamma * (1.0f + beta * u) *
                (1.0f - 1.0f / std::sqrt(1.0f + 2.0f * B / dev_params.BQ)));
-  // If photon energy is too low, do not track it, but still
-  // subtract its energy as done above
-  // if (Eph < dev_params.E_ph_min) return;
-  if (Eph * B / dev_params.BQ < 2.1f && p1 > 0.0f)
-    return;
 
   if (Eph > gamma - 1.0f)
     Eph = gamma - 1.1f;
@@ -85,9 +81,10 @@ __device__ void emit_photon(data_ptrs &data, uint32_t tid, int offset,
   u = (u + beta) / (1 + beta * u);
 
   Scalar ph1, ph2, ph3;
-  ph1 = (pB1 * u - (pB3 * pB3 + pB2 * pB2) * sphi) * Eph;
-  ph2 = (pB2 * u + pB3 * cphi + pB1 * pB2 * sphi) * Eph;
-  ph3 = (pB3 * u - pB2 * cphi + pB1 * pB3 * sphi) * Eph;
+  Scalar sth = sqrt(1.0f - u * u);
+  ph1 = (pB1 * u - sth * ((pB3 * pB3 + pB2 * pB2) * sphi)) * Eph;
+  ph2 = (pB2 * u + sth * (pB3 * cphi + pB1 * pB2 * sphi)) * Eph;
+  ph3 = (pB3 * u - sth * (pB2 * cphi + pB1 * pB3 * sphi)) * Eph;
   // gamma = (gamma - std::abs(Eph));
   ptc.p1[tid] = p1 - ph1;
   ptc.p2[tid] = p2 - ph2;
@@ -101,6 +98,35 @@ __device__ void emit_photon(data_ptrs &data, uint32_t tid, int offset,
         p1, p2, p3, gamma);
     asm("trap;");
     // p1 = p2 = p3 = 0.0f;
+  }
+
+  // If photon energy is too low, do not track it, but still
+  // subtract its energy as done above
+  // if (Eph < dev_params.E_ph_min) return;
+  if (Eph * B / dev_params.BQ < 2.1f && p1 > 0.0f) {
+    auto& ph_flux = data.ph_flux;
+    // Compute the theta of the photon outgoing direction
+    if (ph1 > 0.0f) {
+      Scalar r = std::exp(dev_mesh.pos(0, c1, x1));
+      Scalar theta = dev_mesh.pos(1, c2, x2);
+      logsph2cart(ph1, ph2, ph3, r, theta, ptc.x3[tid]);
+      theta_p = acos(ph3 / Eph);
+      Eph = std::log(std::abs(Eph)) / std::log(10.0f);
+      if (Eph > 2.0f) Eph = 2.0f;
+      if (Eph < -6.0f) Eph = -6.0f;
+      int n0 = ((Eph + 6.0f) / 8.02f * (ph_flux.p.xsize - 1));
+      if (n0 < 0) n0 = 0;
+      if (n0 >= ph_flux.p.xsize) n0 = ph_flux.p.xsize - 1;
+      int n1 = (std::abs(theta_p) / (CONST_PI + 1.0e-5)) *
+               (ph_flux.p.ysize - 1);
+      if (n1 < 0) n1 = 0;
+      if (n1 >= ph_flux.p.ysize) n1 = ph_flux.p.ysize - 1;
+      atomicAdd(&ph_flux(n0, n1), ptc.weight[tid]);
+      // printf("n0 is %d, n1 is %d, Ndot is %f, ph_flux is %f\n",
+      // n0,
+      //        n1, Ndot, ph_flux(n0, n1));
+    }
+    return;
   }
 
   photons.x1[offset] = ptc.x1[tid];
@@ -149,8 +175,32 @@ __device__ bool check_produce_pair(data_ptrs &data, uint32_t tid,
   Scalar B2 = interp(data.B2, x1, x2, c1, c2, Stagger(0b010));
   Scalar B3 = interp(data.B3, x1, x2, c1, c2, Stagger(0b100));
   Scalar B = sqrt(B1 * B1 + B2 * B2 + B3 * B3);
-  if (Eph * B / dev_params.BQ < 2.0f && p1 > 0.0f)
+  if (Eph * B / dev_params.BQ < 2.0f && p1 > 0.0f) {
+    auto& ph_flux = data.ph_flux;
+    // Compute the theta of the photon outgoing direction
+    if (p1 > 0.0f) {
+      Scalar r = std::exp(dev_mesh.pos(0, c1, x1));
+      Scalar theta = dev_mesh.pos(1, c2, x2);
+      logsph2cart(p1, p2, p3, r, theta, data.photons.x3[tid]);
+      Scalar theta_p = acos(p3 / Eph);
+      Eph = std::log(std::abs(Eph)) / std::log(10.0f);
+      if (Eph > 2.0f) Eph = 2.0f;
+      if (Eph < -6.0f) Eph = -6.0f;
+      int n0 = ((Eph + 6.0f) / 8.02f * (ph_flux.p.xsize - 1));
+      if (n0 < 0) n0 = 0;
+      if (n0 >= ph_flux.p.xsize) n0 = ph_flux.p.xsize - 1;
+      int n1 = (std::abs(theta_p) / (CONST_PI + 1.0e-5)) *
+               (ph_flux.p.ysize - 1);
+      if (n1 < 0) n1 = 0;
+      if (n1 >= ph_flux.p.ysize) n1 = ph_flux.p.ysize - 1;
+      atomicAdd(&ph_flux(n0, n1), data.photons.weight[tid]);
+      // printf("n0 is %d, n1 is %d, Ndot is %f, ph_flux is %f\n",
+      // n0,
+      //        n1, Ndot, ph_flux(n0, n1));
+    }
     photons.cell[tid] = MAX_CELL;
+    return false;
+  }
 
   Scalar cth = (B1 * p1 + B2 * p2 + B3 * p3) / (B * Eph);
   Scalar chi = Eph * B * sqrt(1.0 - cth * cth) / dev_params.BQ;

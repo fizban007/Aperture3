@@ -153,9 +153,10 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
         u = (u + beta) / (1 + beta * u);
 
         Scalar ph1, ph2, ph3;
-        ph1 = (pB1 * u - (pB3 * pB3 + pB2 * pB2) * sphi);
-        ph2 = (pB2 * u + pB3 * cphi + pB1 * pB2 * sphi);
-        ph3 = (pB3 * u - pB2 * cphi + pB1 * pB3 * sphi);
+        Scalar sth = sqrt(1.0f - u * u);
+        ph1 = (pB1 * u - sth * ((pB3 * pB3 + pB2 * pB2) * sphi));
+        ph2 = (pB2 * u + sth * (pB3 * cphi + pB1 * pB2 * sphi));
+        ph3 = (pB3 * u - sth * (pB2 * cphi + pB1 * pB3 * sphi));
         p1 += Eres * Nph * mu;
         p2 += Eres * Nph * sgn(B1) * sqrt(1.0 - mu * mu);
         p1 -= ph1 * Eph * Nph;
@@ -164,7 +165,7 @@ user_push_2d_logsph(data_ptrs& data, size_t idx, Scalar dt,
 
         auto& ph_flux = data.ph_flux;
         // Compute the theta of the photon outgoing direction
-        if (p1 > 0.0f && gamma > 3.5f) {
+        if (ph1 > 0.0f) {
           logsph2cart(ph1, ph2, ph3, r, theta, phi);
           theta_p = acos(ph3);
           Eph = std::log(std::abs(Eph)) / std::log(10.0f);
