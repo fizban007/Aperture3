@@ -13,6 +13,13 @@ namespace Aperture {
 
 namespace Kernels {
 
+__global__ void filter_current_logsph(pitchptr<Scalar> j,
+                                      pitchptr<Scalar> j_tmp,
+                                      pitchptr<Scalar> A, bool boundary_lower0,
+                                      bool boundary_upper0,
+                                      bool boundary_lower1,
+                                      bool boundary_upper1);
+
 __device__ Scalar beta_phi(Scalar r, Scalar theta) {
   // return -0.4f * dev_params.compactness * dev_params.omega *
   //        std::sin(theta) / (r * r);
@@ -250,10 +257,10 @@ __global__ void stellar_boundary(data_ptrs data, Scalar omega) {
 
       data.B1(i, j) = data.Bbg1(i, j);
       data.B3(i, j) = data.Bbg3(i, j);
-      data.E2(i, j) = (-omega * coef - 0.1 * dev_params.omega) *
+      data.E2(i, j) = (-omega * coef - 0.0 * dev_params.omega) *
                           std::sin(theta) * data.Bbg1(i, j) +
                       data.Ebg2(i, j);
-      data.E1(i, j) = (omega * coef - 0.1 * dev_params.omega) *
+      data.E1(i, j) = (omega * coef - 0.0 * dev_params.omega) *
                           std::sin(theta_s) * data.Bbg2(i, j) +
                       data.Ebg1(i, j);
       data.B2(i, j) = data.Bbg2(i, j);
@@ -323,7 +330,9 @@ __global__ void outflow_boundary_sph(data_ptrs data) {
 
 } // namespace Kernels
 
-field_solver_logsph::field_solver_logsph(sim_environment &env) : m_env(env) {}
+field_solver_logsph::field_solver_logsph(sim_environment &env) : m_env(env) {
+  m_tmp_e = multi_array<Scalar>(env.local_grid().extent());
+}
 
 field_solver_logsph::~field_solver_logsph() {}
 
@@ -370,6 +379,16 @@ void field_solver_logsph::update_fields(sim_data &data, double dt,
   m_env.send_guard_cells(data.EdotB);
 
   CudaSafeCall(cudaDeviceSynchronize());
+
+  Logger::print_debug("e field smoothing {} times",
+                      1);
+  for (int i = 0; i < 1; i++) {
+    filter_field(data.E, 0, grid);
+    filter_field(data.E, 1, grid);
+    filter_field(data.E, 2, grid);
+    m_env.send_guard_cells(data.E);
+  }
+
   timer::show_duration_since_stamp("Field update", "us", "field_update");
 }
 
@@ -400,6 +419,28 @@ void field_solver_logsph::apply_boundary(sim_data &data, double omega,
     CudaCheckError();
   }
   // Logger::print_info("omega is {}", omega);
+}
+
+void field_solver_logsph::filter_field(vector_field<Scalar> &field, int comp,
+                                       Grid_LogSph &grid) {
+  auto mesh_ptrs = get_mesh_ptrs(grid);
+  pitchptr<Scalar> A;
+  if (comp == 0)
+    A = mesh_ptrs.A1_e;
+  else if (comp == 1)
+    A = mesh_ptrs.A2_e;
+  else if (comp == 2)
+    A = mesh_ptrs.A3_e;
+
+  auto &mesh = grid.mesh();
+  dim3 blockSize(32, 16);
+  dim3 gridSize(mesh.reduced_dim(0) / 32, mesh.reduced_dim(1) / 16);
+  Kernels::filter_current_logsph<<<gridSize, blockSize>>>(
+      get_pitchptr(field.data(comp)), get_pitchptr(m_tmp_e), A,
+      m_env.is_boundary(0), m_env.is_boundary(1), m_env.is_boundary(2),
+      m_env.is_boundary(3));
+  field.data(comp).copy_from(m_tmp_e);
+  CudaCheckError();
 }
 
 } // namespace Aperture

@@ -1,6 +1,8 @@
 #ifndef _FIELD_SOLVER_LOGSPH_H_
 #define _FIELD_SOLVER_LOGSPH_H_
 
+#include "grids/grid_log_sph.h"
+#include "core/fields.h"
 
 namespace Aperture {
 
@@ -14,9 +16,12 @@ class field_solver_logsph {
 
   void update_fields(sim_data& data, double dt, double time = 0.0);
   void apply_boundary(sim_data& data, double omega, double time = 0.0);
+  void filter_field(vector_field<Scalar>& field, int comp, Grid_LogSph& grid);
 
  private:
   sim_environment& m_env;
+
+  multi_array<Scalar> m_tmp_e;
 };
 
 }  // namespace Aperture
