@@ -113,12 +113,12 @@ enum class EnsAdjustCode : int {
   idle,      // does not participate in the current phase
 };
 
-////// Magic numbers start here
-enum : unsigned char { CENTER_ZONE = 13 };
-
 enum class ForceAlgorithm : char { Boris, Vay };
 
 enum class LogLevel : char { info, detail, debug };
+
+////// Magic numbers start here
+enum : unsigned char { CENTER_ZONE = 13 };
 
 }  // namespace Aperture
 
