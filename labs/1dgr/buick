@@ -10,7 +10,7 @@ if [ ! -z $opt ] && [ $opt = "cmake" ]; then
     cmake ../../.. -DLAB_ROOT_DIR=$lab_dir -Dbuild_tests=OFF $@
 elif [ ! -z $opt ] && [ $opt = "build" ]; then
     cd build
-    make
+    make -j8
 elif [ ! -z $opt ] && [ $opt = "clean" ]; then
     cd build
     if [ -f "Makefile" ]; then

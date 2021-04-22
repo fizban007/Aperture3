@@ -130,8 +130,8 @@ move_photons(photon_data photons, size_t num, Scalar dt, bool axis0,
 }
 
 __global__ void
-__launch_bounds__(512, 4)
-    deposit_current_2d_log_sph(data_ptrs data, size_t num,
+// __launch_bounds__(512, 4)
+deposit_current_2d_log_sph(data_ptrs data, size_t num,
                                mesh_ptrs_log_sph mesh_ptrs, Scalar dt,
                                uint32_t step, bool axis0, bool axis1) {
   auto &ptc = data.particles;

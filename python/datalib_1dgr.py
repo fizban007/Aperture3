@@ -2,7 +2,7 @@
 
 import h5py
 import numpy as np
-import pytoml
+import toml
 from pathlib import Path
 import os
 import glob
@@ -130,6 +130,7 @@ class Data:
 
     def load_conf(self, path):
         conf_path = os.path.join(path, "config.toml")
-        with open(conf_path, "rb") as f:
-            conf = pytoml.load(f)
-            return conf
+        return toml.load(conf_path)
+        # with open(conf_path, "rb") as f:
+        #     conf = pytoml.load(f)
+        #     return conf
