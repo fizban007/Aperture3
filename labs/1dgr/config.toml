@@ -29,13 +29,13 @@ E_secondary = 6.0
 E_ph_min = 10.0
 
 # Free path for inverse Compton once a particle reaches threshold
-ic_path = 0.1
+ic_path = 0.01
 
 # Spectral index alpha for the background soft photon
 spectral_alpha = 1.2
 
 # Minimum energy for the above power law soft photon
-e_min = 1.0e-4
+e_min = 1.0e-5
 
 # Separation between two energy regimes for inverse Compton scattering
 e_s = 0.2
@@ -47,7 +47,7 @@ periodic_boundary = [false, false]
 track_percent = 0.02
 
 # Data output directory
-data_dir = "/home/alex/storage/Data/1DGR/1d_experiment"
+data_dir = "/home/yajie/storage/1DGR/KS_experiment"
 
 # Dipole B0
 B0 = 1.0e8

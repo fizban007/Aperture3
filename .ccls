@@ -1,0 +1,18 @@
+clang++
+%cpp -std=c++17
+%h -std=c++17
+%h -x
+%h c++-header
+%cu -std=c++17
+%cu --cuda-gpu-arch=sm_61
+%cu --cuda-path=/opt/cuda
+-Isrc/
+-Ideps/catch/include
+-Ideps/fmt/include
+-Ideps/visit_struct/include
+-Ideps/cpptoml/include
+-Ideps/cxxopts/include
+-Ideps/highfive/include
+-I/opt/cuda/include
+-DCUDA_ENABLED
+-D__AVX2__

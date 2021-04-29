@@ -143,7 +143,7 @@ def make_plot(num):
     plt.close(fig)
 
 
-agents = 7
+agents = 5
 num_re = re.compile(r"\d+")
 orig_steps = data.fld_steps
 print(orig_steps)
