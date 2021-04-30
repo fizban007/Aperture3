@@ -3,7 +3,7 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "sim_params.h"
-#include <boost/filesystem.hpp>
+#include "utils/filesystem.h"
 #include <fmt/core.h>
 
 #define H5_USE_BOOST
@@ -114,10 +114,14 @@ data_exporter::data_exporter(sim_environment& env, uint32_t& timestep)
   outputDirectory = env.params().data_dir;
   // make sure output directory is a directory
   if (outputDirectory.back() != '/') outputDirectory.push_back('/');
-  boost::filesystem::path outPath(outputDirectory);
+  Path outPath(outputDirectory);
 
-  boost::system::error_code returnedError;
-  boost::filesystem::create_directories(outPath, returnedError);
+#ifndef USE_BOOST_FILESYSTEM
+  std::error_code returnedError;
+  fs::create_directories(outPath, returnedError);
+#else
+  fs::create_directories(outPath);
+#endif
 
   copy_config_file();
 }
@@ -183,9 +187,10 @@ data_exporter::write_grid() {
 void
 data_exporter::copy_config_file() {
   std::string path = outputDirectory + "config.toml";
-  boost::filesystem::copy_file(
-      m_env.params().conf_file, path,
-      boost::filesystem::copy_option::overwrite_if_exists);
+  Path conf_path(m_env.params().conf_file);
+  if (fs::exists(conf_path)) {
+    copy_file(m_env.params().conf_file, path);
+  }
 }
 
 void
@@ -342,10 +347,10 @@ data_exporter::write_xmf_tail(std::string& buffer) {
 void
 data_exporter::prepare_xmf_restart(uint32_t restart_step,
                                    int data_interval, float time) {
-  boost::filesystem::path xmf_file(outputDirectory + "data.xmf");
-  boost::filesystem::path xmf_bak(outputDirectory + "data.xmf.bak");
-  boost::filesystem::remove(xmf_bak);
-  boost::filesystem::rename(xmf_file, xmf_bak);
+  Path xmf_file(outputDirectory + "data.xmf");
+  Path xmf_bak(outputDirectory + "data.xmf.bak");
+  fs::remove(xmf_bak);
+  fs::rename(xmf_file, xmf_bak);
 
   std::ifstream xmf_in;
   xmf_in.open(xmf_bak.c_str());
