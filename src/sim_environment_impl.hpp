@@ -6,7 +6,7 @@
 #include "sim_data.h"
 #include "sim_environment.h"
 #include "utils/logger.h"
-#include <boost/filesystem.hpp>
+#include "utils/filesystem.h"
 #include <memory>
 // #include "domain_communicator.h"
 
@@ -53,13 +53,15 @@ sim_environment::sim_environment(int* argc, char*** argv)
 
   // Look at the output directory to see if we are restarting from a
   // snapshot
-  boost::filesystem::path snapshotPath(m_params.data_dir);
+  // boost::filesystem::path snapshotPath(m_params.data_dir);
+  Path snapshotPath(m_params.data_dir);
   snapshotPath /= "snapshot.h5";
   Logger::print_info("Snapshot path is {}", snapshotPath.string());
-  boost::filesystem::path config_path(m_params.data_dir);
+  // boost::filesystem::path config_path(m_params.data_dir);
+  Path config_path(m_params.data_dir);
   config_path /= "config.toml";
-  if (boost::filesystem::exists(snapshotPath) &&
-      boost::filesystem::exists(config_path)) {
+  if (fs::exists(snapshotPath) &&
+      fs::exists(config_path)) {
     // Reading from a snapshot, use the config file in data output path
     // instead
     Logger::print_info(
