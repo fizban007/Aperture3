@@ -281,7 +281,7 @@ user_rt_init(sim_environment& env) {
   Logger::print_debug("in rt_init, emin is {}", env.params().e_min);
   // static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
                                         //  1.0e-10, 0.1);
-  static Spectra::mono_energetic(env.params().e_min, 0.1 * env.params().e_min)
+  static Spectra::mono_energetic rt_ne(env.params().e_min, 0.1 * env.params().e_min);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
              1.50e24 / env.params().ic_path);
 
