@@ -89,8 +89,8 @@ struct mono_energetic {
       return 0.0;
   }
 
-  Scalar emin() const { return e0_ * 1e-2; }
-  Scalar emax() const { return e0_ * 1e2; }
+  Scalar emin() const { return e0_ * 1e-4; }
+  Scalar emax() const { return e0_ * 1e4; }
 
   Scalar e0_, de_;
 };
