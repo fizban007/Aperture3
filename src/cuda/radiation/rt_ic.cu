@@ -21,7 +21,7 @@ namespace Aperture {
 
 HOST_DEVICE double
 beta(Scalar gamma) {
-  return 1.0 / sqrt(1.0 - 1.0 / square(gamma));
+  return sqrt(1.0 - 1.0 / square(gamma));
 }
 
 HOST_DEVICE double
