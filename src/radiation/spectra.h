@@ -70,7 +70,8 @@ struct black_body {
 
   HD_INLINE double operator()(double e) const {
     // The normalization factor comes as 8 \pi/(h^3 c^3) (me c^2)^3
-    return 1.75464e30 * e * e / (exp(e / kT_) - 1.0);
+    // return 1.75464e30 * e * e / (exp(e / kT_) - 1.0);
+    return e * e / (exp(e / kT_) - 1.0) / (2.4 * kT_ * kT_ * kT_);
   }
 
   Scalar emin() const { return 1e-10 * kT_; }
@@ -84,7 +85,7 @@ struct mono_energetic {
 
   HD_INLINE Scalar operator()(Scalar e) const {
     if (e < e0_ + de_ && e > e0_ - de_)
-      return 1.0 / (2.0 * de_);
+      return 1.0 / (2.0 * de_) / e;
     else
       return 0.0;
   }
