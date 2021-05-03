@@ -201,9 +201,8 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   Scalar prob = find_gg_rate(u0_hat) * alphaK * dev_params.delta_t *
                 (1.0 + 2.0 * r * uux / photons.E[tid]);
   if (tid == 1000) {
-    printf(
-        "Producing pair: r is %f, u0_hat is %f, prob is %f\n",
-        r, u0_hat, prob);
+    printf("Producing pair: r is %f, u0_hat is %f, prob is %f\n", r,
+           u0_hat, prob);
   }
   float u = rng();
   return u < prob;
@@ -279,8 +278,12 @@ void
 user_rt_init(sim_environment& env) {
   static inverse_compton rt_ic(env.params());
   Logger::print_debug("in rt_init, emin is {}", env.params().e_min);
-  static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
-                                         1.0e-10, 0.1);
+  // static Spectra::broken_power_law rt_ne(1.25, 1.1,
+  // env.params().e_min,
+  //  1.0e-10, 0.1);
+  // static Spectra::mono_energetic rt_ne(env.params().e_min, 0.1 *
+  // env.params().e_min);
+  static Spectra::black_body rt_ne(env.params().e_min);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
              1.50e24 / env.params().ic_path);
 
