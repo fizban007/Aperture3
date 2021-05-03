@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script works only under the current directory.
 opt=$1
-lab_dir=/home/alex/Projects/Aperture3/labs/1dgr_ZAMO
+lab_dir=`pwd`
 
 if [ ! -z $opt ] && [ $opt = "cmake" ]; then
     # Run cmake with the correct definition of LAB_ROOT_DIR

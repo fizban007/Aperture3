@@ -10,8 +10,6 @@
 #include "radiation/spectra.h"
 #include "sim_environment.h"
 
-// Photon rest frame is the KS FIDO frame
-
 namespace Aperture {
 
 namespace Kernels {
@@ -23,33 +21,11 @@ check_emit_photon(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   auto& ptc = data.particles;
   uint32_t cell = ptc.cell[tid];
   auto x1 = ptc.x1[tid];
-  Scalar xi = dev_mesh.pos(0, cell, x1);
-  const Scalar a = dev_params.a;
-  const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
-  const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
-  Scalar exp_xi = std::exp(xi * (rp - rm));
-  Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
-  Scalar theta = dev_mesh_ptrs_1dgr.theta[cell] * x1 +
-                 dev_mesh_ptrs_1dgr.theta[cell - 1] * (1.0f - x1);
-  Scalar D1 = dev_mesh_ptrs_1dgr.D1[cell] * x1 +
-              dev_mesh_ptrs_1dgr.D1[cell - 1] * (1.0f - x1);
-  Scalar D2 = dev_mesh_ptrs_1dgr.D2[cell] * x1 +
-              dev_mesh_ptrs_1dgr.D2[cell - 1] * (1.0f - x1);
-
-  Scalar Sigma = r * r + a * a * square(std::cos(theta));
-  Scalar Delta = r * r - 2.0 * r + a * a;
-  Scalar vx = (ptc.p1[tid] / ptc.E[tid] - D1) / D2;
-  Scalar alphaK = 1.0 / std::sqrt(1.0 + 2.0 * r / Sigma);
-  Scalar gamma = alphaK * ptc.E[tid] * (1.0 + 2.0 * r * vx);
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
+  Scalar gamma = alpha * ptc.E[tid];
   float u = rng();
-  float prob = find_ic_rate(gamma) * alphaK * dev_params.delta_t *
-               (1.0 + 2.0 * r * vx);
-  if (tid == 1000) {
-    printf(
-        "Emitting photon: r is %f, gamma is %f, vx is %f, prob is %f\n",
-        r, gamma, vx, prob);
-  }
-  return (u < prob);
+  return (u < find_ic_rate(gamma) * alpha * dev_params.delta_t);
 }
 
 __device__ void
@@ -69,12 +45,7 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
   Scalar exp_xi = std::exp(xi * (rp - rm));
   Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
-  Scalar theta = dev_mesh_ptrs_1dgr.theta[c] * x1 +
-                 dev_mesh_ptrs_1dgr.theta[c - 1] * (1.0f - x1);
   Scalar Delta = r * r - 2.0 * r + a * a;
-  Scalar Sigma = r * r + a * a * square(std::cos(theta));
-  Scalar A =
-      square(r * r + a * a) - Delta * a * a * square(std::sin(theta));
 
   Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
                  dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
@@ -86,55 +57,24 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
               dev_mesh_ptrs_1dgr.D3[c - 1] * (1.0f - x1);
   Scalar B3B1 = dev_mesh_ptrs_1dgr.B3B1[c] * x1 +
                 dev_mesh_ptrs_1dgr.B3B1[c - 1] * (1.0f - x1);
-  // Scalar g11 = dev_mesh_ptrs_1dgr.gamma_rr[c] * x1 +
-  //              dev_mesh_ptrs_1dgr.gamma_rr[c - 1] * (1.0f - x1);
-  // Scalar g33 = dev_mesh_ptrs_1dgr.gamma_ff[c] * x1 +
-  //              dev_mesh_ptrs_1dgr.gamma_ff[c - 1] * (1.0f - x1);
-  // Scalar beta = dev_mesh_ptrs_1dgr.beta_phi[c] * x1 +
-  //               dev_mesh_ptrs_1dgr.beta_phi[c - 1] * (1.0f - x1);
+  Scalar g11 = dev_mesh_ptrs_1dgr.gamma_rr[c] * x1 +
+               dev_mesh_ptrs_1dgr.gamma_rr[c - 1] * (1.0f - x1);
+  Scalar g33 = dev_mesh_ptrs_1dgr.gamma_ff[c] * x1 +
+               dev_mesh_ptrs_1dgr.gamma_ff[c - 1] * (1.0f - x1);
+  Scalar beta = dev_mesh_ptrs_1dgr.beta_phi[c] * x1 +
+                dev_mesh_ptrs_1dgr.beta_phi[c - 1] * (1.0f - x1);
 
-  // transformation matrix d\hat{x}_{KS}^{\mu}/dx_T^{\nu}
-  Scalar KB00 = 1.0 / std::sqrt(1.0 + 2.0 * r / Sigma);
-  Scalar KB01 = KB00 * 2.0 * r;
-  Scalar m11 = 1.0 / std::sqrt((a * a + r * r) / Sigma -
-                               2.0 * r / (Sigma + 2.0 * r));
-  Scalar KB10 = 2.0 * r / (Sigma + 2.0 * r) * m11;
-  Scalar KB11 = (Delta + 4.0 * r * r / (Sigma + 2.0 * r)) * m11;
-  Scalar KB30 = -2.0 * a * r * std::sin(theta) / std::sqrt(A * Sigma);
-  Scalar KB33 = std::sqrt(A / Sigma) * std::sin(theta);
+  Scalar ur_ptc = u0_ptc * Delta * (p1 / u0_ptc - D1) / D2;
+  // Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
 
-  // transformation matrix dx_T^{\mu}/d\hat{x}_{KS}^{\nu}
-  Scalar BK00 =
-      std::sqrt(1.0 + 2.0 * r / Sigma) +
-      4.0 * r * r / Delta / std::sqrt(Sigma * (Sigma + 2.0 * r));
-  Scalar BK01 = -2.0 * r / Delta / m11;
-
-  // u^{mu} of particles in tortoise / BL coordinates
-  Scalar ux_ptc = u0_ptc * (p1 / u0_ptc - D1) / D2;
-  Scalar ur_ptc = Delta * ux_ptc;
-  Scalar uphi_ptc = dev_params.omega * u0_ptc + B3B1 * ur_ptc;
-
-  // particle 4-momentum in KS FIDO frame
-  Scalar gamma = KB00 * u0_ptc + KB01 * ux_ptc;
-  Scalar u1 = KB10 * u0_ptc + KB11 * ux_ptc;
-  Scalar u3 = KB30 * u0_ptc + KB33 * uphi_ptc;
-
-  // photon 4-momentum in KS FIDO frame
+  Scalar gamma = alpha * ptc.E[tid];
   Scalar Eph = gen_photon_e(gamma, &(rng.m_local_state));
   // Scalar Eph = bb * dev_ic_dep * gamma;
   // Limit energy loss so that remaining particle momentum still
   // makes sense
   // if (Eph >= gamma - 1.01f) Eph = gamma - 1.01f;
-  Scalar w1_ph = Eph * u1 / std::sqrt(u1 * u1 + u3 * u3);
-  Scalar w3_ph = Eph * u3 / std::sqrt(u1 * u1 + u3 * u3);
 
-  // remaining primary particle 4-momentum in KS FIDO frame
-  Scalar u0new = gamma - Eph;
-  Scalar u1new = std::sqrt(u0new * u0new - 1.0) /
-                 std::sqrt(gamma * gamma - 1.0) * u1;
-
-  // particle 4-momentum in tortoise / BL coordinates
-  ptc.E[tid] = BK00 * u0new + BK01 * u1new;
+  ptc.E[tid] = (gamma - Eph) / alpha;
 
   ptc.p1[tid] =
       sgn(p1) * std::sqrt(square(ptc.E[tid]) *
@@ -153,9 +93,11 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // Scalar path = rad_model.draw_photon_freepath(Eph);
   // printf("Eph is %f, path is %f\n", Eph, path);
   photons.x1[offset] = ptc.x1[tid];
-  photons.p1[offset] = -Eph * KB01 + w1_ph * KB11;
-  photons.p3[offset] = w3_ph * KB33;
-  photons.E[offset] = BK00 * Eph + BK01 * w1_ph;
+  photons.p1[offset] = Delta * (Eph / gamma) * ur_ptc / g11;
+  photons.p3[offset] =
+      (Eph / gamma) *
+      (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
+  photons.E[offset] = Eph / alpha;
   photons.weight[offset] = ptc.weight[tid];
   photons.cell[offset] = c;
   float u = rng();
@@ -171,40 +113,16 @@ check_produce_pair(data_ptrs& data, uint32_t tid, CudaRng& rng) {
   uint32_t cell = photons.cell[tid];
 
   auto x1 = photons.x1[tid];
-  Scalar xi = dev_mesh.pos(0, cell, x1);
-  const Scalar a = dev_params.a;
-  const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
-  const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
-  Scalar exp_xi = std::exp(xi * (rp - rm));
-  Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
-  Scalar theta = dev_mesh_ptrs_1dgr.theta[cell] * x1 +
-                 dev_mesh_ptrs_1dgr.theta[cell - 1] * (1.0f - x1);
-  Scalar gamma_u11 =
-      dev_mesh_ptrs_1dgr.gamma_rr[cell] * x1 +
-      dev_mesh_ptrs_1dgr.gamma_rr[cell - 1] * (1.0f - x1);
-  Scalar Sigma = r * r + a * a * square(std::cos(theta));
-  Scalar Delta = r * r - 2.0 * r + a * a;
 
-  Scalar uux = gamma_u11 * photons.p1[tid] / (Delta * Delta);
-
-  Scalar alphaK = 1.0 / std::sqrt(1.0 + 2.0 * r / Sigma);
-  Scalar u0_hat = alphaK * photons.E[tid] + alphaK * 2.0 * r * uux;
-
-  // Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
-  //                dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
-  // Scalar u0_hat = alpha * std::abs(photons.E[tid]);
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[cell] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[cell - 1] * (1.0f - x1);
+  Scalar u0_hat = alpha * std::abs(photons.E[tid]);
   // if (u0_hat < dev_params.E_ph_min) {
   //   photons.cell[tid] = MAX_CELL;
   //   return false;
   // }
 
-  Scalar prob = find_gg_rate(u0_hat) * alphaK * dev_params.delta_t *
-                (1.0 + 2.0 * r * uux / photons.E[tid]);
-  if (tid == 1000) {
-    printf(
-        "Producing pair: r is %f, u0_hat is %f, prob is %f\n",
-        r, u0_hat, prob);
-  }
+  Scalar prob = find_gg_rate(u0_hat) * alpha * dev_params.delta_t;
   float u = rng();
   return u < prob;
 }
@@ -279,8 +197,9 @@ void
 user_rt_init(sim_environment& env) {
   static inverse_compton rt_ic(env.params());
   Logger::print_debug("in rt_init, emin is {}", env.params().e_min);
-  static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
-                                         1.0e-10, 0.1);
+  // static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
+  //                                        1.0e-10, 0.1);
+  static Spectra::black_body rt_ne(env.params().e_min);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
              1.50e24 / env.params().ic_path);
 
