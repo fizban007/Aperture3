@@ -93,9 +93,13 @@ emit_photon(data_ptrs& data, uint32_t tid, int offset, CudaRng& rng) {
   // Scalar path = rad_model.draw_photon_freepath(Eph);
   // printf("Eph is %f, path is %f\n", Eph, path);
   photons.x1[offset] = ptc.x1[tid];
-  photons.p1[offset] = Delta * (Eph / gamma) * ur_ptc / g11;
+  // photons.p1[offset] = Delta * (Eph / gamma) * ur_ptc / g11;
+  // photons.p3[offset] =
+  //     (Eph / gamma) *
+  //     (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
+  photons.p1[offset] = Delta * (Eph / std::sqrt(gamma * gamma - 1.0)) * ur_ptc / g11;
   photons.p3[offset] =
-      (Eph / gamma) *
+      (Eph / std::sqrt(gamma * gamma - 1.0)) *
       (u0_ptc * (dev_params.omega + beta) + B3B1 * ur_ptc) / g33;
   photons.E[offset] = Eph / alpha;
   photons.weight[offset] = ptc.weight[tid];
@@ -133,16 +137,84 @@ produce_pair(data_ptrs& data, uint32_t tid, uint32_t offset,
   auto& ptc = data.particles;
   auto& photons = data.photons;
 
-  Scalar u0 = 0.5f * std::abs(photons.E[tid]);
-
   uint32_t c = photons.cell[tid];
   Pos_t x1 = photons.x1[tid];
+  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
+                 dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
+
+  // Calculate energy of generated pairs
+  Scalar u0;
+
+  if (dev_params.rad_cooling_on) {
+    const Scalar a = dev_params.a;
+    // const Scalar a = 0.0;
+    const Scalar rp = 1.0f + std::sqrt(1.0f - a * a);
+    const Scalar rm = 1.0f - std::sqrt(1.0f - a * a);
+    Scalar xi = dev_mesh.pos(0, c, x1);
+    Scalar exp_xi = std::exp(xi * (rp - rm));
+    Scalar r = (rp - rm * exp_xi) / (1.0 - exp_xi);
+    Scalar Delta = r * r - 2.0 * r + a * a;
+    Scalar theta = dev_mesh_ptrs_1dgr.theta[c] * x1 +
+                   dev_mesh_ptrs_1dgr.theta[c - 1] * (1.0f - x1);
+    Scalar A =
+        square(r * r + a * a) - Delta * a * a * square(std::sin(theta));
+    // upper components of gamma
+    Scalar g11 = dev_mesh_ptrs_1dgr.gamma_rr[c] * x1 +
+                 dev_mesh_ptrs_1dgr.gamma_rr[c - 1] * (1.0f - x1);
+    Scalar g33 = dev_mesh_ptrs_1dgr.gamma_ff[c] * x1 +
+                 dev_mesh_ptrs_1dgr.gamma_ff[c - 1] * (1.0f - x1);
+    Scalar B3B1 = dev_mesh_ptrs_1dgr.B3B1[c] * x1 +
+                  dev_mesh_ptrs_1dgr.B3B1[c - 1] * (1.0f - x1);
+    // photon 4-velocity in ZAMO frame
+    Scalar uph0 = alpha * photons.E[tid];
+    // note that the following are the lower components
+    Scalar uph1 = std::sqrt(g11) * photons.p1[tid] / Delta;
+    Scalar uph3 = std::sqrt(g33) * photons.p3[tid];
+    // 4-velocity of pairs in the ZAMO frame
+    Scalar u10 = 0.5 * uph0;
+    Scalar u11 = std::sqrt(u10 * u10 - 1.0) * uph1 / uph0;
+    Scalar u13 = sgn(uph3) * std::sqrt(u10 * u10 - 1.0 - u11 * u11);
+    // particle 4-velocity in corotating frame
+    Scalar bb =
+        (dev_params.omega - 2.0 * r * a / A) / alpha / std::sqrt(g33);
+    if (bb > 1.0) bb = 1.0 - 1.0e-4;
+    if (bb < -1.0) bb = -1.0 + 1.0e-4;
+    Scalar gg = 1.0 / std::sqrt(1.0 - bb * bb);
+    Scalar u23 = gg * (u13 - bb * u10);
+    // angle between particle velocity and magnetic field
+    Scalar b3 = gg * B3B1 * std::sqrt(g11) / std::sqrt(g33);
+    Scalar cos_th = (u11 + u23 * b3) /
+                    std::sqrt(u11 * u11 + u23 * u23) /
+                    std::sqrt(1.0 + b3 * b3);
+    if (cos_th > 1.0) cos_th = 1.0 - 1.0e-4;
+    if (cos_th < -1.0) cos_th = -1.0 + 1.0e-4;
+    Scalar sin_th = std::sqrt(1.0 - cos_th * cos_th);
+    // particle 4-velocity in the corotating frame after cooling
+    Scalar u30 = 1.0 / sin_th;
+    Scalar u33 = std::sqrt(u30 * u30 - 1.0) * b3 /
+                 std::sqrt(1.0 + b3 * b3);
+    // in ZAMO frame
+    Scalar u40 = gg * (u30 + bb * u33);
+    if (u40 > u10 || u40 != u40) u40 = u10;
+    // back to global coordinates
+    u0 = u40 / alpha;
+    if (u0 != u0)
+      printf(
+          "pair energy becomes NAN! bb is %f, u11 is %f, u13 is "
+          "%f, uph0 is %f, uph1 is %f, cos_th is %f \n",
+          bb, u11, u13, uph0, uph1, cos_th);
+    // if (tid == 10) {
+    if (true) {
+      printf("Producing pair: r is %f, sin_th is %f, u10 is %f, u0 is %f\n", r,
+             sin_th, u10, u0);
+    }
+  } else {
+    u0 = 0.5f * std::abs(photons.E[tid]);
+  }
 
   // Set this photon to be empty
   photons.cell[tid] = MAX_CELL;
 
-  Scalar alpha = dev_mesh_ptrs_1dgr.alpha[c] * x1 +
-                 dev_mesh_ptrs_1dgr.alpha[c - 1] * (1.0f - x1);
   Scalar D1 = dev_mesh_ptrs_1dgr.D1[c] * x1 +
               dev_mesh_ptrs_1dgr.D1[c - 1] * (1.0f - x1);
   Scalar D2 = dev_mesh_ptrs_1dgr.D2[c] * x1 +
@@ -197,7 +269,8 @@ void
 user_rt_init(sim_environment& env) {
   static inverse_compton rt_ic(env.params());
   Logger::print_debug("in rt_init, emin is {}", env.params().e_min);
-  // static Spectra::broken_power_law rt_ne(1.25, 1.1, env.params().e_min,
+  // static Spectra::broken_power_law rt_ne(1.25, 1.1,
+  // env.params().e_min,
   //                                        1.0e-10, 0.1);
   static Spectra::black_body rt_ne(env.params().e_min);
   rt_ic.init(rt_ne, rt_ne.emin(), rt_ne.emax(),
